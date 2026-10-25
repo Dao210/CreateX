@@ -1,0 +1,419 @@
+{
+  "tools": [
+    {
+      "name": "tank_get_catalog",
+      "description": "Read the classic tank character schema, parts, 9-point budget, deterministic stats, and map versions. The calling agent creates the draft; no server model or arbitrary scripts/assets are used.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "required": [],
+        "type": "object"
+      },
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      }
+    },
+    {
+      "name": "tank_validate_character",
+      "description": "Validate an agent-created tank draft and preview compiled combat stats. Invalid parts are reported, never replaced with a preset.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "draft": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "profile",
+              "name",
+              "parts",
+              "appearance"
+            ],
+            "properties": {
+              "profile": {
+                "const": "tank-defense@1"
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 40,
+                "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$"
+              },
+              "parts": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "chassis",
+                  "armor",
+                  "cannon"
+                ],
+                "properties": {
+                  "chassis": {
+                    "type": "string",
+                    "enum": [
+                      "light",
+                      "standard",
+                      "heavy"
+                    ]
+                  },
+                  "armor": {
+                    "type": "string",
+                    "enum": [
+                      "light",
+                      "standard",
+                      "heavy"
+                    ]
+                  },
+                  "cannon": {
+                    "type": "string",
+                    "enum": [
+                      "rapid",
+                      "standard",
+                      "heavy"
+                    ]
+                  }
+                }
+              },
+              "appearance": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "body",
+                  "accent",
+                  "pattern"
+                ],
+                "properties": {
+                  "body": {
+                    "type": "string",
+                    "pattern": "^#[0-9a-fA-F]{6}$"
+                  },
+                  "accent": {
+                    "type": "string",
+                    "pattern": "^#[0-9a-fA-F]{6}$"
+                  },
+                  "pattern": {
+                    "type": "string",
+                    "enum": [
+                      "solid",
+                      "stripe",
+                      "cross"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "required": [
+          "draft"
+        ],
+        "type": "object"
+      },
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      }
+    },
+    {
+      "name": "tank_save_character",
+      "description": "Save a tank into this workspace's character library. Use a fresh UUID requestId per intended write and reuse it unchanged on retry. Updating an owned character also requires characterId and expectedRevision.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "characterId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "draft": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "profile",
+              "name",
+              "parts",
+              "appearance"
+            ],
+            "properties": {
+              "profile": {
+                "const": "tank-defense@1"
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 40,
+                "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$"
+              },
+              "parts": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "chassis",
+                  "armor",
+                  "cannon"
+                ],
+                "properties": {
+                  "chassis": {
+                    "type": "string",
+                    "enum": [
+                      "light",
+                      "standard",
+                      "heavy"
+                    ]
+                  },
+                  "armor": {
+                    "type": "string",
+                    "enum": [
+                      "light",
+                      "standard",
+                      "heavy"
+                    ]
+                  },
+                  "cannon": {
+                    "type": "string",
+                    "enum": [
+                      "rapid",
+                      "standard",
+                      "heavy"
+                    ]
+                  }
+                }
+              },
+              "appearance": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "body",
+                  "accent",
+                  "pattern"
+                ],
+                "properties": {
+                  "body": {
+                    "type": "string",
+                    "pattern": "^#[0-9a-fA-F]{6}$"
+                  },
+                  "accent": {
+                    "type": "string",
+                    "pattern": "^#[0-9a-fA-F]{6}$"
+                  },
+                  "pattern": {
+                    "type": "string",
+                    "enum": [
+                      "solid",
+                      "stripe",
+                      "cross"
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "expectedRevision": {
+            "maximum": 50,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "requestId": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "requestId",
+          "draft"
+        ],
+        "type": "object"
+      },
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false
+      }
+    },
+    {
+      "name": "tank_list_characters",
+      "description": "List saved characters in the authenticated workspace, including immutable version references and hashes.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "required": [],
+        "type": "object"
+      },
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      }
+    },
+    {
+      "name": "tank_get_character",
+      "description": "Read a saved character. Omit revision for latest, or supply a revision to read an immutable version.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "characterId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "revision": {
+            "maximum": 50,
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "characterId"
+        ],
+        "type": "object"
+      },
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      }
+    },
+    {
+      "name": "tank_check_compatibility",
+      "description": "Check an exact character revision/hash against a map before creating a play session.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "characterId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "contentHash": {
+            "pattern": "^sha256:[0-9a-f]{64}$",
+            "type": "string"
+          },
+          "mapId": {
+            "enum": [
+              "frontline",
+              "river",
+              "steel",
+              "depot",
+              "circuit",
+              "citadel"
+            ],
+            "type": "string"
+          },
+          "mode": {
+            "default": "campaign",
+            "enum": [
+              "campaign",
+              "blitz",
+              "survival"
+            ],
+            "type": "string"
+          },
+          "revision": {
+            "maximum": 50,
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "characterId",
+          "revision",
+          "contentHash",
+          "mapId"
+        ],
+        "type": "object"
+      },
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      }
+    },
+    {
+      "name": "tank_create_session",
+      "description": "Freeze the character and starting map into a 24-hour play session. Returns playUrl: open it in Auro and let the user drive with keyboard/touch. Requires the same Auro account; do not transmit movement through MCP. Reuse requestId unchanged on retry.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "characterId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "contentHash": {
+            "pattern": "^sha256:[0-9a-f]{64}$",
+            "type": "string"
+          },
+          "mapId": {
+            "enum": [
+              "frontline",
+              "river",
+              "steel",
+              "depot",
+              "circuit",
+              "citadel"
+            ],
+            "type": "string"
+          },
+          "mode": {
+            "default": "campaign",
+            "enum": [
+              "campaign",
+              "blitz",
+              "survival"
+            ],
+            "type": "string"
+          },
+          "requestId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "revision": {
+            "maximum": 50,
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "characterId",
+          "revision",
+          "contentHash",
+          "mapId",
+          "requestId"
+        ],
+        "type": "object"
+      },
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false
+      }
+    },
+    {
+      "name": "tank_get_session",
+      "description": "Read a frozen play session created by this authenticated user. It is not a live physics snapshot or a verified battle result.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "sessionId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "sessionId"
+        ],
+        "type": "object"
+      },
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      }
+    }
+  ]
+}

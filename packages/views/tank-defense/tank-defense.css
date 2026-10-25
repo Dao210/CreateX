@@ -1,0 +1,169 @@
+.tank-defense-page {
+  --tank-font-mono: var(--font-mono, "SFMono-Regular", Consolas, monospace);
+  display: flex; flex: 1; flex-direction: column; height: 100%; min-height: 0; min-width: 0; overflow: hidden;
+  color: var(--foreground); background: var(--page-canvas);
+}
+.tank-defense-page h1 { margin: 0; font-family: inherit; font-size: var(--text-body); line-height: 20px; letter-spacing: normal; }
+.tank-defense-app { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 16px 16px 24px; container: tank-defense / inline-size; }
+.tank-layout {
+  max-width: 1200px; margin-inline: auto; display: grid; justify-content: center; align-items: start; gap: 22px 26px;
+  grid-template-columns: minmax(0, min(1000px, calc(100svh - 240px))) minmax(220px, 280px);
+  grid-template-areas: "machine operation" "machine sidebar";
+}
+.tank-operation { grid-area: operation; max-width: none; margin: 0; }
+.tank-machine {
+  grid-area: machine;
+  --background: #111915; --foreground: #e9e7d5; --muted: #202d24; --muted-foreground: #9da895;
+  --primary: #edc96f; --primary-foreground: #20251a; --brand: #edc96f; --brand-foreground: #20251a;
+  --secondary: #2c392c; --secondary-foreground: #e9e7d5; --border: #3c4938; --ring: #edc96f;
+  --accent: #2b392b; --accent-foreground: #f1dfae;
+  color: var(--foreground); background: #1d271f; border: 1px solid #49523c; box-shadow: 0 8px 22px #0002, inset 0 1px #6e795529; min-width: 0; width: 100%;
+}
+.tank-scoreboard { display: flex; justify-content: space-between; gap: 12px; padding: 10px 16px 4px; }
+.tank-scoreboard > div { display: flex; flex-direction: column; gap: 4px; }.tank-scoreboard > div:last-child { text-align: right; }
+.tank-scoreboard span { color: #a5b298; font-size: var(--text-micro); letter-spacing: 0.05em; }
+.tank-scoreboard strong { font: 650 var(--text-title-lg) var(--tank-font-mono); color: #efd18b; letter-spacing: 0.08em; }
+.tank-scoreboard .tank-stage-number { align-items: center; }.tank-stage-number strong { color: #dadfcb; }
+.tank-screen-shell { padding: 0 12px; }.tank-screen { position: relative; border: 5px solid #0b110c; outline: 1px solid #56604766; background: #101913; overflow: hidden; }
+.tank-screen canvas { display: block; width: 100%; aspect-ratio: 1; image-rendering: pixelated; outline-offset: -3px; }
+.tank-screen canvas:focus-visible { outline: 2px solid #ebcc7b88; }
+.tank-overlay { position: absolute; inset: 0; display: grid; place-items: center; padding: 20px; background: #0b150fbb; backdrop-filter: blur(2px); }
+.tank-overlay-card { text-align: center; max-width: 330px; }.tank-overlay-emblem { display: grid; place-items: center; width: 58px; height: 58px; border: 1px solid #cbb16a6b; margin: 0 auto 24px; transform: rotate(45deg); background: #c8ad5810; }
+.tank-overlay-emblem svg { width: 28px; height: 28px; transform: rotate(-45deg); color: var(--primary); stroke-width: 1.5; }
+.tank-overlay-card h2 { margin: 0; font: 700 var(--text-display-sm) "Rockwell", "Songti SC", serif; letter-spacing: 0.025em; color: #f1e9cd; }
+.tank-overlay-card p { color: #c2c9b4; font-size: var(--text-caption); margin: 12px 0 22px; line-height: 1.8; }
+.tank-overlay-actions { display: flex; justify-content: center; flex-wrap: wrap; gap: 12px; }.tank-overlay-actions > button { min-height: 44px; padding-inline: 20px; border-radius: 2px; box-shadow: 3px 3px 0 #c0a75640; }
+.tank-overlay-defeat .tank-overlay-emblem { border-color: #bf786a; }.tank-overlay-defeat .tank-overlay-emblem svg { color: #e3a391; }
+.tank-hud-bar { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 14px; min-height: 34px; margin: 0 14px; padding: 7px 0; border-bottom: 1px solid #3c4938; font-size: var(--text-micro); color: #a6b699; font-variant-numeric: tabular-nums; }
+.tank-hud-bar > span { display: inline-flex; align-items: center; gap: 5px; }
+.tank-hud-bar > strong { font-weight: 500; color: #efd18b; }
+.tank-hud-bar .tank-time-critical { color: #ffb59c; }
+.tank-hud-bar .tank-hud-spacer { flex: 1; }
+.tank-hud-bar .tank-base-safe { color: #c5d3a6; }.tank-hud-bar .tank-base-lost { color: #e5a18b; }
+.tank-hud-bar > button { color: #c6ccb6; min-height: 30px; font-size: var(--text-caption); }
+.tank-keyboard-hint { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; padding: 12px; border-top: 1px solid #38432e; color: #a3b197; font-size: var(--text-micro); }
+.tank-keyboard-hint > span { display: flex; align-items: center; gap: 4px; }
+.tank-machine kbd { border: 1px solid #566049; border-bottom-width: 2px; min-width: 19px; padding: 1px 3px; text-align: center; color: #c3ceb1; border-radius: 2px; font: var(--text-micro) var(--tank-font-mono); }
+.tank-sidebar { display: flex; flex-direction: column; gap: 22px; padding-top: 2px; }.tank-panel-label { color: var(--muted-foreground); font-size: var(--text-micro); letter-spacing: 0.04em; }
+.tank-status-panel h2 { margin: 12px 0 7px; font-size: var(--text-title); font-weight: 600; color: var(--foreground); }
+.tank-status-panel > p { margin: 0; font-size: var(--text-caption); line-height: 1.8; color: var(--muted-foreground); }
+.tank-lives { display: flex; align-items: center; justify-content: space-between; margin: 18px 0; padding: 13px 0; border-block: 1px solid var(--border); font-size: var(--text-caption); }
+.tank-lives > div { display: flex; align-items: center; gap: 8px; }.tank-lives svg { color: var(--muted-foreground); }.tank-lives strong { font: 600 var(--text-title) var(--tank-font-mono); }
+.tank-enemy-heading { display: flex; justify-content: space-between; align-items: baseline; font-size: var(--text-caption); }.tank-enemy-heading strong { font: 650 var(--text-title-lg) var(--tank-font-mono); }.tank-enemy-heading small { font-size: var(--text-micro); color: var(--muted-foreground); }
+.tank-enemy-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 8px 6px; margin: 13px 0 20px; }.tank-enemy-grid svg { width: 14px; height: 17px; color: var(--muted-foreground); }.tank-enemy-grid .eliminated { color: var(--border); }
+.tank-power { display: flex; align-items: center; gap: 10px; font-size: var(--text-caption); }.tank-power > span { display: flex; align-items: center; gap: 5px; }.tank-power > div { display: flex; flex: 1; gap: 4px; }.tank-power > div > span { height: 4px; flex: 1; background: var(--muted); }.tank-power > div > span.active { background: var(--foreground); }.tank-power strong { font: var(--text-label) var(--tank-font-mono); }
+.tank-map-select { padding-top: 20px; border-top: 1px solid var(--border); }.tank-map-select > .tank-panel-label { margin-bottom: 10px; }
+.tank-map-select > button { width: 100%; padding: 11px 9px; display: flex; align-items: center; gap: 11px; text-align: left; border: 1px solid transparent; border-radius: 4px; color: var(--muted-foreground); background: transparent; cursor: pointer; }
+.tank-map-select > button:hover:not(:disabled) { background: var(--surface-hover); }.tank-map-select > button.selected { background: var(--surface-selected); border-color: var(--border); color: var(--foreground); box-shadow: inset 2px 0 var(--foreground); }.tank-map-select > button.selected:hover:not(:disabled) { background: var(--surface-selected); border-color: var(--foreground); }
+.tank-map-select > button:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }.tank-map-select > button:disabled:not(.selected) { opacity: 0.5; cursor: not-allowed; }
+.tank-map-index { font: var(--text-label) var(--tank-font-mono); }.tank-map-select > button > span:nth-child(3) { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; }.tank-map-select strong { font-size: var(--text-caption); font-weight: 500; overflow-wrap: anywhere; }.tank-map-select small { font-size: var(--text-micro); color: var(--muted-foreground); }
+.tank-field-guide { padding-top: 20px; border-top: 1px solid var(--border); }.tank-terrain-legend { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 9px; margin: 15px 0; }.tank-terrain-legend > span { display: grid; grid-template-columns: 20px 1fr; align-items: center; font-size: var(--text-caption); gap: 3px 6px; }.tank-terrain-legend small { grid-column: 2; font-size: var(--text-micro); color: var(--muted-foreground); }
+.tank-terrain-legend i { width: 17px; height: 17px; grid-row: span 2; }.tank-terrain-legend .brick { background: repeating-linear-gradient(0deg, #ab6845 0 5px, #3c3528 5px 6px); border: 1px solid #bc7c52; }.tank-terrain-legend .steel { background: #a0af99; border: 3px ridge #c3ccaf; }.tank-terrain-legend .water { background: repeating-linear-gradient(0deg, #315b63 0 5px, #6b9093 5px 6px); }.tank-terrain-legend .forest { background: repeating-conic-gradient(#365331 0% 25%, #5b7548 0% 50%) 50% / 8px 8px; }
+.tank-field-guide > p { color: var(--muted-foreground); font-size: var(--text-micro); line-height: 1.9; margin: 0 0 9px; }.tank-field-guide .tank-friendly-fire { color: var(--foreground); }
+.tank-footer { max-width: 1200px; margin: 22px auto 0; color: var(--muted-foreground); font-size: var(--text-micro); line-height: 1.7; }
+.tank-touch-controls { display: none; }
+.tank-garage { min-width: 0; padding-top: 18px; border-top: 1px solid var(--border); }
+.tank-garage-heading { display: flex; align-items: center; gap: 4px; margin-bottom: 12px; }
+.tank-garage-heading h2 { flex: 1; margin: 0; font-size: var(--text-label); font-weight: 600; }
+.tank-form-field { display: flex; flex-direction: column; gap: 6px; margin-block: 10px; min-width: 0; font-size: var(--text-caption); color: var(--foreground); }
+.tank-form-field select { width: 100%; min-width: 0; min-height: 36px; padding: 7px 9px; background: var(--background); border: 1px solid var(--border); border-radius: var(--radius-md); color: var(--foreground); font: inherit; text-overflow: ellipsis; }
+.tank-form-field select:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+.tank-garage > p, .tank-character-swatch, .tank-mcp-help, .tank-editor-preview { font-size: var(--text-caption); line-height: 1.7; color: var(--muted-foreground); overflow-wrap: anywhere; }
+.tank-garage .tank-frozen-loadout { color: var(--foreground); border-left: 2px solid var(--foreground); padding-left: 9px; }
+.tank-character-swatch { display: flex; gap: 8px; align-items: center; }
+.tank-character-swatch i { width: 21px; height: 21px; flex-shrink: 0; border: 4px solid; }
+.tank-garage-actions { display: flex; gap: 8px; margin-top: 12px; }
+.tank-garage-error { color: var(--destructive); font-size: var(--text-caption); line-height: 1.7; }
+.tank-character-dialog, .tank-mcp-dialog { max-height: min(90svh, 780px); overflow-y: auto; }
+.tank-editor-fields { margin-block: 18px; }
+.tank-color-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.tank-color-fields input { width: 100%; padding: 3px; min-height: 36px; }
+.tank-editor-preview { padding: 12px; background: var(--muted); border-radius: var(--radius-md); }
+.tank-editor-preview p { margin: 4px 0 0; }
+.tank-mcp-config { max-height: 250px; overflow: auto; padding: 14px; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--muted); font: var(--text-caption) var(--font-mono); line-height: 1.8; }
+.tank-mcp-endpoint { display: block; overflow-wrap: anywhere; font-size: var(--text-caption); }
+.tank-session-state { padding: 32px; font-size: var(--text-body); }.tank-session-state button { margin: 10px 10px 0 0; }
+@container tank-defense (max-width: 700px) {
+  .tank-layout { display: flex; flex-direction: column; gap: 24px; }
+  .tank-operation { order: -1; }
+  .tank-machine { max-width: max(280px, calc(100svh - 340px)); align-self: center; }
+  .tank-sidebar { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; }
+  .tank-scoreboard { padding: 8px 12px 3px; }.tank-scoreboard strong { font-size: var(--text-title); }.tank-screen-shell { padding: 0 8px; }.tank-screen { border-width: 4px; }
+  .tank-overlay { padding: 14px; }.tank-overlay-card h2 { font-size: var(--text-title-lg); }.tank-overlay-emblem { width: 44px; height: 44px; margin-bottom: 18px; }.tank-overlay-emblem svg { width: 24px; }.tank-overlay-card p { font-size: var(--text-micro); margin-bottom: 15px; }
+  .tank-hud-bar { margin-inline: 8px; gap: 3px 10px; padding-block: 5px; }.tank-hud-bar > button { padding-inline: 5px; }
+  .tank-touch-controls { display: flex; align-items: center; justify-content: space-between; padding: 8px 20px 14px; border-top: 1px solid #34432f; }.tank-dpad { display: grid; grid-template-columns: repeat(3, 44px); grid-template-rows: repeat(3, 44px); gap: 3px; }.tank-dpad > button { width: 44px; height: 44px; border-radius: 3px; touch-action: none; }.tank-dpad-up { grid-column: 2; }.tank-dpad-left { grid-row: 2; grid-column: 1; }.tank-dpad-center { grid-row: 2; grid-column: 2; background: #2c3829; margin: 8px; border-radius: 50%; }.tank-dpad-right { grid-row: 2; grid-column: 3; }.tank-dpad-down { grid-row: 3; grid-column: 2; }
+  .tank-touch-fire { display: flex; flex-direction: column; align-items: center; gap: 9px; }.tank-touch-fire > button { width: 76px; height: 76px; border-radius: 50%; touch-action: none; box-shadow: 0 4px 0 #88723c; font-size: var(--text-title); }.tank-touch-fire > span { color: #b6c0a7; font-size: var(--text-micro); }
+  .tank-keyboard-hint { display: none; }.tank-map-select { border-top: 0; padding-top: 0; }.tank-field-guide { grid-column: 1 / -1; }.tank-terrain-legend { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 9px; }.tank-terrain-legend > span { grid-template-columns: 1fr; gap: 5px; }.tank-terrain-legend small { grid-column: 1; }.tank-terrain-legend i { grid-row: 1; }.tank-map-select > button { padding: 11px 6px; gap: 8px; }
+}
+@media (hover: none) and (min-width: 701px) {
+  .tank-touch-controls { display: flex; padding: 14px; align-items: center; justify-content: space-between; }.tank-dpad { display: flex; gap: 5px; }.tank-dpad > button { touch-action: none; min-width: 44px; min-height: 44px; }.tank-touch-fire > button { touch-action: none; min-width: 64px; min-height: 44px; }.tank-touch-fire > span { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { .tank-defense-page button { transition: none; } }
+.tank-mode-select { display: flex; flex-wrap: wrap; gap: 6px; }
+.tank-mode-select > button { white-space: normal; height: auto; min-height: 40px; gap: 10px; border: 1px solid var(--border); color: var(--muted-foreground); }
+.tank-mode-select > button > span { font: var(--text-micro) var(--tank-font-mono); opacity: 0.6; }
+.tank-mode-select > button[aria-pressed="true"] { background: var(--surface-selected); color: var(--foreground); border-color: var(--foreground); }
+.tank-mode-select > button[aria-pressed="true"]:hover { background: var(--surface-selected); }
+.tank-operation > p, .tank-map-help { margin: 9px 0 0; font-size: var(--text-micro); color: var(--muted-foreground); line-height: 1.7; }
+.tank-map-preview { width: 40px; height: 40px; flex-shrink: 0; image-rendering: pixelated; border: 1px solid var(--border); }
+.tank-equipment-guide { padding-top: 20px; border-top: 1px solid var(--border); }
+.tank-equipment-guide details { margin-top: 12px; font-size: var(--text-caption); }
+.tank-equipment-guide summary { cursor: pointer; display: flex; align-items: center; gap: 9px; list-style: none; }
+.tank-equipment-guide summary::after { content: "+"; margin-left: auto; color: var(--muted-foreground); }
+.tank-equipment-guide details[open] summary::after { content: "−"; }
+.tank-equipment-guide summary:focus-visible { outline: 2px solid var(--ring); outline-offset: 4px; }
+.tank-equipment-guide details p { margin: 8px 0 0 26px; font-size: var(--text-micro); line-height: 1.8; color: var(--muted-foreground); }
+.tank-device-icon { display: inline-block; width: 17px; height: 17px; flex-shrink: 0; }
+.tank-device-icon.barrel { background: repeating-linear-gradient(0deg, #a75038 0 5px, #e0b47a 5px 8px); border: 1px solid #c98657; }
+.tank-device-icon.conveyor { background: repeating-linear-gradient(135deg, #303e31 0 5px, #abb888 5px 7px, #303e31 7px 10px); border: 1px solid #75815b; }
+.tank-device-icon.pulse { background: #23606c; border: 2px dashed #a5f2ef; }
+.tank-device-icon.repair { background: linear-gradient(#b1e8bd, #b1e8bd) center / 3px 11px no-repeat, linear-gradient(#b1e8bd, #b1e8bd) center / 11px 3px no-repeat, #254e3e; border: 1px solid #9cdbad; }
+.tank-terrain-legend .ice { background: repeating-linear-gradient(135deg, #6c9894 0 6px, #a8c9ba 6px 8px, #6c9894 8px 13px); }
+@container tank-defense (max-width: 700px) {
+  .tank-mode-select { gap: 4px; }.tank-mode-select > button { flex: 1; padding-inline: 7px; font-size: var(--text-micro); gap: 5px; }
+  .tank-operation > p { min-height: 34px; }.tank-hud-bar { margin-inline: 8px; }.tank-map-preview { width: 28px; height: 28px; }.tank-map-index { display: none; }
+  .tank-equipment-guide { grid-column: 1 / -1; }
+}
+.tank-operation-controls { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px 18px; }
+.tank-difficulty-select { display: flex; gap: 4px; padding: 3px; border: 1px solid var(--border); border-radius: var(--radius-md); }
+.tank-difficulty-select > button { min-height: 32px; padding-inline: 14px; font-size: var(--text-caption); color: var(--muted-foreground); }
+.tank-difficulty-select > button[aria-pressed="true"], .tank-difficulty-select > button[aria-pressed="true"]:hover { background: var(--surface-selected); color: var(--foreground); box-shadow: inset 0 0 0 1px var(--border); }
+.tank-combat-status { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; padding: 0 16px 8px; color: #c5d3a6; font-size: var(--text-micro); font-variant-numeric: tabular-nums; }
+.tank-combat-status > span { display: inline-flex; align-items: center; gap: 5px; }
+.tank-fullscreen-error { margin: 0; padding: 8px 16px; color: var(--destructive); font-size: var(--text-caption); }
+.tank-defense-page:fullscreen { width: 100%; height: 100dvh; background: var(--page-canvas); }
+.tank-defense-page[data-fullscreen="true"] .tank-operation,
+.tank-defense-page[data-fullscreen="true"] .tank-sidebar,
+.tank-defense-page[data-fullscreen="true"] .tank-footer,
+.tank-defense-page[data-fullscreen="true"] .tank-keyboard-hint { display: none; }
+.tank-defense-page[data-fullscreen="true"] .tank-defense-app { --tank-fullscreen-reserve: 170px; display: flex; justify-content: center; align-items: center; padding: 8px 12px; overflow: hidden; }
+.tank-defense-page[data-fullscreen="true"] .tank-layout { display: flex; align-items: center; justify-content: center; width: 100%; max-width: none; height: 100%; gap: 0; }
+.tank-defense-page[data-fullscreen="true"] .tank-machine { width: min(100%, calc(100dvh - var(--tank-fullscreen-reserve))); max-width: none; flex-shrink: 0; }
+@container tank-defense (max-width: 700px) {
+  .tank-operation-controls { flex-direction: column; gap: 8px; }
+  .tank-difficulty-select { align-self: flex-start; }.tank-difficulty-select > button { min-height: 32px; }
+  .tank-combat-status { padding-inline: 12px; gap: 6px; }
+  .tank-defense-page[data-fullscreen="true"] .tank-machine { width: min(100%, calc(100dvh - 330px)); }
+}
+@media (hover: none) {
+  .tank-defense-page[data-fullscreen="true"] .tank-defense-app { --tank-fullscreen-reserve: 330px; }
+}
+@media (hover: none) and (orientation: landscape) and (max-height: 600px) {
+  .tank-defense-page[data-fullscreen="true"] .tank-machine { display: grid; grid-template-columns: minmax(144px, 1fr) minmax(0, calc(100dvh - 90px)) minmax(130px, 1fr); grid-template-rows: auto auto 1fr; width: 100%; height: 100%; }
+  .tank-defense-page[data-fullscreen="true"] .tank-scoreboard { grid-column: 1; grid-row: 1; justify-self: center; width: 144px; flex-direction: column; gap: 3px; padding: 8px 4px 4px; }
+  .tank-defense-page[data-fullscreen="true"] .tank-scoreboard > div { flex-direction: row; align-items: baseline; justify-content: space-between; gap: 6px; }
+  .tank-defense-page[data-fullscreen="true"] .tank-scoreboard strong { font-size: var(--text-label); }
+  .tank-defense-page[data-fullscreen="true"] .tank-combat-status { grid-column: 1; grid-row: 2; justify-self: center; width: 144px; flex-direction: column; gap: 3px; padding: 0 4px 4px; }
+  .tank-defense-page[data-fullscreen="true"] .tank-screen-shell { grid-column: 2; grid-row: 1 / -1; align-self: center; padding-inline: 0; }
+  .tank-defense-page[data-fullscreen="true"] .tank-touch-controls { display: contents; }
+  .tank-defense-page[data-fullscreen="true"] .tank-dpad { grid-column: 1; grid-row: 3; align-self: center; justify-self: center; display: grid; grid-template-columns: repeat(3, 44px); grid-template-rows: repeat(3, 44px); gap: 3px; }
+  .tank-defense-page[data-fullscreen="true"] .tank-dpad-up { grid-column: 2; grid-row: 1; }
+  .tank-defense-page[data-fullscreen="true"] .tank-dpad-left { grid-column: 1; grid-row: 2; }
+  .tank-defense-page[data-fullscreen="true"] .tank-dpad-center { grid-column: 2; grid-row: 2; margin: 8px; border-radius: 50%; background: #2c3829; }
+  .tank-defense-page[data-fullscreen="true"] .tank-dpad-right { grid-column: 3; grid-row: 2; }
+  .tank-defense-page[data-fullscreen="true"] .tank-dpad-down { grid-column: 2; grid-row: 3; }
+  .tank-defense-page[data-fullscreen="true"] .tank-touch-fire { grid-column: 3; grid-row: 2; align-self: center; justify-self: center; display: flex; flex-direction: column; gap: 8px; padding: 12px 0; }
+  .tank-defense-page[data-fullscreen="true"] .tank-touch-fire > button { width: 64px; height: 64px; border-radius: 50%; }
+  .tank-defense-page[data-fullscreen="true"] .tank-hud-bar { grid-column: 3; grid-row: 3; align-self: center; flex-direction: column; flex-wrap: nowrap; justify-content: center; gap: 5px; margin: 0; padding: 4px; border: 0; text-align: center; }
+  .tank-defense-page[data-fullscreen="true"] .tank-hud-bar .tank-hud-spacer { display: none; }
+}

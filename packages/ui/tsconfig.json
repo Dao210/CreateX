@@ -1,0 +1,16 @@
+{
+  "extends": "@auro/tsconfig/react-library.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": ".",
+    "paths": {
+      "@/lib/utils": ["./lib/utils.ts"],
+      "@/hooks/*": ["./hooks/*"],
+      "@/components/ui/*": ["./components/ui/*"],
+      "@auro/ui/components": ["./components"],
+      "@auro/ui/lib": ["./lib"]
+    }
+  },
+  "include": ["**/*.ts", "**/*.tsx"],
+  "exclude": ["node_modules", "dist"]
+}

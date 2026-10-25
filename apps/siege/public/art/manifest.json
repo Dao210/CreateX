@@ -1,0 +1,853 @@
+{
+  "game": "Doodle Siege",
+  "channel": "ChatGPT website in the built-in browser",
+  "conversation": "https://chatgpt.com/c/6ac63ec9-bbb8-83ea-a3a6-391fc427147d",
+  "sources": [
+    {
+      "id": "woodland-battlefield",
+      "sha256": "b888e1ed5751510b2643c8a870a6983c6fa8ed0d072c0179589bea6247b91a75",
+      "bytes": 152410,
+      "width": 1120,
+      "height": 640,
+      "alpha": false,
+      "transparentFraction": 0.0,
+      "original": {
+        "file": "woodland-battlefield.png",
+        "sha256": "8061b8bad243688d52fe91efe40b199e71b8e0bc177e9eb9717ac0cd3e64dd04",
+        "width": 1659,
+        "height": 948,
+        "location": "ChatGPT generation conversation; optimized WebP exported locally"
+      }
+    },
+    {
+      "id": "practice-field",
+      "sha256": "78390d6c9eeadd7f73aea50b81a12936b6fbe2fca22a779f61a03311a020fa6f",
+      "bytes": 108396,
+      "width": 1120,
+      "height": 640,
+      "alpha": false,
+      "transparentFraction": 0.0,
+      "original": {
+        "file": "practice-field.png",
+        "sha256": "0d77149a8d6e043bcce510fdd0671c7ed7dba4a51df9811a4629ee22e18c8eb9",
+        "width": 1659,
+        "height": 948,
+        "location": "ChatGPT generation conversation; optimized WebP exported locally"
+      }
+    },
+    {
+      "id": "castle-states",
+      "sha256": "55072270b0eb7157c12401664c95f1bd42f5ee3d3ffe2a70a3cf11d5873fc09d",
+      "bytes": 176656,
+      "width": 1023,
+      "height": 682,
+      "alpha": true,
+      "transparentFraction": 0.5452725151429153,
+      "original": {
+        "file": "castle-states.png",
+        "sha256": "8fba389770ab13e867bb47832c352566e851cc2bcbbeaaef9d56770d13908f7b",
+        "width": 1536,
+        "height": 1024,
+        "location": "ChatGPT generation conversation; optimized WebP exported locally"
+      }
+    },
+    {
+      "id": "enemy-frames",
+      "sha256": "11a5c65aeb72ff3a75868e6847821abc4ee688999736ea2d6fb968c6bec4212d",
+      "bytes": 82432,
+      "width": 768,
+      "height": 512,
+      "alpha": true,
+      "transparentFraction": 0.686004638671875,
+      "original": {
+        "file": "enemy-frames.png",
+        "sha256": "61253fff1040a2f45293ba6c28eff82cf77902738934a343143360771fe61597",
+        "width": 1536,
+        "height": 1024,
+        "location": "ChatGPT generation conversation; optimized WebP exported locally"
+      }
+    },
+    {
+      "id": "combat-effects",
+      "sha256": "0b1c61268f9b827ad431bf944549dc6714e393f77ad4eb1a070d98b47da719ea",
+      "bytes": 122866,
+      "width": 768,
+      "height": 512,
+      "alpha": true,
+      "transparentFraction": 0.6927032470703125,
+      "original": {
+        "file": "combat-effects.png",
+        "sha256": "80ed9cec227f44012067dda62a4e6f28402fc6d970b33ad44d106f95b471c667",
+        "width": 1536,
+        "height": 1024,
+        "location": "ChatGPT generation conversation; optimized WebP exported locally"
+      }
+    },
+    {
+      "id": "woodland-props",
+      "sha256": "c1f95bb1ecfffff6fc87fc87882046cff6f8ebea5f8268d68e173a013370d299",
+      "bytes": 80158,
+      "width": 768,
+      "height": 512,
+      "alpha": true,
+      "transparentFraction": 0.7496287027994791,
+      "original": {
+        "file": "woodland-props.png",
+        "sha256": "3306b888f5423b6dc608ab38d060efacb86fd946d2652c49849c1b7196d07f2e",
+        "width": 1536,
+        "height": 1024,
+        "location": "ChatGPT generation conversation; optimized WebP exported locally"
+      }
+    },
+    {
+      "id": "workshop-paper",
+      "sha256": "4d346460770c1ebaf8bea0c542f7e5707ac3e7e68bcc1d8aea139b9187a39d0a",
+      "bytes": 4124,
+      "width": 512,
+      "height": 512,
+      "alpha": false,
+      "transparentFraction": 0.0,
+      "original": {
+        "file": "workshop-paper.png",
+        "sha256": "84b1475d3b7cd2fd17494e40aa3ce96f6440b6ffb35eb37f2155abaaa6a37ea9",
+        "width": 1254,
+        "height": 1254,
+        "location": "ChatGPT generation conversation; optimized WebP exported locally"
+      }
+    }
+  ],
+  "assets": [
+    {
+      "id": "woodland-battlefield",
+      "file": "woodland-battlefield.webp",
+      "source": "woodland-battlefield",
+      "width": 1120,
+      "height": 640,
+      "bytes": 195914,
+      "quality": 92,
+      "sha256": "0bfb8051517a7a9322daca83759aa751cbf04a2f4366962ad4b225f3e54f369b"
+    },
+    {
+      "id": "practice-field",
+      "file": "practice-field.webp",
+      "source": "practice-field",
+      "width": 1120,
+      "height": 640,
+      "bytes": 141680,
+      "quality": 92,
+      "sha256": "fffa3991966bbd7bb6f94d361651a77e77171f639779305225562fdba0f412dc"
+    },
+    {
+      "id": "castle-intact",
+      "file": "castle-intact.webp",
+      "source": "castle-states",
+      "width": 353,
+      "height": 488,
+      "bytes": 68852,
+      "quality": 92,
+      "sha256": "2cc09b0242d10b5e371ef26205e0a9b42f4de29bb39faa77fb95a52c5e90227e",
+      "cell": [
+        0,
+        0,
+        351,
+        682
+      ],
+      "crop": [
+        10,
+        93,
+        363,
+        581
+      ],
+      "alignmentOffset": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "castle-damaged",
+      "file": "castle-damaged.webp",
+      "source": "castle-states",
+      "width": 353,
+      "height": 488,
+      "bytes": 83836,
+      "quality": 92,
+      "sha256": "081950ad4803ed4e4350d64f843b7b204bcd4bee4ff767594b7bc08c76ede812",
+      "cell": [
+        351,
+        0,
+        688,
+        682
+      ],
+      "crop": [
+        10,
+        93,
+        363,
+        581
+      ],
+      "alignmentOffset": [
+        10,
+        0
+      ]
+    },
+    {
+      "id": "castle-ruined",
+      "file": "castle-ruined.webp",
+      "source": "castle-states",
+      "width": 353,
+      "height": 488,
+      "bytes": 97930,
+      "quality": 92,
+      "sha256": "25708c823cab20a32769fa5d04e538f3e3c691777eab6c1f6d6a8f8a6862a274",
+      "cell": [
+        688,
+        0,
+        1023,
+        682
+      ],
+      "crop": [
+        10,
+        93,
+        363,
+        581
+      ],
+      "alignmentOffset": [
+        6,
+        0
+      ]
+    },
+    {
+      "id": "scout-1",
+      "file": "scout-1.webp",
+      "source": "enemy-frames",
+      "width": 183,
+      "height": 164,
+      "bytes": 11916,
+      "quality": 92,
+      "sha256": "931ae9487730ab4d0ddd47e2aba1305919f5852d3d0f6ee3c69e90bfa2ceef3d",
+      "cell": [
+        0,
+        0,
+        194,
+        256
+      ],
+      "crop": [
+        10,
+        61,
+        193,
+        225
+      ],
+      "alignmentOffset": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "scout-2",
+      "file": "scout-2.webp",
+      "source": "enemy-frames",
+      "width": 183,
+      "height": 164,
+      "bytes": 11716,
+      "quality": 92,
+      "sha256": "b6ea230aa50558f89283e42ac6f733ca161ac25d3bafd052f662e05f6858c959",
+      "cell": [
+        194,
+        0,
+        384,
+        256
+      ],
+      "crop": [
+        10,
+        61,
+        193,
+        225
+      ],
+      "alignmentOffset": [
+        2,
+        0
+      ]
+    },
+    {
+      "id": "scout-3",
+      "file": "scout-3.webp",
+      "source": "enemy-frames",
+      "width": 183,
+      "height": 164,
+      "bytes": 12452,
+      "quality": 92,
+      "sha256": "cb4a429ecdec281ff72b03dd510f8401e0406acb723ed07fd7aed65ed3e931fa",
+      "cell": [
+        384,
+        0,
+        577,
+        256
+      ],
+      "crop": [
+        10,
+        61,
+        193,
+        225
+      ],
+      "alignmentOffset": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "scout-4",
+      "file": "scout-4.webp",
+      "source": "enemy-frames",
+      "width": 183,
+      "height": 164,
+      "bytes": 11878,
+      "quality": 92,
+      "sha256": "4bcecfadbbfa5e4a194fb75dbc4e068ea39c8834db06fae3403b14737b1eb01b",
+      "cell": [
+        577,
+        0,
+        768,
+        256
+      ],
+      "crop": [
+        10,
+        61,
+        193,
+        225
+      ],
+      "alignmentOffset": [
+        1,
+        0
+      ]
+    },
+    {
+      "id": "heavy-1",
+      "file": "heavy-1.webp",
+      "source": "enemy-frames",
+      "width": 205,
+      "height": 196,
+      "bytes": 17032,
+      "quality": 92,
+      "sha256": "2c178f2270e57f651ce29b1b06ec33320f69b786d7790901854788c3f735b3b9",
+      "cell": [
+        0,
+        256,
+        194,
+        512
+      ],
+      "crop": [
+        1,
+        14,
+        206,
+        210
+      ],
+      "alignmentOffset": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "heavy-2",
+      "file": "heavy-2.webp",
+      "source": "enemy-frames",
+      "width": 205,
+      "height": 196,
+      "bytes": 17236,
+      "quality": 92,
+      "sha256": "e0710934c1f6bae3f0061b255d6da9f749eba1f340e2f0e275213dde61bb7c77",
+      "cell": [
+        194,
+        256,
+        384,
+        512
+      ],
+      "crop": [
+        1,
+        14,
+        206,
+        210
+      ],
+      "alignmentOffset": [
+        2,
+        0
+      ]
+    },
+    {
+      "id": "heavy-3",
+      "file": "heavy-3.webp",
+      "source": "enemy-frames",
+      "width": 205,
+      "height": 196,
+      "bytes": 17586,
+      "quality": 92,
+      "sha256": "e978d8c52db5a62537d85dfd384de85ef5c5b7897fa93f505d3a742ec171547e",
+      "cell": [
+        384,
+        256,
+        577,
+        512
+      ],
+      "crop": [
+        1,
+        14,
+        206,
+        210
+      ],
+      "alignmentOffset": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "heavy-4",
+      "file": "heavy-4.webp",
+      "source": "enemy-frames",
+      "width": 205,
+      "height": 196,
+      "bytes": 17204,
+      "quality": 92,
+      "sha256": "ef3cd444c41e0bd746d17d7ee7e65e3ad80f7f6036e8a31df4622015a1aa6f92",
+      "cell": [
+        577,
+        256,
+        768,
+        512
+      ],
+      "crop": [
+        1,
+        14,
+        206,
+        210
+      ],
+      "alignmentOffset": [
+        1,
+        0
+      ]
+    },
+    {
+      "id": "impact",
+      "file": "impact.webp",
+      "source": "combat-effects",
+      "width": 195,
+      "height": 220,
+      "bytes": 23000,
+      "quality": 92,
+      "sha256": "7f42e07aac2143f32f13e2e9be21f16c9a998e25d1e3a3edf0c4d1382ffcf05c",
+      "cell": [
+        0,
+        0,
+        192,
+        256
+      ],
+      "crop": [
+        1,
+        29,
+        196,
+        249
+      ],
+      "alignmentOffset": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "slash",
+      "file": "slash.webp",
+      "source": "combat-effects",
+      "width": 195,
+      "height": 220,
+      "bytes": 17654,
+      "quality": 92,
+      "sha256": "aa2e9c4f7ad8d9d9d214e988be37d4f721bddd68f65793515ecf742877a11717",
+      "cell": [
+        192,
+        0,
+        384,
+        256
+      ],
+      "crop": [
+        1,
+        29,
+        196,
+        249
+      ],
+      "alignmentOffset": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "shield-block",
+      "file": "shield-block.webp",
+      "source": "combat-effects",
+      "width": 195,
+      "height": 220,
+      "bytes": 23598,
+      "quality": 92,
+      "sha256": "c823fe77ee8875fa9b04bd24ea4eb6aba68c6173ea2d4144f01a7639c93c2092",
+      "cell": [
+        384,
+        0,
+        576,
+        256
+      ],
+      "crop": [
+        1,
+        29,
+        196,
+        249
+      ],
+      "alignmentOffset": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "shield-break",
+      "file": "shield-break.webp",
+      "source": "combat-effects",
+      "width": 195,
+      "height": 220,
+      "bytes": 19656,
+      "quality": 92,
+      "sha256": "5302851beaa6ebcd2efc6a5ef90ad3aacc29cfa7f1f6a03f95a2bc5a53877c97",
+      "cell": [
+        576,
+        0,
+        768,
+        256
+      ],
+      "crop": [
+        1,
+        29,
+        196,
+        249
+      ],
+      "alignmentOffset": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "dust",
+      "file": "dust.webp",
+      "source": "combat-effects",
+      "width": 195,
+      "height": 220,
+      "bytes": 17628,
+      "quality": 92,
+      "sha256": "e104203091fa24f9b52241122a35ec9f2914d680e14ddfdc04a7b98fee80ef3e",
+      "cell": [
+        0,
+        256,
+        192,
+        512
+      ],
+      "crop": [
+        1,
+        29,
+        196,
+        249
+      ],
+      "alignmentOffset": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "smoke",
+      "file": "smoke.webp",
+      "source": "combat-effects",
+      "width": 195,
+      "height": 220,
+      "bytes": 18724,
+      "quality": 92,
+      "sha256": "531823d1edaa444370484d0ee9072f8382af9619cc7c98a37b7fc37a124ed1ac",
+      "cell": [
+        192,
+        256,
+        384,
+        512
+      ],
+      "crop": [
+        1,
+        29,
+        196,
+        249
+      ],
+      "alignmentOffset": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "victory",
+      "file": "victory.webp",
+      "source": "combat-effects",
+      "width": 195,
+      "height": 220,
+      "bytes": 22474,
+      "quality": 92,
+      "sha256": "da6314df55dedbad0af3f7377deeca82ef34c6b4e18e4430bd8e345de4b70c8d",
+      "cell": [
+        384,
+        256,
+        576,
+        512
+      ],
+      "crop": [
+        1,
+        29,
+        196,
+        249
+      ],
+      "alignmentOffset": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "defeat",
+      "file": "defeat.webp",
+      "source": "combat-effects",
+      "width": 195,
+      "height": 220,
+      "bytes": 17638,
+      "quality": 92,
+      "sha256": "abf7657d461d2a700faed06abf276a29949d973b2a487bdd3d227b8be0eb9cdd",
+      "cell": [
+        576,
+        256,
+        768,
+        512
+      ],
+      "crop": [
+        1,
+        29,
+        196,
+        249
+      ],
+      "alignmentOffset": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "grass",
+      "file": "grass.webp",
+      "source": "woodland-props",
+      "width": 180,
+      "height": 221,
+      "bytes": 13536,
+      "quality": 92,
+      "sha256": "a88eaf6fbb49535ab5ac093b8fadaaec11b94a1dbef4004195b1e3a89f16c314",
+      "cell": [
+        0,
+        0,
+        192,
+        256
+      ],
+      "crop": [
+        7,
+        26,
+        187,
+        247
+      ],
+      "alignmentOffset": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "bush",
+      "file": "bush.webp",
+      "source": "woodland-props",
+      "width": 180,
+      "height": 221,
+      "bytes": 18576,
+      "quality": 92,
+      "sha256": "8db346bcb8d1be6f3708fe2dfa796d37a038fa6a6db0ae57d0657070550d3b75",
+      "cell": [
+        192,
+        0,
+        384,
+        256
+      ],
+      "crop": [
+        7,
+        26,
+        187,
+        247
+      ],
+      "alignmentOffset": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "rocks",
+      "file": "rocks.webp",
+      "source": "woodland-props",
+      "width": 180,
+      "height": 221,
+      "bytes": 11592,
+      "quality": 92,
+      "sha256": "fbc638d167cb4884b4301cdf4f2d75ebe4c8a5996ca8e74f0680e97836d8c9c9",
+      "cell": [
+        384,
+        0,
+        576,
+        256
+      ],
+      "crop": [
+        7,
+        26,
+        187,
+        247
+      ],
+      "alignmentOffset": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "stump",
+      "file": "stump.webp",
+      "source": "woodland-props",
+      "width": 180,
+      "height": 221,
+      "bytes": 13318,
+      "quality": 92,
+      "sha256": "5829907d707ba180a2e7665874e7efc8ecde8e8054e6432c9caf0a4d10aae746",
+      "cell": [
+        576,
+        0,
+        768,
+        256
+      ],
+      "crop": [
+        7,
+        26,
+        187,
+        247
+      ],
+      "alignmentOffset": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "banner",
+      "file": "banner.webp",
+      "source": "woodland-props",
+      "width": 180,
+      "height": 221,
+      "bytes": 9638,
+      "quality": 92,
+      "sha256": "e17688e0ffd46d457780a3acc8a1bab8561a4d5b01c02955b1b2e61cb821702a",
+      "cell": [
+        0,
+        256,
+        192,
+        512
+      ],
+      "crop": [
+        7,
+        26,
+        187,
+        247
+      ],
+      "alignmentOffset": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "crate",
+      "file": "crate.webp",
+      "source": "woodland-props",
+      "width": 180,
+      "height": 221,
+      "bytes": 11038,
+      "quality": 92,
+      "sha256": "01baa7e4f775bb5529114b47daad8138d41e507e605849c21993c7e685a21de2",
+      "cell": [
+        192,
+        256,
+        384,
+        512
+      ],
+      "crop": [
+        7,
+        26,
+        187,
+        247
+      ],
+      "alignmentOffset": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "flowers",
+      "file": "flowers.webp",
+      "source": "woodland-props",
+      "width": 180,
+      "height": 221,
+      "bytes": 14772,
+      "quality": 92,
+      "sha256": "e999212369e1ec0b5e59e3b0461758db3ef659ffa8cac14a751c6ad65bd06355",
+      "cell": [
+        384,
+        256,
+        576,
+        512
+      ],
+      "crop": [
+        7,
+        26,
+        187,
+        247
+      ],
+      "alignmentOffset": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "leaves",
+      "file": "leaves.webp",
+      "source": "woodland-props",
+      "width": 180,
+      "height": 221,
+      "bytes": 14480,
+      "quality": 92,
+      "sha256": "7df6517aac0a71ec5214e334eeedec8144b35c83fb457288e7aa98bf0948e02a",
+      "cell": [
+        576,
+        256,
+        768,
+        512
+      ],
+      "crop": [
+        7,
+        26,
+        187,
+        247
+      ],
+      "alignmentOffset": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "workshop-paper",
+      "file": "workshop-paper.webp",
+      "source": "workshop-paper",
+      "width": 512,
+      "height": 512,
+      "bytes": 5800,
+      "quality": 92,
+      "sha256": "29918b9f2645ad7e2ed922172bda9dd7dd886cf558daa5ae54d858e024f12318"
+    }
+  ]
+}

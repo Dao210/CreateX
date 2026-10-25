@@ -1,0 +1,126 @@
+{
+  "game": "Doodle Siege",
+  "scope": "P0",
+  "requestedChannel": "ChatGPT website in the built-in browser",
+  "status": "completed",
+  "style": "纸张上的精致手绘微缩世界；细森林绿墨线、轻盈水彩、奶油纸纹、柔和苔绿、少量锈橙。严格俯视平面；清楚、克制，便于叠加深绿玩家线稿。不要像素风、写实3D、照片、文字、标签、UI、格线、水印。",
+  "assets": [
+    {
+      "id": "woodland-battlefield",
+      "kind": "background",
+      "target": "1792x1024",
+      "alpha": false,
+      "prompt": "直接生成成品图片。横向7:4画幅，严格俯视的平面草地，浅褐道路从右到左贯穿画面，高度约55%。中央80%宽、35%高保持疏朗，左侧10%留安装城堡的空地。边缘少量矮灌木、小石块、细草、落叶和树桩。不要画城堡、武器、敌人或角色。不要硬边框。"
+    },
+    {
+      "id": "practice-field",
+      "kind": "background",
+      "target": "1792x1024",
+      "alpha": false,
+      "prompt": "直接生成与woodland-battlefield同风格的武器测试场背景。横向7:4、严格俯视。中央是疏朗的浅沙色空地，右向左的轻淡土路位于55%高度，左10%预留城堡空地；周围仅少量苔草、圆石和木桩。整体更浅，让深绿原始线稿清楚可见。不要城堡、武器、敌人、靶子或角色。"
+    },
+    {
+      "id": "castle-states",
+      "kind": "sprite-sheet",
+      "target": "1536x1024",
+      "alpha": true,
+      "layout": {
+        "columns": 3,
+        "rows": 1,
+        "sprites": [
+          "castle-intact",
+          "castle-damaged",
+          "castle-ruined"
+        ]
+      },
+      "prompt": "直接生成真实透明RGBA的PNG精灵图。横向3列1行，每个格子等宽、留透明间隔、没有可见格线。三个同尺寸、同位置的俯视纸模型小城堡：左完整，中间墙面破裂与少量碎石，右坍塌的城门与废墟。城堡向画面右侧开门、圆形角塔、奶油石墙、森林绿屋顶、一面小锈橙旗。三格保持相同占地与锚点，每格约80%高度；无地板、天空、白底、棋盘底、阴影底板、人物或文字。"
+    },
+    {
+      "id": "enemy-frames",
+      "kind": "sprite-sheet",
+      "target": "1536x1024",
+      "alpha": true,
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "sprites": [
+          "scout-1",
+          "scout-2",
+          "scout-3",
+          "scout-4",
+          "heavy-1",
+          "heavy-2",
+          "heavy-3",
+          "heavy-4"
+        ],
+        "animationRows": true
+      },
+      "prompt": "直接生成真实透明RGBA的PNG精灵图，4列2行、8个等尺寸格子，无可见格线，各角色完整在自己的格子内。第一行是四帧行走循环：朝左进攻的小苔绿色圆身体纸绘小怪，两只小短脚、背包、锈橙围巾、短耳。第二行同样四帧：体形较大的重甲小怪，圆身体、灰绿盔甲、橙色小铆钉。严格俯视，主体中心与轮廓在各帧一致，步态只轻微改变双脚与围巾；每格60%大小，四周透明留白。不要武器、背景、地面阴影、白底、棋盘图案或文字。"
+    },
+    {
+      "id": "combat-effects",
+      "kind": "sprite-sheet",
+      "target": "1536x1024",
+      "alpha": true,
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "sprites": [
+          "impact",
+          "slash",
+          "shield-block",
+          "shield-break",
+          "dust",
+          "smoke",
+          "victory",
+          "defeat"
+        ]
+      },
+      "prompt": "直接生成真实透明RGBA的PNG精灵图，4列2行，各格同尺寸、留空且无格线。按阅读顺序八个独立手绘战斗特效：锈橙冲击星芒；柔和绿色短弧切击；绿金色盾牌格挡火花；绿色碎片飞散；轻沙色尘土团；灰绿色烟团；金橙色庆祝纸屑；灰绿与锈橙失落纸片。细绿墨线与稀薄水彩，明确留透明空间，不做大片实色背景。每格效果占中间60%，不超出格子。不要文字、角色、背景、白底或棋盘纹理。"
+    },
+    {
+      "id": "woodland-props",
+      "kind": "sprite-sheet",
+      "target": "1536x1024",
+      "alpha": true,
+      "layout": {
+        "columns": 4,
+        "rows": 2,
+        "sprites": [
+          "grass",
+          "bush",
+          "rocks",
+          "stump",
+          "banner",
+          "crate",
+          "flowers",
+          "leaves"
+        ]
+      },
+      "prompt": "直接生成真实透明RGBA的PNG精灵图，4列2行、8个独立装饰，每格同尺寸，四周透明间隔、无可见格线。按阅读顺序：细草簇、苔绿矮灌木、小圆石堆、年轮树桩、锈橙小旗与木杆、旧木箱、奶油黄小野花、锈橙落叶簇。严格俯视平面，精致细绿墨线与轻盈水彩，各物体完整位于格子中央，不互相接触。不要城堡、武器、敌人、地面、白底、棋盘底、文字或水印。"
+    },
+    {
+      "id": "workshop-paper",
+      "kind": "texture",
+      "target": "1024x1024",
+      "alpha": false,
+      "prompt": "直接生成正方形浅奶油纸张纹理，用作绘画工坊底图。极浅的自然纸纤维、均匀光照、干净细致，保持线稿可读。没有暗角、折痕、边框、装饰、物品、文字、图案或格线。四边纹理强度一致，适合重复铺设。"
+    }
+  ],
+  "delivery": {
+    "runtimeDirectory": "apps/siege/public/art",
+    "runtimeFormat": "WebP",
+    "maxBytesPerImage": 307200,
+    "rawWorkingDirectory": ".siege/art-work",
+    "rules": [
+      "Use generated pixels only after downloading and visually checking the actual output.",
+      "Validate real alpha; a checkerboard painted into RGB is not transparency.",
+      "Record the actual conversation URL, source checksum, dimensions and crop bounds after generation.",
+      "Generated art is presentation only. Original weapon strokes and Rapier collision rules remain authoritative.",
+      "Do not ship missing asset references or label pending assets as generated."
+    ],
+    "optimizedSourceDirectory": "docs/siege-art/source",
+    "manifest": "apps/siege/public/art/manifest.json",
+    "assetCount": 30
+  }
+}

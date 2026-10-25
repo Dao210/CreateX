@@ -1,0 +1,43 @@
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "本局已创建；下一步申请启动入口。"
+      }
+    ],
+    "structuredContent": {
+      "sessionId": "22222222-2222-4222-8222-222222222222",
+      "gameId": "siege",
+      "state": "ready",
+      "createdAt": "2026-10-23T04:00:00Z",
+      "expiresAt": "2026-10-23T06:00:00Z",
+      "frozen": {
+        "characterRef": {
+          "characterId": "11111111-1111-4111-8111-111111111111",
+          "revision": 1,
+          "contentHash": "c7c8bdd167bd53cbaa0bf1efadbb126e7b77608a37a8c5585415c1e7feca5eac"
+        },
+        "mapRef": {
+          "mapId": "woodland-1",
+          "revision": 1
+        },
+        "modeId": "player-defense",
+        "rulesVersion": "siege-actor-1",
+        "spawnZoneId": "player-start",
+        "compilerVersion": "entity-compiler-1",
+        "positionMm": {
+          "x": 3500,
+          "y": 11000
+        },
+        "rotationMdeg": 0
+      },
+      "supportedPresentations": [
+        "browser"
+      ]
+    },
+    "isError": false
+  }
+}

@@ -1,0 +1,108 @@
+{
+  "name": "create_play_launch",
+  "description": "创建短时游戏启动入口。作用于连接器已授权的 workspace；资源归属由服务端校验。 浏览器是必选入口；embedded 需要宿主实际支持。启动链接含短时凭证，禁止写入长期日志。",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "sessionId": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "requestId": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "presentation": {
+        "type": "string",
+        "enum": [
+          "auto",
+          "browser",
+          "embedded"
+        ]
+      },
+      "hostCapabilities": {
+        "type": "object",
+        "properties": {
+          "mcpApps": {
+            "type": "boolean"
+          },
+          "wasm": {
+            "type": "boolean"
+          },
+          "keyboard": {
+            "type": "boolean"
+          },
+          "audio": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "mcpApps",
+          "wasm",
+          "keyboard",
+          "audio"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "required": [
+      "sessionId",
+      "requestId",
+      "presentation",
+      "hostCapabilities"
+    ],
+    "additionalProperties": false
+  },
+  "outputSchema": {
+    "type": "object",
+    "properties": {
+      "launchId": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "sessionId": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "presentation": {
+        "type": "string",
+        "enum": [
+          "browser",
+          "embedded"
+        ]
+      },
+      "playUrl": {
+        "type": "string",
+        "format": "uri"
+      },
+      "expiresAt": {
+        "type": "string",
+        "format": "date-time"
+      },
+      "uiResourceUri": {
+        "type": "string",
+        "format": "uri"
+      }
+    },
+    "required": [
+      "launchId",
+      "sessionId",
+      "presentation",
+      "playUrl",
+      "expiresAt"
+    ],
+    "additionalProperties": true
+  },
+  "annotations": {
+    "readOnlyHint": false,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false
+  },
+  "x-http-operationId": "createPlayLaunch",
+  "_meta": {
+    "ui": {
+      "resourceUri": "ui://game/play.html"
+    }
+  }
+}

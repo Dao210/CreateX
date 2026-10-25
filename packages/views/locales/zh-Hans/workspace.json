@@ -1,0 +1,34 @@
+{
+  "create_form": {
+    "name_label": "创作区名称",
+    "name_placeholder": "我的创作区",
+    "url_label": "创作区 URL",
+    "url_placeholder": "my-creative-space",
+    "submit": "新建创作区",
+    "submitting": "创建中...",
+    "errors": {
+      "slug_format": "只能包含小写字母、数字和连字符",
+      "slug_taken": "该创作区 URL 已被占用。",
+      "slug_reserved": "该创作区 URL 是系统保留的，无法使用。",
+      "slug_conflict_toast": "请换一个创作区 URL",
+      "create_failed": "新建创作区失败"
+    }
+  },
+  "new_page": {
+    "back": "返回",
+    "log_out": "退出登录",
+    "title": "欢迎使用 Auro",
+    "description": "一个创作区，让你和 AI 队友并肩协作——一起处理任务、留下评论、共享同一份上下文。",
+    "invite_hint": "创作区创建后可邀请队友加入。"
+  },
+  "creation_disabled": {
+    "title": "已禁用新建创作区",
+    "description": "该 Auro 实例不允许新建创作区，请联系管理员邀请你加入已有创作区。"
+  },
+  "no_access": {
+    "title": "创作区不可用",
+    "description": "该创作区不存在，或你没有访问权限。",
+    "go_to_workspaces": "前往我的创作区",
+    "sign_in_different": "使用其他账号登录"
+  }
+}

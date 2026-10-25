@@ -1,0 +1,10 @@
+{
+  "sequence": 120,
+  "throttle": 1,
+  "steer": 0,
+  "aimWorldM": {
+    "x": 12,
+    "y": 7
+  },
+  "fire": true
+}

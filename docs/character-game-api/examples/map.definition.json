@@ -1,0 +1,234 @@
+{
+  "gameId": "siege",
+  "mapId": "woodland-1",
+  "revision": 1,
+  "name": "林地试驾场",
+  "boundsMm": {
+    "width": 24000,
+    "height": 14000
+  },
+  "traversableAreas": [
+    {
+      "id": "ground",
+      "boundsMm": {
+        "x": 0,
+        "y": 0,
+        "width": 24000,
+        "height": 14000
+      },
+      "mobilityTypes": [
+        "tracked",
+        "static"
+      ]
+    }
+  ],
+  "solidColliders": [
+    {
+      "id": "stone-wall",
+      "transform": {
+        "positionMm": {
+          "x": 12000,
+          "y": 3000
+        },
+        "rotationMdeg": 0
+      },
+      "geometry": {
+        "type": "box",
+        "lengthMm": 4000,
+        "widthMm": 500
+      }
+    }
+  ],
+  "spawnZones": [
+    {
+      "id": "player-start",
+      "boundsMm": {
+        "x": 1000,
+        "y": 9000,
+        "width": 5000,
+        "height": 4000
+      },
+      "positionMm": {
+        "x": 3500,
+        "y": 11000
+      },
+      "rotationMdeg": 0,
+      "archetypes": [
+        "tracked-tank@1"
+      ]
+    },
+    {
+      "id": "tower-start",
+      "boundsMm": {
+        "x": 6000,
+        "y": 500,
+        "width": 3500,
+        "height": 5000
+      },
+      "positionMm": {
+        "x": 7750,
+        "y": 3000
+      },
+      "rotationMdeg": 0,
+      "archetypes": [
+        "fixed-turret@1"
+      ]
+    }
+  ],
+  "routes": [
+    {
+      "id": "main",
+      "pointsMm": [
+        {
+          "x": 0,
+          "y": 7000
+        },
+        {
+          "x": 24000,
+          "y": 7000
+        }
+      ]
+    }
+  ],
+  "waves": [
+    [
+      {
+        "enemyType": "scout",
+        "routeId": "main",
+        "spawnTick": 30
+      },
+      {
+        "enemyType": "scout",
+        "routeId": "main",
+        "spawnTick": 120
+      },
+      {
+        "enemyType": "scout",
+        "routeId": "main",
+        "spawnTick": 210
+      }
+    ],
+    [
+      {
+        "enemyType": "scout",
+        "routeId": "main",
+        "spawnTick": 30
+      },
+      {
+        "enemyType": "scout",
+        "routeId": "main",
+        "spawnTick": 120
+      },
+      {
+        "enemyType": "scout",
+        "routeId": "main",
+        "spawnTick": 210
+      },
+      {
+        "enemyType": "scout",
+        "routeId": "main",
+        "spawnTick": 300
+      }
+    ],
+    [
+      {
+        "enemyType": "scout",
+        "routeId": "main",
+        "spawnTick": 30
+      },
+      {
+        "enemyType": "scout",
+        "routeId": "main",
+        "spawnTick": 120
+      },
+      {
+        "enemyType": "scout",
+        "routeId": "main",
+        "spawnTick": 210
+      },
+      {
+        "enemyType": "scout",
+        "routeId": "main",
+        "spawnTick": 300
+      },
+      {
+        "enemyType": "scout",
+        "routeId": "main",
+        "spawnTick": 390
+      }
+    ],
+    [
+      {
+        "enemyType": "scout",
+        "routeId": "main",
+        "spawnTick": 30
+      },
+      {
+        "enemyType": "scout",
+        "routeId": "main",
+        "spawnTick": 120
+      },
+      {
+        "enemyType": "scout",
+        "routeId": "main",
+        "spawnTick": 210
+      },
+      {
+        "enemyType": "scout",
+        "routeId": "main",
+        "spawnTick": 300
+      },
+      {
+        "enemyType": "scout",
+        "routeId": "main",
+        "spawnTick": 390
+      },
+      {
+        "enemyType": "scout",
+        "routeId": "main",
+        "spawnTick": 480
+      }
+    ],
+    [
+      {
+        "enemyType": "scout",
+        "routeId": "main",
+        "spawnTick": 30
+      },
+      {
+        "enemyType": "scout",
+        "routeId": "main",
+        "spawnTick": 120
+      },
+      {
+        "enemyType": "scout",
+        "routeId": "main",
+        "spawnTick": 210
+      },
+      {
+        "enemyType": "scout",
+        "routeId": "main",
+        "spawnTick": 300
+      },
+      {
+        "enemyType": "scout",
+        "routeId": "main",
+        "spawnTick": 390
+      },
+      {
+        "enemyType": "scout",
+        "routeId": "main",
+        "spawnTick": 480
+      },
+      {
+        "enemyType": "scout",
+        "routeId": "main",
+        "spawnTick": 570
+      }
+    ]
+  ],
+  "objective": {
+    "type": "protect-base",
+    "baseHp": 100
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "method": "tools/call",
+  "params": {
+    "name": "create_play_session",
+    "arguments": {
+      "requestId": "99999999-9999-4999-8999-999999999999",
+      "gameId": "siege",
+      "characterRef": {
+        "characterId": "11111111-1111-4111-8111-111111111111",
+        "revision": 1,
+        "contentHash": "c7c8bdd167bd53cbaa0bf1efadbb126e7b77608a37a8c5585415c1e7feca5eac"
+      },
+      "mapRef": {
+        "mapId": "woodland-1",
+        "revision": 1
+      },
+      "modeId": "player-defense",
+      "rulesVersion": "siege-actor-1",
+      "spawnZoneId": "player-start"
+    }
+  }
+}

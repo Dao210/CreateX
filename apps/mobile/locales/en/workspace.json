@@ -1,0 +1,38 @@
+{
+  "title": "Select a creative space",
+  "members": "Members",
+  "agents": "Agents",
+  "select": "Select creative space",
+  "switch": {
+    "title": "Switch creative space",
+    "message": "Switch to {{name}}?",
+    "confirm": "Switch",
+    "current_a11y": "{{name}} is the current creative space",
+    "switch_a11y": "Switch to {{name}}"
+  },
+  "empty": "You don't belong to any creative spaces yet. Contact your creative space admin to be invited.",
+  "agent": {
+    "coming_soon": "Agents coming soon.",
+    "title": "Agents",
+    "empty": "No agents yet",
+    "search_placeholder": "Search agents..."
+  },
+  "actions": {
+    "retry": "Retry",
+    "sign_out": "Sign out"
+  },
+  "auth": {
+    "signed_in_as": "Signed in as"
+  },
+  "errors": {
+    "load_failed": "Failed to load creative spaces: {{message}}"
+  },
+  "pins": {
+    "errors": {
+      "load_failed": "Failed to load pins: {{message}}"
+    },
+    "empty": "No pinned items yet.",
+    "unavailable_issue": "This pinned issue is unavailable.",
+    "unavailable_project": "This pinned project is unavailable."
+  }
+}

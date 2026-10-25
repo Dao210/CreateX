@@ -1,0 +1,114 @@
+{
+  "characterId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+  "revision": 1,
+  "contentHash": "fed5f037d21044841e84f7dd0a6fc6e6c5e8d19ec25a81c1fe588a5e24582e3f",
+  "createdAt": "2026-10-23T04:00:00Z",
+  "requires": [
+    "aim.turret@1",
+    "weapon.cannon@1"
+  ],
+  "content": {
+    "format": "auro.character",
+    "schemaVersion": 1,
+    "profile": "ground2d@1",
+    "name": "林地固定火炮",
+    "definition": {
+      "archetype": "fixed-turret@1",
+      "parts": [
+        {
+          "id": "base",
+          "parentId": null,
+          "role": "base",
+          "transform": {
+            "positionMm": {
+              "x": 0,
+              "y": 0
+            },
+            "rotationMdeg": 0
+          },
+          "geometry": {
+            "type": "box",
+            "lengthMm": 1000,
+            "widthMm": 1000
+          },
+          "visual": {
+            "type": "primitive",
+            "fill": "#8d886c",
+            "stroke": "#263d2a",
+            "strokeWidthMm": 20
+          }
+        },
+        {
+          "id": "turret",
+          "parentId": "base",
+          "role": "turret",
+          "transform": {
+            "positionMm": {
+              "x": 0,
+              "y": 0
+            },
+            "rotationMdeg": 0
+          },
+          "geometry": {
+            "type": "circle",
+            "radiusMm": 450
+          },
+          "visual": {
+            "type": "primitive",
+            "fill": "#648358",
+            "stroke": "#263d2a",
+            "strokeWidthMm": 20
+          }
+        },
+        {
+          "id": "barrel",
+          "parentId": "turret",
+          "role": "barrel",
+          "transform": {
+            "positionMm": {
+              "x": 800,
+              "y": 0
+            },
+            "rotationMdeg": 0
+          },
+          "geometry": {
+            "type": "box",
+            "lengthMm": 1600,
+            "widthMm": 500
+          },
+          "visual": {
+            "type": "primitive",
+            "fill": "#496b4b",
+            "stroke": "#263d2a",
+            "strokeWidthMm": 20
+          }
+        }
+      ],
+      "mobility": {
+        "type": "static"
+      },
+      "protection": {
+        "material": "steel",
+        "armorTier": 1
+      },
+      "weapons": [
+        {
+          "id": "primary",
+          "type": "cannon",
+          "turretPartId": "turret",
+          "barrelPartId": "barrel",
+          "caliberMm": 75,
+          "ammoType": "solid",
+          "muzzle": {
+            "positionMm": {
+              "x": 800,
+              "y": 0
+            },
+            "rotationMdeg": 0
+          }
+        }
+      ]
+    },
+    "assets": []
+  }
+}

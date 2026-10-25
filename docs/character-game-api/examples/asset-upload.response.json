@@ -1,0 +1,9 @@
+{
+  "uploadId": "44444444-4444-4444-8444-444444444444",
+  "method": "PUT",
+  "uploadUrl": "https://uploads.example.invalid/put/44444444-4444-4444-8444-444444444444?signature=example-only",
+  "headers": {
+    "Content-Type": "image/png"
+  },
+  "expiresAt": "2026-10-23T04:10:00Z"
+}

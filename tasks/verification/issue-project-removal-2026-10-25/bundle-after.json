@@ -1,0 +1,17 @@
+{
+  "tanks": {
+    "chunks": 48,
+    "bytes": 2668284,
+    "gzip": 840442
+  },
+  "chat": {
+    "chunks": 69,
+    "bytes": 5414331,
+    "gzip": 1727438
+  },
+  "inbox": {
+    "chunks": 49,
+    "bytes": 2710074,
+    "gzip": 854287
+  }
+}

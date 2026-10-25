@@ -1,0 +1,17 @@
+{
+  "valid": true,
+  "contentHash": "c7c8bdd167bd53cbaa0bf1efadbb126e7b77608a37a8c5585415c1e7feca5eac",
+  "requires": [
+    "aim.turret@1",
+    "movement.tracked@1",
+    "weapon.cannon@1"
+  ],
+  "errors": [],
+  "warnings": [],
+  "summary": {
+    "partCount": 5,
+    "assetCount": 0,
+    "estimatedColliderCount": 1,
+    "estimatedRigidBodyCount": 1
+  }
+}

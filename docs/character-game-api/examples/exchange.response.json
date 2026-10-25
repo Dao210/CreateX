@@ -1,0 +1,6 @@
+{
+  "sessionId": "22222222-2222-4222-8222-222222222222",
+  "gameAccessToken": "example-only-game-session-token-not-a-live-credential",
+  "tokenType": "Bearer",
+  "expiresAt": "2026-10-23T06:00:00Z"
+}

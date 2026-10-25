@@ -1,0 +1,92 @@
+[
+  {
+    "name": "balanced",
+    "draft": {
+      "profile": "tank-defense@1",
+      "name": "balanced",
+      "parts": {
+        "chassis": "standard",
+        "armor": "light",
+        "cannon": "standard"
+      },
+      "appearance": {
+        "body": "#26834a",
+        "accent": "#d6ef91",
+        "pattern": "stripe"
+      }
+    },
+    "expected": {
+      "speed": 83,
+      "armor": 1,
+      "projectileSpeed": 260,
+      "fireInterval": 22,
+      "cost": 4
+    }
+  },
+  {
+    "name": "forest-scout",
+    "draft": {
+      "profile": "tank-defense@1",
+      "name": "forest-scout",
+      "parts": {
+        "chassis": "light",
+        "armor": "light",
+        "cannon": "rapid"
+      },
+      "appearance": {
+        "body": "#26834a",
+        "accent": "#d6ef91",
+        "pattern": "stripe"
+      }
+    },
+    "expected": {
+      "speed": 106,
+      "armor": 1,
+      "projectileSpeed": 220,
+      "fireInterval": 15,
+      "cost": 8
+    }
+  },
+  {
+    "name": "siege-armor",
+    "draft": {
+      "profile": "tank-defense@1",
+      "name": "siege-armor",
+      "parts": {
+        "chassis": "heavy",
+        "armor": "heavy",
+        "cannon": "heavy"
+      },
+      "appearance": {
+        "body": "#26834a",
+        "accent": "#d6ef91",
+        "pattern": "stripe"
+      }
+    },
+    "expected": {
+      "speed": 50,
+      "armor": 4,
+      "projectileSpeed": 330,
+      "fireInterval": 34,
+      "cost": 9
+    }
+  },
+  {
+    "name": "over-budget",
+    "draft": {
+      "profile": "tank-defense@1",
+      "name": "over-budget",
+      "parts": {
+        "chassis": "light",
+        "armor": "heavy",
+        "cannon": "rapid"
+      },
+      "appearance": {
+        "body": "#26834a",
+        "accent": "#d6ef91",
+        "pattern": "stripe"
+      }
+    },
+    "expected": null
+  }
+]

@@ -1,0 +1,7 @@
+{
+  "launchId": "55555555-5555-4555-8555-555555555555",
+  "sessionId": "22222222-2222-4222-8222-222222222222",
+  "presentation": "browser",
+  "playUrl": "https://game.example.invalid/play/22222222-2222-4222-8222-222222222222#launch=example-only-launch-ticket-not-a-live-credential-0001",
+  "expiresAt": "2026-10-23T04:02:00Z"
+}

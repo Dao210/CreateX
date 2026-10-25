@@ -1,0 +1,43 @@
+{
+  "gameId": "siege",
+  "profile": "ground2d@1",
+  "rulesVersion": "siege-actor-1",
+  "compilerVersion": "entity-compiler-1",
+  "archetypes": [
+    "tracked-tank@1",
+    "fixed-turret@1"
+  ],
+  "capabilities": [
+    "aim.turret@1",
+    "movement.tracked@1",
+    "weapon.cannon@1"
+  ],
+  "limits": {
+    "maxParts": 16,
+    "maxColliders": 24,
+    "maxRigidBodies": 2,
+    "maxJoints": 1,
+    "maxAssets": 16,
+    "maxAssetBytes": 4194304,
+    "maxTotalAssetBytes": 16777216,
+    "maxFootprintDiameterMm": 6000
+  },
+  "modeIds": [
+    "player-defense"
+  ],
+  "maps": [
+    {
+      "ref": {
+        "mapId": "woodland-1",
+        "revision": 1
+      },
+      "name": "林地试驾场",
+      "modeIds": [
+        "player-defense"
+      ]
+    }
+  ],
+  "supportedPresentations": [
+    "browser"
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "items": [
+    {
+      "ref": {
+        "characterId": "11111111-1111-4111-8111-111111111111",
+        "revision": 1,
+        "contentHash": "c7c8bdd167bd53cbaa0bf1efadbb126e7b77608a37a8c5585415c1e7feca5eac"
+      },
+      "name": "林地轻型坦克",
+      "profile": "ground2d@1",
+      "updatedAt": "2026-10-23T04:00:00Z"
+    }
+  ],
+  "nextCursor": null
+}

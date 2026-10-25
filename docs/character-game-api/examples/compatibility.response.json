@@ -1,0 +1,28 @@
+{
+  "compatible": true,
+  "characterRef": {
+    "characterId": "11111111-1111-4111-8111-111111111111",
+    "revision": 1,
+    "contentHash": "c7c8bdd167bd53cbaa0bf1efadbb126e7b77608a37a8c5585415c1e7feca5eac"
+  },
+  "mapRef": {
+    "mapId": "woodland-1",
+    "revision": 1
+  },
+  "rulesVersion": "siege-actor-1",
+  "compilerVersion": "entity-compiler-1",
+  "errors": [],
+  "warnings": [],
+  "deployment": {
+    "positionMm": {
+      "x": 3500,
+      "y": 11000
+    },
+    "rotationMdeg": 0,
+    "actions": [
+      "move",
+      "aim",
+      "fire"
+    ]
+  }
+}

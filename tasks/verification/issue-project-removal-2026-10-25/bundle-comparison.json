@@ -1,0 +1,29 @@
+{
+  "tanks": {
+    "raw_before": 6167299,
+    "raw_after": 2668284,
+    "gzip_before": 1941790,
+    "gzip_after": 840442,
+    "gzip_reduction_percent": 56.72,
+    "chunks_before": 73,
+    "chunks_after": 48
+  },
+  "chat": {
+    "raw_before": 6206025,
+    "raw_after": 5414331,
+    "gzip_before": 1951854,
+    "gzip_after": 1727438,
+    "gzip_reduction_percent": 11.5,
+    "chunks_before": 73,
+    "chunks_after": 69
+  },
+  "inbox": {
+    "raw_before": 6153955,
+    "raw_after": 2710074,
+    "gzip_before": 1937178,
+    "gzip_after": 854287,
+    "gzip_reduction_percent": 55.9,
+    "chunks_before": 72,
+    "chunks_after": 49
+  }
+}

@@ -1,0 +1,238 @@
+{
+  "cannonDesign": {
+    "kind": "cannon-kit",
+    "version": 1,
+    "barrelLengthMm": 2200,
+    "barrelWidthMm": 950
+  },
+  "drawing": {
+    "schemaVersion": 1,
+    "revision": 7,
+    "gridSize": 4096,
+    "strokes": [
+      {
+        "id": "kit-axis",
+        "points": [
+          [
+            1640,
+            2048
+          ],
+          [
+            1632,
+            2110
+          ],
+          [
+            1608,
+            2168
+          ],
+          [
+            1570,
+            2218
+          ],
+          [
+            1520,
+            2256
+          ],
+          [
+            1462,
+            2280
+          ],
+          [
+            1400,
+            2288
+          ],
+          [
+            1338,
+            2280
+          ],
+          [
+            1280,
+            2256
+          ],
+          [
+            1230,
+            2218
+          ],
+          [
+            1192,
+            2168
+          ],
+          [
+            1168,
+            2110
+          ],
+          [
+            1160,
+            2048
+          ],
+          [
+            1168,
+            1986
+          ],
+          [
+            1192,
+            1928
+          ],
+          [
+            1230,
+            1878
+          ],
+          [
+            1280,
+            1840
+          ],
+          [
+            1338,
+            1816
+          ],
+          [
+            1400,
+            1808
+          ],
+          [
+            1462,
+            1816
+          ],
+          [
+            1520,
+            1840
+          ],
+          [
+            1570,
+            1878
+          ],
+          [
+            1608,
+            1928
+          ],
+          [
+            1632,
+            1986
+          ],
+          [
+            1640,
+            2048
+          ]
+        ],
+        "width": 24,
+        "color": "ink"
+      },
+      {
+        "id": "kit-brace",
+        "points": [
+          [
+            1400,
+            2048
+          ],
+          [
+            1750,
+            2048
+          ]
+        ],
+        "width": 24,
+        "color": "ink"
+      },
+      {
+        "id": "kit-barrel",
+        "points": [
+          [
+            1720,
+            1805
+          ],
+          [
+            2846,
+            1805
+          ],
+          [
+            2846,
+            2291
+          ],
+          [
+            1720,
+            2291
+          ],
+          [
+            1720,
+            1805
+          ]
+        ],
+        "width": 24,
+        "color": "ink"
+      }
+    ]
+  },
+  "spec": {
+    "schemaVersion": 1,
+    "drawingHash": "26b3119a6100a00d65f60689795879fb9f8f54b1281ebdaef8a46018eabe897a",
+    "parts": [
+      {
+        "id": "kit-axis",
+        "type": "wheel",
+        "strokeRefs": [
+          {
+            "strokeId": "kit-axis",
+            "fromPoint": 0,
+            "toPoint": 24
+          }
+        ],
+        "anchorHint": [
+          1400,
+          2048
+        ],
+        "directionHint": null
+      },
+      {
+        "id": "kit-brace",
+        "type": "structure",
+        "strokeRefs": [
+          {
+            "strokeId": "kit-brace",
+            "fromPoint": 0,
+            "toPoint": 1
+          }
+        ],
+        "anchorHint": null,
+        "directionHint": null
+      },
+      {
+        "id": "kit-barrel",
+        "type": "cannon",
+        "strokeRefs": [
+          {
+            "strokeId": "kit-barrel",
+            "fromPoint": 0,
+            "toPoint": 4
+          }
+        ],
+        "anchorHint": [
+          2846,
+          2048
+        ],
+        "directionHint": [
+          3102,
+          2048
+        ]
+      }
+    ],
+    "decorations": [],
+    "links": [
+      {
+        "from": "kit-axis",
+        "to": "kit-brace",
+        "kind": "fixed",
+        "anchorHint": null
+      },
+      {
+        "from": "kit-axis",
+        "to": "kit-barrel",
+        "kind": "fixed",
+        "anchorHint": null
+      }
+    ],
+    "mountHint": [
+      1400,
+      2048
+    ],
+    "unresolved": []
+  }
+}

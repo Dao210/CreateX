@@ -1,0 +1,11 @@
+/* Standalone shell stylesheet for `make up C=siege`.
+   The game's own rules live in @auro/views/siege/siege.css; this file only
+   adds what a standalone document needs — Tailwind v4 and the UI token
+   vocabulary the shared Button reads. Auro web has both in globals.css already,
+   so it imports the game stylesheet directly instead of this file. */
+@import "tailwindcss";
+@import "@auro/ui/styles/tokens.css";
+@import "@auro/views/siege/siege.css";
+
+@source "../../../packages/ui/**/*.{ts,tsx}";
+@source "../../../packages/views/siege/**/*.{ts,tsx}";

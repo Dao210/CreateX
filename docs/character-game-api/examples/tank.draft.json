@@ -1,0 +1,151 @@
+{
+  "format": "auro.character",
+  "schemaVersion": 1,
+  "profile": "ground2d@1",
+  "name": "林地轻型坦克",
+  "definition": {
+    "archetype": "tracked-tank@1",
+    "parts": [
+      {
+        "id": "hull",
+        "parentId": null,
+        "role": "hull",
+        "transform": {
+          "positionMm": {
+            "x": 0,
+            "y": 0
+          },
+          "rotationMdeg": 0
+        },
+        "geometry": {
+          "type": "box",
+          "lengthMm": 2400,
+          "widthMm": 1600
+        },
+        "visual": {
+          "type": "primitive",
+          "fill": "#496b4b",
+          "stroke": "#263d2a",
+          "strokeWidthMm": 20
+        }
+      },
+      {
+        "id": "track-left",
+        "parentId": "hull",
+        "role": "track",
+        "transform": {
+          "positionMm": {
+            "x": 0,
+            "y": -850
+          },
+          "rotationMdeg": 0
+        },
+        "geometry": {
+          "type": "box",
+          "lengthMm": 2600,
+          "widthMm": 300
+        },
+        "visual": {
+          "type": "primitive",
+          "fill": "#394237",
+          "stroke": "#263d2a",
+          "strokeWidthMm": 20
+        }
+      },
+      {
+        "id": "track-right",
+        "parentId": "hull",
+        "role": "track",
+        "transform": {
+          "positionMm": {
+            "x": 0,
+            "y": 850
+          },
+          "rotationMdeg": 0
+        },
+        "geometry": {
+          "type": "box",
+          "lengthMm": 2600,
+          "widthMm": 300
+        },
+        "visual": {
+          "type": "primitive",
+          "fill": "#394237",
+          "stroke": "#263d2a",
+          "strokeWidthMm": 20
+        }
+      },
+      {
+        "id": "turret",
+        "parentId": "hull",
+        "role": "turret",
+        "transform": {
+          "positionMm": {
+            "x": 0,
+            "y": 0
+          },
+          "rotationMdeg": 0
+        },
+        "geometry": {
+          "type": "circle",
+          "radiusMm": 450
+        },
+        "visual": {
+          "type": "primitive",
+          "fill": "#648358",
+          "stroke": "#263d2a",
+          "strokeWidthMm": 20
+        }
+      },
+      {
+        "id": "barrel",
+        "parentId": "turret",
+        "role": "barrel",
+        "transform": {
+          "positionMm": {
+            "x": 800,
+            "y": 0
+          },
+          "rotationMdeg": 0
+        },
+        "geometry": {
+          "type": "box",
+          "lengthMm": 1600,
+          "widthMm": 500
+        },
+        "visual": {
+          "type": "primitive",
+          "fill": "#496b4b",
+          "stroke": "#263d2a",
+          "strokeWidthMm": 20
+        }
+      }
+    ],
+    "mobility": {
+      "type": "tracked",
+      "engineTier": 1
+    },
+    "protection": {
+      "material": "steel",
+      "armorTier": 1
+    },
+    "weapons": [
+      {
+        "id": "primary",
+        "type": "cannon",
+        "turretPartId": "turret",
+        "barrelPartId": "barrel",
+        "caliberMm": 75,
+        "ammoType": "solid",
+        "muzzle": {
+          "positionMm": {
+            "x": 800,
+            "y": 0
+          },
+          "rotationMdeg": 0
+        }
+      }
+    ]
+  },
+  "assets": []
+}

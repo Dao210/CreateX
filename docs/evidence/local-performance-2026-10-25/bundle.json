@@ -1,0 +1,10 @@
+{
+  "status": 200,
+  "scriptCount": 70,
+  "jsBytes": 5485488,
+  "gzipBytes": 1732030,
+  "baselineJSBytes": 6433137,
+  "baselineGzipBytes": 1957684,
+  "jsReductionPercent": 14.7,
+  "gzipReductionPercent": 11.5
+}

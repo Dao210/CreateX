@@ -1,0 +1,540 @@
+{
+  "id": "ground2d@1",
+  "schemaVersion": 1,
+  "archetypes": [
+    "tracked-tank@1",
+    "fixed-turret@1"
+  ],
+  "capabilities": [
+    "aim.turret@1",
+    "movement.tracked@1",
+    "weapon.cannon@1"
+  ],
+  "limits": {
+    "maxParts": 16,
+    "maxColliders": 24,
+    "maxRigidBodies": 2,
+    "maxJoints": 1,
+    "maxAssets": 16,
+    "maxAssetBytes": 4194304,
+    "maxTotalAssetBytes": 16777216,
+    "maxFootprintDiameterMm": 6000
+  },
+  "draftSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "format": {
+        "const": "auro.character",
+        "type": "string"
+      },
+      "schemaVersion": {
+        "const": 1,
+        "type": "integer"
+      },
+      "profile": {
+        "const": "ground2d@1",
+        "type": "string"
+      },
+      "name": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 80
+      },
+      "definition": {
+        "type": "object",
+        "properties": {
+          "archetype": {
+            "type": "string",
+            "enum": [
+              "tracked-tank@1",
+              "fixed-turret@1"
+            ]
+          },
+          "parts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 48,
+                  "pattern": "^[a-z][a-z0-9_-]*$"
+                },
+                "parentId": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 48,
+                      "pattern": "^[a-z][a-z0-9_-]*$"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "role": {
+                  "type": "string",
+                  "enum": [
+                    "hull",
+                    "base",
+                    "turret",
+                    "barrel",
+                    "track",
+                    "decoration"
+                  ]
+                },
+                "transform": {
+                  "type": "object",
+                  "properties": {
+                    "positionMm": {
+                      "type": "object",
+                      "properties": {
+                        "x": {
+                          "type": "integer",
+                          "minimum": -100000,
+                          "maximum": 100000
+                        },
+                        "y": {
+                          "type": "integer",
+                          "minimum": -100000,
+                          "maximum": 100000
+                        }
+                      },
+                      "required": [
+                        "x",
+                        "y"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Integer millimetres. +X right, +Y down; local +X is forward. Convert to metres only at the runtime boundary."
+                    },
+                    "rotationMdeg": {
+                      "type": "integer",
+                      "minimum": -180000,
+                      "maximum": 180000
+                    }
+                  },
+                  "required": [
+                    "positionMm",
+                    "rotationMdeg"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Position and orientation in the parent coordinate frame. Positive rotation is clockwise; 90000 mdeg is 90 degrees."
+                },
+                "geometry": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "const": "box",
+                          "type": "string"
+                        },
+                        "lengthMm": {
+                          "type": "integer",
+                          "minimum": 50,
+                          "maximum": 6000
+                        },
+                        "widthMm": {
+                          "type": "integer",
+                          "minimum": 50,
+                          "maximum": 6000
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "lengthMm",
+                        "widthMm"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "const": "circle",
+                          "type": "string"
+                        },
+                        "radiusMm": {
+                          "type": "integer",
+                          "minimum": 25,
+                          "maximum": 3000
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "radiusMm"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "const": "polygon",
+                          "type": "string"
+                        },
+                        "verticesMm": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "x": {
+                                "type": "integer",
+                                "minimum": -100000,
+                                "maximum": 100000
+                              },
+                              "y": {
+                                "type": "integer",
+                                "minimum": -100000,
+                                "maximum": 100000
+                              }
+                            },
+                            "required": [
+                              "x",
+                              "y"
+                            ],
+                            "additionalProperties": false,
+                            "description": "Integer millimetres. +X right, +Y down; local +X is forward. Convert to metres only at the runtime boundary."
+                          },
+                          "minItems": 3,
+                          "maxItems": 16
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "verticesMm"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                },
+                "visual": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "const": "primitive",
+                          "type": "string"
+                        },
+                        "fill": {
+                          "type": "string",
+                          "minLength": 7,
+                          "maxLength": 7,
+                          "pattern": "^#[0-9a-f]{6}$"
+                        },
+                        "stroke": {
+                          "type": "string",
+                          "minLength": 7,
+                          "maxLength": 7,
+                          "pattern": "^#[0-9a-f]{6}$"
+                        },
+                        "strokeWidthMm": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 50
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "fill",
+                        "stroke",
+                        "strokeWidthMm"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "const": "sprite",
+                          "type": "string"
+                        },
+                        "assetId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "pivotPermille": {
+                          "type": "object",
+                          "properties": {
+                            "x": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 1000
+                            },
+                            "y": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 1000
+                            }
+                          },
+                          "required": [
+                            "x",
+                            "y"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "assetId",
+                        "pivotPermille"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "id",
+                "parentId",
+                "role",
+                "transform",
+                "geometry",
+                "visual"
+              ],
+              "additionalProperties": false,
+              "description": "Unique part ID; parentId is null for the single root. Parent references must be acyclic. Array order is render order."
+            },
+            "minItems": 3,
+            "maxItems": 16
+          },
+          "mobility": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "const": "tracked",
+                    "type": "string"
+                  },
+                  "engineTier": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 3
+                  }
+                },
+                "required": [
+                  "type",
+                  "engineTier"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "const": "static",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "type"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          },
+          "protection": {
+            "type": "object",
+            "properties": {
+              "material": {
+                "type": "string",
+                "enum": [
+                  "steel",
+                  "wood"
+                ]
+              },
+              "armorTier": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 3
+              }
+            },
+            "required": [
+              "material",
+              "armorTier"
+            ],
+            "additionalProperties": false
+          },
+          "weapons": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 48,
+                  "pattern": "^[a-z][a-z0-9_-]*$"
+                },
+                "type": {
+                  "const": "cannon",
+                  "type": "string"
+                },
+                "turretPartId": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 48,
+                  "pattern": "^[a-z][a-z0-9_-]*$"
+                },
+                "barrelPartId": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 48,
+                  "pattern": "^[a-z][a-z0-9_-]*$"
+                },
+                "caliberMm": {
+                  "type": "integer",
+                  "enum": [
+                    50,
+                    75,
+                    100
+                  ]
+                },
+                "ammoType": {
+                  "const": "solid",
+                  "type": "string"
+                },
+                "muzzle": {
+                  "type": "object",
+                  "properties": {
+                    "positionMm": {
+                      "type": "object",
+                      "properties": {
+                        "x": {
+                          "type": "integer",
+                          "minimum": -100000,
+                          "maximum": 100000
+                        },
+                        "y": {
+                          "type": "integer",
+                          "minimum": -100000,
+                          "maximum": 100000
+                        }
+                      },
+                      "required": [
+                        "x",
+                        "y"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Integer millimetres. +X right, +Y down; local +X is forward. Convert to metres only at the runtime boundary."
+                    },
+                    "rotationMdeg": {
+                      "type": "integer",
+                      "minimum": -180000,
+                      "maximum": 180000
+                    }
+                  },
+                  "required": [
+                    "positionMm",
+                    "rotationMdeg"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Position and orientation in the parent coordinate frame. Positive rotation is clockwise; 90000 mdeg is 90 degrees."
+                }
+              },
+              "required": [
+                "id",
+                "type",
+                "turretPartId",
+                "barrelPartId",
+                "caliberMm",
+                "ammoType",
+                "muzzle"
+              ],
+              "additionalProperties": false,
+              "description": "Exactly one cannon in v1. The barrel is a box, length 1600-3200 mm and width 450-1050 mm in 50 mm increments. Muzzle is at barrel-local {x:lengthMm/2,y:0}, rotationMdeg=0."
+            },
+            "minItems": 1,
+            "maxItems": 1
+          }
+        },
+        "required": [
+          "archetype",
+          "parts",
+          "mobility",
+          "protection",
+          "weapons"
+        ],
+        "additionalProperties": false,
+        "description": "tracked-tank@1 has hull root, two track parts, one turret and one barrel, with tracked mobility. fixed-turret@1 has base root, one turret and one barrel, with static mobility. Turret parents to root; barrel parents to turret."
+      },
+      "assets": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "assetId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "sha256": {
+              "type": "string",
+              "minLength": 64,
+              "maxLength": 64,
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "mediaType": {
+              "type": "string",
+              "enum": [
+                "image/png",
+                "image/webp"
+              ]
+            },
+            "sizeBytes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 4194304
+            },
+            "widthPx": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2048
+            },
+            "heightPx": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2048
+            }
+          },
+          "required": [
+            "assetId",
+            "sha256",
+            "mediaType",
+            "sizeBytes",
+            "widthPx",
+            "heightPx"
+          ],
+          "additionalProperties": false,
+          "description": "Immutable, authorized, completed upload. SHA-256 covers original image bytes. Metadata must exactly match the registered asset."
+        },
+        "minItems": 0,
+        "maxItems": 16
+      }
+    },
+    "required": [
+      "format",
+      "schemaVersion",
+      "profile",
+      "name",
+      "definition",
+      "assets"
+    ],
+    "additionalProperties": false,
+    "description": "Strict portable character content. No map/session IDs, URLs, credentials, scripts, mass, HP, speed, damage or cooldown. Numeric content is safe integers; game rules derive combat values."
+  },
+  "semanticRules": [
+    "Exactly one root with positionMm={x:0,y:0} and rotationMdeg=0; all part IDs unique; parent references connected and acyclic.",
+    "tracked-tank@1: hull root, exactly two track parts parented to hull, exactly one turret parented to hull and one barrel parented to turret; mobility.type=tracked.",
+    "fixed-turret@1: base root, exactly one turret parented to base and one barrel parented to turret; mobility.type=static; no track parts.",
+    "hull/base/track/barrel geometry is box; turret geometry is circle; polygon is only allowed for decoration and must be convex, simple and have no repeated closing vertex.",
+    "Cannon part references must match turret/barrel roles. Barrel length 1600-3200 mm, width 450-1050 mm, both in 50 mm increments. Muzzle is barrel-local {x:lengthMm/2,y:0}, rotationMdeg=0.",
+    "All dimensions, local transforms and tier values are safe integers. Body and rotating visual sweep envelope diameter is at most 6000 mm, including decorations.",
+    "All sprite assets must be authorized completed uploads; descriptor metadata and bytes hash must match. No duplicate or unused assets; asset list sorted by assetId.",
+    "No executable code or direct combat stats. Requires are server-derived: aim.turret@1 and weapon.cannon@1, plus movement.tracked@1 for tanks."
+  ]
+}

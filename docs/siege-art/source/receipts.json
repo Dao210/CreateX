@@ -1,0 +1,142 @@
+[
+  {
+    "bytes": 152410,
+    "chunks": 12,
+    "cornerAlpha": [
+      255,
+      255,
+      255,
+      255
+    ],
+    "height": 640,
+    "id": "woodland-battlefield",
+    "mode": "RGB",
+    "originalHeight": 948,
+    "originalSHA256": "8061b8bad243688d52fe91efe40b199e71b8e0bc177e9eb9717ac0cd3e64dd04",
+    "originalWidth": 1659,
+    "sha256": "b888e1ed5751510b2643c8a870a6983c6fa8ed0d072c0179589bea6247b91a75",
+    "sourceFilename": "woodland-battlefield.png",
+    "transparentFraction": 0,
+    "width": 1120
+  },
+  {
+    "bytes": 108396,
+    "chunks": 9,
+    "cornerAlpha": [
+      255,
+      255,
+      255,
+      255
+    ],
+    "height": 640,
+    "id": "practice-field",
+    "mode": "RGB",
+    "originalHeight": 948,
+    "originalSHA256": "0d77149a8d6e043bcce510fdd0671c7ed7dba4a51df9811a4629ee22e18c8eb9",
+    "originalWidth": 1659,
+    "sha256": "78390d6c9eeadd7f73aea50b81a12936b6fbe2fca22a779f61a03311a020fa6f",
+    "sourceFilename": "practice-field.png",
+    "transparentFraction": 0,
+    "width": 1120
+  },
+  {
+    "bytes": 176656,
+    "chunks": 14,
+    "cornerAlpha": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "height": 682,
+    "id": "castle-states",
+    "mode": "RGBA",
+    "originalHeight": 1024,
+    "originalSHA256": "8fba389770ab13e867bb47832c352566e851cc2bcbbeaaef9d56770d13908f7b",
+    "originalWidth": 1536,
+    "sha256": "55072270b0eb7157c12401664c95f1bd42f5ee3d3ffe2a70a3cf11d5873fc09d",
+    "sourceFilename": "castle-states.png",
+    "transparentFraction": 0.5428415934244791,
+    "width": 1023
+  },
+  {
+    "bytes": 82432,
+    "chunks": 7,
+    "cornerAlpha": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "height": 512,
+    "id": "enemy-frames",
+    "mode": "RGBA",
+    "originalHeight": 1024,
+    "originalSHA256": "61253fff1040a2f45293ba6c28eff82cf77902738934a343143360771fe61597",
+    "originalWidth": 1536,
+    "sha256": "11a5c65aeb72ff3a75868e6847821abc4ee688999736ea2d6fb968c6bec4212d",
+    "sourceFilename": "enemy-frames.png",
+    "transparentFraction": 0.6842435201009115,
+    "width": 768
+  },
+  {
+    "bytes": 122866,
+    "chunks": 10,
+    "cornerAlpha": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "height": 512,
+    "id": "combat-effects",
+    "mode": "RGBA",
+    "originalHeight": 1024,
+    "originalSHA256": "80ed9cec227f44012067dda62a4e6f28402fc6d970b33ad44d106f95b471c667",
+    "originalWidth": 1536,
+    "sha256": "0b1c61268f9b827ad431bf944549dc6714e393f77ad4eb1a070d98b47da719ea",
+    "sourceFilename": "combat-effects.png",
+    "transparentFraction": 0.6780611673990885,
+    "width": 768
+  },
+  {
+    "bytes": 80158,
+    "chunks": 6,
+    "cornerAlpha": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "height": 512,
+    "id": "woodland-props",
+    "mode": "RGBA",
+    "originalHeight": 1024,
+    "originalSHA256": "3306b888f5423b6dc608ab38d060efacb86fd946d2652c49849c1b7196d07f2e",
+    "originalWidth": 1536,
+    "sha256": "c1f95bb1ecfffff6fc87fc87882046cff6f8ebea5f8268d68e173a013370d299",
+    "sourceFilename": "woodland-props.png",
+    "transparentFraction": 0.7407811482747396,
+    "width": 768
+  },
+  {
+    "bytes": 4124,
+    "chunks": 1,
+    "cornerAlpha": [
+      255,
+      255,
+      255,
+      255
+    ],
+    "height": 512,
+    "id": "workshop-paper",
+    "mode": "RGB",
+    "originalHeight": 1254,
+    "originalSHA256": "84b1475d3b7cd2fd17494e40aa3ce96f6440b6ffb35eb37f2155abaaa6a37ea9",
+    "originalWidth": 1254,
+    "sha256": "4d346460770c1ebaf8bea0c542f7e5707ac3e7e68bcc1d8aea139b9187a39d0a",
+    "sourceFilename": "workshop-paper.png",
+    "transparentFraction": 0,
+    "width": 512
+  }
+]

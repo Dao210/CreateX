@@ -1,0 +1,187 @@
+{
+  "examples": [
+    {
+      "file": "examples/tank.draft.json",
+      "schema": "CharacterDraft"
+    },
+    {
+      "file": "examples/fixed-turret.draft.json",
+      "schema": "CharacterDraft"
+    },
+    {
+      "file": "examples/character.profile.json",
+      "schema": "CharacterProfile",
+      "operationId": "getCharacterSchema",
+      "direction": "response"
+    },
+    {
+      "file": "examples/characters.list.json",
+      "schema": "CharacterList",
+      "operationId": "listCharacters",
+      "direction": "response"
+    },
+    {
+      "file": "examples/games.list.json",
+      "schema": "GameList",
+      "operationId": "listGames",
+      "direction": "response"
+    },
+    {
+      "file": "examples/validate-tank.request.json",
+      "schema": "ValidationRequest",
+      "operationId": "validateCharacter",
+      "direction": "request"
+    },
+    {
+      "file": "examples/fixed-turret.package.json",
+      "schema": "CharacterPackage"
+    },
+    {
+      "file": "examples/save-tank.request.json",
+      "schema": "CreateCharacterRequest",
+      "operationId": "saveCharacter",
+      "direction": "request"
+    },
+    {
+      "file": "examples/tank.package.json",
+      "schema": "CharacterPackage",
+      "operationId": "saveCharacter",
+      "direction": "response"
+    },
+    {
+      "file": "examples/tank.validation.json",
+      "schema": "ValidationReport",
+      "operationId": "validateCharacter",
+      "direction": "response"
+    },
+    {
+      "file": "examples/game.profile.json",
+      "schema": "GameProfile",
+      "operationId": "getGameProfile",
+      "direction": "response"
+    },
+    {
+      "file": "examples/map.definition.json",
+      "schema": "MapDefinition",
+      "operationId": "getGameMap",
+      "direction": "response"
+    },
+    {
+      "file": "examples/create-session.request.json",
+      "schema": "CreatePlaySessionRequest",
+      "operationId": "createPlaySession",
+      "direction": "request"
+    },
+    {
+      "file": "examples/compatibility.response.json",
+      "schema": "CompatibilityReport",
+      "operationId": "checkGameCompatibility",
+      "direction": "response"
+    },
+    {
+      "file": "examples/session.response.json",
+      "schema": "PlaySession",
+      "operationId": "createPlaySession",
+      "direction": "response"
+    },
+    {
+      "file": "examples/create-launch.request.json",
+      "schema": "CreateLaunchRequest",
+      "operationId": "createPlayLaunch",
+      "direction": "request"
+    },
+    {
+      "file": "examples/launch.response.json",
+      "schema": "PlayLaunch",
+      "operationId": "createPlayLaunch",
+      "direction": "response"
+    },
+    {
+      "file": "examples/exchange.request.json",
+      "schema": "ExchangeLaunchRequest",
+      "operationId": "exchangePlayLaunch",
+      "direction": "request"
+    },
+    {
+      "file": "examples/exchange.response.json",
+      "schema": "GameCredential",
+      "operationId": "exchangePlayLaunch",
+      "direction": "response"
+    },
+    {
+      "file": "examples/bootstrap.response.json",
+      "schema": "PlayBootstrap",
+      "operationId": "getPlayBootstrap",
+      "direction": "response"
+    },
+    {
+      "file": "examples/player-input.json",
+      "schema": "PlayerInput"
+    },
+    {
+      "file": "examples/asset-upload.request.json",
+      "schema": "CreateUploadRequest",
+      "operationId": "createCharacterAssetUpload",
+      "direction": "request"
+    },
+    {
+      "file": "examples/asset-upload.response.json",
+      "schema": "UploadTicket",
+      "operationId": "createCharacterAssetUpload",
+      "direction": "response"
+    },
+    {
+      "file": "examples/asset-complete.request.json",
+      "schema": "CompleteUploadRequest",
+      "operationId": "completeCharacterAssetUpload",
+      "direction": "request"
+    },
+    {
+      "file": "examples/asset.response.json",
+      "schema": "AssetDescriptor",
+      "operationId": "completeCharacterAssetUpload",
+      "direction": "response"
+    },
+    {
+      "file": "examples/create-revision.request.json",
+      "schema": "CreateRevisionRequest",
+      "operationId": "createCharacterRevision",
+      "direction": "request"
+    },
+    {
+      "file": "examples/revision.package.json",
+      "schema": "CharacterPackage",
+      "operationId": "createCharacterRevision",
+      "direction": "response"
+    },
+    {
+      "file": "examples/revision-conflict.response.json",
+      "schema": "Problem"
+    },
+    {
+      "file": "examples/missing-barrel.request.json",
+      "schema": "ValidationRequest",
+      "operationId": "validateCharacter",
+      "direction": "request"
+    },
+    {
+      "file": "examples/missing-barrel.response.json",
+      "schema": "ValidationReport",
+      "operationId": "validateCharacter",
+      "direction": "response"
+    }
+  ],
+  "mcpExamples": [
+    "examples/mcp-save.request.json",
+    "examples/mcp-save.response.json",
+    "examples/mcp-error.response.json",
+    "examples/mcp-session.request.json",
+    "examples/mcp-session.response.json",
+    "examples/mcp-embedded-tool.json"
+  ],
+  "notes": [
+    "All domains, IDs and credentials are documentation fixtures.",
+    "Asset upload SHA-256 is a format-only placeholder; no image bytes are supplied.",
+    "Character hashes are real SHA-256 values over the supplied canonical drafts."
+  ]
+}

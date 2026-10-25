@@ -1,0 +1,9 @@
+{
+  "presentation": "auto",
+  "hostCapabilities": {
+    "mcpApps": false,
+    "wasm": true,
+    "keyboard": true,
+    "audio": true
+  }
+}

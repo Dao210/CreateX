@@ -1,0 +1,26 @@
+{
+  "status": "ok",
+  "invalid": [],
+  "timed_out_at": null,
+  "aborted_after_ms": null,
+  "fixture": {
+    "version": "1.2.0",
+    "sha256": "bbf763f777886e4e",
+    "bytes": 1400172
+  },
+  "typing_elapsed_ms": 4906,
+  "scenario_elapsed_ms": 5940,
+  "recalc_style_ms": 64,
+  "layout_ms": 45,
+  "task_ms": 852,
+  "long_task_count": 0,
+  "long_task_total_ms": 0,
+  "long_task_max_ms": 0,
+  "long_tasks_observed": true,
+  "dom_nodes": 12337,
+  "ticks_sent": 60,
+  "stream_span_ms": 5901,
+  "typed_chars": 172,
+  "node_version": "v24.14.1",
+  "browser_version": "145.0.7632.6"
+}

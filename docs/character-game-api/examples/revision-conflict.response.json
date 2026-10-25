@@ -1,0 +1,15 @@
+{
+  "requestId": "77777777-7777-4777-8777-777777777777",
+  "error": {
+    "code": "revision_conflict",
+    "message": "角色已有更新版本，请读取最新版本后重新提交。",
+    "retryable": false,
+    "issues": [
+      {
+        "code": "revision_conflict",
+        "path": "/expectedRevision",
+        "message": "提交版本为 1，最新版本为 2。"
+      }
+    ]
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "valid": false,
+  "contentHash": "d0e557a02383d947405f201f37927864ecc0793d2eef9cbb4c4e97c90b6d95c2",
+  "requires": [
+    "aim.turret@1",
+    "movement.tracked@1",
+    "weapon.cannon@1"
+  ],
+  "errors": [
+    {
+      "code": "missing_part_reference",
+      "path": "/definition/weapons/0/barrelPartId",
+      "message": "找不到指定炮管部件。"
+    }
+  ],
+  "warnings": [],
+  "summary": {
+    "partCount": 5,
+    "assetCount": 0,
+    "estimatedColliderCount": 1,
+    "estimatedRigidBodyCount": 1
+  }
+}

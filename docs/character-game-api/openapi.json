@@ -1,0 +1,3182 @@
+{
+  "openapi": "3.1.0",
+  "jsonSchemaDialect": "https://json-schema.org/draft/2020-12/schema",
+  "info": {
+    "title": "角色创造与游戏对接 API",
+    "version": "1.0.0-draft.1",
+    "description": "设计契约，尚未实现。角色创造与地图玩法分别通过独立 API 对接。示例域名、凭证、地图和规则版本仅用于文档。"
+  },
+  "servers": [
+    {
+      "url": "https://api.example.invalid",
+      "description": "文档占位地址，不能用于实际请求"
+    }
+  ],
+  "tags": [
+    {
+      "name": "角色创造"
+    },
+    {
+      "name": "游戏运行"
+    }
+  ],
+  "paths": {
+    "/api/characters/v1/profiles/{profileId}": {
+      "get": {
+        "operationId": "getCharacterSchema",
+        "summary": "读取内容规范和完整角色 Schema",
+        "tags": [
+          "角色创造"
+        ],
+        "responses": {
+          "200": {
+            "description": "读取内容规范和完整角色 Schema成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CharacterProfile"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "parameters": [
+          {
+            "name": "profileId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          },
+          {
+            "$ref": "#/components/parameters/WorkspaceId"
+          }
+        ],
+        "x-required-scope": "characters:read",
+        "security": [
+          {
+            "userBearer": []
+          },
+          {
+            "browserSession": []
+          }
+        ]
+      }
+    },
+    "/api/characters/v1/asset-uploads": {
+      "post": {
+        "operationId": "createCharacterAssetUpload",
+        "summary": "申请资源上传",
+        "tags": [
+          "角色创造"
+        ],
+        "responses": {
+          "201": {
+            "description": "申请资源上传成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadTicket"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/WorkspaceId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "description": "Cookie 认证时必填，Bearer 认证时不需要。"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateUploadRequest"
+              }
+            }
+          }
+        },
+        "x-required-scope": "characters:write",
+        "security": [
+          {
+            "userBearer": []
+          },
+          {
+            "browserSession": []
+          }
+        ],
+        "description": "Cookie 认证另需 X-CSRF-Token；Bearer 认证不使用 CSRF。"
+      }
+    },
+    "/api/characters/v1/asset-uploads/{uploadId}/complete": {
+      "post": {
+        "operationId": "completeCharacterAssetUpload",
+        "summary": "校验上传字节并登记资源",
+        "tags": [
+          "角色创造"
+        ],
+        "responses": {
+          "201": {
+            "description": "校验上传字节并登记资源成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetDescriptor"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "parameters": [
+          {
+            "name": "uploadId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/WorkspaceId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "description": "Cookie 认证时必填，Bearer 认证时不需要。"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompleteUploadRequest"
+              }
+            }
+          }
+        },
+        "x-required-scope": "characters:write",
+        "security": [
+          {
+            "userBearer": []
+          },
+          {
+            "browserSession": []
+          }
+        ],
+        "description": "Cookie 认证另需 X-CSRF-Token；Bearer 认证不使用 CSRF。"
+      }
+    },
+    "/api/characters/v1/validations": {
+      "post": {
+        "operationId": "validateCharacter",
+        "summary": "校验候选角色",
+        "tags": [
+          "角色创造"
+        ],
+        "responses": {
+          "200": {
+            "description": "校验候选角色成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationReport"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/WorkspaceId"
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "description": "Cookie 认证时必填，Bearer 认证时不需要。"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ValidationRequest"
+              }
+            }
+          }
+        },
+        "x-required-scope": "characters:read",
+        "security": [
+          {
+            "userBearer": []
+          },
+          {
+            "browserSession": []
+          }
+        ],
+        "description": "Cookie 认证另需 X-CSRF-Token；Bearer 认证不使用 CSRF。"
+      }
+    },
+    "/api/characters/v1/packages": {
+      "post": {
+        "operationId": "saveCharacter",
+        "summary": "创建角色及第一个不可变版本",
+        "tags": [
+          "角色创造"
+        ],
+        "responses": {
+          "201": {
+            "description": "创建角色及第一个不可变版本成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CharacterPackage"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/WorkspaceId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "description": "Cookie 认证时必填，Bearer 认证时不需要。"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCharacterRequest"
+              }
+            }
+          }
+        },
+        "x-required-scope": "characters:write",
+        "security": [
+          {
+            "userBearer": []
+          },
+          {
+            "browserSession": []
+          }
+        ],
+        "description": "Cookie 认证另需 X-CSRF-Token；Bearer 认证不使用 CSRF。"
+      },
+      "get": {
+        "operationId": "listCharacters",
+        "summary": "分页读取当前用户的角色库",
+        "tags": [
+          "角色创造"
+        ],
+        "responses": {
+          "200": {
+            "description": "分页读取当前用户的角色库成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CharacterList"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/WorkspaceId"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512
+            }
+          }
+        ],
+        "x-required-scope": "characters:read",
+        "security": [
+          {
+            "userBearer": []
+          },
+          {
+            "browserSession": []
+          }
+        ]
+      }
+    },
+    "/api/characters/v1/packages/{characterId}/revisions": {
+      "post": {
+        "operationId": "createCharacterRevision",
+        "summary": "带版本检查追加角色版本",
+        "tags": [
+          "角色创造"
+        ],
+        "responses": {
+          "201": {
+            "description": "带版本检查追加角色版本成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CharacterPackage"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "parameters": [
+          {
+            "name": "characterId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/WorkspaceId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "description": "Cookie 认证时必填，Bearer 认证时不需要。"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRevisionRequest"
+              }
+            }
+          }
+        },
+        "x-required-scope": "characters:write",
+        "security": [
+          {
+            "userBearer": []
+          },
+          {
+            "browserSession": []
+          }
+        ],
+        "description": "Cookie 认证另需 X-CSRF-Token；Bearer 认证不使用 CSRF。"
+      }
+    },
+    "/api/characters/v1/packages/{characterId}/revisions/{revision}": {
+      "get": {
+        "operationId": "getCharacter",
+        "summary": "读取不可变角色版本",
+        "tags": [
+          "角色创造"
+        ],
+        "responses": {
+          "200": {
+            "description": "读取不可变角色版本成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CharacterPackage"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "parameters": [
+          {
+            "name": "characterId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "revision",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            }
+          },
+          {
+            "$ref": "#/components/parameters/WorkspaceId"
+          }
+        ],
+        "x-required-scope": "characters:read",
+        "security": [
+          {
+            "userBearer": []
+          },
+          {
+            "browserSession": []
+          }
+        ]
+      }
+    },
+    "/api/games/v1/games": {
+      "get": {
+        "operationId": "listGames",
+        "summary": "读取可用游戏",
+        "tags": [
+          "游戏运行"
+        ],
+        "responses": {
+          "200": {
+            "description": "读取可用游戏成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GameList"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/WorkspaceId"
+          }
+        ],
+        "x-required-scope": "games:read",
+        "security": [
+          {
+            "userBearer": []
+          },
+          {
+            "browserSession": []
+          }
+        ]
+      }
+    },
+    "/api/games/v1/games/{gameId}/profile": {
+      "get": {
+        "operationId": "getGameProfile",
+        "summary": "读取游戏能力和地图索引",
+        "tags": [
+          "游戏运行"
+        ],
+        "responses": {
+          "200": {
+            "description": "读取游戏能力和地图索引成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GameProfile"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "parameters": [
+          {
+            "name": "gameId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          },
+          {
+            "$ref": "#/components/parameters/WorkspaceId"
+          }
+        ],
+        "x-required-scope": "games:read",
+        "security": [
+          {
+            "userBearer": []
+          },
+          {
+            "browserSession": []
+          }
+        ]
+      }
+    },
+    "/api/games/v1/games/{gameId}/maps/{mapId}/revisions/{revision}": {
+      "get": {
+        "operationId": "getGameMap",
+        "summary": "读取指定地图版本",
+        "tags": [
+          "游戏运行"
+        ],
+        "responses": {
+          "200": {
+            "description": "读取指定地图版本成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MapDefinition"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "parameters": [
+          {
+            "name": "revision",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            }
+          },
+          {
+            "name": "gameId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          },
+          {
+            "name": "mapId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          },
+          {
+            "$ref": "#/components/parameters/WorkspaceId"
+          }
+        ],
+        "x-required-scope": "games:read",
+        "security": [
+          {
+            "userBearer": []
+          },
+          {
+            "browserSession": []
+          }
+        ]
+      }
+    },
+    "/api/games/v1/games/{gameId}/compatibility": {
+      "post": {
+        "operationId": "checkGameCompatibility",
+        "summary": "检查角色与地图是否兼容",
+        "tags": [
+          "游戏运行"
+        ],
+        "responses": {
+          "200": {
+            "description": "检查角色与地图是否兼容成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompatibilityReport"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "parameters": [
+          {
+            "name": "gameId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          },
+          {
+            "$ref": "#/components/parameters/WorkspaceId"
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "description": "Cookie 认证时必填，Bearer 认证时不需要。"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompatibilityRequest"
+              }
+            }
+          }
+        },
+        "x-required-scope": "games:read",
+        "security": [
+          {
+            "userBearer": []
+          },
+          {
+            "browserSession": []
+          }
+        ],
+        "description": "Cookie 认证另需 X-CSRF-Token；Bearer 认证不使用 CSRF。"
+      }
+    },
+    "/api/games/v1/games/{gameId}/sessions": {
+      "post": {
+        "operationId": "createPlaySession",
+        "summary": "冻结角色地图规则并创建游戏会话",
+        "tags": [
+          "游戏运行"
+        ],
+        "responses": {
+          "201": {
+            "description": "冻结角色地图规则并创建游戏会话成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaySession"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "parameters": [
+          {
+            "name": "gameId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          },
+          {
+            "$ref": "#/components/parameters/WorkspaceId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "description": "Cookie 认证时必填，Bearer 认证时不需要。"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePlaySessionRequest"
+              }
+            }
+          }
+        },
+        "x-required-scope": "games:play",
+        "security": [
+          {
+            "userBearer": []
+          },
+          {
+            "browserSession": []
+          }
+        ],
+        "description": "Cookie 认证另需 X-CSRF-Token；Bearer 认证不使用 CSRF。"
+      }
+    },
+    "/api/games/v1/sessions/{sessionId}": {
+      "get": {
+        "operationId": "getPlaySession",
+        "summary": "读取游戏会话元数据",
+        "tags": [
+          "游戏运行"
+        ],
+        "responses": {
+          "200": {
+            "description": "读取游戏会话元数据成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaySession"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/WorkspaceId"
+          }
+        ],
+        "x-required-scope": "games:read",
+        "security": [
+          {
+            "userBearer": []
+          },
+          {
+            "browserSession": []
+          }
+        ]
+      }
+    },
+    "/api/games/v1/sessions/{sessionId}/launches": {
+      "post": {
+        "operationId": "createPlayLaunch",
+        "summary": "创建短时游戏启动入口",
+        "tags": [
+          "游戏运行"
+        ],
+        "responses": {
+          "201": {
+            "description": "创建短时游戏启动入口成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlayLaunch"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/WorkspaceId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "description": "Cookie 认证时必填，Bearer 认证时不需要。"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateLaunchRequest"
+              }
+            }
+          }
+        },
+        "x-required-scope": "games:play",
+        "security": [
+          {
+            "userBearer": []
+          },
+          {
+            "browserSession": []
+          }
+        ],
+        "description": "Cookie 认证另需 X-CSRF-Token；Bearer 认证不使用 CSRF。"
+      }
+    },
+    "/api/games/v1/launches/exchange": {
+      "post": {
+        "operationId": "exchangePlayLaunch",
+        "summary": "兑换绑定会话的游戏凭证",
+        "tags": [
+          "游戏运行"
+        ],
+        "responses": {
+          "200": {
+            "description": "兑换绑定会话的游戏凭证成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GameCredential"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExchangeLaunchRequest"
+              }
+            }
+          }
+        },
+        "x-required-scope": "launch:exchange",
+        "security": []
+      }
+    },
+    "/api/games/v1/sessions/{sessionId}/bootstrap": {
+      "get": {
+        "operationId": "getPlayBootstrap",
+        "summary": "读取本局冻结内容与短时资源地址",
+        "tags": [
+          "游戏运行"
+        ],
+        "responses": {
+          "200": {
+            "description": "读取本局冻结内容与短时资源地址成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlayBootstrap"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        },
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "x-required-scope": "game:bootstrap",
+        "security": [
+          {
+            "gameBearer": []
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "userBearer": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "用户 OAuth 访问令牌；服务端校验 workspace 成员和资源归属。"
+      },
+      "browserSession": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "auro_auth",
+        "description": "Auro 宿主的 auro_auth Cookie；写请求另需 X-CSRF-Token。独立宿主在部署文档中声明自己的会话认证适配。"
+      },
+      "gameBearer": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "通过一次性启动码兑换，只能读取指定游戏会话和其资源。"
+      }
+    },
+    "parameters": {
+      "WorkspaceId": {
+        "name": "X-Workspace-ID",
+        "in": "header",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "description": "宿主 workspace 选择器。被令牌固定的 workspace 优先；不能扩大授权。"
+      },
+      "IdempotencyKey": {
+        "name": "Idempotency-Key",
+        "in": "header",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "description": "相同调用重试复用 UUID；不同内容或下一次独立操作使用新 UUID。"
+      }
+    },
+    "responses": {
+      "Problem": {
+        "description": "统一错误；见技术文档错误码表。",
+        "headers": {
+          "X-Request-ID": {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "Retry-After": {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 86400
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "PointMm": {
+        "type": "object",
+        "properties": {
+          "x": {
+            "type": "integer",
+            "minimum": -100000,
+            "maximum": 100000
+          },
+          "y": {
+            "type": "integer",
+            "minimum": -100000,
+            "maximum": 100000
+          }
+        },
+        "required": [
+          "x",
+          "y"
+        ],
+        "additionalProperties": false,
+        "description": "Integer millimetres. +X right, +Y down; local +X is forward. Convert to metres only at the runtime boundary."
+      },
+      "Transform": {
+        "type": "object",
+        "properties": {
+          "positionMm": {
+            "$ref": "#/components/schemas/PointMm"
+          },
+          "rotationMdeg": {
+            "type": "integer",
+            "minimum": -180000,
+            "maximum": 180000
+          }
+        },
+        "required": [
+          "positionMm",
+          "rotationMdeg"
+        ],
+        "additionalProperties": false,
+        "description": "Position and orientation in the parent coordinate frame. Positive rotation is clockwise; 90000 mdeg is 90 degrees."
+      },
+      "BoxGeometry": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "const": "box",
+            "type": "string"
+          },
+          "lengthMm": {
+            "type": "integer",
+            "minimum": 50,
+            "maximum": 6000
+          },
+          "widthMm": {
+            "type": "integer",
+            "minimum": 50,
+            "maximum": 6000
+          }
+        },
+        "required": [
+          "type",
+          "lengthMm",
+          "widthMm"
+        ],
+        "additionalProperties": false
+      },
+      "CircleGeometry": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "const": "circle",
+            "type": "string"
+          },
+          "radiusMm": {
+            "type": "integer",
+            "minimum": 25,
+            "maximum": 3000
+          }
+        },
+        "required": [
+          "type",
+          "radiusMm"
+        ],
+        "additionalProperties": false
+      },
+      "PolygonGeometry": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "const": "polygon",
+            "type": "string"
+          },
+          "verticesMm": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PointMm"
+            },
+            "minItems": 3,
+            "maxItems": 16
+          }
+        },
+        "required": [
+          "type",
+          "verticesMm"
+        ],
+        "additionalProperties": false
+      },
+      "Geometry": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/BoxGeometry"
+          },
+          {
+            "$ref": "#/components/schemas/CircleGeometry"
+          },
+          {
+            "$ref": "#/components/schemas/PolygonGeometry"
+          }
+        ]
+      },
+      "PrimitiveVisual": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "const": "primitive",
+            "type": "string"
+          },
+          "fill": {
+            "type": "string",
+            "minLength": 7,
+            "maxLength": 7,
+            "pattern": "^#[0-9a-f]{6}$"
+          },
+          "stroke": {
+            "type": "string",
+            "minLength": 7,
+            "maxLength": 7,
+            "pattern": "^#[0-9a-f]{6}$"
+          },
+          "strokeWidthMm": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 50
+          }
+        },
+        "required": [
+          "type",
+          "fill",
+          "stroke",
+          "strokeWidthMm"
+        ],
+        "additionalProperties": false
+      },
+      "SpriteVisual": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "const": "sprite",
+            "type": "string"
+          },
+          "assetId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "pivotPermille": {
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 1000
+              },
+              "y": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 1000
+              }
+            },
+            "required": [
+              "x",
+              "y"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "type",
+          "assetId",
+          "pivotPermille"
+        ],
+        "additionalProperties": false
+      },
+      "Visual": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/PrimitiveVisual"
+          },
+          {
+            "$ref": "#/components/schemas/SpriteVisual"
+          }
+        ]
+      },
+      "Part": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 48,
+            "pattern": "^[a-z][a-z0-9_-]*$"
+          },
+          "parentId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 48,
+                "pattern": "^[a-z][a-z0-9_-]*$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "hull",
+              "base",
+              "turret",
+              "barrel",
+              "track",
+              "decoration"
+            ]
+          },
+          "transform": {
+            "$ref": "#/components/schemas/Transform"
+          },
+          "geometry": {
+            "$ref": "#/components/schemas/Geometry"
+          },
+          "visual": {
+            "$ref": "#/components/schemas/Visual"
+          }
+        },
+        "required": [
+          "id",
+          "parentId",
+          "role",
+          "transform",
+          "geometry",
+          "visual"
+        ],
+        "additionalProperties": false,
+        "description": "Unique part ID; parentId is null for the single root. Parent references must be acyclic. Array order is render order."
+      },
+      "Mobility": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "tracked",
+                "type": "string"
+              },
+              "engineTier": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 3
+              }
+            },
+            "required": [
+              "type",
+              "engineTier"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "static",
+                "type": "string"
+              }
+            },
+            "required": [
+              "type"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "Protection": {
+        "type": "object",
+        "properties": {
+          "material": {
+            "type": "string",
+            "enum": [
+              "steel",
+              "wood"
+            ]
+          },
+          "armorTier": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 3
+          }
+        },
+        "required": [
+          "material",
+          "armorTier"
+        ],
+        "additionalProperties": false
+      },
+      "Cannon": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 48,
+            "pattern": "^[a-z][a-z0-9_-]*$"
+          },
+          "type": {
+            "const": "cannon",
+            "type": "string"
+          },
+          "turretPartId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 48,
+            "pattern": "^[a-z][a-z0-9_-]*$"
+          },
+          "barrelPartId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 48,
+            "pattern": "^[a-z][a-z0-9_-]*$"
+          },
+          "caliberMm": {
+            "type": "integer",
+            "enum": [
+              50,
+              75,
+              100
+            ]
+          },
+          "ammoType": {
+            "const": "solid",
+            "type": "string"
+          },
+          "muzzle": {
+            "$ref": "#/components/schemas/Transform"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "turretPartId",
+          "barrelPartId",
+          "caliberMm",
+          "ammoType",
+          "muzzle"
+        ],
+        "additionalProperties": false,
+        "description": "Exactly one cannon in v1. The barrel is a box, length 1600-3200 mm and width 450-1050 mm in 50 mm increments. Muzzle is at barrel-local {x:lengthMm/2,y:0}, rotationMdeg=0."
+      },
+      "CharacterDefinition": {
+        "type": "object",
+        "properties": {
+          "archetype": {
+            "type": "string",
+            "enum": [
+              "tracked-tank@1",
+              "fixed-turret@1"
+            ]
+          },
+          "parts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Part"
+            },
+            "minItems": 3,
+            "maxItems": 16
+          },
+          "mobility": {
+            "$ref": "#/components/schemas/Mobility"
+          },
+          "protection": {
+            "$ref": "#/components/schemas/Protection"
+          },
+          "weapons": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Cannon"
+            },
+            "minItems": 1,
+            "maxItems": 1
+          }
+        },
+        "required": [
+          "archetype",
+          "parts",
+          "mobility",
+          "protection",
+          "weapons"
+        ],
+        "additionalProperties": false,
+        "description": "tracked-tank@1 has hull root, two track parts, one turret and one barrel, with tracked mobility. fixed-turret@1 has base root, one turret and one barrel, with static mobility. Turret parents to root; barrel parents to turret."
+      },
+      "AssetDescriptor": {
+        "type": "object",
+        "properties": {
+          "assetId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sha256": {
+            "type": "string",
+            "minLength": 64,
+            "maxLength": 64,
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "mediaType": {
+            "type": "string",
+            "enum": [
+              "image/png",
+              "image/webp"
+            ]
+          },
+          "sizeBytes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 4194304
+          },
+          "widthPx": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2048
+          },
+          "heightPx": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2048
+          }
+        },
+        "required": [
+          "assetId",
+          "sha256",
+          "mediaType",
+          "sizeBytes",
+          "widthPx",
+          "heightPx"
+        ],
+        "additionalProperties": false,
+        "description": "Immutable, authorized, completed upload. SHA-256 covers original image bytes. Metadata must exactly match the registered asset."
+      },
+      "CharacterDraft": {
+        "type": "object",
+        "properties": {
+          "format": {
+            "const": "auro.character",
+            "type": "string"
+          },
+          "schemaVersion": {
+            "const": 1,
+            "type": "integer"
+          },
+          "profile": {
+            "const": "ground2d@1",
+            "type": "string"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "definition": {
+            "$ref": "#/components/schemas/CharacterDefinition"
+          },
+          "assets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AssetDescriptor"
+            },
+            "minItems": 0,
+            "maxItems": 16
+          }
+        },
+        "required": [
+          "format",
+          "schemaVersion",
+          "profile",
+          "name",
+          "definition",
+          "assets"
+        ],
+        "additionalProperties": false,
+        "description": "Strict portable character content. No map/session IDs, URLs, credentials, scripts, mass, HP, speed, damage or cooldown. Numeric content is safe integers; game rules derive combat values."
+      },
+      "CharacterRef": {
+        "type": "object",
+        "properties": {
+          "characterId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "contentHash": {
+            "type": "string",
+            "minLength": 64,
+            "maxLength": 64,
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        },
+        "required": [
+          "characterId",
+          "revision",
+          "contentHash"
+        ],
+        "additionalProperties": false
+      },
+      "CharacterPackage": {
+        "type": "object",
+        "properties": {
+          "characterId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "contentHash": {
+            "type": "string",
+            "minLength": 64,
+            "maxLength": 64,
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "requires": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "movement.tracked@1",
+                "aim.turret@1",
+                "weapon.cannon@1"
+              ]
+            },
+            "minItems": 2,
+            "maxItems": 3,
+            "uniqueItems": true
+          },
+          "content": {
+            "$ref": "#/components/schemas/CharacterDraft"
+          }
+        },
+        "required": [
+          "characterId",
+          "revision",
+          "contentHash",
+          "createdAt",
+          "requires",
+          "content"
+        ],
+        "additionalProperties": true
+      },
+      "CharacterSummary": {
+        "type": "object",
+        "properties": {
+          "ref": {
+            "$ref": "#/components/schemas/CharacterRef"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "profile": {
+            "const": "ground2d@1",
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "ref",
+          "name",
+          "profile",
+          "updatedAt"
+        ],
+        "additionalProperties": true
+      },
+      "CharacterList": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CharacterSummary"
+            },
+            "minItems": 0,
+            "maxItems": 100
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 512
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor"
+        ],
+        "additionalProperties": true
+      },
+      "Issue": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80,
+            "pattern": "^[a-z][a-z0-9_]*$"
+          },
+          "path": {
+            "type": "string",
+            "minLength": 0,
+            "maxLength": 512
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512
+          }
+        },
+        "required": [
+          "code",
+          "path",
+          "message"
+        ],
+        "additionalProperties": false
+      },
+      "Problem": {
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 80,
+                "pattern": "^[a-z][a-z0-9_]*$"
+              },
+              "message": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 512
+              },
+              "retryable": {
+                "type": "boolean"
+              },
+              "issues": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Issue"
+                },
+                "minItems": 0,
+                "maxItems": 64
+              }
+            },
+            "required": [
+              "code",
+              "message",
+              "retryable",
+              "issues"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "requestId",
+          "error"
+        ],
+        "additionalProperties": true
+      },
+      "ValidationRequest": {
+        "type": "object",
+        "properties": {
+          "draft": {
+            "$ref": "#/components/schemas/CharacterDraft"
+          }
+        },
+        "required": [
+          "draft"
+        ],
+        "additionalProperties": false
+      },
+      "ValidationReport": {
+        "type": "object",
+        "properties": {
+          "valid": {
+            "type": "boolean"
+          },
+          "contentHash": {
+            "type": "string",
+            "minLength": 64,
+            "maxLength": 64,
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "requires": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "movement.tracked@1",
+                "aim.turret@1",
+                "weapon.cannon@1"
+              ]
+            },
+            "minItems": 0,
+            "maxItems": 3,
+            "uniqueItems": true
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Issue"
+            },
+            "minItems": 0,
+            "maxItems": 64
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Issue"
+            },
+            "minItems": 0,
+            "maxItems": 64
+          },
+          "summary": {
+            "type": "object",
+            "properties": {
+              "partCount": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 16
+              },
+              "assetCount": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 16
+              },
+              "estimatedColliderCount": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 24
+              },
+              "estimatedRigidBodyCount": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 2
+              }
+            },
+            "required": [
+              "partCount",
+              "assetCount",
+              "estimatedColliderCount",
+              "estimatedRigidBodyCount"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "valid",
+          "contentHash",
+          "requires",
+          "errors",
+          "warnings",
+          "summary"
+        ],
+        "additionalProperties": true
+      },
+      "CreateCharacterRequest": {
+        "type": "object",
+        "properties": {
+          "draft": {
+            "$ref": "#/components/schemas/CharacterDraft"
+          }
+        },
+        "required": [
+          "draft"
+        ],
+        "additionalProperties": false
+      },
+      "CreateRevisionRequest": {
+        "type": "object",
+        "properties": {
+          "expectedRevision": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "draft": {
+            "$ref": "#/components/schemas/CharacterDraft"
+          }
+        },
+        "required": [
+          "expectedRevision",
+          "draft"
+        ],
+        "additionalProperties": false
+      },
+      "Limits": {
+        "type": "object",
+        "properties": {
+          "maxParts": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 16
+          },
+          "maxColliders": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 24
+          },
+          "maxRigidBodies": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2
+          },
+          "maxJoints": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "maxAssets": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 16
+          },
+          "maxAssetBytes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 4194304
+          },
+          "maxTotalAssetBytes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 16777216
+          },
+          "maxFootprintDiameterMm": {
+            "type": "integer",
+            "minimum": 50,
+            "maximum": 6000
+          }
+        },
+        "required": [
+          "maxParts",
+          "maxColliders",
+          "maxRigidBodies",
+          "maxJoints",
+          "maxAssets",
+          "maxAssetBytes",
+          "maxTotalAssetBytes",
+          "maxFootprintDiameterMm"
+        ],
+        "additionalProperties": false
+      },
+      "CharacterProfile": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "const": "ground2d@1",
+            "type": "string"
+          },
+          "schemaVersion": {
+            "const": 1,
+            "type": "integer"
+          },
+          "archetypes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "tracked-tank@1",
+                "fixed-turret@1"
+              ]
+            },
+            "minItems": 1,
+            "maxItems": 2,
+            "uniqueItems": true
+          },
+          "capabilities": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "movement.tracked@1",
+                "aim.turret@1",
+                "weapon.cannon@1"
+              ]
+            },
+            "minItems": 1,
+            "maxItems": 3,
+            "uniqueItems": true
+          },
+          "limits": {
+            "$ref": "#/components/schemas/Limits"
+          },
+          "draftSchema": {
+            "type": "object",
+            "description": "Self-contained JSON Schema 2020-12; no external references."
+          },
+          "semanticRules": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1024
+            },
+            "minItems": 1,
+            "maxItems": 64
+          }
+        },
+        "required": [
+          "id",
+          "schemaVersion",
+          "archetypes",
+          "capabilities",
+          "limits",
+          "draftSchema",
+          "semanticRules"
+        ],
+        "additionalProperties": true
+      },
+      "CreateUploadRequest": {
+        "type": "object",
+        "properties": {
+          "fileName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+          },
+          "mediaType": {
+            "type": "string",
+            "enum": [
+              "image/png",
+              "image/webp"
+            ]
+          },
+          "sizeBytes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 4194304
+          },
+          "sha256": {
+            "type": "string",
+            "minLength": 64,
+            "maxLength": 64,
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "widthPx": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2048
+          },
+          "heightPx": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2048
+          }
+        },
+        "required": [
+          "fileName",
+          "mediaType",
+          "sizeBytes",
+          "sha256",
+          "widthPx",
+          "heightPx"
+        ],
+        "additionalProperties": false
+      },
+      "UploadTicket": {
+        "type": "object",
+        "properties": {
+          "uploadId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "method": {
+            "const": "PUT",
+            "type": "string"
+          },
+          "uploadUrl": {
+            "type": "string",
+            "format": "uri"
+          },
+          "headers": {
+            "type": "object",
+            "properties": {
+              "Content-Type": {
+                "type": "string",
+                "enum": [
+                  "image/png",
+                  "image/webp"
+                ]
+              }
+            },
+            "required": [
+              "Content-Type"
+            ],
+            "additionalProperties": false
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "uploadId",
+          "method",
+          "uploadUrl",
+          "headers",
+          "expiresAt"
+        ],
+        "additionalProperties": true
+      },
+      "CompleteUploadRequest": {
+        "type": "object",
+        "properties": {
+          "sha256": {
+            "type": "string",
+            "minLength": 64,
+            "maxLength": 64,
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        },
+        "required": [
+          "sha256"
+        ],
+        "additionalProperties": false
+      },
+      "MapRef": {
+        "type": "object",
+        "properties": {
+          "mapId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9_-]*$"
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          }
+        },
+        "required": [
+          "mapId",
+          "revision"
+        ],
+        "additionalProperties": false
+      },
+      "MapSummary": {
+        "type": "object",
+        "properties": {
+          "ref": {
+            "$ref": "#/components/schemas/MapRef"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "modeIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64,
+              "pattern": "^[a-z][a-z0-9_-]*$"
+            },
+            "minItems": 1,
+            "maxItems": 8,
+            "uniqueItems": true
+          }
+        },
+        "required": [
+          "ref",
+          "name",
+          "modeIds"
+        ],
+        "additionalProperties": false
+      },
+      "GameList": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "gameId": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64,
+                  "pattern": "^[a-z][a-z0-9_-]*$"
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 80
+                }
+              },
+              "required": [
+                "gameId",
+                "name"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 0,
+            "maxItems": 100
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "additionalProperties": true
+      },
+      "GameProfile": {
+        "type": "object",
+        "properties": {
+          "gameId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9_-]*$"
+          },
+          "profile": {
+            "const": "ground2d@1",
+            "type": "string"
+          },
+          "rulesVersion": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9_-]*$"
+          },
+          "compilerVersion": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9_-]*$"
+          },
+          "archetypes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "tracked-tank@1",
+                "fixed-turret@1"
+              ]
+            },
+            "minItems": 1,
+            "maxItems": 2,
+            "uniqueItems": true
+          },
+          "capabilities": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "movement.tracked@1",
+                "aim.turret@1",
+                "weapon.cannon@1"
+              ]
+            },
+            "minItems": 1,
+            "maxItems": 3,
+            "uniqueItems": true
+          },
+          "limits": {
+            "$ref": "#/components/schemas/Limits"
+          },
+          "modeIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64,
+              "pattern": "^[a-z][a-z0-9_-]*$"
+            },
+            "minItems": 1,
+            "maxItems": 8,
+            "uniqueItems": true
+          },
+          "maps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MapSummary"
+            },
+            "minItems": 1,
+            "maxItems": 100
+          },
+          "supportedPresentations": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "browser",
+                "embedded"
+              ]
+            },
+            "minItems": 1,
+            "maxItems": 2,
+            "uniqueItems": true
+          }
+        },
+        "required": [
+          "gameId",
+          "profile",
+          "rulesVersion",
+          "compilerVersion",
+          "archetypes",
+          "capabilities",
+          "limits",
+          "modeIds",
+          "maps",
+          "supportedPresentations"
+        ],
+        "additionalProperties": true
+      },
+      "RectMm": {
+        "type": "object",
+        "properties": {
+          "x": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100000
+          },
+          "y": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100000
+          },
+          "width": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100000
+          },
+          "height": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100000
+          }
+        },
+        "required": [
+          "x",
+          "y",
+          "width",
+          "height"
+        ],
+        "additionalProperties": false
+      },
+      "SpawnZone": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9_-]*$"
+          },
+          "boundsMm": {
+            "$ref": "#/components/schemas/RectMm"
+          },
+          "positionMm": {
+            "$ref": "#/components/schemas/PointMm"
+          },
+          "rotationMdeg": {
+            "type": "integer",
+            "minimum": -180000,
+            "maximum": 180000
+          },
+          "archetypes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "tracked-tank@1",
+                "fixed-turret@1"
+              ]
+            },
+            "minItems": 1,
+            "maxItems": 2,
+            "uniqueItems": true
+          }
+        },
+        "required": [
+          "id",
+          "boundsMm",
+          "positionMm",
+          "rotationMdeg",
+          "archetypes"
+        ],
+        "additionalProperties": false
+      },
+      "Route": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9_-]*$"
+          },
+          "pointsMm": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PointMm"
+            },
+            "minItems": 2,
+            "maxItems": 64
+          }
+        },
+        "required": [
+          "id",
+          "pointsMm"
+        ],
+        "additionalProperties": false
+      },
+      "WaveEntry": {
+        "type": "object",
+        "properties": {
+          "enemyType": {
+            "type": "string",
+            "enum": [
+              "scout",
+              "runner",
+              "armor",
+              "swarm",
+              "banner",
+              "boss"
+            ]
+          },
+          "routeId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9_-]*$"
+          },
+          "spawnTick": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 216000
+          }
+        },
+        "required": [
+          "enemyType",
+          "routeId",
+          "spawnTick"
+        ],
+        "additionalProperties": false
+      },
+      "MapDefinition": {
+        "type": "object",
+        "properties": {
+          "gameId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9_-]*$"
+          },
+          "mapId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9_-]*$"
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "boundsMm": {
+            "type": "object",
+            "properties": {
+              "width": {
+                "type": "integer",
+                "minimum": 1000,
+                "maximum": 100000
+              },
+              "height": {
+                "type": "integer",
+                "minimum": 1000,
+                "maximum": 100000
+              }
+            },
+            "required": [
+              "width",
+              "height"
+            ],
+            "additionalProperties": false
+          },
+          "traversableAreas": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64,
+                  "pattern": "^[a-z][a-z0-9_-]*$"
+                },
+                "boundsMm": {
+                  "$ref": "#/components/schemas/RectMm"
+                },
+                "mobilityTypes": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "tracked",
+                      "static"
+                    ]
+                  },
+                  "minItems": 1,
+                  "maxItems": 2,
+                  "uniqueItems": true
+                }
+              },
+              "required": [
+                "id",
+                "boundsMm",
+                "mobilityTypes"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 1,
+            "maxItems": 64
+          },
+          "solidColliders": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64,
+                  "pattern": "^[a-z][a-z0-9_-]*$"
+                },
+                "transform": {
+                  "$ref": "#/components/schemas/Transform"
+                },
+                "geometry": {
+                  "$ref": "#/components/schemas/Geometry"
+                }
+              },
+              "required": [
+                "id",
+                "transform",
+                "geometry"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 0,
+            "maxItems": 128
+          },
+          "spawnZones": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SpawnZone"
+            },
+            "minItems": 1,
+            "maxItems": 32
+          },
+          "routes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Route"
+            },
+            "minItems": 1,
+            "maxItems": 8
+          },
+          "waves": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/WaveEntry"
+              },
+              "minItems": 1,
+              "maxItems": 100
+            },
+            "minItems": 1,
+            "maxItems": 16
+          },
+          "objective": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "protect-base",
+                "type": "string"
+              },
+              "baseHp": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100000
+              }
+            },
+            "required": [
+              "type",
+              "baseHp"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "gameId",
+          "mapId",
+          "revision",
+          "name",
+          "boundsMm",
+          "traversableAreas",
+          "solidColliders",
+          "spawnZones",
+          "routes",
+          "waves",
+          "objective"
+        ],
+        "additionalProperties": true
+      },
+      "CompatibilityRequest": {
+        "type": "object",
+        "properties": {
+          "characterRef": {
+            "$ref": "#/components/schemas/CharacterRef"
+          },
+          "mapRef": {
+            "$ref": "#/components/schemas/MapRef"
+          },
+          "modeId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9_-]*$"
+          },
+          "rulesVersion": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9_-]*$"
+          },
+          "spawnZoneId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9_-]*$"
+          }
+        },
+        "required": [
+          "characterRef",
+          "mapRef",
+          "modeId",
+          "rulesVersion",
+          "spawnZoneId"
+        ],
+        "additionalProperties": false
+      },
+      "Deployment": {
+        "type": "object",
+        "properties": {
+          "positionMm": {
+            "$ref": "#/components/schemas/PointMm"
+          },
+          "rotationMdeg": {
+            "type": "integer",
+            "minimum": -180000,
+            "maximum": 180000
+          },
+          "actions": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "move",
+                "aim",
+                "fire"
+              ]
+            },
+            "minItems": 2,
+            "maxItems": 3,
+            "uniqueItems": true
+          }
+        },
+        "required": [
+          "positionMm",
+          "rotationMdeg",
+          "actions"
+        ],
+        "additionalProperties": false
+      },
+      "CompatibilityReport": {
+        "type": "object",
+        "properties": {
+          "compatible": {
+            "type": "boolean"
+          },
+          "characterRef": {
+            "$ref": "#/components/schemas/CharacterRef"
+          },
+          "mapRef": {
+            "$ref": "#/components/schemas/MapRef"
+          },
+          "rulesVersion": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9_-]*$"
+          },
+          "compilerVersion": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9_-]*$"
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Issue"
+            },
+            "minItems": 0,
+            "maxItems": 64
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Issue"
+            },
+            "minItems": 0,
+            "maxItems": 64
+          },
+          "deployment": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Deployment"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "compatible",
+          "characterRef",
+          "mapRef",
+          "rulesVersion",
+          "compilerVersion",
+          "errors",
+          "warnings",
+          "deployment"
+        ],
+        "additionalProperties": true
+      },
+      "CreatePlaySessionRequest": {
+        "type": "object",
+        "properties": {
+          "characterRef": {
+            "$ref": "#/components/schemas/CharacterRef"
+          },
+          "mapRef": {
+            "$ref": "#/components/schemas/MapRef"
+          },
+          "modeId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9_-]*$"
+          },
+          "rulesVersion": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9_-]*$"
+          },
+          "spawnZoneId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9_-]*$"
+          }
+        },
+        "required": [
+          "characterRef",
+          "mapRef",
+          "modeId",
+          "rulesVersion",
+          "spawnZoneId"
+        ],
+        "additionalProperties": false
+      },
+      "FrozenLoadout": {
+        "type": "object",
+        "properties": {
+          "characterRef": {
+            "$ref": "#/components/schemas/CharacterRef"
+          },
+          "mapRef": {
+            "$ref": "#/components/schemas/MapRef"
+          },
+          "modeId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9_-]*$"
+          },
+          "rulesVersion": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9_-]*$"
+          },
+          "compilerVersion": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9_-]*$"
+          },
+          "spawnZoneId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9_-]*$"
+          },
+          "positionMm": {
+            "$ref": "#/components/schemas/PointMm"
+          },
+          "rotationMdeg": {
+            "type": "integer",
+            "minimum": -180000,
+            "maximum": 180000
+          }
+        },
+        "required": [
+          "characterRef",
+          "mapRef",
+          "modeId",
+          "rulesVersion",
+          "compilerVersion",
+          "spawnZoneId",
+          "positionMm",
+          "rotationMdeg"
+        ],
+        "additionalProperties": false
+      },
+      "PlaySession": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "gameId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9_-]*$"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "ready",
+              "closed",
+              "expired"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "frozen": {
+            "$ref": "#/components/schemas/FrozenLoadout"
+          },
+          "supportedPresentations": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "browser",
+                "embedded"
+              ]
+            },
+            "minItems": 1,
+            "maxItems": 2,
+            "uniqueItems": true
+          }
+        },
+        "required": [
+          "sessionId",
+          "gameId",
+          "state",
+          "createdAt",
+          "expiresAt",
+          "frozen",
+          "supportedPresentations"
+        ],
+        "additionalProperties": true
+      },
+      "CreateLaunchRequest": {
+        "type": "object",
+        "properties": {
+          "presentation": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "browser",
+              "embedded"
+            ]
+          },
+          "hostCapabilities": {
+            "type": "object",
+            "properties": {
+              "mcpApps": {
+                "type": "boolean"
+              },
+              "wasm": {
+                "type": "boolean"
+              },
+              "keyboard": {
+                "type": "boolean"
+              },
+              "audio": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "mcpApps",
+              "wasm",
+              "keyboard",
+              "audio"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "presentation",
+          "hostCapabilities"
+        ],
+        "additionalProperties": false
+      },
+      "PlayLaunch": {
+        "type": "object",
+        "properties": {
+          "launchId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sessionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "presentation": {
+            "type": "string",
+            "enum": [
+              "browser",
+              "embedded"
+            ]
+          },
+          "playUrl": {
+            "type": "string",
+            "format": "uri"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "uiResourceUri": {
+            "type": "string",
+            "format": "uri"
+          }
+        },
+        "required": [
+          "launchId",
+          "sessionId",
+          "presentation",
+          "playUrl",
+          "expiresAt"
+        ],
+        "additionalProperties": true
+      },
+      "ExchangeLaunchRequest": {
+        "type": "object",
+        "properties": {
+          "launchTicket": {
+            "type": "string",
+            "minLength": 32,
+            "maxLength": 512
+          },
+          "clientNonce": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "launchTicket",
+          "clientNonce"
+        ],
+        "additionalProperties": false
+      },
+      "GameCredential": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "gameAccessToken": {
+            "type": "string",
+            "minLength": 32,
+            "maxLength": 4096
+          },
+          "tokenType": {
+            "const": "Bearer",
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "sessionId",
+          "gameAccessToken",
+          "tokenType",
+          "expiresAt"
+        ],
+        "additionalProperties": true
+      },
+      "ResolvedAsset": {
+        "type": "object",
+        "properties": {
+          "assetId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sha256": {
+            "type": "string",
+            "minLength": 64,
+            "maxLength": 64,
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "downloadUrl": {
+            "type": "string",
+            "format": "uri"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "assetId",
+          "sha256",
+          "downloadUrl",
+          "expiresAt"
+        ],
+        "additionalProperties": false
+      },
+      "PlayBootstrap": {
+        "type": "object",
+        "properties": {
+          "session": {
+            "$ref": "#/components/schemas/PlaySession"
+          },
+          "character": {
+            "$ref": "#/components/schemas/CharacterPackage"
+          },
+          "map": {
+            "$ref": "#/components/schemas/MapDefinition"
+          },
+          "assets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ResolvedAsset"
+            },
+            "minItems": 0,
+            "maxItems": 16
+          },
+          "simulation": {
+            "type": "object",
+            "properties": {
+              "tickRate": {
+                "const": 60,
+                "type": "integer"
+              },
+              "checkpointPolicy": {
+                "const": "completed-wave",
+                "type": "string"
+              },
+              "resultAuthority": {
+                "const": "local-unverified",
+                "type": "string"
+              }
+            },
+            "required": [
+              "tickRate",
+              "checkpointPolicy",
+              "resultAuthority"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "session",
+          "character",
+          "map",
+          "assets",
+          "simulation"
+        ],
+        "additionalProperties": true
+      },
+      "PlayerInput": {
+        "type": "object",
+        "properties": {
+          "sequence": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "throttle": {
+            "type": "number",
+            "minimum": -1,
+            "maximum": 1
+          },
+          "steer": {
+            "type": "number",
+            "minimum": -1,
+            "maximum": 1
+          },
+          "aimWorldM": {
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "number"
+              },
+              "y": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "x",
+              "y"
+            ],
+            "additionalProperties": false
+          },
+          "fire": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "sequence",
+          "throttle",
+          "steer",
+          "aimWorldM",
+          "fire"
+        ],
+        "additionalProperties": false
+      }
+    }
+  }
+}

@@ -1,0 +1,1619 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Auro Classic Tank Characters",
+    "version": "1.0.0"
+  },
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/api/tanks/v1/catalog": {
+      "parameters": [
+        {
+          "name": "X-Workspace-ID",
+          "in": "header",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "get": {
+        "operationId": "getTankCatalog",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TankCatalog"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tanks/v1/characters/validate": {
+      "parameters": [
+        {
+          "name": "X-Workspace-ID",
+          "in": "header",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "post": {
+        "operationId": "validateTankCharacter",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "draft": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "profile",
+                      "name",
+                      "parts",
+                      "appearance"
+                    ],
+                    "properties": {
+                      "profile": {
+                        "const": "tank-defense@1"
+                      },
+                      "name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 40,
+                        "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$"
+                      },
+                      "parts": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "chassis",
+                          "armor",
+                          "cannon"
+                        ],
+                        "properties": {
+                          "chassis": {
+                            "type": "string",
+                            "enum": [
+                              "light",
+                              "standard",
+                              "heavy"
+                            ]
+                          },
+                          "armor": {
+                            "type": "string",
+                            "enum": [
+                              "light",
+                              "standard",
+                              "heavy"
+                            ]
+                          },
+                          "cannon": {
+                            "type": "string",
+                            "enum": [
+                              "rapid",
+                              "standard",
+                              "heavy"
+                            ]
+                          }
+                        }
+                      },
+                      "appearance": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "body",
+                          "accent",
+                          "pattern"
+                        ],
+                        "properties": {
+                          "body": {
+                            "type": "string",
+                            "pattern": "^#[0-9a-fA-F]{6}$"
+                          },
+                          "accent": {
+                            "type": "string",
+                            "pattern": "^#[0-9a-fA-F]{6}$"
+                          },
+                          "pattern": {
+                            "type": "string",
+                            "enum": [
+                              "solid",
+                              "stripe",
+                              "cross"
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "required": [
+                  "draft"
+                ],
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TankValidation"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tanks/v1/characters": {
+      "parameters": [
+        {
+          "name": "X-Workspace-ID",
+          "in": "header",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "get": {
+        "operationId": "listTankCharacters",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "characters": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/TankCharacter"
+                      }
+                    }
+                  },
+                  "required": [
+                    "characters"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "saveTankCharacter",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "characterId": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "draft": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "profile",
+                      "name",
+                      "parts",
+                      "appearance"
+                    ],
+                    "properties": {
+                      "profile": {
+                        "const": "tank-defense@1"
+                      },
+                      "name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 40,
+                        "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$"
+                      },
+                      "parts": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "chassis",
+                          "armor",
+                          "cannon"
+                        ],
+                        "properties": {
+                          "chassis": {
+                            "type": "string",
+                            "enum": [
+                              "light",
+                              "standard",
+                              "heavy"
+                            ]
+                          },
+                          "armor": {
+                            "type": "string",
+                            "enum": [
+                              "light",
+                              "standard",
+                              "heavy"
+                            ]
+                          },
+                          "cannon": {
+                            "type": "string",
+                            "enum": [
+                              "rapid",
+                              "standard",
+                              "heavy"
+                            ]
+                          }
+                        }
+                      },
+                      "appearance": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "body",
+                          "accent",
+                          "pattern"
+                        ],
+                        "properties": {
+                          "body": {
+                            "type": "string",
+                            "pattern": "^#[0-9a-fA-F]{6}$"
+                          },
+                          "accent": {
+                            "type": "string",
+                            "pattern": "^#[0-9a-fA-F]{6}$"
+                          },
+                          "pattern": {
+                            "type": "string",
+                            "enum": [
+                              "solid",
+                              "stripe",
+                              "cross"
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "expectedRevision": {
+                    "maximum": 50,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "requestId": {
+                    "format": "uuid",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "requestId",
+                  "draft"
+                ],
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TankCharacter"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tanks/v1/characters/{id}": {
+      "parameters": [
+        {
+          "name": "X-Workspace-ID",
+          "in": "header",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "name": "revision",
+          "in": "query",
+          "schema": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50
+          }
+        }
+      ],
+      "get": {
+        "operationId": "getTankCharacter",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TankCharacter"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tanks/v1/compatibility": {
+      "parameters": [
+        {
+          "name": "X-Workspace-ID",
+          "in": "header",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "post": {
+        "operationId": "checkTankCompatibility",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "characterId": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "contentHash": {
+                    "pattern": "^sha256:[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  "mapId": {
+                    "enum": [
+                      "frontline",
+                      "river",
+                      "steel",
+                      "depot",
+                      "circuit",
+                      "citadel"
+                    ],
+                    "type": "string"
+                  },
+                  "mode": {
+                    "default": "campaign",
+                    "enum": [
+                      "campaign",
+                      "blitz",
+                      "survival"
+                    ],
+                    "type": "string"
+                  },
+                  "revision": {
+                    "maximum": 50,
+                    "minimum": 1,
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "characterId",
+                  "revision",
+                  "contentHash",
+                  "mapId"
+                ],
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TankCompatibility"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tanks/v1/sessions": {
+      "parameters": [
+        {
+          "name": "X-Workspace-ID",
+          "in": "header",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "post": {
+        "operationId": "createTankSession",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "characterId": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "contentHash": {
+                    "pattern": "^sha256:[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  "mapId": {
+                    "enum": [
+                      "frontline",
+                      "river",
+                      "steel",
+                      "depot",
+                      "circuit",
+                      "citadel"
+                    ],
+                    "type": "string"
+                  },
+                  "mode": {
+                    "default": "campaign",
+                    "enum": [
+                      "campaign",
+                      "blitz",
+                      "survival"
+                    ],
+                    "type": "string"
+                  },
+                  "requestId": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "revision": {
+                    "maximum": 50,
+                    "minimum": 1,
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "characterId",
+                  "revision",
+                  "contentHash",
+                  "mapId",
+                  "requestId"
+                ],
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TankPlaySession"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tanks/v1/sessions/{id}": {
+      "parameters": [
+        {
+          "name": "X-Workspace-ID",
+          "in": "header",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "get": {
+        "operationId": "getTankSession",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TankPlaySession"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    },
+    "schemas": {
+      "TankCatalog": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "const": "tank-defense@1"
+          },
+          "rulesVersion": {
+            "const": 1
+          },
+          "compilerVersion": {
+            "const": 1
+          },
+          "budget": {
+            "const": 9
+          },
+          "chassis": {
+            "type": "object",
+            "properties": {
+              "light": {
+                "type": "object",
+                "properties": {
+                  "speed": {
+                    "type": "integer"
+                  },
+                  "armor": {
+                    "type": "integer"
+                  },
+                  "cost": {
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "speed",
+                  "armor",
+                  "cost"
+                ]
+              },
+              "standard": {
+                "type": "object",
+                "properties": {
+                  "speed": {
+                    "type": "integer"
+                  },
+                  "armor": {
+                    "type": "integer"
+                  },
+                  "cost": {
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "speed",
+                  "armor",
+                  "cost"
+                ]
+              },
+              "heavy": {
+                "type": "object",
+                "properties": {
+                  "speed": {
+                    "type": "integer"
+                  },
+                  "armor": {
+                    "type": "integer"
+                  },
+                  "cost": {
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "speed",
+                  "armor",
+                  "cost"
+                ]
+              }
+            },
+            "required": [
+              "light",
+              "standard",
+              "heavy"
+            ]
+          },
+          "armor": {
+            "type": "object",
+            "properties": {
+              "light": {
+                "type": "object",
+                "properties": {
+                  "speed": {
+                    "type": "integer"
+                  },
+                  "armor": {
+                    "type": "integer"
+                  },
+                  "cost": {
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "speed",
+                  "armor",
+                  "cost"
+                ]
+              },
+              "standard": {
+                "type": "object",
+                "properties": {
+                  "speed": {
+                    "type": "integer"
+                  },
+                  "armor": {
+                    "type": "integer"
+                  },
+                  "cost": {
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "speed",
+                  "armor",
+                  "cost"
+                ]
+              },
+              "heavy": {
+                "type": "object",
+                "properties": {
+                  "speed": {
+                    "type": "integer"
+                  },
+                  "armor": {
+                    "type": "integer"
+                  },
+                  "cost": {
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "speed",
+                  "armor",
+                  "cost"
+                ]
+              }
+            },
+            "required": [
+              "light",
+              "standard",
+              "heavy"
+            ]
+          },
+          "cannon": {
+            "type": "object",
+            "properties": {
+              "rapid": {
+                "type": "object",
+                "properties": {
+                  "projectileSpeed": {
+                    "type": "integer"
+                  },
+                  "fireInterval": {
+                    "type": "integer"
+                  },
+                  "cost": {
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "projectileSpeed",
+                  "fireInterval",
+                  "cost"
+                ]
+              },
+              "standard": {
+                "type": "object",
+                "properties": {
+                  "projectileSpeed": {
+                    "type": "integer"
+                  },
+                  "fireInterval": {
+                    "type": "integer"
+                  },
+                  "cost": {
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "projectileSpeed",
+                  "fireInterval",
+                  "cost"
+                ]
+              },
+              "heavy": {
+                "type": "object",
+                "properties": {
+                  "projectileSpeed": {
+                    "type": "integer"
+                  },
+                  "fireInterval": {
+                    "type": "integer"
+                  },
+                  "cost": {
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "projectileSpeed",
+                  "fireInterval",
+                  "cost"
+                ]
+              }
+            },
+            "required": [
+              "rapid",
+              "standard",
+              "heavy"
+            ]
+          },
+          "maps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TankMap"
+            }
+          },
+          "modes": {
+            "type": "array",
+            "items": {
+              "enum": [
+                "campaign",
+                "blitz",
+                "survival"
+              ]
+            }
+          },
+          "actions": {
+            "type": "array",
+            "items": {
+              "enum": [
+                "four_direction_move",
+                "fire"
+              ]
+            }
+          },
+          "draftSchema": {
+            "type": "object",
+            "description": "JSON Schema for an agent-created draft; part cost and trimmed-name constraints are also checked by the compiler."
+          }
+        },
+        "required": [
+          "profile",
+          "rulesVersion",
+          "compilerVersion",
+          "budget",
+          "chassis",
+          "armor",
+          "cannon",
+          "maps",
+          "modes",
+          "actions",
+          "draftSchema"
+        ],
+        "example": {
+          "profile": "tank-defense@1",
+          "rulesVersion": 1,
+          "compilerVersion": 1,
+          "budget": 9,
+          "chassis": {
+            "light": {
+              "speed": 106,
+              "armor": 0,
+              "cost": 3
+            },
+            "standard": {
+              "speed": 83,
+              "armor": 0,
+              "cost": 1
+            },
+            "heavy": {
+              "speed": 66,
+              "armor": 1,
+              "cost": 2
+            }
+          },
+          "armor": {
+            "light": {
+              "speed": 0,
+              "armor": 0,
+              "cost": 1
+            },
+            "standard": {
+              "speed": -8,
+              "armor": 1,
+              "cost": 2
+            },
+            "heavy": {
+              "speed": -16,
+              "armor": 2,
+              "cost": 4
+            }
+          },
+          "cannon": {
+            "rapid": {
+              "projectileSpeed": 220,
+              "fireInterval": 15,
+              "cost": 4
+            },
+            "standard": {
+              "projectileSpeed": 260,
+              "fireInterval": 22,
+              "cost": 2
+            },
+            "heavy": {
+              "projectileSpeed": 330,
+              "fireInterval": 34,
+              "cost": 3
+            }
+          },
+          "maps": [
+            {
+              "id": "frontline",
+              "levelId": 1,
+              "version": 1
+            },
+            {
+              "id": "river",
+              "levelId": 2,
+              "version": 1
+            },
+            {
+              "id": "steel",
+              "levelId": 3,
+              "version": 1
+            },
+            {
+              "id": "depot",
+              "levelId": 4,
+              "version": 1
+            },
+            {
+              "id": "circuit",
+              "levelId": 5,
+              "version": 1
+            },
+            {
+              "id": "citadel",
+              "levelId": 6,
+              "version": 1
+            }
+          ],
+          "draftSchema": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "profile",
+              "name",
+              "parts",
+              "appearance"
+            ],
+            "properties": {
+              "profile": {
+                "const": "tank-defense@1"
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 40,
+                "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$"
+              },
+              "parts": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "chassis",
+                  "armor",
+                  "cannon"
+                ],
+                "properties": {
+                  "chassis": {
+                    "type": "string",
+                    "enum": [
+                      "light",
+                      "standard",
+                      "heavy"
+                    ]
+                  },
+                  "armor": {
+                    "type": "string",
+                    "enum": [
+                      "light",
+                      "standard",
+                      "heavy"
+                    ]
+                  },
+                  "cannon": {
+                    "type": "string",
+                    "enum": [
+                      "rapid",
+                      "standard",
+                      "heavy"
+                    ]
+                  }
+                }
+              },
+              "appearance": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "body",
+                  "accent",
+                  "pattern"
+                ],
+                "properties": {
+                  "body": {
+                    "type": "string",
+                    "pattern": "^#[0-9a-fA-F]{6}$"
+                  },
+                  "accent": {
+                    "type": "string",
+                    "pattern": "^#[0-9a-fA-F]{6}$"
+                  },
+                  "pattern": {
+                    "type": "string",
+                    "enum": [
+                      "solid",
+                      "stripe",
+                      "cross"
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "modes": [
+            "campaign",
+            "blitz",
+            "survival"
+          ],
+          "actions": [
+            "four_direction_move",
+            "fire"
+          ]
+        }
+      },
+      "TankMap": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "enum": [
+              "frontline",
+              "river",
+              "steel",
+              "depot",
+              "circuit",
+              "citadel"
+            ]
+          },
+          "levelId": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 6
+          },
+          "version": {
+            "const": 1
+          }
+        },
+        "required": [
+          "id",
+          "levelId",
+          "version"
+        ]
+      },
+      "TankValidationIssue": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "path",
+          "message"
+        ]
+      },
+      "TankBlueprint": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "speed": {
+            "type": "integer"
+          },
+          "armor": {
+            "type": "integer"
+          },
+          "projectileSpeed": {
+            "type": "integer"
+          },
+          "fireInterval": {
+            "type": "integer"
+          },
+          "score": {
+            "const": 0
+          },
+          "appearance": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "body",
+              "accent",
+              "pattern"
+            ],
+            "properties": {
+              "body": {
+                "type": "string",
+                "pattern": "^#[0-9a-fA-F]{6}$"
+              },
+              "accent": {
+                "type": "string",
+                "pattern": "^#[0-9a-fA-F]{6}$"
+              },
+              "pattern": {
+                "type": "string",
+                "enum": [
+                  "solid",
+                  "stripe",
+                  "cross"
+                ]
+              }
+            }
+          }
+        },
+        "required": [
+          "id",
+          "speed",
+          "armor",
+          "projectileSpeed",
+          "fireInterval",
+          "score",
+          "appearance"
+        ]
+      },
+      "TankValidation": {
+        "type": "object",
+        "properties": {
+          "valid": {
+            "type": "boolean"
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TankValidationIssue"
+            }
+          },
+          "blueprint": {
+            "$ref": "#/components/schemas/TankBlueprint"
+          },
+          "cost": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "budget": {
+            "const": 9
+          }
+        },
+        "required": [
+          "valid",
+          "errors",
+          "cost",
+          "budget"
+        ],
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "valid": {
+                  "const": true
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "blueprint"
+              ],
+              "properties": {
+                "errors": {
+                  "maxItems": 0
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "errors": {
+                  "minItems": 1
+                }
+              }
+            }
+          }
+        ]
+      },
+      "TankCompatibility": {
+        "type": "object",
+        "properties": {
+          "compatible": {
+            "const": true
+          },
+          "characterId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50
+          },
+          "contentHash": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
+          },
+          "map": {
+            "$ref": "#/components/schemas/TankMap"
+          }
+        },
+        "required": [
+          "compatible",
+          "characterId",
+          "revision",
+          "contentHash",
+          "map"
+        ]
+      },
+      "TankCharacterDraft": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "profile",
+          "name",
+          "parts",
+          "appearance"
+        ],
+        "properties": {
+          "profile": {
+            "const": "tank-defense@1"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40,
+            "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]+$"
+          },
+          "parts": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "chassis",
+              "armor",
+              "cannon"
+            ],
+            "properties": {
+              "chassis": {
+                "type": "string",
+                "enum": [
+                  "light",
+                  "standard",
+                  "heavy"
+                ]
+              },
+              "armor": {
+                "type": "string",
+                "enum": [
+                  "light",
+                  "standard",
+                  "heavy"
+                ]
+              },
+              "cannon": {
+                "type": "string",
+                "enum": [
+                  "rapid",
+                  "standard",
+                  "heavy"
+                ]
+              }
+            }
+          },
+          "appearance": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "body",
+              "accent",
+              "pattern"
+            ],
+            "properties": {
+              "body": {
+                "type": "string",
+                "pattern": "^#[0-9a-fA-F]{6}$"
+              },
+              "accent": {
+                "type": "string",
+                "pattern": "^#[0-9a-fA-F]{6}$"
+              },
+              "pattern": {
+                "type": "string",
+                "enum": [
+                  "solid",
+                  "stripe",
+                  "cross"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "TankCharacter": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50
+          },
+          "workspaceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "ownerId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "rulesVersion": {
+            "const": 1
+          },
+          "compilerVersion": {
+            "const": 1
+          },
+          "contentHash": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
+          },
+          "draft": {
+            "$ref": "#/components/schemas/TankCharacterDraft"
+          },
+          "blueprint": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "speed": {
+                "type": "integer"
+              },
+              "armor": {
+                "type": "integer"
+              },
+              "projectileSpeed": {
+                "type": "integer"
+              },
+              "fireInterval": {
+                "type": "integer"
+              },
+              "score": {
+                "const": 0
+              },
+              "appearance": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "body",
+                  "accent",
+                  "pattern"
+                ],
+                "properties": {
+                  "body": {
+                    "type": "string",
+                    "pattern": "^#[0-9a-fA-F]{6}$"
+                  },
+                  "accent": {
+                    "type": "string",
+                    "pattern": "^#[0-9a-fA-F]{6}$"
+                  },
+                  "pattern": {
+                    "type": "string",
+                    "enum": [
+                      "solid",
+                      "stripe",
+                      "cross"
+                    ]
+                  }
+                }
+              }
+            },
+            "required": [
+              "id",
+              "speed",
+              "armor",
+              "projectileSpeed",
+              "fireInterval",
+              "score",
+              "appearance"
+            ]
+          },
+          "cost": {
+            "type": "integer"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "revision",
+          "workspaceId",
+          "ownerId",
+          "rulesVersion",
+          "compilerVersion",
+          "contentHash",
+          "draft",
+          "blueprint",
+          "cost",
+          "createdAt"
+        ]
+      },
+      "TankPlaySession": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "workspaceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "ownerId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "rulesVersion": {
+            "const": 1
+          },
+          "mapId": {
+            "enum": [
+              "frontline",
+              "river",
+              "steel",
+              "depot",
+              "circuit",
+              "citadel"
+            ]
+          },
+          "mapVersion": {
+            "const": 1
+          },
+          "levelId": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 6
+          },
+          "mode": {
+            "enum": [
+              "campaign",
+              "blitz",
+              "survival"
+            ]
+          },
+          "character": {
+            "$ref": "#/components/schemas/TankCharacter"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "playPath": {
+            "type": "string"
+          },
+          "playUrl": {
+            "type": "string",
+            "format": "uri"
+          }
+        },
+        "required": [
+          "id",
+          "workspaceId",
+          "ownerId",
+          "rulesVersion",
+          "mapId",
+          "mapVersion",
+          "levelId",
+          "mode",
+          "character",
+          "createdAt",
+          "expiresAt",
+          "playPath",
+          "playUrl"
+        ]
+      },
+      "Problem": {
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              },
+              "issues": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/TankValidationIssue"
+                }
+              }
+            },
+            "required": [
+              "code",
+              "message"
+            ]
+          }
+        },
+        "required": [
+          "requestId",
+          "error"
+        ]
+      }
+    }
+  }
+}
