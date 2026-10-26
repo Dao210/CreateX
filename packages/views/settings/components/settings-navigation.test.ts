@@ -17,33 +17,11 @@ describe("settings location", () => {
     ],
     ["tab=integrations", { tab: "channels", section: null, integration: null }],
     [
-      "tab=integrations&integration=vcs",
-      { tab: "code", section: "code-hosting", integration: null },
-    ],
-    [
-      "tab=integrations&integration=github",
-      { tab: "code", section: null, integration: null },
-    ],
-    [
       "tab=integrations&integration=composio",
       { tab: "apps", section: null, integration: null },
     ],
   ])("resolves the retired %s entry", (search, expected) => {
     expect(resolve(search)).toEqual(expected);
-  });
-
-  it("keeps server redirects from the GitHub App install working", () => {
-    // github.go returns to one of these two tabs after the App is installed.
-    expect(resolve("tab=github")).toEqual({
-      tab: "code",
-      section: null,
-      integration: null,
-    });
-    expect(resolve("tab=repositories&github_connected=1")).toEqual({
-      tab: "code",
-      section: "repositories",
-      integration: null,
-    });
   });
 
   it.each(["connected=notion", "error=composio_connect_failed"])(
@@ -54,9 +32,9 @@ describe("settings location", () => {
   );
 
   it("passes current pages and anchors through untouched", () => {
-    expect(resolve("tab=code&section=pr-sidebar")).toEqual({
-      tab: "code",
-      section: "pr-sidebar",
+    expect(resolve("tab=preferences&section=timezone")).toEqual({
+      tab: "preferences",
+      section: "timezone",
       integration: null,
     });
     expect(resolve("").tab).toBe("profile");

@@ -1353,7 +1353,6 @@
     "undo": "撤销",
     "disable": "此任务合并后不改状态",
     "enable": "恢复合并后改状态",
-    "settings": "PR 合并设置",
     "update_failed": "更新 PR 合并设置失败。",
     "waiting_to_other": "等待 {{prs}} 合并后改为 {{status}}",
     "not_merged": "{{prs}} 已关闭，未合并",

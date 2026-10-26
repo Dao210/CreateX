@@ -1396,7 +1396,6 @@
     "undo": "Annuler",
     "disable": "Garder le statut à la fusion des PR",
     "enable": "Changer le statut à la fusion des PR",
-    "settings": "Paramètres de fusion des PR",
     "update_failed": "Impossible de mettre à jour le paramètre de fusion des PR.",
     "waiting_to_one": "Passe à {{status}} quand {{prs}} est fusionnée",
     "waiting_to_other": "Passe à {{status}} quand {{prs}} sont fusionnées",

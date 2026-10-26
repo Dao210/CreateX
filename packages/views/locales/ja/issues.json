@@ -1353,7 +1353,6 @@
     "undo": "元に戻す",
     "disable": "PR マージ後もステータスを変えない",
     "enable": "PR マージ後のステータス変更を再開",
-    "settings": "PR マージ設定",
     "update_failed": "PR マージ設定を更新できませんでした。",
     "waiting_to_other": "{{prs}} がマージされると {{status}} に変更",
     "not_merged": "{{prs}} はマージされずにクローズされました",

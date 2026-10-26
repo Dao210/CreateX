@@ -108,41 +108,6 @@ export function useSettingsSearchIndex(
         title: t(($) => $.page.tabs.quick_actions),
         description: t(($) => $.quick_actions.description),
       },
-      { tab: "code", anchor: "code-hosting", title: t(($) => $.code.hosting_title) },
-      { tab: "code", anchor: "github", title: t(($) => $.page.tabs.github) },
-      { tab: "code", anchor: "vcs", title: t(($) => $.vcs.section_title) },
-      {
-        tab: "code",
-        anchor: "repositories",
-        title: t(($) => $.repositories.section_title),
-        description: t(($) => $.repositories.description),
-      },
-      { tab: "code", anchor: "pr-linking", title: t(($) => $.code.pr_linking_title) },
-      {
-        tab: "code",
-        anchor: "pr-sidebar",
-        title: t(($) => $.github.feature_pr_sidebar_label),
-        description: t(($) => $.github.feature_pr_sidebar_description),
-      },
-      {
-        tab: "code",
-        anchor: "auto-link",
-        title: t(($) => $.github.feature_auto_link_label),
-        description: t(($) => $.github.feature_auto_link_description, {
-          example: "MUL-123",
-        }),
-      },
-      {
-        tab: "code",
-        anchor: "co-author",
-        title: t(($) => $.github.feature_co_author_label),
-      },
-      {
-        tab: "code",
-        anchor: "pr-merge-status",
-        title: t(($) => $.pr_merge_status.label),
-        description: t(($) => $.pr_merge_status.description),
-      },
       ...CHANNEL_INTEGRATIONS.map((channel) => ({
         tab: "channels",
         integration: channel,

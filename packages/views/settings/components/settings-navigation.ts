@@ -25,10 +25,7 @@ export interface SettingsLocation {
 
 /**
  * Resolve a settings URL, including links that predate the current layout.
- * Server redirects still point at some of them — the GitHub App install flow
- * returns to `?tab=github` / `?tab=repositories` and the Composio OAuth flow to
- * `?tab=integrations&connected=…` — so these mappings are part of the URL
- * contract, not bookmarks we can drop.
+ * The Composio OAuth flow still returns to `?tab=integrations&connected=…`.
  */
 export function resolveSettingsLocation(
   params: URLSearchParams,
@@ -42,22 +39,12 @@ export function resolveSettingsLocation(
       return { tab: "preferences", section: tab, integration: null };
     case "labs":
       return { tab: "workspace", section: null, integration: null };
-    case "github":
-      return { tab: "code", section, integration: null };
-    case "repositories":
-      return { tab: "code", section: section ?? "repositories", integration: null };
     case "integrations": {
       const composioCallback =
         params.has("connected") ||
         params.get("error") === "composio_connect_failed";
       if (composioCallback || integration === "composio") {
         return { tab: "apps", section: null, integration: null };
-      }
-      if (integration === "github") {
-        return { tab: "code", section: null, integration: null };
-      }
-      if (integration === "vcs") {
-        return { tab: "code", section: "code-hosting", integration: null };
       }
       return {
         tab: "channels",

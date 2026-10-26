@@ -1396,7 +1396,6 @@
     "undo": "Undo",
     "disable": "Keep status when PRs merge",
     "enable": "Change status when PRs merge",
-    "settings": "PR merge settings",
     "update_failed": "Couldn’t update the PR merge setting.",
     "waiting_to_one": "Moves to {{status}} when {{prs}} merges",
     "waiting_to_other": "Moves to {{status}} when {{prs}} merge",

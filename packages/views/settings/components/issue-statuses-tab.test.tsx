@@ -132,21 +132,21 @@ describe("IssueStatusesTab", () => {
   describe("PR merge status badge (MUL-7726)", () => {
     const BUILT_IN_DONE = entry({ id: "done", key: "done", name: "Done", category: "done", is_system: true, position: 0 });
     const QA = entry({ key: "qa", name: "QA" });
-    const badgeLink = () => screen.getByText(en.issue_statuses.pr_auto_complete_badge).closest("a");
+    const badge = () => screen.getByText(en.issue_statuses.pr_auto_complete_badge);
 
-    it("badges Done by default and links to the rule on the Code page", () => {
+    it("badges Done without linking to the retired settings page", () => {
       catalog = [BUILT_IN_DONE, QA];
       render(<IssueStatusesTab />);
       expect(screen.getAllByText(en.issue_statuses.pr_auto_complete_badge)).toHaveLength(1);
-      expect(badgeLink()?.getAttribute("href")).toBe("/acme/settings?tab=code&section=pr-merge-status");
-      expect(badgeLink()?.closest(".group\\/row")).toHaveTextContent(en.issue_statuses.built_in_descriptions.done);
+      expect(badge().closest("a")).toBeNull();
+      expect(badge().closest(".group\\/row")).toHaveTextContent(en.issue_statuses.built_in_descriptions.done);
     });
 
     it("moves the badge to the chosen status and drops it for no change", () => {
       catalog = [BUILT_IN_DONE, QA];
       workspaceSettings = { pr_merge_status: "qa" };
       render(<IssueStatusesTab />);
-      expect(badgeLink()?.closest(".group\\/row")).toHaveTextContent("QA");
+      expect(badge().closest(".group\\/row")).toHaveTextContent("QA");
       cleanup();
       workspaceSettings = { pr_merge_status: "none" };
       render(<IssueStatusesTab />);

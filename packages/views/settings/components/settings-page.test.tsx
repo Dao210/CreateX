@@ -19,7 +19,6 @@ vi.mock("./preferences-tab", stub("PreferencesTab"));
 vi.mock("./tokens-tab", stub("TokensTab"));
 vi.mock("./workspace-tab", stub("WorkspaceTab"));
 vi.mock("./members-tab", stub("MembersTab"));
-vi.mock("./code-tab", stub("CodeTab"));
 vi.mock("./channels-tab", stub("ChannelsTab"));
 vi.mock("./notifications-tab", stub("NotificationsTab"));
 vi.mock("./labels-tab", stub("LabelsTab"));
@@ -213,7 +212,7 @@ describe("SettingsPage information architecture", () => {
     const connections = within(workspace).getByRole("group", {
       name: "Connections & extensions",
     });
-    for (const name of ["Code", "Messaging", "MCP servers"]) {
+    for (const name of ["Messaging", "MCP servers"]) {
       expect(within(connections).getByRole("link", { name })).toBeInTheDocument();
     }
   });
@@ -222,7 +221,7 @@ describe("SettingsPage information architecture", () => {
     renderWithI18n(<SettingsPage />);
     expect(
       within(nav()).queryByRole("link", {
-        name: /^(Issue|Chat|GitHub|Labs|Integrations|Repositories)$/,
+        name: /^(Issue|Chat|Code|GitHub|Labs|Integrations|Repositories)$/,
       }),
     ).not.toBeInTheDocument();
   });
@@ -237,11 +236,16 @@ describe("SettingsPage information architecture", () => {
     );
   });
 
-  it("opens the GitHub App return URL on the Code page", () => {
-    navigationState.search = "tab=repositories&github_connected=1";
+  it.each([
+    "tab=code",
+    "tab=code&section=pr-merge-status",
+    "tab=github",
+    "tab=repositories&github_connected=1",
+  ])("opens the default page for the retired %s URL", (search) => {
+    navigationState.search = search;
     renderWithI18n(<SettingsPage />);
-    expect(screen.getByText("CodeTab")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Code" })).toHaveAttribute(
+    expect(screen.getByText("AccountTab")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Profile" })).toHaveAttribute(
       "aria-current",
       "page",
     );
@@ -340,6 +344,15 @@ describe("SettingsPage search", () => {
     fireEvent.change(screen.getByRole("searchbox"), { target: { value: "Opening issues" } });
     expect(screen.queryByRole("option", { name: /Opening issues/ })).toBeNull();
   });
+
+  it.each(["GitHub", "Code hosting", "Repositories", "PR merge"])(
+    "excludes retired code settings from the %s search",
+    (query) => {
+      renderWithI18n(<SettingsPage />);
+      fireEvent.change(screen.getByRole("searchbox"), { target: { value: query } });
+      expect(screen.getByText("No matching settings")).toBeInTheDocument();
+    },
+  );
 
   it("does not offer pages hidden by feature flags", () => {
     renderWithI18n(<SettingsPage />);

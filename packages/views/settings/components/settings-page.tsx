@@ -5,7 +5,6 @@ import {
   Bell,
   Blocks,
   CreditCard,
-  FolderGit2,
   Keyboard,
   KeyRound,
   Laptop,
@@ -41,7 +40,6 @@ import { TokensTab } from "./tokens-tab";
 import { WorkspaceTab } from "./workspace-tab";
 import { LabelsTab } from "./labels-tab";
 import { MembersTab } from "./members-tab";
-import { CodeTab } from "./code-tab";
 import { ChannelsTab } from "./channels-tab";
 import { ConnectedAppsTab, useComposioAvailable } from "./connected-apps-tab";
 import { NotificationsTab } from "./notifications-tab";
@@ -198,9 +196,6 @@ export function SettingsPage({ extraDeviceTabs = [] }: SettingsPageProps = {}) {
           key: "connections",
           label: t(($) => $.page.groups.connections),
           entries: [
-            entry("code", t(($) => $.page.tabs.code), FolderGit2, <CodeTab />, {
-              adminOnly: true,
-            }),
             entry(
               "channels",
               t(($) => $.page.tabs.channels),

@@ -31,16 +31,10 @@ vi.mock("@auro/core/api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@auro/core/api")>()),
   api: apiMock,
 }));
-const navigatePush = vi.hoisted(() => vi.fn());
-vi.mock("../../navigation", () => ({
-  useNavigation: () => ({ push: navigatePush }),
-  AppLink: ({ href, children }: { href: string; children: React.ReactNode }) => <a href={href}>{children}</a>,
-}));
 vi.mock("@auro/core/hooks", () => ({ useWorkspaceId: () => "ws-1" }));
 let mockWorkspaceSettings: Record<string, unknown> = {};
 vi.mock("@auro/core/paths", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@auro/core/paths")>()),
-  useWorkspacePaths: () => ({ settings: () => "/acme/settings" }),
   useCurrentWorkspace: () => ({ id: "ws-1", slug: "acme", settings: mockWorkspaceSettings }),
 }));
 
@@ -70,7 +64,6 @@ describe("PullRequestsSection (MUL-7429)", () => {
     mockWorkspaceSettings = {};
     apiMock.linkIssuePullRequest.mockReset();
     apiMock.setIssuePRAutoComplete.mockReset();
-    navigatePush.mockReset();
   });
 
   it("links a pasted PR URL", async () => {
@@ -123,19 +116,18 @@ describe("PullRequestsSection (MUL-7429)", () => {
     await waitFor(() => expect(apiMock.setIssuePRAutoComplete).toHaveBeenCalledWith("issue-1", true));
   });
 
-  it("opens the GitHub setting from the section menu", async () => {
+  it("keeps the retired merge settings link out of the section menu", async () => {
     renderSection();
     fireEvent.click(await screen.findByRole("button", { name: "Pull request automation" }));
-    fireEvent.click(await screen.findByRole("menuitem", { name: "PR merge settings" }));
-    expect(navigatePush).toHaveBeenCalledWith("/acme/settings?tab=code");
+    expect(await screen.findByRole("menuitem", { name: "Keep status when PRs merge" })).toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: "PR merge settings" })).toBeNull();
   });
 
-  it("offers only the settings link while the workspace leaves status alone", async () => {
+  it("hides the menu while the workspace leaves status alone", async () => {
     mockAutoComplete = { ...decision, workspace_enabled: false };
     renderSection();
-    fireEvent.click(await screen.findByRole("button", { name: "Pull request automation" }));
-    expect(await screen.findByRole("menuitem", { name: "PR merge settings" })).toBeInTheDocument();
-    expect(screen.queryByRole("menuitem", { name: "Keep status when PRs merge" })).toBeNull();
+    await screen.findByRole("button", { name: "Link pull request" });
+    expect(screen.queryByRole("button", { name: "Pull request automation" })).toBeNull();
   });
 
   it("drops the auto-link hint when the workspace does not auto-link PRs", async () => {

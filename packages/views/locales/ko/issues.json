@@ -1353,7 +1353,6 @@
     "undo": "실행 취소",
     "disable": "PR 병합 후에도 상태 유지",
     "enable": "PR 병합 후 상태 변경 다시 켜기",
-    "settings": "PR 병합 설정",
     "update_failed": "PR 병합 설정을 업데이트하지 못했습니다.",
     "waiting_to_other": "{{prs}} 병합 시 {{status}}(으)로 변경",
     "not_merged": "{{prs}}이(가) 병합되지 않고 닫혔습니다",

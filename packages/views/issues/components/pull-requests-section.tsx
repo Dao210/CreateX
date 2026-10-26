@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ChevronRight, CircleSlash, MoreHorizontal, Plus, RotateCcw, Settings } from "lucide-react";
+import { ChevronRight, CircleSlash, MoreHorizontal, Plus, RotateCcw } from "lucide-react";
 import { ApiError } from "@auro/core/api";
 import {
   issuePullRequestsOptions,
@@ -11,18 +11,15 @@ import {
   useLinkIssuePullRequest,
   useSetIssuePRAutoComplete,
 } from "@auro/core/github";
-import { useWorkspacePaths } from "@auro/core/paths";
 import { Button } from "@auro/ui/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@auro/ui/components/ui/dropdown-menu";
 import { Input } from "@auro/ui/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@auro/ui/components/ui/popover";
-import { useNavigation } from "../../navigation";
 import { useT } from "../../i18n";
 import { PullRequestList } from "./pull-request-list";
 
@@ -71,11 +68,12 @@ export function PullRequestsSection({
         {supported ? (
           <>
             <LinkPullRequestPopover issueId={issueId} identifier={identifier} onLinked={() => onOpenChange(true)} />
-            <AutoCompleteMenu
-              issueId={issueId}
-              disabled={data?.auto_complete?.issue_disabled ?? false}
-              workspaceEnabled={data?.auto_complete?.workspace_enabled ?? true}
-            />
+            {data?.auto_complete?.workspace_enabled !== false ? (
+              <AutoCompleteMenu
+                issueId={issueId}
+                disabled={data?.auto_complete?.issue_disabled ?? false}
+              />
+            ) : null}
           </>
         ) : null}
       </div>
@@ -195,15 +193,11 @@ function LinkPullRequestPopover({
 function AutoCompleteMenu({
   issueId,
   disabled,
-  workspaceEnabled,
 }: {
   issueId: string;
   disabled: boolean;
-  workspaceEnabled: boolean;
 }) {
   const { t } = useT("issues");
-  const paths = useWorkspacePaths();
-  const navigation = useNavigation();
   const setAutoComplete = useSetIssuePRAutoComplete(issueId);
 
   return (
@@ -216,26 +210,16 @@ function AutoCompleteMenu({
         }
       />
       <DropdownMenuContent align="end" className="w-60">
-        {/* When the workspace leaves status alone, the issue switch changes nothing. */}
-        {workspaceEnabled ? (
-          <>
-            <DropdownMenuItem
-              disabled={setAutoComplete.isPending}
-              onClick={() =>
-                setAutoComplete.mutate(!disabled, {
-                  onError: () => toast.error(t(($) => $.pr_automation.update_failed)),
-                })
-              }
-            >
-              {disabled ? <RotateCcw /> : <CircleSlash />}
-              {disabled ? t(($) => $.pr_automation.enable) : t(($) => $.pr_automation.disable)}
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-          </>
-        ) : null}
-        <DropdownMenuItem onClick={() => navigation.push(`${paths.settings()}?tab=code`)}>
-          <Settings />
-          {t(($) => $.pr_automation.settings)}
+        <DropdownMenuItem
+          disabled={setAutoComplete.isPending}
+          onClick={() =>
+            setAutoComplete.mutate(!disabled, {
+              onError: () => toast.error(t(($) => $.pr_automation.update_failed)),
+            })
+          }
+        >
+          {disabled ? <RotateCcw /> : <CircleSlash />}
+          {disabled ? t(($) => $.pr_automation.enable) : t(($) => $.pr_automation.disable)}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
