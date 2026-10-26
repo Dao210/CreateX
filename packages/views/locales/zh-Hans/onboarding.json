@@ -9,7 +9,7 @@
     "retry": "重试"
   },
   "step_nav": {
-    "wordmark": "Auro",
+    "wordmark": "织个世界",
     "label": "引导步骤",
     "about_you": {
       "label": "关于你"
@@ -22,7 +22,7 @@
     }
   },
   "welcome": {
-    "wordmark": "欢迎使用 Auro",
+    "wordmark": "欢迎使用织个世界",
     "headline_line1": "你的 AI 队友，",
     "headline_line2": "在",
     "headline_emphasis": "同一个创作区。",
@@ -63,7 +63,7 @@
   },
   "source_backfill": {
     "eyebrow": "顺便问一句",
-    "lede": "帮助我们了解你从哪里知道 Auro。",
+    "lede": "帮助我们了解你从哪里知道织个世界。",
     "submit": "提交",
     "save_failed_toast": "保存失败"
   },
@@ -72,7 +72,7 @@
       "question": "简单介绍一下你自己。"
     },
     "source": {
-      "question": "你是从哪里了解到 Auro 的？",
+      "question": "你是从哪里了解到织个世界的？",
       "friends_colleagues": "朋友或同事",
       "search": "Google / 搜索",
       "social_x": "X / Twitter",
@@ -103,7 +103,7 @@
       "other_placeholder": "例如：教师、支持负责人"
     },
     "use_case": {
-      "question": "你打算用 Auro 做什么？",
+      "question": "你打算用织个世界做什么？",
       "ship_code": "让 AI 智能体帮我写代码",
       "manage_team": "给团队做任务管理",
       "personal_tasks": "管理我自己的任务",
@@ -125,7 +125,7 @@
   "cli_install": {
     "copy_aria": "复制",
     "intro": "这台电脑上需要安装一个智能体运行时（Claude Code、Codex、Cursor 等）才能运行你的智能体。也支持服务器和远程开发机。",
-    "step1_label": "安装 Auro CLI",
+    "step1_label": "安装织个世界 CLI",
     "platform_group": "选择你的系统",
     "platform_macos_linux": "macOS / Linux",
     "platform_windows": "Windows",
@@ -147,7 +147,7 @@
   "welcome_after_onboarding": {
     "skip": {
       "loading": "正在为你准备创作区...",
-      "title": "欢迎来到 Auro！",
+      "title": "欢迎来到织个世界！",
       "subtitle": "我们建了一个任务帮你连接运行时。准备好后，在 \"运行时\" 页面就能开始使用 Mika。",
       "got_it": "知道了",
       "status_in_progress": "进行中",
@@ -197,7 +197,7 @@
     "create_failed_toast": "新建创作区失败",
     "creation_disabled_eyebrow": "已禁用新建创作区",
     "creation_disabled_headline": "请联系管理员邀请你加入创作区。",
-    "creation_disabled_lede": "该 Auro 实例不允许新建创作区。等管理员把你邀请到某个创作区后，接受邀请并刷新即可继续。",
+    "creation_disabled_lede": "该织个世界实例不允许新建创作区。等管理员把你邀请到某个创作区后，接受邀请并刷新即可继续。",
     "creation_disabled_logout": "退出登录",
     "creation_disabled_eyebrow_resume": "你的创作区",
     "creation_disabled_headline_resume": "继续使用 {{name}}。",

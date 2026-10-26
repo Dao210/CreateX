@@ -1,4 +1,4 @@
-const OFFICIAL_MARKETING_HOSTS = new Set(["auro.ai", "www.auro.ai"]);
+const OFFICIAL_MARKETING_HOSTS = new Set(["weavea.world", "www.weavea.world", "auro.ai", "www.auro.ai"]);
 
 export function isOfficialMarketingHost(hostname: string): boolean {
   const normalized = hostname.trim().toLowerCase().replace(/\.$/, "");

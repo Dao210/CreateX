@@ -18,7 +18,7 @@ describe("NotFound", () => {
     expect(
       screen.getByText("你要查找的页面不存在或已被移动。"),
     ).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "返回 Auro" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "返回织个世界" })).toHaveAttribute(
       "href",
       "/",
     );

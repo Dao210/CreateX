@@ -48,7 +48,7 @@ beforeEach(() => {
 describe("formatDocumentTitle", () => {
   it("puts the page name in front of the product name", () => {
     expect(formatDocumentTitle("Reviewer")).toBe(
-      "Reviewer | Auro",
+      "Reviewer | Weave a World",
     );
   });
 
@@ -64,14 +64,14 @@ describe("formatDocumentTitle", () => {
     const formatted = formatDocumentTitle(title);
 
     expect(formatted.startsWith("MUL-123: long")).toBe(true);
-    expect(formatted.endsWith("… | Auro")).toBe(true);
+    expect(formatted.endsWith("… | Weave a World")).toBe(true);
     // Ellipsis replaces the clipped remainder, and no trailing space survives.
     expect(formatted).not.toContain(" … ");
   });
 
   it("clips on code points so an emoji is never cut in half", () => {
     const formatted = formatDocumentTitle("🎯".repeat(MAX_PAGE_TITLE_LENGTH + 10));
-    const pageTitle = formatted.slice(0, formatted.indexOf(" | Auro"));
+    const pageTitle = formatted.slice(0, formatted.indexOf(" | Weave a World"));
 
     expect(Array.from(pageTitle)).toHaveLength(MAX_PAGE_TITLE_LENGTH + 1);
     expect(pageTitle).not.toContain("�");
@@ -80,7 +80,7 @@ describe("formatDocumentTitle", () => {
 
   it("leaves a title at the limit untouched", () => {
     const exact = "x".repeat(MAX_PAGE_TITLE_LENGTH);
-    expect(formatDocumentTitle(exact)).toBe(`${exact} | Auro`);
+    expect(formatDocumentTitle(exact)).toBe(`${exact} | Weave a World`);
   });
 });
 
@@ -91,7 +91,7 @@ describe("WorkspaceDocumentTitle", () => {
 
     render(<WorkspaceDocumentTitle />);
 
-    expect(document.title).toBe("Reviewer | Auro");
+    expect(document.title).toBe("Reviewer | Weave a World");
   });
 
   it("resolves against the full URL so a container's selection titles the tab", () => {
@@ -101,7 +101,7 @@ describe("WorkspaceDocumentTitle", () => {
     render(<WorkspaceDocumentTitle />);
 
     expect(presentation.urls).toContain("/acme/inbox?issue=abc&view=archived");
-    expect(document.title).toBe("MUL-9: Ping | Auro");
+    expect(document.title).toBe("MUL-9: Ping | Weave a World");
   });
 
   it("keeps the site title on an unrecognized route", () => {
@@ -118,7 +118,7 @@ describe("WorkspaceDocumentTitle", () => {
     presentation.title = "Design review";
 
     const view = render(<WorkspaceDocumentTitle />);
-    expect(document.title).toBe("Design review | Auro");
+    expect(document.title).toBe("Design review | Weave a World");
 
     view.unmount();
     expect(document.title).toBe(SITE_TITLE);
@@ -128,7 +128,7 @@ describe("WorkspaceDocumentTitle", () => {
     open("/acme/inbox");
     presentation.title = "Inbox";
     const view = render(<WorkspaceDocumentTitle />);
-    expect(document.title).toBe("Inbox | Auro");
+    expect(document.title).toBe("Inbox | Weave a World");
 
     // A route change re-renders the target's metadata, resetting the title to
     // the root default before our effect gets to run again.
@@ -136,6 +136,6 @@ describe("WorkspaceDocumentTitle", () => {
     open("/acme/inbox", "view=archived");
     view.rerender(<WorkspaceDocumentTitle />);
 
-    expect(document.title).toBe("Inbox | Auro");
+    expect(document.title).toBe("Inbox | Weave a World");
   });
 });

@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { BRAND, BRAND_NAME } from "@/lib/brand";
 
 /**
  * Web app manifest — what makes the mobile web app installable and lets it run
@@ -35,10 +36,10 @@ export const PWA_START_URL = "/inbox";
 export default function manifest(): MetadataRoute.Manifest {
   return {
     id: "/",
-    name: "Auro",
-    short_name: "Auro",
+    name: BRAND_NAME,
+    short_name: BRAND_NAME,
     description:
-      "Assign tasks to coding agents, track progress, and keep your team's work in one place.",
+      BRAND.en.description,
     start_url: PWA_START_URL,
     scope: "/",
     display: "standalone",
@@ -47,7 +48,7 @@ export default function manifest(): MetadataRoute.Manifest {
     // manifest cannot express — these are the pre-launch fallback only.
     background_color: "#ffffff",
     theme_color: "#ffffff",
-    categories: ["productivity"],
+    categories: ["games", "entertainment"],
     icons: [
       {
         src: "/icons/icon-192.png",

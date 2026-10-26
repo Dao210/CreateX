@@ -16,6 +16,9 @@ function launch(cookies: Record<string, string>, host = "www.auro.ai") {
 }
 
 describe("web app manifest", () => {
+  it("uses the game brand and category for installed web apps", () => {
+    expect(manifest()).toMatchObject({ name: "Weave a World", short_name: "Weave a World", categories: ["games", "entertainment"] });
+  });
 
   it("does not advertise the retired personal issue page", () => {
     expect(manifest().shortcuts).not.toEqual(

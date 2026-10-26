@@ -5,7 +5,6 @@ import {
   use,
   useCallback,
   useMemo,
-  useState,
   useTransition,
 } from "react";
 import { useRouter } from "next/navigation";
@@ -13,6 +12,7 @@ import { useConfigStore } from "@auro/core/config";
 import { createBrowserCookieLocaleAdapter } from "@auro/core/i18n/browser";
 import { createLandingDict } from "./dictionary";
 import type { LandingDict, Locale } from "./types";
+import { localizedHref } from "@/lib/marketing-urls";
 
 type LocaleContextValue = {
   locale: Locale;
@@ -29,7 +29,7 @@ export function LocaleProvider({
   children: React.ReactNode;
   initialLocale?: Locale;
 }) {
-  const [locale, setLocaleState] = useState<Locale>(initialLocale);
+  const locale = initialLocale;
   const [, startTransition] = useTransition();
   const router = useRouter();
   const localeAdapter = useMemo(() => createBrowserCookieLocaleAdapter(), []);
@@ -42,10 +42,9 @@ export function LocaleProvider({
   const setLocale = useCallback(
     (l: Locale) => {
       if (l === locale) return;
-      setLocaleState(l);
       localeAdapter.persist(l);
       startTransition(() => {
-        router.refresh();
+        router.push(localizedHref(`${window.location.pathname}${window.location.search}${window.location.hash}`, l), { scroll: false });
       });
     },
     [locale, localeAdapter, router, startTransition],

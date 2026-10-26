@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { Instrument_Serif } from "next/font/google";
 import { LocaleProvider } from "@/features/landing/i18n";
 import { getRequestLocale } from "@/lib/request-locale";
@@ -14,29 +15,9 @@ const instrumentSerif = Instrument_Serif({
   variable: "--font-instrument-serif",
 });
 
-const jsonLd = {
-  "@context": "https://schema.org",
-  "@graph": [
-    {
-      "@type": "Organization",
-      name: "Auro",
-      url: "https://www.auro.ai",
-      sameAs: ["https://github.com/auro-ai/auro"],
-    },
-    {
-      "@type": "SoftwareApplication",
-      name: "Auro",
-      applicationCategory: "ProjectManagement",
-      operatingSystem: "Web",
-      description:
-        "Source-available project management platform that turns coding agents into real teammates.",
-      offers: {
-        "@type": "Offer",
-        price: "0",
-        priceCurrency: "USD",
-      },
-    },
-  ],
+// Game pages opt in individually; inherited marketing pages stay unlisted.
+export const metadata: Metadata = {
+  robots: { index: false, follow: true },
 };
 
 export default async function LandingLayout({
@@ -48,10 +29,6 @@ export default async function LandingLayout({
 
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-      />
       <div className={`${instrumentSerif.variable} landing-light h-full overflow-x-hidden overflow-y-auto bg-white`}>
         <LocaleProvider initialLocale={initialLocale}>{children}</LocaleProvider>
       </div>

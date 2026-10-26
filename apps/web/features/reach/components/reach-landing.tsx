@@ -9,12 +9,14 @@ import { useLocale } from "@/features/landing/i18n";
 import { chronicleLine, type Chronicle } from "../types";
 import { useWorld, type WorldSource } from "../use-world";
 import { WorldWindow } from "./world-window";
+import { brandForLocale } from "@/lib/brand";
 
 const ACCENT = "#C8622D";
 
 export function ReachLanding() {
   const { t, locale } = useLocale();
   const copy = t.world;
+  const brand = brandForLocale(locale);
   const { snapshot, season, source, reducedMotion } = useWorld();
   const live = source === "live";
   const beatSeconds = season?.beatSeconds ?? 60;
@@ -26,7 +28,7 @@ export function ReachLanding() {
   const alive = entities.filter((e) => e.status === "alive").length;
 
   return (
-    <div className="min-h-full bg-[#0A0B0E] text-[#E8E1D5] selection:bg-[#C8622D]/30">
+    <main className="min-h-full bg-[#0A0B0E] text-[#E8E1D5] selection:bg-[#C8622D]/30">
       <section id="world" className="relative">
         <LandingHeader variant="dark" />
 
@@ -34,7 +36,7 @@ export function ReachLanding() {
           {/* Console strip: identity on the left, the world's pulse on the right. */}
           <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-b border-white/8 py-3">
             <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-white/45">
-              <span className="text-white/80">REACH</span>
+              <span className="text-white/80">{brand.name}</span>
               <span className="mx-2 text-white/20">—</span>
               {copy.eyebrow}
               <span className="mx-2 text-white/20">/</span>
@@ -55,18 +57,19 @@ export function ReachLanding() {
               before deciding whether the map is worth their attention. */}
           <div className="pt-7 sm:pt-9 lg:pt-11">
             <h1 className="max-w-[22ch] text-[2.3rem] font-semibold leading-[1.03] tracking-[-0.035em] text-[#E8E1D5] sm:text-[3rem] lg:text-[3.5rem]">
-              {copy.claim}
+              {brand.slogan}
             </h1>
+            <p className="mt-4 text-title-sm font-medium text-[#dc895e]">{brand.genre}</p>
             <p className="mt-4 max-w-[600px] text-balance text-[15.5px] leading-[1.65] text-white/58 sm:text-[16px]">
-              {copy.sub}
+              {brand.intro}
             </p>
             <div className="mt-6 flex flex-wrap items-center gap-x-3 gap-y-3">
               <Link href="#create" className={heroButtonClassName("solid")}>
-                {copy.primaryCta}
+                {brand.play}
                 <ArrowRight className="size-4" aria-hidden />
               </Link>
               <Link href="#world" className={heroButtonClassName("ghost")}>
-                {copy.secondaryCta}
+                {brand.world}
               </Link>
               <span className="text-[13px] text-white/48">{copy.note}</span>
             </div>
@@ -133,10 +136,24 @@ export function ReachLanding() {
         agents={copy.connect.agents}
       />
 
-      <Closing line={copy.closing.line} cta={copy.closing.cta} />
+      <section className="border-t border-white/8" aria-labelledby="world-faq">
+        <div className="mx-auto max-w-[1320px] px-4 py-16 sm:px-6 lg:px-8">
+          <h2 id="world-faq" className="text-title-lg font-semibold">{brand.faqTitle}</h2>
+          <dl className="mt-8 grid gap-8 md:grid-cols-3">
+            {brand.faq.map(({ question, answer }) => (
+              <div key={question}>
+                <dt className="text-body-lg font-medium">{question}</dt>
+                <dd className="mt-3 text-body leading-relaxed text-white/55">{answer}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      </section>
 
-      <LandingFooter tagline={copy.closing.footerNote} />
-    </div>
+      <Closing line={brand.value} cta={brand.play} />
+
+      <LandingFooter />
+    </main>
   );
 }
 
@@ -282,7 +299,7 @@ function RulesSection({
   items: { k: string; f: string; t: string; d: string }[];
 }) {
   return (
-    <section className="border-t border-white/8">
+    <section id="rules" className="border-t border-white/8">
       <div className="mx-auto max-w-[1320px] px-4 py-16 sm:px-6 sm:py-20 lg:px-8 lg:py-24">
         <SectionHead title={title} lead={lead} />
         <div className="mt-12 grid gap-px bg-white/8 sm:grid-cols-3">

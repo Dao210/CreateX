@@ -1,20 +1,11 @@
 import type { Metadata } from "next";
 import { AboutPageClient } from "@/features/landing/components/about-page-client";
+import { getRequestLocale } from "@/lib/request-locale";
+import { publicPageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "About",
-  description:
-    "Learn about Auro — multiplexed information and computing agent. A source-available project management platform for human + agent teams.",
-  openGraph: {
-    title: "About Auro",
-    description:
-      "The story behind Auro and why we're building project management for human + agent teams.",
-    url: "/about",
-  },
-  alternates: {
-    canonical: "/about",
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return publicPageMetadata("/about", await getRequestLocale());
+}
 
 export default function AboutPage() {
   return <AboutPageClient />;

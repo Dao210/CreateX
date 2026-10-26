@@ -9,6 +9,8 @@ import { docsHrefForLocale, useLocale } from "../i18n";
 import { useDashboardCtaHref } from "../utils/use-dashboard-cta";
 import { BrandMark } from "./brand-mark";
 import { headerButtonClassName } from "./shared";
+import { brandForLocale } from "@/lib/brand";
+import { localizedHref } from "@/lib/marketing-urls";
 
 export function LandingHeader({
   variant = "dark",
@@ -19,13 +21,15 @@ export function LandingHeader({
   const user = useAuthStore((s) => s.user);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const docsHref = docsHrefForLocale(locale);
+  const brand = brandForLocale(locale);
   const navLinks = [
-    { href: "/usecases", label: t.header.useCases },
+    { href: localizedHref("/#world", locale), label: brand.world },
+    { href: localizedHref("/#create", locale), label: brand.play },
+    { href: localizedHref("/about", locale), label: brand.about },
     { href: docsHref, label: t.header.docs },
-    { href: "/changelog", label: t.header.changelog },
   ];
   const ctaHref = useDashboardCtaHref();
-  const ctaLabel = user ? t.header.dashboard : t.header.cta;
+  const ctaLabel = user ? t.header.dashboard : brand.play;
 
   return (
     <header
@@ -38,7 +42,7 @@ export function LandingHeader({
     >
       <div className="mx-auto flex h-[76px] max-w-[1320px] items-center justify-between px-4 sm:px-6 lg:px-8">
         <div className="flex min-w-0 items-center gap-6 lg:gap-8">
-          <Link href="/" className="flex shrink-0 items-center gap-2.5">
+          <Link href={localizedHref("/", locale)} className="flex shrink-0 items-center gap-2.5">
             <BrandMark
               className={cn(
                 "h-5 w-auto",
@@ -47,17 +51,17 @@ export function LandingHeader({
             />
             <span
               className={cn(
-                "text-title font-semibold tracking-[0.04em] lowercase sm:text-title-lg",
+                "text-body font-semibold tracking-tight sm:text-title-sm",
                 variant === "dark" ? "text-white/92" : "text-[#0a0d12]",
               )}
             >
-              auro
+              {brand.name}
             </span>
           </Link>
 
           <nav
             aria-label={t.header.navigation}
-            className="hidden items-center gap-1 md:flex"
+            className="hidden items-center gap-1 xl:flex"
           >
             {navLinks.map((link) => (
               <Link
@@ -79,7 +83,7 @@ export function LandingHeader({
             onClick={() => setIsMenuOpen((open) => !open)}
             className={cn(
               headerButtonClassName("ghost", variant),
-              "px-3 md:hidden",
+              "px-3 xl:hidden",
             )}
           >
             {isMenuOpen ? (
@@ -100,7 +104,7 @@ export function LandingHeader({
       {isMenuOpen ? (
         <div
           className={cn(
-            "absolute left-4 right-4 top-[calc(100%+8px)] z-50 rounded-(--landing-radius-menu) border p-2 shadow-[0_18px_60px_rgba(0,0,0,0.18)] backdrop-blur-xl md:hidden",
+            "absolute left-4 right-4 top-[calc(100%+8px)] z-50 rounded-(--landing-radius-menu) border p-2 shadow-[0_18px_60px_rgba(0,0,0,0.18)] backdrop-blur-xl xl:hidden",
             variant === "dark"
               ? "border-white/14 bg-[#070a10]/95 text-white"
               : "border-[#0a0d12]/10 bg-white text-[#0a0d12]",

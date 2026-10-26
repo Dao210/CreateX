@@ -9,7 +9,7 @@
     "retry": "再試行"
   },
   "step_nav": {
-    "wordmark": "Auro",
+    "wordmark": "Weave a World",
     "label": "オンボーディングの手順",
     "about_you": {
       "label": "あなたについて"
@@ -22,7 +22,7 @@
     }
   },
   "welcome": {
-    "wordmark": "Auro へようこそ",
+    "wordmark": "Weave a World へようこそ",
     "headline_line1": "あなたの AI チームメイトを、",
     "headline_line2": "ひとつの",
     "headline_emphasis": "クリエイティブスペースに。",
@@ -63,7 +63,7 @@
   },
   "source_backfill": {
     "eyebrow": "ちょっと質問",
-    "lede": "Auro を知ったきっかけを教えてください。",
+    "lede": "Weave a World を知ったきっかけを教えてください。",
     "submit": "送信",
     "save_failed_toast": "保存できませんでした"
   },
@@ -72,7 +72,7 @@
       "question": "あなたについて少し教えてください。"
     },
     "source": {
-      "question": "Auro をどこで知りましたか?",
+      "question": "Weave a World をどこで知りましたか?",
       "friends_colleagues": "友人または同僚",
       "search": "Google / 検索",
       "social_x": "X / Twitter",
@@ -103,7 +103,7 @@
       "other_placeholder": "例: 教師、サポートリード"
     },
     "use_case": {
-      "question": "Auro を何に使いたいですか?",
+      "question": "Weave a World を何に使いたいですか?",
       "ship_code": "AI エージェントとコードをリリース",
       "manage_team": "チームのタスクを管理",
       "personal_tasks": "自分のタスクを整理",
@@ -125,7 +125,7 @@
   "cli_install": {
     "copy_aria": "コピー",
     "intro": "エージェントを実行するには、このコンピュータにエージェントランタイム(Claude Code、Codex、Cursor など)が必要です。サーバーやリモート開発環境でも動作します。",
-    "step1_label": "Auro CLI をインストール",
+    "step1_label": "Weave a World CLI をインストール",
     "platform_group": "プラットフォームを選択",
     "platform_macos_linux": "macOS / Linux",
     "platform_windows": "Windows",
@@ -147,7 +147,7 @@
   "welcome_after_onboarding": {
     "skip": {
       "loading": "クリエイティブスペースを準備中…",
-      "title": "Auro へようこそ!",
+      "title": "Weave a World へようこそ!",
       "subtitle": "ランタイム接続を案内するタスクを 1 つ追加しました。準備できたら Runtimes から Mika と始められます。",
       "got_it": "了解",
       "status_in_progress": "進行中",
@@ -197,7 +197,7 @@
     "create_failed_toast": "クリエイティブスペースを作成できませんでした",
     "creation_disabled_eyebrow": "クリエイティブスペースの作成は無効です",
     "creation_disabled_headline": "管理者に招待を依頼してください。",
-    "creation_disabled_lede": "この Auro インスタンスでは新しいクリエイティブスペースを作成できません。管理者からクリエイティブスペースに招待されたら、招待を承諾して更新し、続けてください。",
+    "creation_disabled_lede": "この Weave a World インスタンスでは新しいクリエイティブスペースを作成できません。管理者からクリエイティブスペースに招待されたら、招待を承諾して更新し、続けてください。",
     "creation_disabled_logout": "ログアウト",
     "creation_disabled_eyebrow_resume": "あなたのクリエイティブスペース",
     "creation_disabled_headline_resume": "{{name}} で続けましょう。",

@@ -9,7 +9,7 @@
     "retry": "Try again"
   },
   "step_nav": {
-    "wordmark": "Auro",
+    "wordmark": "Weave a World",
     "label": "Onboarding steps",
     "about_you": {
       "label": "About you"
@@ -22,7 +22,7 @@
     }
   },
   "welcome": {
-    "wordmark": "Welcome to Auro",
+    "wordmark": "Welcome to Weave a World",
     "headline_line1": "Your AI teammates,",
     "headline_line2": "in",
     "headline_emphasis": "one creative space.",
@@ -63,7 +63,7 @@
   },
   "source_backfill": {
     "eyebrow": "Quick question",
-    "lede": "Help us understand how you found Auro.",
+    "lede": "Help us understand how you found Weave a World.",
     "submit": "Submit",
     "save_failed_toast": "Failed to save"
   },
@@ -72,7 +72,7 @@
       "question": "Tell us a bit about you."
     },
     "source": {
-      "question": "How did you hear about Auro?",
+      "question": "How did you hear about Weave a World?",
       "friends_colleagues": "Friends or colleagues",
       "search": "Google / search",
       "social_x": "X / Twitter",
@@ -103,7 +103,7 @@
       "other_placeholder": "e.g. teacher, support lead"
     },
     "use_case": {
-      "question": "What do you want to use Auro for?",
+      "question": "What do you want to use Weave a World for?",
       "ship_code": "Ship code with AI agents",
       "manage_team": "Manage tasks for my team",
       "personal_tasks": "Organize my own tasks",
@@ -125,7 +125,7 @@
   "cli_install": {
     "copy_aria": "Copy",
     "intro": "You'll need an agent runtime on this computer (Claude Code, Codex, Cursor, …) for it to run your agent. Also works on servers and remote dev boxes.",
-    "step1_label": "Install the Auro CLI",
+    "step1_label": "Install the Weave a World CLI",
     "platform_group": "Choose your platform",
     "platform_macos_linux": "macOS / Linux",
     "platform_windows": "Windows",
@@ -147,7 +147,7 @@
   "welcome_after_onboarding": {
     "skip": {
       "loading": "Setting up your creative space…",
-      "title": "Welcome to Auro!",
+      "title": "Welcome to Weave a World!",
       "subtitle": "We've added one issue to help you connect a runtime. When it's ready, start with Mika from Runtimes.",
       "got_it": "Got it",
       "status_in_progress": "In progress",
@@ -197,7 +197,7 @@
     "create_failed_toast": "Couldn't create the creative space",
     "creation_disabled_eyebrow": "Creating creative spaces is disabled",
     "creation_disabled_headline": "Ask your administrator for an invitation.",
-    "creation_disabled_lede": "This Auro instance does not allow new creative spaces to be created. Once an administrator invites you to a creative space, accept the invitation and refresh to continue.",
+    "creation_disabled_lede": "This Weave a World instance does not allow new creative spaces to be created. Once an administrator invites you to a creative space, accept the invitation and refresh to continue.",
     "creation_disabled_logout": "Log out",
     "creation_disabled_eyebrow_resume": "Your creative space",
     "creation_disabled_headline_resume": "Continue with {{name}}.",

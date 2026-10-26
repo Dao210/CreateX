@@ -133,7 +133,7 @@ describe("LoginPage", () => {
         );
       });
       expect(
-        await screen.findByRole("button", { name: "Open Auro Desktop" }),
+        await screen.findByRole("button", { name: "Open Weave a World Desktop" }),
       ).toBeInTheDocument();
     } finally {
       Object.defineProperty(window, "location", {

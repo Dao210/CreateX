@@ -5,6 +5,10 @@ import {
 } from "./locale-routing";
 
 describe("locale routing", () => {
+  it("keeps an explicit language URL stable across conflicting cookies and headers", () => {
+    expect(resolveLocaleFromSignals({ queryLocale: "zh-Hans", cookieLocale: "en", acceptLanguage: "ja" })).toBe("zh-Hans");
+    expect(resolveLocaleFromSignals({ queryLocale: "invalid", cookieLocale: "en" })).toBe("en");
+  });
   it("accepts only app-supported locale identifiers", () => {
     expect(isSupportedLocale("en")).toBe(true);
     expect(isSupportedLocale("zh-Hans")).toBe(true);

@@ -1,8 +1,7 @@
 import type { MetadataRoute } from "next";
+import { SITE_URL } from "@/lib/brand";
 
 export default function robots(): MetadataRoute.Robots {
-  const baseUrl = "https://www.auro.ai";
-
   return {
     rules: [
       {
@@ -23,6 +22,6 @@ export default function robots(): MetadataRoute.Robots {
         ],
       },
     ],
-    sitemap: [`${baseUrl}/sitemap.xml`, `${baseUrl}/docs/sitemap.xml`],
+    sitemap: `${SITE_URL}/sitemap.xml`,
   };
 }

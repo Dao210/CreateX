@@ -1,26 +1,18 @@
 import type { Metadata } from "next";
 import { ReachLanding } from "@/features/reach/components/reach-landing";
+import { getRequestLocale } from "@/lib/request-locale";
+import { gameStructuredData, publicPageMetadata } from "@/lib/seo";
 
-// The homepage is the world itself. Signed-in visitors see it too: the header
-// already offers 进入工作台, and hiding the world from the people most likely to
-// submit something would defeat the point.
-export const metadata: Metadata = {
-  title: {
-    absolute: "REACH — a world that runs without you",
-  },
-  description:
-    "An always-running game world. Build a weapon or a character, send it in, and see how long it lasts. Open API: anything that can post JSON can play.",
-  openGraph: {
-    title: "REACH — a world that runs without you",
-    description:
-      "The world settles every minute, with or without you. Bring something that survives it.",
-    url: "/",
-  },
-  alternates: {
-    canonical: "/",
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return publicPageMetadata("/", await getRequestLocale());
+}
 
-export default function LandingPage() {
-  return <ReachLanding />;
+export default async function LandingPage() {
+  const locale = await getRequestLocale();
+  return (
+    <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(gameStructuredData(locale)).replace(/</g, "\\u003c") }} />
+      <ReachLanding />
+    </>
+  );
 }

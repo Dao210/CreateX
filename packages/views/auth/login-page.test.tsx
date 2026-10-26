@@ -140,10 +140,10 @@ describe("LoginPage", () => {
     expect(screen.queryByText(/your session expired/i)).not.toBeInTheDocument();
   });
 
-  it("renders email form with 'Sign in to Auro' title", () => {
+  it("renders email form with 'Sign in to Weave a World' title", () => {
     renderWithI18n(<LoginPage onSuccess={onSuccess} />);
     expect(
-      screen.getByText(/sign in to auro/i),
+      screen.getByText(/sign in to weave a world/i),
     ).toBeInTheDocument();
     expect(
       screen.getByLabelText(/^password$/i),
@@ -619,7 +619,7 @@ describe("LoginPage", () => {
     );
 
     expect(
-      screen.getByText(/sign in to auro/i),
+      screen.getByText(/sign in to weave a world/i),
     ).toBeInTheDocument();
   });
 
@@ -804,7 +804,7 @@ describe("LoginPage", () => {
     await user.click(screen.getByRole("button", { name: /back/i }));
 
     expect(
-      screen.getByText(/sign in to auro/i),
+      screen.getByText(/sign in to weave a world/i),
     ).toBeInTheDocument();
   });
 

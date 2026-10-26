@@ -16,12 +16,15 @@ export function isSupportedLocale(
 }
 
 export function resolveLocaleFromSignals({
+  queryLocale,
   cookieLocale,
   acceptLanguage,
 }: {
+  queryLocale?: string | null;
   cookieLocale?: string | null;
   acceptLanguage?: string | null;
 }): SupportedLocale {
+  if (queryLocale && isSupportedLocale(queryLocale)) return queryLocale;
   const candidates: string[] = [];
   if (cookieLocale) candidates.push(cookieLocale);
 

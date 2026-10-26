@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { isOfficialMarketingHost } from "./public-host";
 
 describe("isOfficialMarketingHost", () => {
-  it.each(["auro.ai", "www.auro.ai", "AURO.AI", "auro.ai."])(
+  it.each(["weavea.world", "www.weavea.world", "WEAVEA.WORLD", "weavea.world.", "auro.ai", "www.auro.ai", "AURO.AI", "auro.ai."])(
     "recognizes %s as an official marketing host",
     (host) => {
       expect(isOfficialMarketingHost(host)).toBe(true);

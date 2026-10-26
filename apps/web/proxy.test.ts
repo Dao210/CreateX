@@ -102,7 +102,7 @@ describe("proxy legacy workspace route redirects", () => {
     ).toBe("https://app.auro.test/login");
   });
 
-  it.each(["auro.ai", "www.auro.ai"])(
+  it.each(["weavea.world", "www.weavea.world", "auro.ai", "www.auro.ai"])(
     "resolves a slugless session off the marketing host %s instead of stranding it",
     (host) => {
       expect(
@@ -121,7 +121,7 @@ describe("proxy legacy workspace route redirects", () => {
     );
   });
 
-  it.each(["auro.ai", "www.auro.ai"])(
+  it.each(["weavea.world", "www.weavea.world", "auro.ai", "www.auro.ai"])(
     "does not redirect public marketing root on %s",
     (host) => {
       expect(redirectLocation("/", sessionCookies, host)).toBeNull();

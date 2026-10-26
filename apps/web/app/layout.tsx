@@ -9,6 +9,7 @@ import { RESOURCES } from "@auro/views/locales";
 import { getRequestLocale } from "@/lib/request-locale";
 import { HTML_LANG } from "@/lib/html-lang";
 import { SITE_TITLE, TITLE_TEMPLATE } from "@/platform/document-title";
+import { BRAND, BRAND_NAME, SITE_URL } from "@/lib/brand";
 import {
   resolveBrowserApiBaseUrl,
   resolveBrowserWsUrl,
@@ -73,13 +74,14 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://www.auro.ai"),
+  metadataBase: new URL(SITE_URL),
+  applicationName: BRAND_NAME,
   title: {
     default: SITE_TITLE,
     template: TITLE_TEMPLATE,
   },
   description:
-    "Source-available platform that turns coding agents into real teammates. Assign tasks, track progress, compound skills.",
+    BRAND.en.description,
   icons: {
     icon: [{ url: "/favicon.svg", type: "image/svg+xml" }],
     shortcut: ["/favicon.svg"],
@@ -94,7 +96,7 @@ export const metadata: Metadata = {
   // manifest's `display` instead (honoured since iOS 16.4).
   appleWebApp: {
     capable: true,
-    title: "Auro",
+    title: BRAND_NAME,
     // `default` keeps the web view below the status bar. Going edge-to-edge
     // (`black-translucent` + viewport-fit=cover) needs env(safe-area-inset-*)
     // padding, which no surface in the app has yet.
@@ -102,20 +104,17 @@ export const metadata: Metadata = {
   },
   openGraph: {
     type: "website",
-    siteName: "Auro",
+    siteName: BRAND_NAME,
     locale: "en_US",
+    images: [{ url: "/images/weave-a-world-social.png", width: 1200, height: 630, alt: BRAND.en.slogan }],
   },
   twitter: {
     card: "summary_large_image",
-    site: "@auro_hq",
-    creator: "@auro_hq",
-  },
-  alternates: {
-    canonical: "/",
+    images: ["/images/weave-a-world-social.png"],
   },
   robots: {
-    index: true,
-    follow: true,
+    index: false,
+    follow: false,
   },
 };
 

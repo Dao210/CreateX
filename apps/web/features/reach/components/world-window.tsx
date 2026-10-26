@@ -306,7 +306,7 @@ export function WorldWindow({ snapshot, beatSeconds = 60, reducedMotion = false 
         onPointerLeave={() => setHovered(null)}
         className="h-full w-full"
         role="img"
-        aria-label="The REACH world map. Every shape is a submitted weapon or character. The live feed beside it describes the same events in text."
+        aria-label="The Weave a World map. Every shape is a weapon or character. The chronicle beside it describes the same events in text."
       />
       {hovered && (
         <div
