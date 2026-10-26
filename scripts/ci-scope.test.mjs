@@ -19,7 +19,7 @@ for (const [name, files, selected] of [
   ["readme only", ["README.md"], []],
   ["quality configuration", ["knip.jsonc"], ["quality"]],
   ["web changelog", ["apps/web/features/landing/i18n/en.ts"], ["frontend", "quality"]],
-  ["Siege", ["apps/siege/src/main.tsx"], ["frontend", "quality"]],
+  ["Siege", ["packages/views/siege/siege-page.tsx"], ["frontend", "quality"]],
   ["mobile UI", ["apps/mobile/app/index.tsx"], ["quality"]],
   ["migration only", ["server/migrations/999_example.up.sql"], ["backend", "sqlc"]],
   ["agent process code", ["server/pkg/agent/cursor_background.go"], ["backend", "runtime"]],

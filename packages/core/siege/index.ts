@@ -7,3 +7,5 @@ export * from "./simulation";
 export * from "./cannon";
 export * from "./campaign";
 export * from "./platform";
+export * from "./preferences";
+export * from "./routes";

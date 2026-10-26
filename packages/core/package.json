@@ -169,7 +169,8 @@
     "./autopilots/stores": "./autopilots/stores/index.ts",
     "./siege": "./siege/index.ts",
     "./tank-defense": "./tank-defense/index.ts",
-    "./inbox/system-notifications": "./inbox/system-notifications.ts"
+    "./inbox/system-notifications": "./inbox/system-notifications.ts",
+    "./siege/queries": "./siege/queries.ts"
   },
   "dependencies": {
     "@formatjs/intl-localematcher": "catalog:",

@@ -1,9 +1,11 @@
+import { useCanvasResolution } from "../use-canvas-resolution";
+import { createSiegeClient, siegeSessionOptions, type SiegeScope } from "@auro/core/siege/queries";
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, ArrowRight, BookOpen, Check, Coins, Download, Flag, Hammer, Heart, Map, Pause, Play, Plus, RotateCcw, Settings2, Shield, Snowflake, Sparkles, Swords, Target, Volume2, VolumeX, X } from "lucide-react";
 import { Button } from "@auro/ui/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@auro/ui/components/ui/dialog";
-import { CAMPAIGN_HEIGHT, CAMPAIGN_LEVELS, CAMPAIGN_WIDTH, compileCampaignWeapon, createCannonDrawing, createCannonSpec, DEFAULT_CANNON, ENEMY_RECIPES, presetBlueprint, RULES_VERSION, sellPrice, SiegeClient, unlockedLevel, upgradePrice, WEAPON_RECIPES,
+import { CAMPAIGN_HEIGHT, CAMPAIGN_LEVELS, CAMPAIGN_WIDTH, compileCampaignWeapon, createCannonDrawing, createCannonSpec, DEFAULT_CANNON, ENEMY_RECIPES, presetBlueprint, RULES_VERSION, sellPrice, unlockedLevel, upgradePrice, WEAPON_RECIPES,
   type Blueprint, type CampaignBlueprint, type CampaignCheckpoint, type CannonDesign, type WeaponKind, type SiegePlatform } from "@auro/core/siege";
 import { loadArenaArt } from "../arena/art";
 import { paintBattle } from "./painter";
@@ -18,16 +20,18 @@ const emptySnapshot = (levelId: number): CampaignSnapshot => ({ tick: 0, phase: 
 
 export interface CampaignAppProps {
   platform: SiegePlatform;
-  /** Where the drawing workshop lives. Defaults to the standalone path. */
-  workshopHref?: string;
+  scope: SiegeScope;
+  /** The workspace drawing workshop destination. */
+  workshopHref: string;
 }
 
-export function CampaignApp({ platform, workshopHref = "/siege/" }: CampaignAppProps) {
-  const api = useMemo(() => new SiegeClient("/api/siege", platform.request), [platform.request]);
+export function CampaignApp({ platform, scope, workshopHref }: CampaignAppProps) {
+  const { workspaceId, workspaceSlug, userId } = scope;
+  const api = useMemo(() => createSiegeClient({ workspaceId, workspaceSlug, userId }), [workspaceId, workspaceSlug, userId]);
   const store = useMemo(() => createCampaignStorage(platform), [platform]);
   const paperStyle = useMemo(
-    () => ({ "--siege-paper": `url("${platform.assetBase}art/workshop-paper.webp")` }) as CSSProperties,
-    [platform.assetBase],
+    () => ({ "--siege-paper": `url("${platform.assetUrl("workshop-paper")}")` }) as CSSProperties,
+    [platform],
   );
   const [initial] = useState(() => ({ progress: store.readProgress(), ...store.readCheckpoint(), ...store.readLoadout() }));
   const [progress, setProgress] = useState(initial.progress);
@@ -41,11 +45,14 @@ export function CampaignApp({ platform, workshopHref = "/siege/" }: CampaignAppP
   const [speed, setSpeed] = useState<1 | 2>(initial.progress.speed), [levelsOpen, setLevelsOpen] = useState(false), [helpOpen, setHelpOpen] = useState(false), [settingsOpen, setSettingsOpen] = useState(false);
   const [importing, setImporting] = useState(false);
   const [sessionId] = useState(() => platform.preferences.getItem("siege.session") ?? "");
-  const library = useQuery({ queryKey: ["siege", "session", sessionId], queryFn: () => api.read(sessionId), enabled: settingsOpen && !!sessionId, retry: false });
+  const library = useQuery({ ...siegeSessionOptions(api, scope, sessionId), enabled: settingsOpen && !!sessionId });
   const resume = useRef<CampaignCheckpoint | null>(initial.checkpoint);
   const engine = useRef<CampaignEngine | null>(null), canvas = useRef<HTMLCanvasElement>(null);
   const controls = useRef({ speed, selectedSlot, selectedKind, loadout }); controls.current = { speed, selectedSlot, selectedKind, loadout };
   const sound = useRef<GameSound | null>(null);
+  const redraw = useRef<(() => void) | null>(null);
+  useCanvasResolution(canvas, CAMPAIGN_WIDTH / CAMPAIGN_HEIGHT, redraw);
+  useEffect(() => { redraw.current?.(); }, [selectedSlot, selectedKind, loadout]);
   const recordedResult = useRef<CampaignEngine | null>(null);
   const level = CAMPAIGN_LEVELS[levelId - 1]!;
   const selected = snapshot.towers.find(t => t.slot === selectedSlot);
@@ -80,14 +87,17 @@ export function CampaignApp({ platform, workshopHref = "/siege/" }: CampaignAppP
         world.setPaused(true); setSnapshot(world.snapshot());
       }
     };
+    const blur = () => { if (world && !["victory", "defeat"].includes(world.phase)) { world.setPaused(true); setSnapshot(world.snapshot()); redraw.current?.(); } };
     document.addEventListener("visibilitychange", visibility);
-    Promise.all([import("./engine"), loadArenaArt(platform.assetBase)]).then(async ([runtime, art]) => {
-      await runtime.initializePhysics(); if (disposed) return;
+    window.addEventListener("blur", blur);
+    Promise.all([import("./engine").then(async runtime => { await runtime.initializePhysics(); return runtime; }), loadArenaArt(platform.assetUrl, "campaign")]).then(([runtime, art]) => {
+      if (disposed) return;
       const checkpoint = resume.current?.levelId === levelId ? resume.current : undefined;
       world = new runtime.CampaignEngine(CAMPAIGN_LEVELS[levelId - 1]!, checkpoint); resume.current = null;
       engine.current = world; sound.current?.reset(); setSnapshot(world.snapshot()); setReady(true);
       let last = 0, accumulator = 0, lastHUD = 0, lastRevision = -1, lastCheckpoint = "", heardTick = -1, priorLeaks = world.leaks.length;
       const frame = (now: number) => {
+        raf = 0;
         if (disposed || !world) return;
         const elapsed = Math.min(0.1, last ? (now - last) / 1000 : 0); last = now;
         if (!world.paused && document.visibilityState === "visible" && ["running", "intermission"].includes(world.phase)) accumulator += elapsed * controls.current.speed;
@@ -115,19 +125,20 @@ export function CampaignApp({ platform, workshopHref = "/siege/" }: CampaignAppP
           if (result.phase === "victory") setProgress(previous => ({ ...previous, stars: previous.stars.map((stars, index) => index === levelId - 1 ? Math.max(stars, result.stars) : stars) }));
         }
         if (now - lastHUD >= 100 || world.revision !== lastRevision) { setSnapshot(world.snapshot()); lastHUD = now; lastRevision = world.revision; }
-        raf = requestAnimationFrame(frame);
+        if (!world.paused && document.visibilityState === "visible" && ["running", "intermission"].includes(world.phase)) raf = requestAnimationFrame(frame);
       };
-      raf = requestAnimationFrame(frame);
+      redraw.current = () => { if (!disposed && !raf) { last = 0; raf = requestAnimationFrame(frame); } };
+      redraw.current();
     }).catch(() => { if (!disposed) setError("战场加载失败，进度仍保留。请重试加载。"); });
     return () => {
-      disposed = true; cancelAnimationFrame(raf); document.removeEventListener("visibilitychange", visibility);
+      disposed = true; redraw.current = null; cancelAnimationFrame(raf); document.removeEventListener("visibilitychange", visibility); window.removeEventListener("blur", blur);
       if (engine.current === world) engine.current = null;
       world?.dispose();
     };
     // A running battle owns immutable blueprint snapshots; drafts do not recreate it.
-  }, [levelId, restart, retryLoad, store, platform.assetBase]);
+  }, [levelId, restart, retryLoad, store, platform]);
 
-  const update = () => { if (engine.current) setSnapshot(engine.current.snapshot()); };
+  const update = () => { if (engine.current) setSnapshot(engine.current.snapshot()); redraw.current?.(); };
   const act = (action: () => string | null, cue?: "upgrade" | "gold") => {
     void sound.current?.activate(); const issue = action(); setNotice(issue ?? "");
     if (!issue && cue) sound.current?.play(cue, engine.current?.tick); update();
@@ -186,7 +197,11 @@ export function CampaignApp({ platform, workshopHref = "/siege/" }: CampaignAppP
 
   const startButton = <Button size="sm" disabled={!ready || finished} onClick={() => { if (["ready", "intermission"].includes(snapshot.phase)) { if (!snapshot.towers.length) { setNotice("先点一个阵位，建造你的第一座武器。"); return; } act(() => engine.current!.startWave()); } else togglePause(); }}>{["ready", "intermission"].includes(snapshot.phase) ? <><Play size={16} />{snapshot.completedWaves ? "开始下一波" : "开始进攻"}</> : snapshot.paused ? <><Play size={16} />继续战斗</> : <><Pause size={16} />暂停布阵</>}</Button>;
 
-  return <main className="campaign-app" style={paperStyle}>
+  return <main className="campaign-app" style={paperStyle} onBlur={event => {
+    if (event.relatedTarget instanceof Node && !event.currentTarget.contains(event.relatedTarget)) {
+      const world = engine.current; if (world && world.phase === "running") { world.setPaused(true); update(); }
+    }
+  }}>
     <header className="campaign-header">
       <span className="campaign-wordmark">Doodle<span>Siege<span className="campaign-dot">.</span></span></span>
       <nav aria-label="游戏导航"><AppLink href={workshopHref} onClick={() => pauseForPanel(true)}><ArrowLeft size={15} />武器工坊</AppLink>

@@ -62,9 +62,6 @@ make status ARGS="createx-440"           # 按登记名称查看一个环境
 | `make up C=deal` | 启动独立 DEAL 环境，数据和日志位于 `.deal/`。 |
 | `make status C=deal` | 查看 DEAL 状态。 |
 | `make down C=deal` | 停止 DEAL，保留数据。 |
-| `make up C=siege` | 启动 Siege 独立演示与测试壳。 |
-| `make status C=siege` | 查看 Siege 独立壳状态。 |
-| `make down C=siege` | 停止 Siege 独立壳，保留数据。 |
 
 `deal`、`siege` 通过各自脚本管理，需要单独指定，不能与 Auro 组件组合为一个 `C` 值。`make list` 枚举的是 Auro 环境注册表；DEAL 和 Siege 独立壳分别使用上表的状态命令。Auro 工作区内的 Siege 功能随 API 和 Web/Desktop 启动。
 
@@ -110,7 +107,6 @@ pnpm build                              # 全部前端应用，排除移动端
 pnpm --filter @auro/web build            # Web
 pnpm --filter @auro/desktop build        # Desktop 编译
 pnpm --filter @auro/deal build           # DEAL
-pnpm --filter @auro/siege build          # Siege 独立壳
 ```
 
 ## 初始化与其他启动入口

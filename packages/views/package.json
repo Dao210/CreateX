@@ -68,7 +68,9 @@
     "./locales": "./locales/index.ts",
     "./locales/*": "./locales/*",
     "./issues/visuals": "./issues/components/visuals.ts",
-    "./siege/siege.css": "./siege/siege.css"
+    "./siege/siege.css": "./siege/siege.css",
+    "./siege/workshop": "./siege/siege-workshop.tsx",
+    "./siege/campaign": "./siege/campaign/campaign-app.tsx"
   },
   "dependencies": {
     "@auro/core": "workspace:*",

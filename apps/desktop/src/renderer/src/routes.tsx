@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { createMemoryRouter, Outlet, useMatches } from "react-router-dom";
 import type { RouteObject } from "react-router-dom";
 import { AutopilotDetailPage } from "./pages/autopilot-detail-page";
@@ -31,7 +31,8 @@ import { DaemonSettingsTab } from "./components/daemon-settings-tab";
 import { UpdatesSettingsTab } from "./components/updates-settings-tab";
 import { WorkspaceRouteLayout } from "./components/workspace-route-layout";
 import { DesktopRouteErrorPage } from "./components/route-error-page";
-import { SiegeCampaignPage, SiegePage } from "./pages/siege-page";
+const SiegePage = lazy(() => import("./pages/siege-page").then(module => ({ default: module.SiegePage })));
+const SiegeCampaignPage = lazy(() => import("./pages/siege-page").then(module => ({ default: module.SiegeCampaignPage })));
 import { TanksPage } from "./pages/tank-defense-page";
 
 /**
@@ -152,11 +153,11 @@ export const appRoutes: RouteObject[] = [
           { path: "skills", element: <SkillsPage />, handle: { title: "Skills" } },
           // Shared game pages keep workspace identity and the desktop shell;
           // each game owns the content header, controls and scrolling.
-          { path: "siege", element: <SiegePage />, handle: { title: "Siege" } },
+          { path: "siege", element: <Suspense><SiegePage /></Suspense>, handle: { title: "Siege" } },
           { path: "tanks", element: <TanksPage />, handle: { title: "Tank Defense" } },
           {
             path: "siege/campaign",
-            element: <SiegeCampaignPage />,
+            element: <Suspense><SiegeCampaignPage /></Suspense>,
             handle: { title: "Siege" },
           },
           {

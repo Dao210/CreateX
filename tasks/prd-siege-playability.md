@@ -1,8 +1,8 @@
 # PRD：Siege 从武器试玩走向可反复挑战的塔防
 
-版本：v0.2 实施版  
-日期：2026-10-08  
-入口：`/siege/play/` 闯关；`/siege/` 武器工坊  
+版本：v0.2 实施版
+日期：2026-10-08
+入口：`/{slug}/siege/campaign` 闯关；`/{slug}/siege` 武器工坊
 状态：按“新增路由，新页面实现这个项目”实施 8 关验证版；交付范围与验证见 [林地战役交付说明](../docs/siege-campaign-delivery.md)。可玩性目标仍需玩家试玩验证。
 
 ## 1. 产品定位与问题
@@ -191,7 +191,7 @@ flowchart LR
 
 ### 主界面
 
-- `/siege/play/` 首次进入第一关；后续恢复最近的波间防线，提供选关与工坊入口。`/siege/` 保留创作与单武器测试，并提供闯关链接。
+- `/{slug}/siege/campaign` 首次进入第一关；后续恢复最近的波间防线，提供选关与工坊入口。`/{slug}/siege` 保留创作与单武器测试，并提供闯关链接。
 - 战斗占据主要空间。顶部只保留城堡生命、金币、波次、暂停与倍率；底部是本关可用武器。
 - 点击安装位后显示建造菜单；点击已有武器显示范围、升级、出售。每次操作最多经过“选位置 → 选动作”两个主要步骤。
 - 完整参数、碰撞调试和物理细节放到工坊或显式详情入口；选关与战斗无需读质量和惯量才能操作。
@@ -246,7 +246,7 @@ UI 故事的浏览器验收原采用 PRD 技能要求的 dev-browser 路径；�
 
 | 编号 | 要求 | 优先级 |
 | --- | --- | --- |
-| FR-01 | `/siege/play/` 提供首次开玩、选关、继续和工坊链接 | 首期必需 |
+| FR-01 | `/{slug}/siege/campaign` 提供首次开玩、选关、继续和工坊链接 | 首期必需 |
 | FR-02 | 地图定义道路、入口、城堡、安装位、可攻击障碍与装饰 | 首期必需 |
 | FR-03 | 多武器部署与单一战斗世界，支持独立升级和出售 | 首期必需 |
 | FR-04 | 金币与版本化定价，禁止重复发奖或透支建造 | 首期必需 |
@@ -265,7 +265,7 @@ UI 故事的浏览器验收原采用 PRD 技能要求的 dev-browser 路径；�
 
 ### 复用与必须新增的能力
 
-- 保持独立 `apps/siege`、`packages/core/siege`、`server/internal/siege` 与 `/siege/`，不接入 Auro 登录、工作区或 PostgreSQL。
+- 作为 Auro 的一级工作区功能，复用 Web/Desktop、登录、工作区与 PostgreSQL；共享规则在 `packages/core/siege`，Canvas/Rapier 在 `packages/views/siege`，API 在 `server/internal/siege`。
 - 复用 Drawing／Spec、几何编译、炮台生成与绘制、现有素材和匿名蓝图保存。已有 P0 工坊作为测试与创作入口继续使用。
 - core 增加关卡定义、金币／升级／星级规则、战斗指令校验、受限配方和版本化定价；保持纯逻辑，不导入 DOM 或 Rapier。
 - app 运行时把当前单个 `definition/body/mount` 改为武器实例集合；继续使用一个物理世界，增加路径推进、障碍与事件记录。不是把现有三波常量简单加大。
@@ -342,12 +342,12 @@ UI 故事的浏览器验收原采用 PRD 技能要求的 dev-browser 路径；�
 - [现有交付与边界](../docs/doodle-siege-delivery.md)
 - [原始产品构想](../docs/画武器对战20261007.md)
 - [架构设计](../docs/doodle-siege-architecture.md)
-- [现有工坊与入口](../apps/siege/src/app.tsx)
-- [单武器战斗运行时](../apps/siege/src/runtime/engine.ts)
+- [现有工坊与入口](../packages/views/siege/siege-workshop.tsx)
+- [单武器战斗运行时](../packages/views/siege/runtime/engine.ts)
 - [三波与统计规则](../packages/core/siege/simulation.ts)
 - [武器编译器](../packages/core/siege/compiler.ts)
 - [蓝图与草稿契约](../packages/core/siege/schema.ts)
-- [浏览器存储](../apps/siege/src/platform/storage.ts)
+- [浏览器存储](../packages/views/siege/platform/web.ts)
 - [既有浏览器用例](../e2e/siege/siege.spec.ts)
 
 仓库指令引用的两份 `apps/docs/.../conventions*.mdx` 在本次 checkout 中不存在；本稿沿用既有“城堡、炮台、蓝图、墨水”等术语及根指令中的文案规则。当前目录也没有 Git 元数据，因此不能用 `git diff --check` 或提交状态作交付证据。本文仅新增 PRD；没有改动玩法代码，没有运行代码测试或发布服务。

@@ -387,6 +387,18 @@ export class TestApiClient {
     }
   }
 
+  async siegeStatus(): Promise<{ mode: string; ready: boolean }> {
+    const response = await this.authedFetch("/api/siege/status");
+    if (!response.ok) throw new Error(`Siege status failed: ${response.status}`);
+    return response.json();
+  }
+
+  async readSiegeSession(id: string) {
+    const response = await this.authedFetch(`/api/siege/sessions/${encodeURIComponent(id)}`);
+    if (!response.ok) throw new Error(`Siege session failed: ${response.status}`);
+    return response.json();
+  }
+
   /** Deletes this client's workspace; only for workspaces a test created. */
   async deleteWorkspace() {
     if (!this.workspaceId) return;

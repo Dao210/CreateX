@@ -4,9 +4,8 @@ import { drawStrokes } from "../editor/drawing-canvas";
 import { paintCannon } from "../workshop/cannon-painter";
 import type { CampaignEngine } from "./engine";
 
-export function paintBattle(ctx: CanvasRenderingContext2D, engine: CampaignEngine, art: ArenaArt | null, selected: number | null, reducedMotion: boolean, preview: { range: number; color: string }) {
-  const scale = ctx.canvas.width / CAMPAIGN_WIDTH;
-  ctx.setTransform(scale, 0, 0, scale, 0, 0);
+const landscapes = new WeakMap<CanvasRenderingContext2D, { canvas: OffscreenCanvas; level: CampaignEngine["level"]; art: ArenaArt | null }>();
+function paintLandscape(ctx: OffscreenCanvasRenderingContext2D, engine: CampaignEngine, art: ArenaArt | null) {
   ctx.clearRect(0, 0, CAMPAIGN_WIDTH, CAMPAIGN_HEIGHT);
   ctx.fillStyle = "#dce2b8"; ctx.fillRect(0, 0, CAMPAIGN_WIDTH, CAMPAIGN_HEIGHT);
   // A quiet center keeps the authored routes legible over the woodland perimeter.
@@ -27,6 +26,20 @@ export function paintBattle(ctx: CanvasRenderingContext2D, engine: CampaignEngin
     const entry = route[0]!;
     ctx.fillStyle = "#ba663f"; ctx.beginPath(); ctx.moveTo(entry.x + 0.3, entry.y - 0.23); ctx.lineTo(entry.x + 0.7, entry.y); ctx.lineTo(entry.x + 0.3, entry.y + 0.23); ctx.closePath(); ctx.fill();
   }
+}
+
+export function paintBattle(ctx: CanvasRenderingContext2D, engine: CampaignEngine, art: ArenaArt | null, selected: number | null, reducedMotion: boolean, preview: { range: number; color: string }) {
+  const scale = ctx.canvas.width / CAMPAIGN_WIDTH;
+  ctx.setTransform(scale, 0, 0, scale, 0, 0);
+  let cached = landscapes.get(ctx);
+  if (!cached || cached.level !== engine.level || cached.art !== art || cached.canvas.width !== ctx.canvas.width || cached.canvas.height !== ctx.canvas.height) {
+    const canvas = new OffscreenCanvas(ctx.canvas.width, ctx.canvas.height);
+    const background = canvas.getContext("2d")!;
+    background.setTransform(scale, 0, 0, scale, 0, 0);
+    paintLandscape(background, engine, art);
+    cached = { canvas, level: engine.level, art }; landscapes.set(ctx, cached);
+  }
+  ctx.drawImage(cached.canvas, 0, 0, CAMPAIGN_WIDTH, CAMPAIGN_HEIGHT);
   const endpoint = engine.level.routes[0]!.at(-1)!;
   if (art) paintSprite(ctx, art[engine.hp === 0 ? "castle-ruined" : engine.hp < 60 ? "castle-damaged" : "castle-intact"], endpoint.x - 0.6, endpoint.y, 2.6);
   if (selected !== null) {

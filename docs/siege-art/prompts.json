@@ -108,7 +108,7 @@
     }
   ],
   "delivery": {
-    "runtimeDirectory": "apps/siege/public/art",
+    "runtimeDirectory": "packages/views/siege/assets",
     "runtimeFormat": "WebP",
     "maxBytesPerImage": 307200,
     "rawWorkingDirectory": ".siege/art-work",
@@ -120,7 +120,7 @@
       "Do not ship missing asset references or label pending assets as generated."
     ],
     "optimizedSourceDirectory": "docs/siege-art/source",
-    "manifest": "apps/siege/public/art/manifest.json",
+    "manifest": "packages/views/siege/assets/manifest.json",
     "assetCount": 30
   }
 }

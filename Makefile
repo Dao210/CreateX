@@ -155,13 +155,13 @@ selfhost-stop: ## Stop the self-hosted Docker Compose stack
 #   make up ARGS=--ephemeral    agent-owned, expires, collected by `make gc`
 
 up: ## Start this checkout's environment (C=api,web,...; MODE=development|production)
-	@if [ "$(C)" = "deal" ]; then bash scripts/deal-env.sh up; elif [ "$(C)" = "siege" ]; then bash scripts/siege-env.sh up; else bash scripts/dev-env.sh up $(if $(C),--components $(C)) $(if $(MODE),--web-mode $(MODE)) $(ARGS); fi
+	@if [ "$(C)" = "deal" ]; then bash scripts/deal-env.sh up; else bash scripts/dev-env.sh up $(if $(C),--components $(C)) $(if $(MODE),--web-mode $(MODE)) $(ARGS); fi
 
 down: ## Stop this environment's processes, keeping its database and profile
-	@if [ "$(C)" = "deal" ]; then bash scripts/deal-env.sh down; elif [ "$(C)" = "siege" ]; then bash scripts/siege-env.sh down; else bash scripts/dev-env.sh down $(ARGS); fi
+	@if [ "$(C)" = "deal" ]; then bash scripts/deal-env.sh down; else bash scripts/dev-env.sh down $(ARGS); fi
 
 status: ## Show what is running for this environment, with proof of identity
-	@if [ "$(C)" = "deal" ]; then bash scripts/deal-env.sh status; elif [ "$(C)" = "siege" ]; then bash scripts/siege-env.sh status; else bash scripts/dev-env.sh status $(ARGS); fi
+	@if [ "$(C)" = "deal" ]; then bash scripts/deal-env.sh status; else bash scripts/dev-env.sh status $(ARGS); fi
 
 list: ## List every registered development environment on this machine
 	@bash scripts/dev-env.sh list $(ARGS)

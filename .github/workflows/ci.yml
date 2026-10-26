@@ -897,9 +897,6 @@ jobs:
       - name: Test development environment registry
         run: bash scripts/dev-env.test.sh
 
-      - name: Test independent Siege environment lifecycle
-        run: bash scripts/siege-env.test.sh
-
       - name: Test UI performance comparison runner
         run: bash scripts/perf-compare.test.sh
 
@@ -944,10 +941,29 @@ jobs:
       - name: Check frontend quality
         uses: ./.github/actions/frontend-quality
 
-  siege-browser:
+  workspace-games-browser:
     needs: changes
     if: ${{ needs.changes.outputs.frontend == 'true' || needs.changes.outputs.backend == 'true' || needs.changes.outputs.scripts == 'true' }}
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_DB: auro
+          POSTGRES_USER: auro
+          POSTGRES_PASSWORD: auro
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U auro -d auro"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      DATABASE_URL: postgres://auro:auro@localhost:5432/auro?sslmode=disable
+      SIEGE_RECOGNITION_MODE: fixture
+      SIEGE_TEST_DATABASE_URL: postgres://auro:auro@localhost:5432/auro?sslmode=disable
+      AURO_DEV_HOME: ${{ runner.temp }}/auro-dev
+      AURO_DEV_PROFILES_HOME: ${{ runner.temp }}/auro-profiles
+      AURO_DEV_VERIFICATION_CODE: "888888"
+      RESEND_API_KEY: ""
     steps:
       - uses: actions/checkout@v6
       - uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024
@@ -962,23 +978,29 @@ jobs:
         with:
           go-version: "1.26.x"
           cache-dependency-path: server/go.sum
-      - name: Install game dependencies
-        run: pnpm install --filter @auro/siege... --frozen-lockfile
-      - name: Build game
-        run: pnpm --filter @auro/siege build
+      - name: Install workspace dependencies
+        run: pnpm install --frozen-lockfile
       - name: Install test browser
         run: pnpm exec playwright install --with-deps chromium
-      - name: Start explicit fixture environment
-        run: SIEGE_RECOGNITION_MODE=fixture make up C=siege
-      - name: Verify production assets and game workflow
-        env:
-          SIEGE_TEST_URL: http://127.0.0.1:18107
-        run: pnpm exec playwright test --config apps/siege/playwright.config.ts
-      - name: Stop game
+      - name: Start the main application with explicit recognition fixtures
+        run: |
+          make up C=api,web MODE=production
+          node --input-type=module <<'JS'
+          import { config } from 'dotenv';
+          import { appendFileSync } from 'node:fs';
+          config({ path: '.env', override: true });
+          appendFileSync(process.env.GITHUB_ENV, `PLAYWRIGHT_BASE_URL=http://localhost:${process.env.FRONTEND_PORT}\nNEXT_PUBLIC_API_URL=http://localhost:${process.env.PORT}\nDATABASE_URL=${process.env.DATABASE_URL}\nSIEGE_TEST_DATABASE_URL=${process.env.DATABASE_URL}\n`);
+          JS
+      - name: Verify authenticated game workflows
+        run: pnpm exec playwright test e2e/siege e2e/tanks.spec.ts
+      - name: Verify PostgreSQL session contracts
+        working-directory: server
+        run: go test ./internal/siege -run PGStore -count=1
+      - name: Stop the application
         if: always()
-        run: make down C=siege
+        run: make down
       - uses: actions/upload-artifact@v7
         if: failure()
         with:
-          name: siege-browser-failure
-          path: test-results/siege/
+          name: workspace-games-browser-failure
+          path: test-results/

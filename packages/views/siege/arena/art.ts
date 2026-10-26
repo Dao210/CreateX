@@ -9,27 +9,29 @@ export const ART_IDS = [
 
 export type ArtId = typeof ART_IDS[number];
 export type ArenaArt = Record<ArtId, HTMLImageElement>;
-let pending: Promise<ArenaArt> | undefined;
+const images = new Map<string, Promise<HTMLImageElement>>();
+const campaignIds = ART_IDS.filter(id => !["practice-field", "workshop-paper", "impact", "slash", "shield-block", "shield-break", "dust", "smoke", "victory", "defeat", "grass", "rocks", "banner", "leaves"].includes(id));
 
-// One cache per document: a host serves the game from exactly one base URL, so
-// the first caller's assetBase wins. A second base would need its own page.
-export function loadArenaArt(assetBase: string): Promise<ArenaArt> {
-  const base = assetBase.endsWith("/") ? assetBase : assetBase + "/";
-  if (!pending) {
-    pending = Promise.all(ART_IDS.map(id => new Promise<readonly [ArtId, HTMLImageElement]>((resolve, reject) => {
-      const image = new Image();
-      image.onload = () => resolve([id, image]);
-      image.onerror = () => reject(new Error(`art_unavailable:${id}`));
-      image.src = `${base}art/${id}.webp`;
-    }))).then(entries => Object.fromEntries(entries) as ArenaArt).catch(error => {
-      pending = undefined;
-      throw error;
-    });
-  }
-  return pending;
+export async function loadArenaArt(assetUrl: (id: string) => string, scene: "arena" | "campaign" = "arena"): Promise<ArenaArt> {
+  const ids = scene === "campaign" ? campaignIds : ART_IDS.filter(id => id !== "workshop-paper");
+  const entries = await Promise.all(ids.map(async id => {
+    const url = assetUrl(id);
+    let pending = images.get(url);
+    if (!pending) {
+      pending = new Promise<HTMLImageElement>((resolve, reject) => {
+        const image = new Image();
+        image.onload = () => resolve(image);
+        image.onerror = () => reject(new Error(`art_unavailable:${id}`));
+        image.src = url;
+      }).catch(error => { images.delete(url); throw error; });
+      images.set(url, pending);
+    }
+    return [id, await pending] as const;
+  }));
+  return Object.fromEntries(entries) as ArenaArt;
 }
 
-export function paintSprite(ctx: CanvasRenderingContext2D, image: HTMLImageElement, x: number, y: number, size: number) {
+export function paintSprite(ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D, image: HTMLImageElement, x: number, y: number, size: number) {
   const width = image.naturalWidth, height = image.naturalHeight;
   const scale = size / Math.max(width, height);
   ctx.drawImage(image, x - width * scale / 2, y - height * scale / 2, width * scale, height * scale);

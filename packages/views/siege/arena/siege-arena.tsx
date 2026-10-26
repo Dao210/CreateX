@@ -1,3 +1,4 @@
+import { useCanvasResolution } from "../use-canvas-resolution";
 import { useEffect, useLayoutEffect, useRef } from "react";
 import { WORLD_SCALE, type WeaponDefinition, type ArenaMode, type ArenaStats } from "@auro/core/siege";
 import type { ArenaEngine } from "../runtime/engine";
@@ -12,17 +13,20 @@ const heavyFrames = ["heavy-1", "heavy-2", "heavy-3", "heavy-4"] as const;
 
 interface Props {
   definition: WeaponDefinition | null; run: number; mode: ArenaMode; paused: boolean;
-  collisions: boolean; onStats: (stats: ArenaStats) => void; onError: (code: string) => void;
-  assetBase: string;
+  collisions: boolean; onPause: () => void; onStats: (stats: ArenaStats) => void; onError: (code: string) => void;
+  assetUrl: (id: string) => string;
 }
-export function Arena({ definition, run, mode, paused, collisions, onStats, onError, assetBase }: Props) {
+export function Arena({ definition, run, mode, paused, collisions, onStats, onError, onPause, assetUrl }: Props) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const simulation = useRef<ArenaEngine | null>(null);
-  const controls = useRef({ paused, collisions, onStats, onError });
-  controls.current = { paused, collisions, onStats, onError };
+  const redraw = useRef<(() => void) | null>(null);
+  useCanvasResolution(canvas, 1.75, redraw);
+  const controls = useRef({ paused, collisions, onStats, onError, onPause });
+  controls.current = { paused, collisions, onStats, onError, onPause };
   useLayoutEffect(() => {
+    redraw.current?.();
     if (paused && simulation.current) onStats(simulation.current.snapshot());
-  }, [paused, onStats]);
+  }, [paused, collisions, onStats]);
   useEffect(() => {
     let disposed = false, raf = 0, engine: ArenaEngine | null = null;
     let last = 0, accumulator = 0, lastHUD = 0;
@@ -32,9 +36,9 @@ export function Arena({ definition, run, mode, paused, collisions, onStats, onEr
     const ctx = canvas.current?.getContext("2d");
     const render = () => {
       if (!ctx) return;
-      ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, 1120, 640);
-      ctx.fillStyle = "#f6f2e6"; ctx.fillRect(0, 0, 1120, 640);
-      const height = Math.max(8, (definition?.reach ?? 0) * 2 + 0.5), scale = 640 / height;
+      ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+      ctx.fillStyle = "#f6f2e6"; ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+      const height = Math.max(8, (definition?.reach ?? 0) * 2 + 0.5), scale = ctx.canvas.height / height;
       ctx.setTransform(scale, 0, 0, scale, 0, (height / 2 - 4) * scale);
       if (art) paintScenery(ctx, art, mode, engine?.stats.castleHP ?? 100, height);
       if (engine && definition) {
@@ -78,7 +82,7 @@ export function Arena({ definition, run, mode, paused, collisions, onStats, onEr
       }
     };
     render();
-    loadArenaArt(assetBase).then(loaded => {
+    if (definition && run) loadArenaArt(assetUrl).then(loaded => {
       if (disposed) return;
       art = loaded; render();
     }).catch(() => { if (!disposed) controls.current.onError("art_unavailable"); });
@@ -88,6 +92,7 @@ export function Arena({ definition, run, mode, paused, collisions, onStats, onEr
       engine = new ArenaEngine(definition, mode); engine.start();
       simulation.current = engine;
       const frame = (now: number) => {
+        raf = 0;
         if (disposed || !engine) return;
         const delta = Math.min(0.083, last ? (now - last) / 1000 : 0); last = now;
         if (!controls.current.paused && document.visibilityState === "visible") accumulator += delta;
@@ -98,16 +103,21 @@ export function Arena({ definition, run, mode, paused, collisions, onStats, onEr
           accumulator -= 1 / 60; steps++;
         }
         render();
-        if (now - lastHUD > 120) { controls.current.onStats(engine.snapshot()); lastHUD = now; }
-        raf = requestAnimationFrame(frame);
+        if (now - lastHUD > 120 || engine.stats.phase === "finished") { controls.current.onStats(engine.snapshot()); lastHUD = now; }
+        if (!controls.current.paused && document.visibilityState === "visible" && engine.stats.phase === "running") raf = requestAnimationFrame(frame);
       };
-      raf = requestAnimationFrame(frame);
+      redraw.current = () => { if (!disposed && !raf) { last = 0; raf = requestAnimationFrame(frame); } };
+      redraw.current();
     }).catch(() => { if (!disposed) controls.current.onError("physics_unavailable"); });
+    const suspend = () => controls.current.onPause();
+    const visibility = () => { if (document.visibilityState === "hidden") suspend(); };
+    window.addEventListener("blur", suspend); document.addEventListener("visibilitychange", visibility);
     return () => {
+      redraw.current = null; window.removeEventListener("blur", suspend); document.removeEventListener("visibilitychange", visibility);
       disposed = true; cancelAnimationFrame(raf);
       if (simulation.current === engine) simulation.current = null;
       engine?.dispose();
     };
-  }, [definition, run, mode, assetBase]);
+  }, [definition, run, mode, assetUrl]);
   return <canvas ref={canvas} className="arena-canvas" width={1120} height={640} aria-label="武器测试场" role="img" />;
 }

@@ -6,8 +6,6 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
-	"os"
-	"path/filepath"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -29,13 +27,10 @@ func (m *countedModel) Recognize(ctx context.Context, d Drawing) (Spec, int64, i
 }
 func setup(t *testing.T, model Recognizer) (*Service, string, Owner) {
 	t.Helper()
-	store, err := OpenStore(t.TempDir())
-	if err != nil {
-		t.Fatal(err)
-	}
+	store := newTestStore()
 	t.Cleanup(func() { store.Close() })
 	service := NewService(store, model, "fixture", true, 100)
-	owner := Owner{UserID: "test-owner"}
+	owner := Owner{WorkspaceID: uuid.NewString(), UserID: uuid.NewString()}
 	session, err := service.Create(owner, uuid.NewString())
 	if err != nil {
 		t.Fatal(err)
@@ -91,15 +86,7 @@ func TestUnknownModelOutcomeDoesNotRetryOrWriteBlueprint(t *testing.T) {
 	}
 }
 func TestStorageRestartAndOwnership(t *testing.T) {
-	dir := t.TempDir()
-	store, err := OpenStore(dir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if second, err := OpenStore(dir); err == nil {
-		second.Close()
-		t.Fatal("second process lock accepted")
-	}
+	store := newTestStore()
 	service := NewService(store, FixtureRecognizer{}, "fixture", true, 10)
 	session, err := service.Create(Owner{UserID: "owner"}, uuid.NewString())
 	if err != nil {
@@ -110,13 +97,7 @@ func TestStorageRestartAndOwnership(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	store.Close()
-	reopened, err := OpenStore(dir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer reopened.Close()
-	service = NewService(reopened, FixtureRecognizer{}, "fixture", true, 10)
+	service = NewService(store, FixtureRecognizer{}, "fixture", true, 10)
 	view, err := service.Receipt(session.ID, Owner{UserID: "owner"}, request)
 	if err != nil || view.State != "complete" {
 		t.Fatalf("restart %v %v", view, err)
@@ -175,7 +156,7 @@ func TestCannonBlueprintContract(t *testing.T) {
 	if decodeStrict(encoded, &Spec{}) == nil {
 		t.Fatal("model-authored damage accepted")
 	}
-	request := httptest.NewRequest(http.MethodGet, "/api/siege/status", nil)
+	request := httptest.NewRequest(http.MethodGet, "/api/siege/status", nil).WithContext(WithOwner(context.Background(), owner))
 	response := httptest.NewRecorder()
 	(&HTTP{Service: service}).Handler().ServeHTTP(response, request)
 	if response.Code != 200 || !strings.Contains(response.Body.String(), `"cannon"`) {
@@ -183,13 +164,10 @@ func TestCannonBlueprintContract(t *testing.T) {
 	}
 }
 
-// TestHTTPRequiresOwnerAndEnforcesOrigin covers the integration boundary: the
-// handler refuses a request with no member attached (the main server always
-// attaches one), keeps the standalone origin check when enabled, and never
-// leaks ownership metadata.
-func TestHTTPRequiresOwnerAndEnforcesOrigin(t *testing.T) {
+// The API rejects missing identity and never exposes ownership bookkeeping.
+func TestHTTPRequiresWorkspaceOwner(t *testing.T) {
 	service, _, owner := setup(t, FixtureRecognizer{})
-	handler := (&HTTP{Service: service, EnforceOrigin: true}).Handler()
+	handler := (&HTTP{Service: service}).Handler()
 	create := func(origin string, ctx context.Context) *httptest.ResponseRecorder {
 		request := httptest.NewRequest(http.MethodPost, "http://game.test/api/siege/sessions", strings.NewReader(`{"requestId":"`+uuid.NewString()+`"}`))
 		request.Header.Set("Content-Type", "application/json")
@@ -202,9 +180,6 @@ func TestHTTPRequiresOwnerAndEnforcesOrigin(t *testing.T) {
 		return response
 	}
 
-	if response := create("http://evil.test", WithOwner(context.Background(), owner)); response.Code != 403 {
-		t.Fatalf("foreign origin status=%d", response.Code)
-	}
 	if response := create("http://game.test", nil); response.Code != 401 {
 		t.Fatalf("anonymous status=%d body=%s", response.Code, response.Body.String())
 	}
@@ -217,6 +192,28 @@ func TestHTTPRequiresOwnerAndEnforcesOrigin(t *testing.T) {
 	}
 	if _, err := service.Read("00000000-0000-0000-0000-000000000000", owner); err == nil {
 		t.Fatal("missing session accepted")
+	}
+}
+
+func TestHTTPRateLimitIsScopedToWorkspaceMember(t *testing.T) {
+	_, _, owner := setup(t, FixtureRecognizer{})
+	h := &HTTP{}
+	request := httptest.NewRequest(http.MethodPost, "/api/siege/sessions", nil).WithContext(WithOwner(context.Background(), owner))
+	for range 30 {
+		if !h.allow(request) {
+			t.Fatal("member allowance exhausted early")
+		}
+	}
+	if h.allow(request) {
+		t.Fatal("member allowance was not enforced")
+	}
+	other := Owner{WorkspaceID: owner.WorkspaceID, UserID: uuid.NewString()}
+	if !h.allow(request.WithContext(WithOwner(context.Background(), other))) {
+		t.Fatal("one member exhausted another member's allowance")
+	}
+	other = Owner{WorkspaceID: uuid.NewString(), UserID: owner.UserID}
+	if !h.allow(request.WithContext(WithOwner(context.Background(), other))) {
+		t.Fatal("one workspace exhausted another workspace's allowance")
 	}
 }
 
@@ -273,15 +270,7 @@ func TestCrashedReceiptAndBudgetSurviveRestart(t *testing.T) {
 	if err := service.Store.SaveSession(session); err != nil {
 		t.Fatal(err)
 	}
-	// This test restarts the file-backed store, so it needs the directory. The
-	// interface deliberately hides it; assert on the concrete type instead.
-	dir := service.Store.(*fileStore).dir
-	service.Store.Close()
-	store, err := OpenStore(dir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer store.Close()
+	store := service.Store
 	model := &countedModel{}
 	restarted := NewService(store, model, "fixture", true, 1)
 	view, err := restarted.Recognize(context.Background(), id, owner, request, fixtureDrawing())
@@ -301,14 +290,7 @@ func TestStorageCapacityDoesNotReplaceExistingBlueprint(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	f, err := os.Create(filepath.Join(service.Store.(*fileStore).dir, "capacity-reserved"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err = f.Truncate(128 * 1024 * 1024); err != nil {
-		t.Fatal(err)
-	}
-	f.Close()
+	service.Store.(*testStore).saveError = problem("storage_capacity", 507)
 	_, err = service.Save(id, owner, SaveInput{RequestID: uuid.NewString(), ExpectedVersion: saved.Version, Name: "second", Drawing: fixtureDrawing(), Spec: spec})
 	var p *Problem
 	if !errors.As(err, &p) || p.Code != "storage_capacity" {

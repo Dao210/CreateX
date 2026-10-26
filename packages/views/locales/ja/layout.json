@@ -61,5 +61,10 @@
       "title": "Discord に参加",
       "dismiss": "閉じる"
     }
+  },
+  "siege": {
+    "workshop": "武器工房",
+    "campaign": "森の防衛戦",
+    "loading": "戦場を読み込み中…"
   }
 }

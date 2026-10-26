@@ -4,56 +4,74 @@ import (
 	"context"
 	"errors"
 	"os"
-	"path/filepath"
+	"sync"
 	"testing"
-	"time"
 
+	"github.com/auro-ai/auro/server/internal/testutil"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// The PostgreSQL store is the backend the hosted game actually runs on, so it
-// gets its own integration test rather than riding on the file store's.
-//
-// It is gated on SIEGE_TEST_PG_DSN instead of the package-wide test database:
-// the queries below own their schema (migration 564, applied here so there is
-// one source of truth), and a scratch database keeps the assertions about
-// capacity counts and daily budgets from colliding with rows other suites left
-// behind.
-//
-//	SIEGE_TEST_PG_DSN='postgres:///siege_probe' go test ./internal/siege -run PGStore
-func openTestPG(t *testing.T) *pgxpool.Pool {
-	t.Helper()
-	dsn := os.Getenv("SIEGE_TEST_PG_DSN")
-	if dsn == "" {
-		t.Skip("SIEGE_TEST_PG_DSN not set")
+func TestPGStoreConcurrentCreatesRespectMemberQuota(t *testing.T) {
+	pool, owner := openTestPG(t)
+	store := OpenPGStore(pool)
+	var workers sync.WaitGroup
+	errorsCh := make(chan error, 12)
+	for range 12 {
+		workers.Add(1)
+		go func() {
+			defer workers.Done()
+			request := uuid.NewString()
+			_, err := store.CreateSession(owner, request, func() *Session {
+				return &Session{ID: uuid.NewString(), Version: 1, CreateRequest: request}
+			})
+			errorsCh <- err
+		}()
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-	defer cancel()
-	pool, err := pgxpool.New(ctx, dsn)
+	workers.Wait()
+	close(errorsCh)
+	accepted := 0
+	for err := range errorsCh {
+		if err == nil {
+			accepted++
+			continue
+		}
+		var p *Problem
+		if !errors.As(err, &p) || p.Code != "capacity_reached" {
+			t.Fatalf("concurrent create: %v", err)
+		}
+	}
+	if accepted != maxSessionsPerOwner {
+		t.Fatalf("accepted %d sessions, want %d", accepted, maxSessionsPerOwner)
+	}
+}
+
+// PostgreSQL tests share the migrated test database and clean only their fixture rows.
+func openTestPG(t *testing.T) (*pgxpool.Pool, Owner) {
+	t.Helper()
+	dsn := os.Getenv("SIEGE_TEST_DATABASE_URL")
+	if dsn == "" {
+		t.Skip("SIEGE_TEST_DATABASE_URL not set")
+	}
+	pool, err := pgxpool.New(context.Background(), dsn)
 	if err != nil {
-		t.Fatalf("connect: %v", err)
+		t.Fatal(err)
 	}
 	t.Cleanup(pool.Close)
-
-	schema, err := os.ReadFile(filepath.Join("..", "..", "migrations", "564_siege_session.up.sql"))
-	if err != nil {
-		t.Fatalf("read migration: %v", err)
+	fx := testutil.New(pool, "", "")
+	suffix := uuid.NewString()
+	fx.UserID = fx.User(t, "Siege test", "siege-"+suffix+"@example.invalid")
+	fx.WorkspaceID = fx.Workspace(t, "Siege test", "siege-"+suffix)
+	fx.Member(t, fx.WorkspaceID, fx.UserID, "owner")
+	for _, table := range []string{"siege_session", "siege_recognition_budget"} {
+		fx.Cleanup(t, "DELETE FROM "+table+" WHERE workspace_id=$1::uuid", fx.WorkspaceID)
 	}
-	if _, err = pool.Exec(ctx, string(schema)); err != nil {
-		t.Fatalf("apply migration: %v", err)
-	}
-	// Each test starts from an empty table: capacity is counted across the whole
-	// table, so leftovers from a previous run would change the outcome.
-	if _, err = pool.Exec(ctx, `TRUNCATE siege_session, siege_recognition_budget`); err != nil {
-		t.Fatalf("truncate: %v", err)
-	}
-	return pool
+	return pool, Owner{WorkspaceID: fx.WorkspaceID, UserID: fx.UserID}
 }
 
 func TestPGStoreCreateIsIdempotent(t *testing.T) {
-	pool := openTestPG(t)
+	pool, owner := openTestPG(t)
 	store := OpenPGStore(pool)
-	owner := Owner{WorkspaceID: "0d1f4a8e-9c2b-4a71-8f3d-5b6e7c8d9a01", UserID: "6f1a1f9c-3c4a-4c1a-9b8e-2f1d0b6a7c55"}
 
 	build := func() *Session {
 		return &Session{ID: "11111111-1111-1111-1111-111111111111", Version: 1, CreateRequest: "req-1"}
@@ -73,7 +91,7 @@ func TestPGStoreCreateIsIdempotent(t *testing.T) {
 		t.Errorf("retried create returned %s, want the original %s", second.ID, first.ID)
 	}
 	var rows int
-	if err := pool.QueryRow(context.Background(), `select count(*) from siege_session`).Scan(&rows); err != nil {
+	if err := pool.QueryRow(context.Background(), `select count(*) from siege_session where workspace_id=$1::uuid`, owner.WorkspaceID).Scan(&rows); err != nil {
 		t.Fatal(err)
 	}
 	if rows != 1 {
@@ -82,9 +100,8 @@ func TestPGStoreCreateIsIdempotent(t *testing.T) {
 }
 
 func TestPGStoreIsolatesOwners(t *testing.T) {
-	pool := openTestPG(t)
+	pool, owner := openTestPG(t)
 	store := OpenPGStore(pool)
-	owner := Owner{WorkspaceID: "0d1f4a8e-9c2b-4a71-8f3d-5b6e7c8d9a01", UserID: "6f1a1f9c-3c4a-4c1a-9b8e-2f1d0b6a7c55"}
 	session, err := store.CreateSession(owner, "req-1", func() *Session {
 		return &Session{ID: "11111111-1111-1111-1111-111111111111", Version: 1, CreateRequest: "req-1"}
 	})
@@ -106,9 +123,8 @@ func TestPGStoreIsolatesOwners(t *testing.T) {
 }
 
 func TestPGStoreLockExcludesConcurrentWriters(t *testing.T) {
-	pool := openTestPG(t)
+	pool, owner := openTestPG(t)
 	store := OpenPGStore(pool)
-	owner := Owner{WorkspaceID: "0d1f4a8e-9c2b-4a71-8f3d-5b6e7c8d9a01", UserID: "6f1a1f9c-3c4a-4c1a-9b8e-2f1d0b6a7c55"}
 	session, err := store.CreateSession(owner, "req-1", func() *Session {
 		return &Session{ID: "11111111-1111-1111-1111-111111111111", Version: 1, CreateRequest: "req-1"}
 	})
@@ -143,9 +159,8 @@ func TestPGStoreLockExcludesConcurrentWriters(t *testing.T) {
 }
 
 func TestPGStoreSavesVersionAndRejectsMissingRows(t *testing.T) {
-	pool := openTestPG(t)
+	pool, owner := openTestPG(t)
 	store := OpenPGStore(pool)
-	owner := Owner{WorkspaceID: "0d1f4a8e-9c2b-4a71-8f3d-5b6e7c8d9a01", UserID: "6f1a1f9c-3c4a-4c1a-9b8e-2f1d0b6a7c55"}
 	session, err := store.CreateSession(owner, "req-1", func() *Session {
 		return &Session{ID: "11111111-1111-1111-1111-111111111111", Version: 1, CreateRequest: "req-1"}
 	})
@@ -172,10 +187,9 @@ func TestPGStoreSavesVersionAndRejectsMissingRows(t *testing.T) {
 	}
 }
 
-func TestPGStoreReserveBudgetMatchesFileStore(t *testing.T) {
-	pool := openTestPG(t)
+func TestPGStoreReserveBudget(t *testing.T) {
+	pool, owner := openTestPG(t)
 	store := OpenPGStore(pool)
-	owner := Owner{WorkspaceID: "0d1f4a8e-9c2b-4a71-8f3d-5b6e7c8d9a01", UserID: "6f1a1f9c-3c4a-4c1a-9b8e-2f1d0b6a7c55"}
 
 	// A budget of zero means "no recognitions": the insert branch must not hand
 	// out the first one for free.
@@ -193,7 +207,10 @@ func TestPGStoreReserveBudgetMatchesFileStore(t *testing.T) {
 		t.Errorf("third call error = %v, want recognition_budget", err)
 	}
 	// The budget is per member, so another member still has their own allowance.
-	if err := store.ReserveBudget(Owner{WorkspaceID: owner.WorkspaceID, UserID: "99999999-9999-9999-9999-999999999999"}, 2); err != nil {
+	fx := testutil.New(pool, owner.WorkspaceID, "")
+	other := fx.User(t, "Other member", "other-"+uuid.NewString()+"@example.invalid")
+	fx.Member(t, owner.WorkspaceID, other, "member")
+	if err := store.ReserveBudget(Owner{WorkspaceID: owner.WorkspaceID, UserID: other}, 2); err != nil {
 		t.Errorf("other member: %v", err)
 	}
 }

@@ -61,5 +61,10 @@
       "title": "加入 Discord",
       "dismiss": "关闭"
     }
+  },
+  "siege": {
+    "workshop": "武器工坊",
+    "campaign": "林地闯关",
+    "loading": "正在加载战场…"
   }
 }

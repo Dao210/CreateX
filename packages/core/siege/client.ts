@@ -6,8 +6,8 @@ export class SiegeError extends Error {
   constructor(public readonly code: string) { super(code); this.name = "SiegeError"; }
 }
 export class SiegeClient {
-  constructor(private baseURL = "/api/siege",
-    private transport: typeof fetch = (...args) => fetch(...args)) {}
+  constructor(private baseURL: string,
+    private transport: typeof fetch) {}
   private async request<T>(path: string, schema: z.ZodType<T>, body?: unknown): Promise<T> {
     let response: Response;
     try {

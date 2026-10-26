@@ -1,8 +1,7 @@
-import RAPIER from "@dimforge/rapier2d-compat";
+import { RAPIER } from "./physics";
+export { initializePhysics } from "./physics";
 import { hitDamage, initialStats, summary, DEFENSE_WAVES, ENEMIES_PER_WAVE, WAVE_INTERVAL, type ArenaMode, type ArenaStats, type WeaponDefinition, type ColliderDefinition } from "@auro/core/siege";
 
-let initialization: Promise<void> | undefined;
-export const initializePhysics = () => initialization ??= RAPIER.init();
 export interface Enemy {
   id: number; body: RAPIER.RigidBody; collider: RAPIER.Collider;
   hp: number; maxHP: number; heavy: boolean; stunUntil: number; lastHit: number;

@@ -6,30 +6,16 @@ import (
 	"errors"
 	"io"
 	"mime"
-	"net"
 	"net/http"
-	"net/url"
-	"strings"
 	"sync"
 	"time"
 )
 
-// HTTP serves the siege API. Ownership is resolved from the request context by
-// the caller: the main server injects the workspace member through
-// WithOwner (see the workspace-scoped route in cmd/server/router.go), while
-// standalone mode wraps this handler in a cookie-based resolver.
+// HTTP serves the workspace API behind Auro membership and CSRF middleware.
 type HTTP struct {
 	Service *Service
-	// SecureCookies only affects the secure flag of the standalone cookie
-	// issuer; it has no effect once identity comes from Auro sessions.
-	SecureCookies bool
-	// EnforceOrigin enables the same-origin POST check used by standalone mode.
-	// The main server leaves it off: Auro's auth middleware already rejects
-	// cookie-authenticated state changes without a CSRF token, and Electron
-	// sends a non-http Origin that would otherwise be refused here.
-	EnforceOrigin bool
-	mu            sync.Mutex
-	windows       map[string]struct {
+	mu      sync.Mutex
+	windows map[string]struct {
 		At    time.Time
 		Count int
 	}
@@ -45,7 +31,7 @@ func WithOwner(ctx context.Context, owner Owner) context.Context {
 // OwnerFromContext returns the member attached by WithOwner.
 func OwnerFromContext(ctx context.Context) (Owner, bool) {
 	owner, ok := ctx.Value(ownerKey{}).(Owner)
-	return owner, ok
+	return owner, ok && validRequest(owner.WorkspaceID) && validRequest(owner.UserID)
 }
 
 func (h *HTTP) Handler() http.Handler {
@@ -120,6 +106,10 @@ func (h *HTTP) Handler() http.Handler {
 		respond(w, 200, session.public())
 	})
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if _, ok := OwnerFromContext(r.Context()); !ok {
+			fail(w, problem("unauthorized", 401))
+			return
+		}
 		w.Header().Set("Cache-Control", "no-store")
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		if r.Method == "POST" {
@@ -127,19 +117,6 @@ func (h *HTTP) Handler() http.Handler {
 			if err != nil || media != "application/json" {
 				fail(w, problem("invalid_input", 415))
 				return
-			}
-			if h.EnforceOrigin {
-				if origin := r.Header.Get("Origin"); origin != "" {
-					u, err := url.Parse(origin)
-					scheme := "http"
-					if h.SecureCookies || r.TLS != nil {
-						scheme = "https"
-					}
-					if err != nil || u.Scheme != scheme || !strings.EqualFold(u.Host, r.Host) {
-						fail(w, problem("invalid_origin", 403))
-						return
-					}
-				}
 			}
 			if !h.allow(r) {
 				fail(w, problem("rate_limited", 429))
@@ -151,10 +128,8 @@ func (h *HTTP) Handler() http.Handler {
 }
 
 func (h *HTTP) allow(r *http.Request) bool {
-	ip, _, err := net.SplitHostPort(r.RemoteAddr)
-	if err != nil {
-		ip = r.RemoteAddr
-	}
+	owner, _ := OwnerFromContext(r.Context())
+	key := owner.Hash()
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	if h.windows == nil {
@@ -169,7 +144,7 @@ func (h *HTTP) allow(r *http.Request) bool {
 			delete(h.windows, key)
 		}
 	}
-	v := h.windows[ip]
+	v := h.windows[key]
 	if v.At.IsZero() {
 		if len(h.windows) >= 4096 {
 			return false
@@ -180,7 +155,7 @@ func (h *HTTP) allow(r *http.Request) bool {
 		return false
 	}
 	v.Count++
-	h.windows[ip] = v
+	h.windows[key] = v
 	return true
 }
 

@@ -61,5 +61,10 @@
       "title": "Join our Discord",
       "dismiss": "Dismiss"
     }
+  },
+  "siege": {
+    "workshop": "Weapon workshop",
+    "campaign": "Woodland campaign",
+    "loading": "Loading battlefield…"
   }
 }

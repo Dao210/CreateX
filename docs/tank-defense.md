@@ -112,7 +112,7 @@ make status
 | 基础音效 | `packages/views/common/game-sound.ts` | 坦克与 Siege 共用的合成音效 |
 | 宿主入口 | `apps/web`、`apps/desktop` | 路由、工作区身份与存储适配 |
 
-坦克模块不依赖 Siege、绘图编译器、Rapier 或识别服务。`apps/siege` 只保留原有涂鸦攻城的测试壳。协议与规则留在 core，DOM、画布和音频留在 views，框架 API 留在宿主。
+坦克模块不依赖 Siege、绘图编译器、Rapier 或识别服务。涂鸦攻城同样使用主项目的 Web、桌面和后端入口。协议与规则留在 core，DOM、画布和音频留在 views，框架 API 留在宿主。
 
 ```ts
 import { PLAYER_TANK, TANK_LEVELS, TankDefenseGame } from "@auro/core/tank-defense";

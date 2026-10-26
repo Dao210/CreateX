@@ -10,8 +10,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// pgxNoRows is pgx.ErrNoRows under a local name so both call sites read the
-// same as the file store's os.IsNotExist checks.
+// pgxNoRows identifies missing workspace-owned sessions.
 var pgxNoRows = pgx.ErrNoRows
 
 // pgLockNamespace keeps siege advisory locks from colliding with any other
@@ -53,6 +52,13 @@ func (s *pgStore) CreateSession(owner Owner, requestID string, build func() *Ses
 		return nil, err
 	}
 	defer tx.Rollback(ctx)
+	if err := lockOwner(ctx, tx, owner); err != nil {
+		return nil, err
+	}
+	// Serialize quota and idempotency checks only for this member, never globally.
+	if _, err := tx.Exec(ctx, `select pg_advisory_xact_lock($1, hashtext($2))`, pgLockNamespace+1, owner.Hash()); err != nil {
+		return nil, err
+	}
 
 	// Idempotency first: a retried create must return the original session,
 	// exactly like the file store's CreateRequest scan.
@@ -69,17 +75,11 @@ func (s *pgStore) CreateSession(owner Owner, requestID string, build func() *Ses
 		return nil, err
 	}
 
-	var total, mine int
-	if err = tx.QueryRow(ctx, `select count(*) from siege_session`).Scan(&total); err != nil {
+	var mine int
+	if err = tx.QueryRow(ctx, `select count(*) from siege_session where workspace_id=$1::uuid and user_id=$2::uuid`, owner.WorkspaceID, owner.UserID).Scan(&mine); err != nil {
 		return nil, err
 	}
-	if err = tx.QueryRow(ctx, `
-		select count(*) from siege_session
-		where workspace_id = $1::uuid and user_id = $2::uuid`,
-		owner.WorkspaceID, owner.UserID).Scan(&mine); err != nil {
-		return nil, err
-	}
-	if total >= maxSessionsTotal || mine >= maxSessionsPerOwner {
+	if mine >= maxSessionsPerOwner {
 		return nil, problem("capacity_reached", 429)
 	}
 
@@ -185,15 +185,16 @@ func (s *pgStore) SaveSession(session *Session) error {
 func (s *pgStore) ReserveBudget(owner Owner, limit int) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	// The WHERE on the conflict branch makes an exhausted budget insert nothing
-	// and update nothing, so RowsAffected distinguishes "consumed" from "over".
-	//
-	// The insert branch needs the same guard, expressed as a filtered select: a
-	// budget of 0 means "no recognitions", and a bare VALUES insert would hand
-	// out the first one for free. The day is bucketed in UTC because the file
-	// store rolls over at UTC midnight; current_date would follow the database's
-	// timezone instead, so the two backends would disagree about the boundary.
-	tag, err := s.pool.Exec(ctx, `
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+	if err = lockOwner(ctx, tx, owner); err != nil {
+		return err
+	}
+	// Both branches enforce the allowance, bucketed by the UTC day.
+	tag, err := tx.Exec(ctx, `
 		insert into siege_recognition_budget (workspace_id, user_id, day, count)
 		select $1::uuid, $2::uuid, (now() at time zone 'utc')::date, 1
 		where $3 > 0
@@ -207,5 +208,15 @@ func (s *pgStore) ReserveBudget(owner Owner, limit int) error {
 	if tag.RowsAffected() == 0 {
 		return problem("recognition_budget", 429)
 	}
-	return nil
+	return tx.Commit(ctx)
+}
+
+// Shared row locks fence session/budget creation against workspace or member deletion.
+func lockOwner(ctx context.Context, tx pgx.Tx, owner Owner) error {
+	var id string
+	err := tx.QueryRow(ctx, `select w.id from workspace w join member m on m.workspace_id=w.id join "user" u on u.id=m.user_id where w.id=$1::uuid and m.user_id=$2::uuid for key share of w,m,u`, owner.WorkspaceID, owner.UserID).Scan(&id)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return problem("not_found", 404)
+	}
+	return err
 }

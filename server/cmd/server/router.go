@@ -193,8 +193,7 @@ func parseTrustedProxies(raw string) []netip.Prefix {
 }
 
 // siegeOwner attaches the workspace member resolved by RequireWorkspaceMember as
-// the game owner. Standalone mode (cmd/siege) resolves owners from an anonymous
-// cookie instead; everything downstream of the owner is identical.
+// the game owner. All game requests use this authenticated identity.
 func siegeOwner(handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		workspaceID := middleware.WorkspaceIDFromContext(r.Context())

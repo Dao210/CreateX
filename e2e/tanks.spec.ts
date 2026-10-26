@@ -53,7 +53,7 @@ async function switchWorkspace(page: Page, workspace: Workspace) {
 }
 
 test("tank defense is a direct workspace item and preserves the shell after reload", async ({ page, baseURL }) => {
-  await page.goto(`/${primary.slug}/issues`);
+  await page.goto(`/${primary.slug}/chat`);
   const entry = page.getByRole("link", { name: "坦克守城", exact: true });
   await expect(entry).toHaveAttribute("href", `/${primary.slug}/tanks`, { timeout: 45000 });
   await entry.click();
@@ -135,6 +135,8 @@ test("arcade modes expose six maps, equipment guides and a paused blitz timer", 
   await page.getByRole("button", { name: "开始守卫", exact: true }).click();
   const battlefield = page.getByTestId("tank-battlefield");
   await expect(battlefield).toHaveAttribute("data-mode", "blitz");
+  // Map selection and the equipment guide can scroll the content pane.
+  await battlefield.scrollIntoViewIfNeeded();
   const board = await battlefield.boundingBox();
   expect(board!.y).toBeGreaterThanOrEqual(55); expect(board!.y + board!.height).toBeLessThanOrEqual(980);
   await expect.poll(async () => Number(await battlefield.getAttribute("data-time-left"))).toBeLessThan(90);

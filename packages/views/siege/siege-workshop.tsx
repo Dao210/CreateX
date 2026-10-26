@@ -1,16 +1,16 @@
+import type { SiegeClient } from "@auro/core/siege";
+import { createSiegeClient, siegeKeys, siegeSessionOptions, siegeStatusOptions, type SiegeScope } from "@auro/core/siege/queries";
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowRight, Check, Crosshair, Download, Eraser, LoaderCircle, Pause, Pencil, Play, RotateCcw, Save, Sparkles, Undo2 } from "lucide-react";
 import { Button } from "@auro/ui/components/ui/button";
-import { canonicalDrawing, CompileError, compileWeapon, emptyDrawing, initialStats, RULES_VERSION, SAMPLES, sampleSpec, SiegeClient, SiegeError,
+import { canonicalDrawing, CompileError, compileWeapon, emptyDrawing, initialStats, RULES_VERSION, SAMPLES, sampleSpec, SiegeError,
   DEFAULT_CANNON, createCannonDrawing, createCannonSpec, matchesCannonDesign,
-  type Drawing, type Point, type PartType, type WeaponSpec, type WeaponDefinition, type SiegeSession, type ArenaMode, type CannonDesign, type FreehandDraft, type Blueprint, type SiegePlatform } from "@auro/core/siege";
+  type Drawing, type Point, type PartType, type WeaponSpec, type WeaponDefinition, type SiegeSession, type ArenaMode, type CannonDesign, type WorkshopDraft, type FreehandDraft, type Blueprint, type SiegePlatform } from "@auro/core/siege";
 import { DrawingCanvas, type CanvasTool } from "./editor/drawing-canvas";
 import { Arena } from "./arena/siege-arena";
 import { DesignMetrics, BattleMetrics } from "./workshop/metrics";
 import { CannonWorkshop } from "./workshop/cannon-workshop";
-import { paintCannon } from "./workshop/cannon-painter";
-import { AppLink } from "../navigation";
 
 const defaultDrawing = createCannonDrawing(DEFAULT_CANNON), placeholderHash = "0".repeat(64);
 const defaultDefinition = compileWeapon(defaultDrawing, createCannonSpec(defaultDrawing, placeholderHash), placeholderHash, DEFAULT_CANNON);
@@ -55,23 +55,24 @@ const errorText = (error: unknown) => {
 };
 export interface SiegeWorkshopProps {
   platform: SiegePlatform;
+  scope: SiegeScope;
   /**
    * Where the campaign ("林地闯关") lives. Web passes its workspace route;
-   * standalone mode passes its /siege/play/ path. Omitted means no link, which
-   * is what a host that has no campaign route should show.
+   * The shared workspace page supplies the campaign destination.
    */
   campaignHref?: string;
 }
 
-export function SiegeWorkshop({ platform, campaignHref }: SiegeWorkshopProps) {
+export function SiegeWorkshop({ platform, scope }: SiegeWorkshopProps) {
   // The transport comes from the platform: /api/siege is workspace-scoped, so
   // the host has to contribute the workspace slug and its own credential.
-  const api = useMemo(() => new SiegeClient("/api/siege", platform.request), [platform.request]);
+  const { workspaceId, workspaceSlug, userId } = scope;
+  const api = useMemo(() => createSiegeClient({ workspaceId, workspaceSlug, userId }), [workspaceId, workspaceSlug, userId]);
   // The paper texture comes from the host's asset base, which differs between
   // an absolute web URL and a packaged desktop build's relative path.
   const paperStyle = useMemo(
-    () => ({ "--siege-paper": `url("${platform.assetBase}art/workshop-paper.webp")` }) as CSSProperties,
-    [platform.assetBase],
+    () => ({ "--siege-paper": `url("${platform.assetUrl("workshop-paper")}")` }) as CSSProperties,
+    [platform],
   );
   const [workshopMode, setWorkshopMode] = useState<"cannon" | "drawing">("cannon");
   const [cannonDesign, setCannonDesign] = useState<CannonDesign>(() => ({ ...DEFAULT_CANNON }));
@@ -100,8 +101,8 @@ export function SiegeWorkshop({ platform, campaignHref }: SiegeWorkshopProps) {
   const currentDrawing = useRef(drawing); currentDrawing.current = drawing;
   const edited = useRef(false);
   const queryClient = useQueryClient();
-  const status = useQuery({ queryKey: ["siege", "status"], queryFn: () => api.status() });
-  const session = useQuery({ queryKey: ["siege", "session", sessionId], queryFn: () => api.read(sessionId), enabled: !!sessionId });
+  const status = useQuery(siegeStatusOptions(api, scope));
+  const session = useQuery(siegeSessionOptions(api, scope, sessionId));
   useEffect(() => {
     let cancelled = false;
     platform.loadDraft().then(draft => {
@@ -134,6 +135,11 @@ export function SiegeWorkshop({ platform, campaignHref }: SiegeWorkshopProps) {
     }, 400);
     return () => clearTimeout(timeout);
   }, [drawing, spec, loaded, name, workshopMode, cannonDesign, platform]);
+  const latestDraft = useRef<WorkshopDraft | null>(null);
+  latestDraft.current = loaded ? { mode: workshopMode, cannonDesign, cannonName: workshopMode === "cannon" ? name : cannonName.current, freehand: workshopMode === "drawing" ? { drawing, spec, name } : freehand.current } : null;
+  useEffect(() => () => {
+    if (latestDraft.current) void platform.saveDraft(latestDraft.current).catch(() => {});
+  }, [platform]);
   const compiled = useMemo(() => {
     if (!spec || !hash) return { definition: null, error: "" };
     try { return { definition: compileWeapon(drawing, spec, hash, workshopMode === "cannon" ? cannonDesign : null), error: "" }; }
@@ -210,12 +216,12 @@ export function SiegeWorkshop({ platform, campaignHref }: SiegeWorkshopProps) {
   };
   const ensureSession = async (): Promise<SiegeSession> => {
     if (sessionId) {
-      try { const existing = await api.read(sessionId); queryClient.setQueryData(["siege", "session", sessionId], existing); return existing; }
+      try { const existing = await api.read(sessionId); queryClient.setQueryData(siegeKeys.session(scope, sessionId), existing); return existing; }
       catch (e) { if (!(e instanceof SiegeError) || e.code !== "not_found") throw e; }
     }
     const created = await api.create(createRequest.current);
     platform.preferences.setItem("siege.session", created.id); setSessionId(created.id);
-    queryClient.setQueryData(["siege", "session", created.id], created); return created;
+    queryClient.setQueryData(siegeKeys.session(scope, created.id), created); return created;
   };
   const recognition = useMutation({
     mutationFn: async (recover: boolean) => {
@@ -240,11 +246,11 @@ export function SiegeWorkshop({ platform, campaignHref }: SiegeWorkshopProps) {
       retrySave.current = input; return api.save(active.id, input);
     },
     onSuccess: value => {
-      queryClient.setQueryData(["siege", "session", value.id], value); retrySave.current = null;
+      queryClient.setQueryData(siegeKeys.session(scope, value.id), value); retrySave.current = null;
       setError(""); setNotice("蓝图已保存。");
     },
     onError: e => {
-      if (e instanceof SiegeError && e.code === "version_conflict") { retrySave.current = null; void queryClient.invalidateQueries({ queryKey: ["siege", "session", sessionId] }); }
+      if (e instanceof SiegeError && e.code === "version_conflict") { retrySave.current = null; void queryClient.invalidateQueries({ queryKey: siegeKeys.session(scope, sessionId) }); }
       setError(errorText(e));
     },
   });
@@ -252,25 +258,12 @@ export function SiegeWorkshop({ platform, campaignHref }: SiegeWorkshopProps) {
     if (!compiled.definition) return;
     setRunningDefinition(structuredClone(compiled.definition)); setRun(n => n + 1); setStats(initialStats()); setPaused(false); setError("");
   };
-  const exportDrawing = () => {
-    const canvas = document.createElement("canvas"); canvas.width = 1024; canvas.height = 1024;
-    const ctx = canvas.getContext("2d"); if (!ctx) return;
-    ctx.fillStyle = "#f6f2e6"; ctx.fillRect(0, 0, 1024, 1024);
-    if (workshopMode === "cannon") {
-      ctx.translate(230, 512); ctx.scale(180, 180); paintCannon(ctx, cannonDesign);
-      canvas.toBlob(blob => { if (blob) platform.download(blob, "siege-design.png"); }); return;
-    }
-    ctx.scale(0.25, 0.25);
-    for (const stroke of drawing.strokes) {
-      ctx.lineWidth = stroke.width; ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.strokeStyle = "#283f35"; ctx.beginPath();
-      stroke.points.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])); ctx.stroke();
-    }
-    canvas.toBlob(blob => { if (blob) platform.download(blob, "siege-design.png"); });
-  };
+  const exportDrawing = () => platform.exportImage(drawing, workshopMode === "cannon" ? cannonDesign : null, "siege-design.png");
   const busy = recognition.isPending || save.isPending;
-  return <main className="siege-app" style={paperStyle}>
-    <header className="game-header"><span className="wordmark">Doodle<span>Siege<span className="wordmark-dot">.</span></span></span>
-      <div className="header-right">{campaignHref ? <AppLink href={campaignHref}>林地闯关 ↗</AppLink> : null}<span className="edition">纸上防线 / 01</span><Button variant="outline" size="sm" onClick={exportDrawing}><Download />下载原画</Button></div></header>
+  return <main className="siege-app" style={paperStyle} onBlur={event => {
+    if (event.relatedTarget instanceof Node && !event.currentTarget.contains(event.relatedTarget)) setPaused(true);
+  }}>
+    <div className="game-header"><span className="eyebrow">DOODLE SIEGE / WORKSHOP</span><Button variant="outline" size="sm" onClick={exportDrawing}><Download />下载原画</Button></div>
     <section className="game-intro"><div><span className="eyebrow">THE DRAWING WORKSHOP</span><h1>画出你的<br /><em>制胜一笔。</em></h1></div>
       <div className="intro-note"><span className="note-arrow">↳</span><p>长一点，够得更远。<br />重一点，也会转得更慢。</p><span className="stamp">画 · 试 · 再画</span></div></section>
     <div className="workshop">
@@ -289,7 +282,7 @@ export function SiegeWorkshop({ platform, campaignHref }: SiegeWorkshopProps) {
             <Button size="xs" variant={tool === "direction" ? "brand" : "outline"} aria-pressed={tool === "direction"} disabled={!cannon.anchorHint} onClick={() => setTool(tool === "direction" ? "draw" : "direction")}>设置朝向</Button>
             {(tool === "muzzle" || tool === "direction" || !cannon.anchorHint || !cannon.directionHint) && <p role="status">{tool === "direction" ? "点击炮口前方，确定发射朝向。" : "点击炮管前端设置炮口，再设置朝向。"}</p>}
           </div>}
-        <div className="drawing-paper"><DrawingCanvas drawing={drawing} spec={spec} selected={selected} width={width} tool={tool} onChange={changeDrawing}
+        <div className="drawing-paper"><DrawingCanvas randomId={platform.randomId} drawing={drawing} spec={spec} selected={selected} width={width} tool={tool} onChange={changeDrawing}
           onPlacement={place} />
           {!drawing.strokes.length && <div className="canvas-empty" aria-hidden="true"><span>从一笔开始</span><p>画一个锤头、刀刃、炮管或盾</p></div>}
           <span className="paper-corner">8 × 8 m</span></div>
@@ -318,7 +311,7 @@ export function SiegeWorkshop({ platform, campaignHref }: SiegeWorkshopProps) {
       </section>
       <section className="arena-panel" aria-labelledby="arena-title"><div className="panel-heading"><div><span className="step-number">02</span><h2 id="arena-title">让设计上场</h2></div>
         <span className="arena-tag">{mode === "practice" ? "TEST ARENA" : "CASTLE DEFENSE"}</span></div>
-        <div className="arena-paper"><Arena definition={runningDefinition} run={run} mode={mode} paused={paused} collisions={collisions} onStats={setStats} onError={code => setError(messages[code] ?? code)} assetBase={platform.assetBase} />
+        <div className="arena-paper"><Arena definition={runningDefinition} run={run} mode={mode} paused={paused} onPause={() => setPaused(true)} collisions={collisions} onStats={setStats} onError={code => setError(messages[code] ?? code)} assetUrl={platform.assetUrl} />
           {!run && <div className="arena-empty"><Crosshair /><span>你的第一道防线，<br />即将在这里动起来。</span></div>}</div>
         <div className="arena-actions"><Button size="lg" disabled={!compiled.definition} onClick={start}><Play />{mode === "defense" ? run ? "重新守城" : "开始守城" : run ? "重新测试" : "开始测试"}<ArrowRight /></Button>
           <Button variant="outline" disabled={!run || stats.phase === "finished"} onClick={() => setPaused(value => !value)}>{paused ? <Play /> : <Pause />}{paused ? "继续" : "暂停"}</Button>

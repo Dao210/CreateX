@@ -1,7 +1,7 @@
 import { test, expect } from "./fixtures";
 
-test("adjusts the cannon kit, preserves both drafts and restores saved parameters before defending", async ({ page, api }) => {
-  await api.assertFixture(); await page.clock.install(); await page.goto("/siege/");
+test("adjusts the cannon kit, preserves both drafts and restores saved parameters before defending", async ({ page, api, game }) => {
+  await page.clock.install(); await page.goto(game.workshopHref);
   await expect(page.getByRole("button", { name: "精制炮台", exact: true })).toHaveAttribute("aria-pressed", "true");
   await page.getByLabel("炮管长度数值", { exact: true }).fill("3.20");
   await page.getByLabel("炮管长度数值", { exact: true }).press("Enter");
@@ -18,8 +18,8 @@ test("adjusts the cannon kit, preserves both drafts and restores saved parameter
   await page.getByLabel("蓝图名称").fill("可调炮验收");
   await page.getByRole("button", { name: "保存蓝图", exact: true }).click();
   await expect(page.getByRole("status").filter({ hasText: "蓝图已保存" })).toBeVisible();
-  const id = await page.evaluate(() => localStorage.getItem("siege.session"));
-  const saved = await api.readSession(id!);
+  const id = await page.evaluate(key => localStorage.getItem(`${key}:siege.session`), game.namespace);
+  const saved = await api.readSiegeSession(id!);
   expect(saved.blueprints[0].cannonDesign).toEqual({ kind: "cannon-kit", version: 1, barrelLengthMm: 3200, barrelWidthMm: 450 });
   await page.clock.runFor(600); await page.reload();
   await expect(page.getByLabel("炮管长度数值", { exact: true })).toHaveValue("3.20");
@@ -51,8 +51,8 @@ test("adjusts the cannon kit, preserves both drafts and restores saved parameter
   await page.screenshot({ path: "test-results/siege/cannon-kit-phone.png", fullPage: true });
 });
 
-test("draws original strokes, confirms a part, saves once after a lost response and restores", async ({ page, api }) => {
-  await api.assertFixture(); await page.goto("/siege/"); await page.getByRole("button", { name: "自由绘图", exact: true }).click();
+test("draws original strokes, confirms a part, saves once after a lost response and restores", async ({ page, api, game }) => {
+  await page.goto(game.workshopHref); await page.getByRole("button", { name: "自由绘图", exact: true }).click();
   await page.getByRole("button", { name: "新画布", exact: true }).click();
   const canvas = page.getByRole("img", { name: "武器画布" });
   const rect = (await canvas.boundingBox())!;
@@ -69,11 +69,11 @@ test("draws original strokes, confirms a part, saves once after a lost response 
     else await route.continue();
   });
   await page.getByRole("button", { name: "保存蓝图", exact: true }).click();
-  await expect(page.getByRole("alert")).toContainText("连接中断");
+  await expect(page.locator(".siege-app").getByRole("alert")).toContainText("连接中断");
   await page.getByRole("button", { name: "保存蓝图", exact: true }).click();
   await expect(page.getByRole("status").filter({ hasText: "蓝图已保存" })).toBeVisible();
-  const id = await page.evaluate(() => localStorage.getItem("siege.session"));
-  const saved = await api.readSession(id!);
+  const id = await page.evaluate(key => localStorage.getItem(`${key}:siege.session`), game.namespace);
+  const saved = await api.readSiegeSession(id!);
   expect(saved.blueprints).toHaveLength(1); expect(saved.version).toBe(2);
   expect(saved.blueprints[0].drawing.strokes).toHaveLength(1);
   await page.waitForTimeout(500); await page.reload();
@@ -84,20 +84,22 @@ test("draws original strokes, confirms a part, saves once after a lost response 
   expect((await downloadPromise).suggestedFilename()).toBe("siege-design.png");
 });
 
-test("recovers the same recognition receipt after a dropped response", async ({ page, api }) => {
-  await api.assertFixture(); await page.goto("/siege/"); await page.getByRole("button", { name: "自由绘图", exact: true }).click();
+test("recovers the same recognition receipt after a dropped response", async ({ page, api, game }) => {
+  test.skip((await api.siegeStatus()).mode !== "fixture", "Requires explicit SIEGE_RECOGNITION_MODE=fixture");
+  await page.goto(game.workshopHref); await page.getByRole("button", { name: "自由绘图", exact: true }).click();
   await expect(page.getByRole("button", { name: "AI 识别", exact: true })).toBeEnabled();
   let posts = 0;
   await page.route("**/api/siege/sessions/*/recognitions", async route => { posts++; await route.fetch(); await route.abort(); });
   await page.getByRole("button", { name: "AI 识别", exact: true }).click();
-  await expect(page.getByRole("alert")).toContainText("连接中断");
+  await expect(page.locator(".siege-app").getByRole("alert")).toContainText("连接中断");
   await page.getByRole("button", { name: "恢复识别结果", exact: true }).click();
   await expect(page.getByRole("status").filter({ hasText: "部件已识别" })).toBeVisible();
   expect(posts).toBe(1); await expect(page.getByRole("button", { name: "开始测试", exact: true })).toBeEnabled();
 });
 
-test("a late recognition cannot overwrite a new drawing", async ({ page, api }) => {
-  await api.assertFixture(); await page.goto("/siege/"); await page.getByRole("button", { name: "自由绘图", exact: true }).click();
+test("a late recognition cannot overwrite a new drawing", async ({ page, api, game }) => {
+  test.skip((await api.siegeStatus()).mode !== "fixture", "Requires explicit SIEGE_RECOGNITION_MODE=fixture");
+  await page.goto(game.workshopHref); await page.getByRole("button", { name: "自由绘图", exact: true }).click();
   await expect(page.getByRole("button", { name: "AI 识别", exact: true })).toBeEnabled();
   let release!: () => void; const waiting = new Promise<void>(resolve => { release = resolve; });
   await page.route("**/api/siege/sessions/*/recognitions", async route => { const response = await route.fetch(); await waiting; await route.fulfill({ response }); });
@@ -109,8 +111,8 @@ test("a late recognition cannot overwrite a new drawing", async ({ page, api }) 
   await expect(page.getByRole("button", { name: "开始测试", exact: true })).toBeDisabled();
 });
 
-test("real WASM contacts, pause and three defense waves work", async ({ page, api }) => {
-  await api.assertFixture(); await page.clock.install(); await page.goto("/siege/"); await page.getByRole("button", { name: "自由绘图", exact: true }).click();
+test("real WASM contacts, pause and three defense waves work", async ({ page, api, game }) => {
+  await page.clock.install(); await page.goto(game.workshopHref); await page.getByRole("button", { name: "自由绘图", exact: true }).click();
   await expect(page.getByRole("button", { name: "开始测试", exact: true })).toBeEnabled();
   await page.getByRole("button", { name: "开始测试", exact: true }).click();
   await expect.poll(async () => { await page.clock.runFor(250); return page.locator(".battle-log").getAttribute("data-phase"); }).toBe("running");
@@ -130,8 +132,8 @@ test("real WASM contacts, pause and three defense waves work", async ({ page, ap
   await page.screenshot({ path: "test-results/siege/workshop.png", fullPage: true });
 });
 
-test("automatic cannon displays real numbers, freezes on pause and keeps the test separate from edits", async ({ page, api }) => {
-  await api.assertFixture(); await page.clock.install(); await page.goto("/siege/"); await page.getByRole("button", { name: "自由绘图", exact: true }).click();
+test("automatic cannon displays real numbers, freezes on pause and keeps the test separate from edits", async ({ page, api, game }) => {
+  await page.clock.install(); await page.goto(game.workshopHref); await page.getByRole("button", { name: "自由绘图", exact: true }).click();
   await page.getByRole("button", { name: "自动炮台", exact: true }).click();
   const design = page.getByRole("region", { name: "设计参数" }), battle = page.getByRole("region", { name: "实时数据" });
   await expect(design.getByText("射程", { exact: true })).toBeVisible();
@@ -160,17 +162,16 @@ test("automatic cannon displays real numbers, freezes on pause and keeps the tes
   await expect(battle.getByText("剩余耐久", { exact: true })).toBeVisible();
 });
 
-test("the workshop fits a phone width", async ({ page, api }) => {
-  await api.assertFixture(); await page.setViewportSize({ width: 390, height: 844 }); await page.goto("/siege/"); await page.getByRole("button", { name: "自由绘图", exact: true }).click();
+test("the workshop fits a phone width", async ({ page, api, game }) => {
+  await page.setViewportSize({ width: 390, height: 844 }); await page.goto(game.workshopHref); await page.getByRole("button", { name: "自由绘图", exact: true }).click();
   await expect(page.getByRole("img", { name: "武器画布" })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path: "test-results/siege/phone-width.png", fullPage: true });
 });
 
-test("manual drawing and testing remain available without an AI connection", async ({ page, api }) => {
-  await api.assertFixture();
-  await page.route("**/api/siege/status", route => route.fulfill({ json: { mode: "llm", ready: false, rulesVersion: "p0.2", parts: [] } }));
-  await page.goto("/siege/");
+test("manual drawing and testing remain available without an AI connection", async ({ page, api, game }) => {
+    await page.route("**/api/siege/status", route => route.fulfill({ json: { mode: "llm", ready: false, rulesVersion: "p0.2", parts: [] } }));
+  await page.goto(game.workshopHref);
   await expect(page.getByRole("button", { name: "开始守城", exact: true })).toBeEnabled();
   await page.getByRole("button", { name: "自由绘图", exact: true }).click();
   await expect(page.getByRole("button", { name: "AI 识别", exact: true })).toBeDisabled();

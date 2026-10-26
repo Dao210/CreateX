@@ -622,7 +622,7 @@ curl --fail-with-body -X POST "$CHARACTER_GAME_API/api/games/v1/games/siege/sess
 | `packages/views/siege` | Rapier、Canvas、输入与音频；通过平台接口获取宿主能力 |
 | `server/internal/siege` | 游戏兼容、冻结会话与启动 API 的宿主挂载 |
 | MCP 适配包（新增） | 映射本文两个 HTTP API；共享同一份 Schema |
-| Web/Desktop 路由及 `apps/siege` | 宿主入口；独立壳继续保持薄壳 |
+| Web/Desktop 路由 | 工作区宿主入口；复用主项目的身份、构建与发布 |
 
 当前可复用代码：[绘图/蓝图 Schema](../packages/core/siege/schema.ts)、[纯武器编译器](../packages/core/siege/compiler.ts)、[地图与战役规则](../packages/core/siege/campaign.ts)、[战斗引擎](../packages/views/siege/campaign/engine.ts)、[平台能力接口](../packages/core/siege/platform.ts)、[现有 HTTP](../server/internal/siege/http.go)、[workspace 接入](siege-integration-plan.md)。旧绘图蓝图不自动宣称实现了本文的坦克协议；新行为需要对应角色编译和运行时实现。
 

@@ -1,25 +1,34 @@
-import { useEffect, useRef, type PointerEvent } from "react";
+import { useCallback, useEffect, useRef, type PointerEvent } from "react";
 import { GRID, type Drawing, type Point, type Stroke, type WeaponSpec } from "@auro/core/siege";
 
-export function drawStrokes(ctx: CanvasRenderingContext2D, drawing: Drawing, selected: string[] = []) {
-  for (const stroke of drawing.strokes) {
-    ctx.beginPath(); ctx.lineWidth = stroke.width; ctx.lineCap = "round"; ctx.lineJoin = "round";
-    ctx.strokeStyle = selected.includes(stroke.id) ? "#dd653b" : "#283f35";
-    stroke.points.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]));
-    ctx.stroke();
+const paths = new WeakMap<Drawing, Array<{ id: string; width: number; path: Path2D }>>();
+export function drawStrokes(ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D, drawing: Drawing, selected: string[] = []) {
+  let compiled = paths.get(drawing);
+  if (!compiled) {
+    compiled = drawing.strokes.map(stroke => {
+      const path = new Path2D();
+      stroke.points.forEach((point, i) => i ? path.lineTo(point[0], point[1]) : path.moveTo(point[0], point[1]));
+      return { id: stroke.id, width: stroke.width, path };
+    });
+    paths.set(drawing, compiled);
+  }
+  ctx.lineCap = "round"; ctx.lineJoin = "round";
+  for (const stroke of compiled) {
+    ctx.lineWidth = stroke.width; ctx.strokeStyle = selected.includes(stroke.id) ? "#dd653b" : "#283f35";
+    ctx.stroke(stroke.path);
   }
 }
 export type CanvasTool = "draw" | "mount" | "muzzle" | "direction";
 interface Props {
   drawing: Drawing; spec: WeaponSpec | null; selected: string[]; width: 24 | 40;
-  tool: CanvasTool; onChange: (drawing: Drawing) => void; onPlacement: (tool: Exclude<CanvasTool, "draw">, point: Point) => void;
+  tool: CanvasTool; randomId: () => string; onChange: (drawing: Drawing) => void; onPlacement: (tool: Exclude<CanvasTool, "draw">, point: Point) => void;
 }
-export function DrawingCanvas({ drawing, spec, selected, width, tool, onChange, onPlacement }: Props) {
+export function DrawingCanvas({ drawing, spec, selected, width, tool, randomId, onChange, onPlacement }: Props) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const active = useRef<Stroke | null>(null);
   const pointer = useRef<number | null>(null);
   const current = useRef(drawing); current.current = drawing;
-  const paint = () => {
+  const paint = useCallback(() => {
     const ctx = canvas.current?.getContext("2d"); if (!ctx) return;
     ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, 1024, 1024);
     ctx.setTransform(1024 / GRID, 0, 0, 1024 / GRID, 0, 0);
@@ -40,8 +49,8 @@ export function DrawingCanvas({ drawing, spec, selected, width, tool, onChange, 
         ctx.moveTo(dx, dy); ctx.lineTo(dx - Math.cos(angle + 0.5) * 85, dy - Math.sin(angle + 0.5) * 85); ctx.stroke();
       }
     }
-  };
-  useEffect(() => { paint(); }); // Canvas updates do not own the persisted drawing.
+  }, [selected, spec]);
+  useEffect(() => { paint(); }, [drawing, paint]); // Canvas updates do not own the persisted drawing.
   const point = (e: PointerEvent<HTMLCanvasElement>): Point => {
     const rect = e.currentTarget.getBoundingClientRect();
     return [Math.round(Math.max(0, Math.min(GRID, (e.clientX - rect.left) / rect.width * GRID))),
@@ -52,7 +61,7 @@ export function DrawingCanvas({ drawing, spec, selected, width, tool, onChange, 
     if (tool !== "draw") { onPlacement(tool, point(e)); return; }
     if (drawing.strokes.length >= 64 || drawing.strokes.reduce((sum, s) => sum + s.points.length, 0) >= 4094) return;
     pointer.current = e.pointerId; e.currentTarget.setPointerCapture(e.pointerId);
-    active.current = { id: crypto.randomUUID(), points: [point(e)], width, color: "ink" }; paint();
+    active.current = { id: randomId(), points: [point(e)], width, color: "ink" }; paint();
   };
   const move = (e: PointerEvent<HTMLCanvasElement>) => {
     if (pointer.current !== e.pointerId || !active.current) return;

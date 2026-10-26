@@ -3,7 +3,6 @@
     ".github/actions/frontend-quality/**",
     "apps/web/**",
     "apps/desktop/**",
-    "apps/siege/**",
     "e2e/siege/**",
     "packages/**",
     "package.json",
@@ -107,9 +106,7 @@
     ".github/workflows/ci.yml",
     ".github/ci-paths.json",
     "scripts/ci-scope.mjs",
-    "scripts/ci-scope.test.mjs",
-    "scripts/siege-env.sh",
-    "scripts/siege-env.test.sh"
+    "scripts/ci-scope.test.mjs"
   ],
   "installer": [
     "scripts/install.sh",

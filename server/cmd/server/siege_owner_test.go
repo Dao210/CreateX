@@ -13,13 +13,7 @@ import (
 	db "github.com/auro-ai/auro/server/pkg/db/generated"
 )
 
-// TestSiegeOwnerGlue pins the only piece of glue between Auro's workspace auth
-// and the game service. Standalone mode (cmd/siege) resolves the owner from an
-// anonymous cookie, so siege.HTTP itself has no opinion about identity: it
-// requires an owner to be present in the context and refuses otherwise. That
-// refusal is what stops a request which slipped past RequireWorkspaceMember
-// from touching a session under an empty owner — with a workspace-less hash,
-// every such caller would share one.
+// TestSiegeOwnerGlue verifies the workspace authentication boundary.
 func TestSiegeOwnerGlue(t *testing.T) {
 	memberID := uuid.MustParse("6f1a1f9c-3c4a-4c1a-9b8e-2f1d0b6a7c55")
 	const workspaceID = "0d1f4a8e-9c2b-4a71-8f3d-5b6e7c8d9a01"

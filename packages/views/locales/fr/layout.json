@@ -61,5 +61,10 @@
       "title": "Rejoignez notre Discord",
       "dismiss": "Ignorer"
     }
+  },
+  "siege": {
+    "workshop": "Atelier d’armes",
+    "campaign": "Campagne forestière",
+    "loading": "Chargement du champ de bataille…"
   }
 }

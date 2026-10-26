@@ -75,6 +75,12 @@ WITH
 mcp_activity_deleted AS (
     DELETE FROM mcp_activity WHERE workspace_id = $1
 ),
+deleted_siege_sessions AS (
+    DELETE FROM siege_session WHERE workspace_id = $1
+),
+deleted_siege_budgets AS (
+    DELETE FROM siege_recognition_budget WHERE workspace_id = $1
+),
 deleted_tank_requests AS (
     DELETE FROM tank_request WHERE workspace_id = $1
 ),

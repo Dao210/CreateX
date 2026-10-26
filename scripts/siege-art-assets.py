@@ -136,7 +136,7 @@ def main():
             "width": image.width, "height": image.height, "bytes": len(data),
             "quality": quality, "sha256": hashlib.sha256(data).hexdigest(), **bounds,
         })
-    destination = ROOT / "apps/siege/public/art"
+    destination = ROOT / "packages/views/siege/assets"
     destination.mkdir(parents=True, exist_ok=True)
     for name, data in encoded:
         temporary = destination / f".{name}.webp.tmp"

@@ -3,8 +3,7 @@ package siege
 // Session is the whole persisted document for one member: blueprints plus the
 // idempotency receipts that make create/recognize/save safe to retry.
 //
-// Both stores persist this as a single document (a JSON file, or one jsonb
-// column) because every read and write touches the session as a unit.
+// PostgreSQL persists this as one jsonb document because session writes are atomic.
 type Session struct {
 	ID                  string        `json:"id"`
 	Version             int           `json:"version"`

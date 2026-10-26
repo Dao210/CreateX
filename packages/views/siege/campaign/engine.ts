@@ -1,7 +1,7 @@
-import RAPIER from "@dimforge/rapier2d-compat";
-import { campaignStars, compileCampaignWeapon, damageMultiplier, ENEMY_RECIPES, hitDamage, pointOnRoute, routeLength, sellPrice, upgradePrice, validCheckpoint,
+import { RAPIER } from "../runtime/physics";
+import { campaignStars, compileCampaignWeapon, damageMultiplier, ENEMY_RECIPES, hitDamage, compileRoute, pointOnCompiledRoute, selectCampaignTarget, sellPrice, upgradePrice, validCheckpoint,
   CAMPAIGN_VERSION, type CampaignBlueprint, type CampaignCheckpoint, type CampaignLevel, type CompiledCampaignWeapon, type EnemyKind, type Position, type WeaponKind, type SpawnEntry, type ColliderDefinition } from "@auro/core/siege";
-import { initializePhysics } from "../runtime/engine";
+import { initializePhysics } from "../runtime/physics";
 
 export { initializePhysics };
 export type BattlePhase = "ready" | "running" | "intermission" | "victory" | "defeat";
@@ -31,6 +31,8 @@ export class CampaignEngine {
   readonly obstacles = new Map<string, Obstacle>();
   readonly effects: CombatEffect[] = [];
   readonly events: BattleEvent[] = [];
+  private readonly routes;
+  private readonly obstacleHandles = new Map<number, Obstacle>();
   private readonly parts = new Map<number, { tower: number; shape: ColliderDefinition }>();
   private readonly contacts = new Map<string, [number, number]>();
   private readonly meleeCooldowns = new Map<string, number>();
@@ -44,12 +46,14 @@ export class CampaignEngine {
   leaks: CampaignCheckpoint["leaks"] = [];
 
   constructor(readonly level: CampaignLevel, checkpoint?: CampaignCheckpoint) {
+    this.routes = level.routes.map(compileRoute);
     this.world.timestep = 1 / 60;
     this.gold = level.gold;
     for (const source of level.obstacles) {
       const body = this.world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(source.x, source.y));
       const collider = this.world.createCollider(RAPIER.ColliderDesc.ball(0.55).setSensor(true).setCollisionGroups(groups.obstacle).setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS), body);
-      this.obstacles.set(source.id, { id: source.id, hp: source.hp, body, collider });
+      const obstacle = { id: source.id, hp: source.hp, body, collider };
+      this.obstacles.set(source.id, obstacle); this.obstacleHandles.set(collider.handle, obstacle);
     }
     if (checkpoint) {
       const saved = validCheckpoint(checkpoint);
@@ -95,7 +99,7 @@ export class CampaignEngine {
       const part = this.world.createCollider(collider.setTranslation(...shape.center).setRotation(shape.rotation).setDensity(0).setSensor(true).setCollisionGroups(groups.weapon).setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS), body);
       this.parts.set(part.handle, { tower: id, shape });
     }
-    const toward = pointOnRoute(this.level.routes[0]!, this.level.id === 1 ? position.x : routeLength(this.level.routes[0]!) / 2);
+    const toward = pointOnCompiledRoute(this.routes[0]!, this.level.id === 1 ? position.x : this.routes[0]!.total / 2);
     body.setRotation(Math.atan2(toward.y - position.y, toward.x - position.x), true);
     this.towers.set(id, { id, slot, weapon, level, body, pin, reloadAt: this.tick, damage: 0, kills: 0, shots: 0, control: 0, lastShot: -100 });
   }
@@ -146,9 +150,7 @@ export class CampaignEngine {
       const obstacle = this.obstacles.get(this.focus.slice(9)), source = this.level.obstacles.find(o => o.id === obstacle?.id);
       if (obstacle && source && obstacle.hp > 0 && inRange(source)) return { position: source, obstacle };
     }
-    const candidates = [...this.enemies.values()].filter(e => e.hp > 0 && inRange(e.body.translation()));
-    const selected = candidates.find(e => this.focus === `enemy:${e.id}`) ?? candidates.sort((a, b) =>
-      (routeLength(this.level.routes[a.route]!) - a.progress) - (routeLength(this.level.routes[b.route]!) - b.progress) || a.id - b.id)[0];
+    const selected = selectCampaignTarget(this.enemies.values(), this.routes, enemy => inRange(enemy.body.translation()), this.focus);
     return selected ? { position: selected.body.translation(), enemy: selected } : null;
   }
   muzzle(tower: CampaignTower): Position {
@@ -157,7 +159,6 @@ export class CampaignEngine {
   }
   private updateTower(tower: CampaignTower, fire: boolean) {
     const definition = tower.weapon.definition, launcher = definition.launcher;
-    const target = this.targetFor(tower);
     if (!launcher) {
       if (!fire) {
         const speed = definition.motion === "rotating" ? 2.5 : Math.sin(this.tick / 45) * 2;
@@ -165,11 +166,12 @@ export class CampaignEngine {
       }
       return;
     }
+    const target = this.targetFor(tower);
     const mount = this.level.slots[tower.slot]!, muzzle = this.muzzle(tower);
     let aim = target?.position;
     if (target?.enemy) {
       const enemy = target.enemy, time = Math.min(launcher.range / launcher.projectileSpeed, separation(muzzle, enemy.body.translation()) / launcher.projectileSpeed);
-      aim = pointOnRoute(this.level.routes[enemy.route]!, enemy.progress + ENEMY_RECIPES[enemy.kind].speed * time * (enemy.slowUntil > this.tick ? enemy.kind === "boss" ? 0.75 : 0.5 : 1));
+      aim = pointOnCompiledRoute(this.routes[enemy.route]!, enemy.progress + ENEMY_RECIPES[enemy.kind].speed * time * (enemy.slowUntil > this.tick ? enemy.kind === "boss" ? 0.75 : 0.5 : 1));
     }
     let error: number | null = null;
     if (aim) {
@@ -226,6 +228,7 @@ export class CampaignEngine {
     }
   }
   private removeObstacleBody(obstacle: Obstacle) {
+    if (obstacle.collider) this.obstacleHandles.delete(obstacle.collider.handle);
     if (obstacle.body) this.world.removeRigidBody(obstacle.body);
     obstacle.body = null; obstacle.collider = null;
   }
@@ -238,12 +241,13 @@ export class CampaignEngine {
     this.tick++;
     if (this.phase === "intermission") { if (this.tick >= this.nextWaveAt) this.startWave(); else return; }
     while (this.spawnQueue[0] && this.spawnQueue[0].tick <= this.tick - this.waveStart && this.enemies.size < MAX_ENEMIES) this.spawn(this.spawnQueue.shift()!);
+    const banners = [...this.enemies.values()].filter(enemy => enemy.kind === "banner" && enemy.hp > 0).map(enemy => ({ id: enemy.id, position: enemy.body.translation() }));
     for (const enemy of this.enemies.values()) {
       const position = enemy.body.translation();
-      const boosted = [...this.enemies.values()].some(other => other.kind === "banner" && other.hp > 0 && other.id !== enemy.id && separation(position, other.body.translation()) <= 3);
+      const boosted = banners.some(other => other.id !== enemy.id && separation(position, other.position) <= 3);
       const slow = enemy.slowUntil > this.tick ? enemy.kind === "boss" ? 0.75 : 0.5 : 1;
       if (enemy.stunUntil <= this.tick) enemy.progress += ENEMY_RECIPES[enemy.kind].speed * slow * (boosted ? 1.25 : 1) / 60;
-      enemy.body.setNextKinematicTranslation(pointOnRoute(this.level.routes[enemy.route]!, enemy.progress));
+      enemy.body.setNextKinematicTranslation(pointOnCompiledRoute(this.routes[enemy.route]!, enemy.progress));
     }
     for (const tower of this.towers.values()) this.updateTower(tower, false);
     this.world.step(this.queue);
@@ -257,7 +261,7 @@ export class CampaignEngine {
     for (const [a, b] of collisions) {
       const round = this.rounds.get(a) ?? this.rounds.get(b); if (!round) continue;
       const tower = this.towers.get(round.towerId), enemy = this.enemies.get(a) ?? this.enemies.get(b);
-      const obstacle = [...this.obstacles.values()].find(o => o.collider?.handle === a || o.collider?.handle === b);
+      const obstacle = this.obstacleHandles.get(a) ?? this.obstacleHandles.get(b);
       if (tower && (enemy || obstacle)) {
         const launcher = tower.weapon.definition.launcher!;
         const damage = launcher.damage * damageMultiplier(tower.level) * (tower.weapon.kind === "frost" ? 0.35 : 1);
@@ -279,7 +283,7 @@ export class CampaignEngine {
       const part = this.parts.get(a) ?? this.parts.get(b); if (!part) continue;
       const tower = this.towers.get(part.tower); if (!tower || tower.weapon.definition.launcher || this.tick < tower.reloadAt) continue;
       const enemy = this.enemies.get(a) ?? this.enemies.get(b);
-      const obstacle = [...this.obstacles.values()].find(o => o.collider?.handle === a || o.collider?.handle === b);
+      const obstacle = this.obstacleHandles.get(a) ?? this.obstacleHandles.get(b);
       const p = enemy?.body.translation() ?? (obstacle ? this.level.obstacles.find(o => o.id === obstacle.id)! : null);
       if (!p || (enemy && enemy.hp <= 0) || (obstacle && obstacle.hp <= 0)) continue;
       const hitKey = `${tower.id}:${enemy ? `enemy-${enemy.id}` : `obstacle-${obstacle!.id}`}`;
@@ -294,7 +298,7 @@ export class CampaignEngine {
     }
     if (this.tick % 60 === 0) for (const [key, until] of this.meleeCooldowns) if (until <= this.tick) this.meleeCooldowns.delete(key);
     for (const [handle, enemy] of this.enemies) {
-      const escaped = enemy.progress >= routeLength(this.level.routes[enemy.route]!);
+      const escaped = enemy.progress >= this.routes[enemy.route]!.total;
       if (enemy.hp <= 0 || escaped) {
         if (enemy.hp > 0 && escaped) {
           this.hp = Math.max(0, this.hp - ENEMY_RECIPES[enemy.kind].leak);
@@ -335,5 +339,5 @@ export class CampaignEngine {
       towers: [...this.towers.values()].map(t => ({ id: t.id, slot: t.slot, kind: t.weapon.kind, level: t.level, damage: Math.round(t.damage), kills: t.kills, control: t.control, cost: t.weapon.cost, name: t.weapon.blueprint.name })),
       obstacles: [...this.obstacles.values()].map(o => ({ id: o.id, hp: o.hp })), leaks: [...this.leaks], stars: this.phase === "victory" ? campaignStars(this.hp, [...this.obstacles.values()].filter(o => o.hp > 0).length) : 0 };
   }
-  dispose() { if (this.disposed) return; this.disposed = true; this.queue.free(); this.world.free(); this.rounds.clear(); this.enemies.clear(); this.towers.clear(); this.meleeCooldowns.clear(); this.contacts.clear(); }
+  dispose() { if (this.disposed) return; this.disposed = true; this.queue.free(); this.world.free(); this.rounds.clear(); this.enemies.clear(); this.towers.clear(); this.meleeCooldowns.clear(); this.contacts.clear(); this.obstacleHandles.clear(); this.parts.clear(); }
 }

@@ -61,5 +61,10 @@
       "title": "Discord 참여하기",
       "dismiss": "닫기"
     }
+  },
+  "siege": {
+    "workshop": "무기 공방",
+    "campaign": "숲 방어전",
+    "loading": "전장 불러오는 중…"
   }
 }

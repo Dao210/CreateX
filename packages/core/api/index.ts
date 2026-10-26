@@ -53,10 +53,7 @@ export const api = new Proxy({} as ApiClientType, {
  *
  * Features that live outside ApiClient but still speak to the same API must not
  * re-derive those headers. The workspace slug is URL-owned state and the CSRF
- * binding rotates on renewal, so a second implementation goes stale in ways
- * that stay invisible until a write is rejected. Before a client exists (the
- * standalone siege shell, which runs without Auro's auth) this degrades to a
- * plain credentialed fetch.
+ * binding rotates on renewal. A configured shared client is required.
  *
  * A path starting with "/" is resolved against the client's base URL: the
  * desktop renderer runs from file://, where a relative URL never reaches the
@@ -66,13 +63,12 @@ export function authenticatedFetch(
   input: RequestInfo | URL,
   init?: RequestInit,
 ): Promise<Response> {
-  const headers: Record<string, string> = {
-    ...(_api ? _api.authHeaders() : {}),
-    ...((init?.headers as Record<string, string> | undefined) ?? {}),
-  };
+  const client = getApi();
+  const headers = new Headers(client.authHeaders());
+  new Headers(init?.headers).forEach((value, key) => headers.set(key, value));
   const target =
-    typeof input === "string" && input.startsWith("/") && _api
-      ? `${_api.getBaseUrl()}${input}`
+    typeof input === "string" && input.startsWith("/")
+      ? `${client.getBaseUrl()}${input}`
       : input;
   return fetch(target, {
     ...init,
