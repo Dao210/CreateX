@@ -403,7 +403,7 @@ export function sanitizeTabPath(path: string): string | null {
     return `/${firstSegment}/chat${suffix}`;
   }
   try {
-    if (["my-issues", "issues", "projects"].includes(decodeURIComponent(segments[1]).toLowerCase())) return null;
+    if (["my-issues", "issues", "projects", "squads"].includes(decodeURIComponent(segments[1]).toLowerCase())) return null;
   } catch {
     return null;
   }

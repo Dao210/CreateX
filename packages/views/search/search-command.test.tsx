@@ -28,6 +28,7 @@ describe("workspace command search after route retirement", () => {
     renderWithI18n(<SearchCommand />);
     expect(screen.queryByText("Issues")).not.toBeInTheDocument();
     expect(screen.queryByText("Projects")).not.toBeInTheDocument();
+    expect(screen.queryByText("Squads")).not.toBeInTheDocument();
     expect(screen.queryByText("New Issue")).not.toBeInTheDocument();
     expect(screen.queryByText("New Project")).not.toBeInTheDocument();
     expect(state.queries.every((query) => query.enabled === false)).toBe(true);

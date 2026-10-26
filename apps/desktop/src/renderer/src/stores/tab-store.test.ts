@@ -19,7 +19,7 @@ beforeEach(() => {
 });
 
 describe("sanitizeTabPath", () => {
-  it.each(["issues", "projects", "my-issues"])("rejects the complete retired %s route family", (segment) => {
+  it.each(["issues", "projects", "my-issues", "squads", "SQUADS", "%73quads"])("rejects the complete retired %s route family", (segment) => {
     expect(sanitizeTabPath(`/acme/${segment}`)).toBeNull();
     expect(sanitizeTabPath(`/acme/${segment}/old-id?view=saved#comment`)).toBeNull();
   });
@@ -1427,9 +1427,9 @@ describe("mergePersistedTabs (rehydration, MUL-4370)", () => {
   });
 
   it("rehydrates payloads with no icon field at all", () => {
-    const tab = rehydrate(persistedTab("/acme/squads"));
+    const tab = rehydrate(persistedTab("/acme/agents"));
     expect(tab).not.toHaveProperty("icon");
-    expect(tab.url).toBe("/acme/squads");
+    expect(tab.url).toBe("/acme/agents");
   });
 
   // Payloads written before the generic view-state entries existed carry a
@@ -1468,25 +1468,25 @@ describe("mergePersistedTabs (rehydration, MUL-4370)", () => {
     ).byWorkspace.acme;
   }
 
-  it("drops retired tabs and removes retired destinations from live tab history", () => {
+  it.each(["my-issues", "squads"])("drops retired %s tabs and destinations from live tab history", (segment) => {
     const result = mergePersistedTabs({
       activeWorkspaceSlug: "acme",
       byWorkspace: {
         acme: {
           activeTabId: "retired",
           tabs: [
-            persistedTab("/acme/my-issues?view=old", { id: "retired", pinned: true }),
+            persistedTab(`/acme/${segment}?view=old`, { id: "retired", pinned: true }),
             persistedTab("/acme/chat", {
               id: "chat",
               history: {
-                stack: ["/acme/my-issues", "/acme/inbox", "/acme/my-issues?view=old", "/acme/chat", "/acme/agents"],
+                stack: [`/acme/${segment}`, "/acme/inbox", "/acme/my-issues?view=old", "/acme/chat", "/acme/agents"],
                 index: 3,
               },
             }),
           ],
           recentTabIds: ["retired", "chat"],
-          browsingHistory: ["/acme/my-issues", "/acme/chat", "/acme/inbox"],
-          browsingHistoryTitles: { "/acme/my-issues": "Old page", "/acme/chat": "Chat" },
+          browsingHistory: [`/acme/${segment}`, "/acme/chat", "/acme/inbox"],
+          browsingHistoryTitles: { [`/acme/${segment}`]: "Old page", "/acme/chat": "Chat" },
         },
       },
     }, emptyState());
@@ -1496,7 +1496,7 @@ describe("mergePersistedTabs (rehydration, MUL-4370)", () => {
     expect(group.activeTabId).toBe("chat");
     expect(group.tabs[0].history).toEqual({ stack: ["/acme/inbox", "/acme/chat", "/acme/agents"], index: 1 });
     expect(group.browsingHistory).toEqual(["/acme/chat", "/acme/inbox"]);
-    expect(group.browsingHistoryTitles).not.toHaveProperty("/acme/my-issues");
+    expect(group.browsingHistoryTitles).not.toHaveProperty(`/acme/${segment}`);
     useTabStore.setState(result);
     useTabStore.getState().goBack();
     expect(getActiveTab(useTabStore.getState())?.url).toBe("/acme/inbox");

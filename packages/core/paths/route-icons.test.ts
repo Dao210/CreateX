@@ -60,7 +60,7 @@ describe("resolveRouteIconName", () => {
     expect(resolveRouteIconName("/acme/projects")).toBe(DEFAULT_ROUTE_ICON_NAME);
     expect(resolveRouteIconName("/acme/autopilots")).toBe("Zap");
     expect(resolveRouteIconName("/acme/chat")).toBe("MessageSquare");
-    expect(resolveRouteIconName("/acme/squads")).toBe("Users");
+    expect(resolveRouteIconName("/acme/squads")).toBe(DEFAULT_ROUTE_ICON_NAME);
     expect(resolveRouteIconName("/acme/usage")).toBe("BarChart3");
     expect(resolveRouteIconName("/acme/my-issues")).toBe(DEFAULT_ROUTE_ICON_NAME);
     expect(resolveRouteIconName("/acme/siege")).toBe("Gamepad2");

@@ -17,7 +17,6 @@ import {
   skillDetailOptions,
   agentListOptions,
   memberListOptions,
-  squadListOptions,
 } from "@auro/core/workspace/queries";
 import { runtimeListOptions } from "@auro/core/runtimes/queries";
 import { runtimeDisplayName } from "@auro/core/runtimes";
@@ -67,7 +66,6 @@ const PENDING_RESOURCE_KEYS: ReadonlySet<TabLabelKey> = new Set<TabLabelKey>([
   "autopilot",
   "agent",
   "member",
-  "squad",
   "skill",
   "machine",
   "runtime",
@@ -113,7 +111,6 @@ function useTabEntityData(subject: TabSubject, wsId: string): TabEntityData {
 
   const agents = useQuery({ ...agentListOptions(wsId), enabled: false }).data;
   const members = useQuery({ ...memberListOptions(wsId), enabled: false }).data;
-  const squads = useQuery({ ...squadListOptions(wsId), enabled: false }).data;
   const runtimes = useQuery({ ...runtimeListOptions(wsId), enabled: false }).data;
   const sessions = useQuery({ ...chatSessionsOptions(wsId), enabled: false }).data;
 
@@ -129,9 +126,7 @@ function useTabEntityData(subject: TabSubject, wsId: string): TabEntityData {
       const name =
         subject.actorType === "agent"
           ? agents?.find((a) => a.id === subject.id)?.name
-          : subject.actorType === "member"
-            ? members?.find((m) => m.user_id === subject.id)?.name
-            : squads?.find((s) => s.id === subject.id)?.name;
+          : members?.find((m) => m.user_id === subject.id)?.name;
       if (name) data.actorName = name;
       break;
     }
@@ -230,12 +225,7 @@ export function useTabPresentation(
     visual.kind === "actor" && !wsId
       ? {
           kind: "icon",
-          icon:
-            visual.actorType === "squad"
-              ? "Users"
-              : visual.actorType === "member"
-                ? "CircleUser"
-                : "Bot",
+          icon: visual.actorType === "member" ? "CircleUser" : "Bot",
         }
       : visual;
 

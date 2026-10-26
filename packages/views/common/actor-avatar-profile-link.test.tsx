@@ -30,7 +30,6 @@ vi.mock("@auro/core/paths", () => ({
   useWorkspacePaths: () => ({
     memberDetail: (id: string) => `/acme/members/${id}`,
     agentDetail: (id: string) => `/acme/agents/${id}`,
-    squadDetail: (id: string) => `/acme/squads/${id}`,
   }),
   useCurrentWorkspace: () => ({ id: "ws1", slug: "acme" }),
 }));
@@ -48,11 +47,20 @@ vi.mock("../agents/components/agent-live-peek-card", () => ({
 vi.mock("../members/member-profile-card", () => ({
   MemberProfileCard: () => null,
 }));
-vi.mock("../squads/components/squad-profile-card", () => ({
-  SquadProfileCard: () => null,
-}));
 
 import { ActorAvatar } from "./actor-avatar";
+
+it("keeps a historical squad identity visible without linking to a retired page", () => {
+  const adapter = makeAdapter();
+  render(
+    <NavigationProvider value={adapter}>
+      <ActorAvatar actorType="squad" actorId="squad-1" name="Historical squad" avatarUrl="https://example.test/squad.png" enableHoverCard />
+    </NavigationProvider>,
+  );
+  expect(screen.queryByRole("link")).toBeNull();
+  expect(screen.getByRole("img", { name: "Historical squad" })).toBeInTheDocument();
+  expect(adapter.push).not.toHaveBeenCalled();
+});
 
 const MEMBER_ID = "8f14e45f-ceea-4d0e-a1a2-9b1c0d3e4f5a";
 const HREF = `/acme/members/${MEMBER_ID}`;

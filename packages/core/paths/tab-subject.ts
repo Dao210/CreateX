@@ -15,7 +15,7 @@
  */
 import { pageForSegment, type WorkspacePageKey } from "./route-icons";
 
-export type TabActorType = "agent" | "member" | "squad";
+export type TabActorType = "agent" | "member";
 
 export type TabSubject =
   /** A collection or tool page with no specific resource. */
@@ -26,7 +26,7 @@ export type TabSubject =
   | { kind: "project"; id: string }
   /** A single autopilot detail. */
   | { kind: "autopilot"; id: string }
-  /** An agent / member / squad detail (has an avatar identity). */
+  /** An agent / member detail (has an avatar identity). */
   | { kind: "actor"; actorType: TabActorType; id: string }
   /** A single skill detail. */
   | { kind: "skill"; id: string }
@@ -86,10 +86,6 @@ export function parseTabSubject(url: string): TabSubject {
     case "members":
       // No members collection route exists; only `/members/:id`.
       return id ? { kind: "actor", actorType: "member", id } : { kind: "unknown" };
-    case "squads":
-      return id
-        ? { kind: "actor", actorType: "squad", id }
-        : { kind: "page", page: "squads" };
     case "usage":
       return { kind: "page", page: "usage" };
     case "inbox":

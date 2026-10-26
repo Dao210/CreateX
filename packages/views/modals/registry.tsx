@@ -3,7 +3,6 @@
 import { lazy, Suspense, type ReactNode } from "react";
 import { SurfaceLoading } from "../common/surface-loading";
 import { useModalStore } from "@auro/core/modals";
-const CreateSquadModal = lazy(() => import("./create-squad").then((module) => ({ default: module.CreateSquadModal })));
 const FeedbackModal = lazy(() => import("./feedback").then((module) => ({ default: module.FeedbackModal })));
 const IssueLimitUpgradeDialog = lazy(() => import("./issue-limit-upgrade-dialog").then((module) => ({ default: module.IssueLimitUpgradeDialog })));
 
@@ -16,9 +15,6 @@ export function ModalRegistry() {
 
   let activeModal: ReactNode = null;
   switch (modal) {
-    case "create-squad":
-      activeModal = <CreateSquadModal onClose={close} />;
-      break;
     case "feedback":
       activeModal = <FeedbackModal onClose={close} data={data} />;
       break;

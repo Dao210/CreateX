@@ -286,7 +286,6 @@
   },
   "creation_studio": {
     "title": "Créer un agent",
-    "squad_title": "Créer un agent pour ce squad",
     "duplicate_title": "Dupliquer {{name}}",
     "back": "Revenir en arrière",
     "eyebrow": "Création d'agent",
@@ -362,7 +361,6 @@
     "duplicate_env_notice": "Les instructions, les skills et les arguments de commande sont copiés. Les variables d'environnement, les serveurs MCP et la configuration de runtime locale à la machine ne le sont pas.",
     "duplicate_runtime_reset_notice": "Le runtime d'origine est indisponible : cette copie s'exécute donc sur un autre. Le modèle, le niveau de réflexion et la vitesse ont été effacés car ils ne valent que pour le runtime sur lequel ils ont été choisis.",
     "create_and_open": "Créer et ouvrir l'agent",
-    "create_and_add": "Créer et ajouter au squad",
     "creating": "Création de l'agent…",
     "create_failed": "Impossible de créer l'agent.",
     "name_conflict": "Un agent portant ce nom existe déjà.",
@@ -415,7 +413,6 @@
     "cancel": "Annuler",
     "create_failed_toast": "Échec de la création de l'agent",
     "skill_attach_failed_toast": "Agent créé, mais échec du rattachement des skills : {{error}}",
-    "squad_join_failed_toast": "L'agent « {{name}} » a été créé mais n'a pas pu rejoindre le squad : {{error}}. Vous pouvez l'ajouter manuellement depuis Membres.",
     "instructions": {
       "label": "Instructions",
       "placeholder_blank": "Cliquez pour rédiger les instructions…",

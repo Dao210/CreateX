@@ -35,8 +35,6 @@
     "./runtimes": "./runtimes/index.ts",
     "./billing": "./billing/index.ts",
     "./dashboard": "./dashboard/index.ts",
-    "./squads": "./squads/index.ts",
-    "./squads/components": "./squads/components/index.ts",
     "./siege": "./siege/index.ts",
     "./tank-defense": "./tank-defense/index.ts",
     "./tank-defense/tank-defense.css": "./tank-defense/tank-defense.css",

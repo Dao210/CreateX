@@ -21,7 +21,6 @@ import {
   ChooseCreateMethodPage,
   ManualCreateAgentPage,
 } from "@auro/views/agents";
-import { SquadsPage, SquadDetailPage as SquadDetailPageView } from "@auro/views/squads/components";
 import { InboxPage } from "@auro/views/inbox";
 import { ChatPage } from "@auro/views/chat";
 import { SettingsPage } from "@auro/views/settings";
@@ -195,12 +194,6 @@ export const appRoutes: RouteObject[] = [
             path: "members/:id",
             element: <MemberDetailPage />,
             handle: { title: "Member" },
-          },
-          { path: "squads", element: <SquadsPage />, handle: { title: "Squads" } },
-          {
-            path: "squads/:id",
-            element: <SquadDetailPageView />,
-            handle: { title: "Squad" },
           },
           { path: "inbox", element: <InboxPage />, handle: { title: "Inbox" } },
           { path: "chat", element: <ChatPage />, handle: { title: "Chat" } },

@@ -24,13 +24,11 @@ describe("paths.workspace() shape", () => {
       ["newAgentManual", "agents/new/manual"],
       ["newAgentAi", "agents/new/ai"],
       ["chat", "chat"],
-      ["squads", "squads"],
       ["inbox", "inbox"],
       ["runtimes", "runtimes"],
       ["skills", "skills"],
       ["siege", "siege"],
       ["tanks", "tanks"],
-      ["squads", "squads"],
       ["settings", "settings"],
     ];
     const wsAsAny = ws as unknown as Record<string, () => string>;

@@ -141,7 +141,6 @@ vi.mock("@auro/core/paths", async (importOriginal) => ({
     projects: () => "/acme/projects",
     autopilots: () => "/acme/autopilots",
     agents: () => "/acme/agents",
-    squads: () => "/acme/squads",
     usage: () => "/acme/usage",
     runtimes: () => "/acme/runtimes",
     skills: () => "/acme/skills",
@@ -362,6 +361,11 @@ describe("work group agents", () => {
   it("omits the retired chat entry", () => {
     const { container } = render(<AppSidebar />);
     expect(container.querySelector('button[data-href="/acme/chat"]')).toBeNull();
+  });
+
+  it("omits the retired squads entry", () => {
+    const { container } = render(<AppSidebar />);
+    expect(container.querySelector('button[data-href="/acme/squads"]')).toBeNull();
   });
 
   it("links created agents into a chat bound to that agent", () => {

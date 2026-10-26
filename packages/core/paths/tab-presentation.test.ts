@@ -27,7 +27,7 @@ describe("resolveTabPresentation — pages", () => {
 });
 
 describe("resolveTabPresentation — direct resources", () => {
-  it.each(["/acme/issues/i1", "/acme/projects/p1"])("keeps retired URL %s neutral", (url) => {
+  it.each(["/acme/issues/i1", "/acme/projects/p1", "/acme/squads", "/acme/squads/sq1"])("keeps retired URL %s neutral", (url) => {
     expect(present(url)).toEqual({ visual: { kind: "icon", icon: "FileQuestion" }, title: { kind: "tab", tabKey: "unknown" } });
   });
 
@@ -40,10 +40,6 @@ describe("resolveTabPresentation — direct resources", () => {
     expect(present("/acme/members/m1", { actorName: "Ada" })).toEqual({
       visual: { kind: "actor", actorType: "member", id: "m1" },
       title: { kind: "text", text: "Ada" },
-    });
-    expect(present("/acme/squads/sq1")).toEqual({
-      visual: { kind: "actor", actorType: "squad", id: "sq1" },
-      title: { kind: "tab", tabKey: "squad" },
     });
   });
 

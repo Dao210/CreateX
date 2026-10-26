@@ -79,7 +79,6 @@ type NavKey =
   | "inbox"
   | "autopilots"
   | "agents"
-  | "squads"
   | "usage"
   | "runtimes"
   | "skills"
@@ -93,7 +92,6 @@ type NavLabelKey =
   | "inbox"
   | "autopilots"
   | "agents"
-  | "squads"
   | "usage"
   | "runtimes"
   | "skills"
@@ -115,7 +113,6 @@ const personalNav: { key: NavKey; labelKey: NavLabelKey }[] = [
 const aiTeamNav: { key: NavKey; labelKey: NavLabelKey }[] = [
   { key: "autopilots", labelKey: "autopilots" },
   { key: "agents", labelKey: "agents" },
-  { key: "squads", labelKey: "squads" },
   { key: "skills", labelKey: "skills" },
   { key: "runtimes", labelKey: "runtimes" },
 ];
@@ -408,7 +405,7 @@ export function AppSidebar({ topSlot, headerClassName, headerStyle }: AppSidebar
                 <>
                   {!isCollapsed && (
                     <SidebarGroupLabel className="mt-1">
-                      {t(($) => $.nav.agents)}
+                      {t(($) => $.sidebar.my_assistants_group)}
                     </SidebarGroupLabel>
                   )}
                   <SidebarMenu className="gap-0.5">

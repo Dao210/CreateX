@@ -1,12 +1,19 @@
 // @vitest-environment node
 import { describe, it, expect } from "vitest";
 import { paths, isGlobalPath } from "./paths";
+import { isReservedSlug } from "./reserved-slugs";
 
 describe("paths.workspace(slug)", () => {
   const ws = paths.workspace("acme");
 
   it("does not expose the retired personal issue page", () => {
     expect(ws).not.toHaveProperty("myIssues");
+  });
+
+  it("does not expose retired squad pages", () => {
+    expect(ws).not.toHaveProperty("squads");
+    expect(ws).not.toHaveProperty("squadDetail");
+    expect(isReservedSlug("squads")).toBe(true);
   });
 
   it("builds workspace paths with slug prefix", () => {
@@ -37,8 +44,6 @@ describe("paths.workspace(slug)", () => {
     expect(ws.siege()).toBe("/acme/siege");
     expect(ws.tanks()).toBe("/acme/tanks");
     expect(ws.skillDetail("skl_123")).toBe("/acme/skills/skl_123");
-    expect(ws.squads()).toBe("/acme/squads");
-    expect(ws.squadDetail("sq_1")).toBe("/acme/squads/sq_1");
     expect(ws.settings()).toBe("/acme/settings");
     expect(ws.attachmentPreview("att_42")).toBe("/acme/attachments/att_42/preview");
   });

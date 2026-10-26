@@ -26,7 +26,6 @@ import enRuntimes from "./en/runtimes.json";
 import enLayout from "./en/layout.json";
 import enUsage from "./en/usage.json";
 import enUi from "./en/ui.json";
-import enSquads from "./en/squads.json";
 import enBilling from "./en/billing.json";
 import enTanks from "./en/tanks.json";
 import zhHansCommon from "./zh-Hans/common.json";
@@ -51,7 +50,6 @@ import zhHansRuntimes from "./zh-Hans/runtimes.json";
 import zhHansLayout from "./zh-Hans/layout.json";
 import zhHansUsage from "./zh-Hans/usage.json";
 import zhHansUi from "./zh-Hans/ui.json";
-import zhHansSquads from "./zh-Hans/squads.json";
 import zhHansBilling from "./zh-Hans/billing.json";
 import zhHansTanks from "./zh-Hans/tanks.json";
 import koCommon from "./ko/common.json";
@@ -76,7 +74,6 @@ import koRuntimes from "./ko/runtimes.json";
 import koLayout from "./ko/layout.json";
 import koUsage from "./ko/usage.json";
 import koUi from "./ko/ui.json";
-import koSquads from "./ko/squads.json";
 import koBilling from "./ko/billing.json";
 import koTanks from "./ko/tanks.json";
 import jaCommon from "./ja/common.json";
@@ -101,7 +98,6 @@ import jaRuntimes from "./ja/runtimes.json";
 import jaLayout from "./ja/layout.json";
 import jaUsage from "./ja/usage.json";
 import jaUi from "./ja/ui.json";
-import jaSquads from "./ja/squads.json";
 import jaBilling from "./ja/billing.json";
 import jaTanks from "./ja/tanks.json";
 import frCommon from "./fr/common.json";
@@ -126,7 +122,6 @@ import frRuntimes from "./fr/runtimes.json";
 import frLayout from "./fr/layout.json";
 import frUsage from "./fr/usage.json";
 import frUi from "./fr/ui.json";
-import frSquads from "./fr/squads.json";
 import frBilling from "./fr/billing.json";
 import frTanks from "./fr/tanks.json";
 
@@ -157,7 +152,6 @@ export const RESOURCES: Record<SupportedLocale, LocaleResources> = {
     layout: enLayout,
     usage: enUsage,
     ui: enUi,
-    squads: enSquads,
     billing: enBilling,
     tanks: enTanks,
     admin: enAdmin,
@@ -185,7 +179,6 @@ export const RESOURCES: Record<SupportedLocale, LocaleResources> = {
     layout: zhHansLayout,
     usage: zhHansUsage,
     ui: zhHansUi,
-    squads: zhHansSquads,
     billing: zhHansBilling,
     tanks: zhHansTanks,
     admin: zhHansAdmin,
@@ -213,7 +206,6 @@ export const RESOURCES: Record<SupportedLocale, LocaleResources> = {
     layout: koLayout,
     usage: koUsage,
     ui: koUi,
-    squads: koSquads,
     billing: koBilling,
     tanks: koTanks,
     admin: koAdmin,
@@ -241,7 +233,6 @@ export const RESOURCES: Record<SupportedLocale, LocaleResources> = {
     layout: jaLayout,
     usage: jaUsage,
     ui: jaUi,
-    squads: jaSquads,
     billing: jaBilling,
     tanks: jaTanks,
     admin: jaAdmin,
@@ -269,7 +260,6 @@ export const RESOURCES: Record<SupportedLocale, LocaleResources> = {
     layout: frLayout,
     usage: frUsage,
     ui: frUi,
-    squads: frSquads,
     billing: frBilling,
     tanks: frTanks,
     admin: frAdmin,

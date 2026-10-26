@@ -259,6 +259,6 @@ describe("ResourceLeadingVisual", () => {
   });
 });
 
- it.each(["issues", "projects", "my-issues"])("keeps retired %s routes neutral even with cached entities", (segment) => {
+ it.each(["issues", "projects", "my-issues", "squads"])("keeps retired %s routes neutral even with cached entities", (segment) => {
  expect(presentationOf(`/acme/${segment}/i1`, "Old title")).toEqual({ visual: {kind: "icon", icon: "FileQuestion"}, title: "Unknown page" });
 });

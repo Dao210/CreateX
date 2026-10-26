@@ -20,7 +20,6 @@ vi.mock("@auro/core/hooks", () => ({
 vi.mock("@auro/core/paths", () => ({
   useWorkspacePaths: () => ({
     agentDetail: (agentId: string) => `/acme/agents/${agentId}`,
-    squadDetail: (squadId: string) => `/acme/squads/${squadId}`,
   }),
 }));
 
@@ -128,7 +127,6 @@ describe("useCreateAgentSubmit cache handoff", () => {
             runtimeId: CREATED_AGENT.runtime_id,
           },
           runtimeId: CREATED_AGENT.runtime_id,
-          squadId: null,
         }),
       { wrapper: wrapper(queryClient) },
     );

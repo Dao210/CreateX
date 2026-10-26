@@ -61,9 +61,14 @@ describe("proxy legacy workspace route redirects", () => {
     expect(redirectLocation("/acme/my-issues?view=old", sessionCookies)).toBeNull();
   });
 
+  it.each<Record<string, string>>([{}, sessionCookies, { auro_logged_in: "1" }])("does not redirect retired squad URLs for session %j", (cookies) => {
+    expect(redirectLocation("/squads?view=members", cookies)).toBeNull();
+    expect(redirectLocation("/squads/old-id", cookies)).toBeNull();
+    expect(redirectLocation("/acme/squads/old-id", cookies)).toBeNull();
+  });
+
   it.each([
     ["agents", "/acme/agents"],
-    ["squads", "/acme/squads"],
     ["inbox", "/acme/inbox"],
     ["autopilots", "/acme/autopilots"],
     ["runtimes", "/acme/runtimes"],
@@ -81,8 +86,8 @@ describe("proxy legacy workspace route redirects", () => {
 
   it("preserves nested legacy paths and query strings", () => {
     expect(
-      redirectLocation("/squads/squad-123?view=members", sessionCookies),
-    ).toBe("https://app.auro.test/acme/squads/squad-123?view=members");
+      redirectLocation("/agents/agent-123?view=details", sessionCookies),
+    ).toBe("https://app.auro.test/acme/agents/agent-123?view=details");
   });
 
   it("sends logged-out legacy URLs to login", () => {
@@ -98,7 +103,7 @@ describe("proxy legacy workspace route redirects", () => {
     // instead. The deep-link query is dropped because feeding a legacy path
     // back through `next` would return here and loop.
     expect(
-      redirectLocation("/squads?view=members", { auro_logged_in: "1" }),
+      redirectLocation("/agents?view=details", { auro_logged_in: "1" }),
     ).toBe("https://app.auro.test/login");
   });
 
@@ -112,7 +117,7 @@ describe("proxy legacy workspace route redirects", () => {
   );
 
   it("does not redirect workspace-scoped URLs whose first segment is already a slug", () => {
-    expect(redirectLocation("/acme/squads", sessionCookies)).toBeNull();
+    expect(redirectLocation("/acme/agents", sessionCookies)).toBeNull();
   });
 
   it("redirects app-host root URLs to the last workspace", () => {

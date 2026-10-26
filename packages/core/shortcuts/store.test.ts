@@ -134,6 +134,7 @@ describe("shortcut store", () => {
         createIssue: createShortcutChord("C"),
         goIssues: createShortcutChord("I"),
         goProjects: createShortcutChord("P"),
+        goSquads: createShortcutChord("S"),
       }),
     ).toEqual({
       send: createShortcutChord("Enter"),
