@@ -1,24 +1,51 @@
-node_modules
-dist
-*.log
-.DS_Store
-.envrc
+# ---------------------------------------------------------------------------
+# Dependencies
+# ---------------------------------------------------------------------------
+node_modules/
+.pnpm-store/
+.yarn/
 
-# build outputs
-.turbo
-.next
-.next-local
-out
-build
-bin
-dist-electron
+# ---------------------------------------------------------------------------
+# Build outputs
+# ---------------------------------------------------------------------------
+dist/
+dist-electron/
+out/
+build/
+.next/
+.next-local/
+.turbo/
+.cache/
+.vercel/
 *.tsbuildinfo
+*.tgz
 # ...except electron-builder's source resources dir, which holds tracked
 # config files (entitlements, icons) — not build output.
 !apps/desktop/build/
 !apps/desktop/build/**
 
-# env
+# Go binaries built into the server module root
+server/bin/
+server/tmp/
+server/migrate
+server/daemon
+server/auro
+server/server
+server/reach
+*.exe
+
+# ---------------------------------------------------------------------------
+# Tests and coverage
+# ---------------------------------------------------------------------------
+coverage/
+.nyc_output/
+test-results/
+playwright-report/
+blob-report/
+
+# ---------------------------------------------------------------------------
+# Environment files
+# ---------------------------------------------------------------------------
 .env*
 !.env.example
 # Desktop production config is public (backend URL, etc.) — track it so
@@ -37,51 +64,61 @@ dist-electron
 # external users can run `pnpm ios:mobile:device:prod:release` against
 # auro.ai's production backend without copying templates first.
 !apps/mobile/.env.production
+# The production example is a tracked template; `.env*` above would hide it.
+!apps/mobile/.env.production.example
 
-# test coverage
-coverage
-
-# Go
-server/bin/
-server/tmp/
-server/migrate
-server/daemon
-server/auro
-
-# Test artifacts
-test-results/
-apps/web/test-results/
-
-# context (agent workspace)
-.context
-.agent_context/
+# ---------------------------------------------------------------------------
+# Logs, PIDs, and runtime data
+# ---------------------------------------------------------------------------
+*.log
+pnpm-debug.log*
+*.pid
+*.pid.lock
+*~
+/data/
+/server/data/
+.deal/
+.siege/
 .auro/
 
-# local settings
+# ---------------------------------------------------------------------------
+# OS and editor files
+# ---------------------------------------------------------------------------
+.DS_Store
+._*
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# ---------------------------------------------------------------------------
+# Local agent and tooling state (never shared through the repository)
+# ---------------------------------------------------------------------------
+.context
+.agent_context/
+.agents/
 .claude/
-.tool-versions
-
-# feature tracking
-_features/
-
-# runtime
-*.pid
-
-# platform specific
-*.dmg
-*.app
-server/server
-data/
+.codex/
+.cursor/
+.qoder/
+.workbuddy/
 .kilo
-.idea
 .gstack/
+_features/
+.tool-versions
+.envrc
+
+# Agent working notes stay local; the Siege PRD is referenced from docs.
+tasks/*
+!tasks/prd-siege-playability.md
 
 # Python (agent tooling)
 __pycache__/
 *.pyc
+.venv/
 perf-report/
-.deal/
-# The production example is a tracked template; `.env*` above would hide it.
-!apps/mobile/.env.production.example
 
-.siege/
+# Platform-specific artifacts
+*.dmg
+*.app

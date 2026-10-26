@@ -33,8 +33,14 @@
     "mdx": {
       "outputs": [".source/**"]
     },
+    // `next typegen` writes `next-env.d.ts` and `.next/types`, both ignored.
+    // Running it before `build` and `typecheck` keeps the generated file out
+    // of git and stops turbo from racing the two writers over `.next`.
+    "typegen": {
+      "outputs": ["next-env.d.ts", ".next/types/**"]
+    },
     "build": {
-      "dependsOn": ["^build", "mdx"],
+      "dependsOn": ["^build", "mdx", "typegen"],
       // No explicit `inputs`: turbo's default (every git-tracked file in the
       // package) is the only safe hash source now that the cache is actually
       // restored in CI. The previous narrow glob list matched neither
@@ -53,7 +59,7 @@
       "persistent": true
     },
     "typecheck": {
-      "dependsOn": ["^typecheck", "mdx"]
+      "dependsOn": ["^typecheck", "mdx", "typegen"]
     },
     // Hash-only transit task. No package implements a `cache-inputs` script,
     // so every node resolves to <NONEXISTENT> and nothing is ever executed --
