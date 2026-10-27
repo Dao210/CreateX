@@ -20,6 +20,9 @@ type Store interface {
 	// ReadSession reads without taking the session lock. Returns not_found when
 	// the session does not exist or belongs to someone else.
 	ReadSession(id string, owner Owner) (*Session, error)
+	// ListSessions returns every session owned by this member, newest first.
+	// The library only reads the blueprint snapshots; it never locks them.
+	ListSessions(owner Owner) ([]*Session, error)
 	// LockSession takes the session-level exclusive lock and reads the session.
 	// Returns service_busy when another request holds it, not_found when the
 	// session does not exist or belongs to someone else. release must be called

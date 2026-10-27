@@ -1,5 +1,8 @@
 import type { StorageAdapter } from "../types/storage";
 
+/** Campaign stars live inside the identity-scoped preference namespace. */
+export const SIEGE_CAMPAIGN_PROGRESS_KEY = "siege-campaign-progress";
+
 export function siegePreferencesKey(userId: string, workspaceId: string): string {
   if (!userId || !workspaceId) throw new Error("Siege records require a user and workspace");
   return `auro:siege:${encodeURIComponent(userId)}:${encodeURIComponent(workspaceId)}`;

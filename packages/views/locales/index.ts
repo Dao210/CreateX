@@ -28,6 +28,7 @@ import enUsage from "./en/usage.json";
 import enUi from "./en/ui.json";
 import enBilling from "./en/billing.json";
 import enTanks from "./en/tanks.json";
+import enMe from "./en/me.json";
 import zhHansCommon from "./zh-Hans/common.json";
 import zhHansAuth from "./zh-Hans/auth.json";
 import zhHansSettings from "./zh-Hans/settings.json";
@@ -52,6 +53,7 @@ import zhHansUsage from "./zh-Hans/usage.json";
 import zhHansUi from "./zh-Hans/ui.json";
 import zhHansBilling from "./zh-Hans/billing.json";
 import zhHansTanks from "./zh-Hans/tanks.json";
+import zhHansMe from "./zh-Hans/me.json";
 import koCommon from "./ko/common.json";
 import koAuth from "./ko/auth.json";
 import koSettings from "./ko/settings.json";
@@ -76,6 +78,7 @@ import koUsage from "./ko/usage.json";
 import koUi from "./ko/ui.json";
 import koBilling from "./ko/billing.json";
 import koTanks from "./ko/tanks.json";
+import koMe from "./ko/me.json";
 import jaCommon from "./ja/common.json";
 import jaAuth from "./ja/auth.json";
 import jaSettings from "./ja/settings.json";
@@ -100,6 +103,7 @@ import jaUsage from "./ja/usage.json";
 import jaUi from "./ja/ui.json";
 import jaBilling from "./ja/billing.json";
 import jaTanks from "./ja/tanks.json";
+import jaMe from "./ja/me.json";
 import frCommon from "./fr/common.json";
 import frAuth from "./fr/auth.json";
 import frSettings from "./fr/settings.json";
@@ -124,6 +128,7 @@ import frUsage from "./fr/usage.json";
 import frUi from "./fr/ui.json";
 import frBilling from "./fr/billing.json";
 import frTanks from "./fr/tanks.json";
+import frMe from "./fr/me.json";
 
 // Single source of truth for the resource bundle. Both apps (web layout +
 // desktop App.tsx) import from here so adding a locale or namespace happens
@@ -154,6 +159,7 @@ export const RESOURCES: Record<SupportedLocale, LocaleResources> = {
     ui: enUi,
     billing: enBilling,
     tanks: enTanks,
+    me: enMe,
     admin: enAdmin,
   },
   "zh-Hans": {
@@ -181,6 +187,7 @@ export const RESOURCES: Record<SupportedLocale, LocaleResources> = {
     ui: zhHansUi,
     billing: zhHansBilling,
     tanks: zhHansTanks,
+    me: zhHansMe,
     admin: zhHansAdmin,
   },
   ko: {
@@ -208,6 +215,7 @@ export const RESOURCES: Record<SupportedLocale, LocaleResources> = {
     ui: koUi,
     billing: koBilling,
     tanks: koTanks,
+    me: koMe,
     admin: koAdmin,
   },
   ja: {
@@ -235,6 +243,7 @@ export const RESOURCES: Record<SupportedLocale, LocaleResources> = {
     ui: jaUi,
     billing: jaBilling,
     tanks: jaTanks,
+    me: jaMe,
     admin: jaAdmin,
   },
   fr: {
@@ -262,6 +271,7 @@ export const RESOURCES: Record<SupportedLocale, LocaleResources> = {
     ui: frUi,
     billing: frBilling,
     tanks: frTanks,
+    me: frMe,
     admin: frAdmin,
   },
 };

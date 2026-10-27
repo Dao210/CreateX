@@ -1,0 +1,57 @@
+{
+  "title": "내 공간",
+  "summary": {
+    "weapons": "무기",
+    "stars": "별",
+    "best": "최고 기록"
+  },
+  "filters": {
+    "all": "전체",
+    "siege": "시즈",
+    "tanks": "탱크 방어전",
+    "mcp": "MCP로 생성"
+  },
+  "weapons": {
+    "title": "무기 컬렉션",
+    "siege_empty": "저장된 설계도가 없습니다.",
+    "tanks_empty": "탱크 캐릭터가 없습니다.",
+    "mcp_empty": "아직 MCP로 생성된 콘텐츠가 없습니다.",
+    "siege_error": "설계도를 불러오지 못했습니다.",
+    "tanks_error": "탱크 캐릭터를 불러오지 못했습니다.",
+    "empty_help": "워크숍이나 차고에서 만들거나 MCP로 에이전트를 연결하세요.",
+    "open_workshop": "워크숍 열기",
+    "open_garage": "차고 열기",
+    "mcp": "MCP",
+    "manual": "직접 생성",
+    "revision": "v{{revision}}",
+    "created": "{{date}} 생성",
+    "stats": "속도 {{speed}} · 장갑 {{armor}} · 간격 {{cooldown}}",
+    "range": "사거리 {{range}}",
+    "ink": "잉크 {{ink}}",
+    "cost": "{{cost}} 포인트",
+    "kind_cannon": "대포",
+    "kind_blade": "블레이드",
+    "kind_hammer": "해머",
+    "kind_mixed": "복합",
+    "parts": "{{count}}개 부품"
+  },
+  "progress": {
+    "title": "게임 진행",
+    "siege_title": "시즈 캠페인",
+    "tanks_title": "탱크 방어전",
+    "stars": "{{earned}} / {{total}} 별",
+    "next_level": "다음: 레벨 {{level}}",
+    "campaign_complete": "모든 스테이지 완료",
+    "best": "최고 {{score}}",
+    "unlocked": "{{unlocked}} / {{total}} 스테이지 잠금 해제",
+    "continue_siege": "캠페인 계속",
+    "continue_tanks": "방어 계속",
+    "local": "이 기기에 저장됨",
+    "synced": "동기화됨",
+    "offline": "진행 상황을 동기화할 수 없습니다. 이 기기의 기록을 표시합니다.",
+    "level_stars": "레벨 {{level}}: {{stars}} / 3 별"
+  },
+  "loading": "컬렉션을 불러오는 중…",
+  "error": "컬렉션을 불러오지 못했습니다.",
+  "retry": "다시 시도"
+}

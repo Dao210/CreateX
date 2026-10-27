@@ -146,6 +146,7 @@ vi.mock("@auro/core/paths", async (importOriginal) => ({
     skills: () => "/acme/skills",
     siege: () => "/acme/siege",
     tanks: () => "/acme/tanks",
+    me: () => "/acme/me",
     settings: () => "/acme/settings",
     issueDetail: (id: string) => `/acme/issues/${id}`,
     projectDetail: (id: string) => `/acme/projects/${id}`,

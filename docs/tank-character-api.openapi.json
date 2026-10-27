@@ -1483,6 +1483,14 @@
           "cost": {
             "type": "integer"
           },
+          "origin": {
+            "type": "string",
+            "enum": [
+              "manual",
+              "mcp"
+            ],
+            "default": "manual"
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time"
@@ -1499,6 +1507,7 @@
           "draft",
           "blueprint",
           "cost",
+          "origin",
           "createdAt"
         ]
       },

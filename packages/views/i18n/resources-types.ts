@@ -26,6 +26,7 @@ import type layout from "../locales/en/layout.json";
 import type usage from "../locales/en/usage.json";
 import type billing from "../locales/en/billing.json";
 import type tanks from "../locales/en/tanks.json";
+import type me from "../locales/en/me.json";
 import type admin from "../locales/en/admin.json";
 
 // Module augmentation enables i18next v26 selector API across the monorepo:
@@ -67,6 +68,7 @@ declare global {
     usage: typeof usage;
     billing: typeof billing;
     tanks: typeof tanks;
+    me: typeof me;
     admin: typeof admin;
   }
 }

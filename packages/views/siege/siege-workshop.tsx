@@ -1,5 +1,5 @@
 import type { SiegeClient } from "@auro/core/siege";
-import { createSiegeClient, siegeKeys, siegeSessionOptions, siegeStatusOptions, type SiegeScope } from "@auro/core/siege/queries";
+import { createSiegeClient, siegeKeys, siegeLibraryOptions, siegeSessionOptions, siegeStatusOptions, type SiegeScope } from "@auro/core/siege/queries";
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowRight, Check, Crosshair, Download, Eraser, LoaderCircle, Pause, Pencil, Play, RotateCcw, Save, Sparkles, Undo2 } from "lucide-react";
@@ -11,6 +11,7 @@ import { DrawingCanvas, type CanvasTool } from "./editor/drawing-canvas";
 import { Arena } from "./arena/siege-arena";
 import { DesignMetrics, BattleMetrics } from "./workshop/metrics";
 import { CannonWorkshop } from "./workshop/cannon-workshop";
+import { useNavigation } from "../navigation";
 
 const defaultDrawing = createCannonDrawing(DEFAULT_CANNON), placeholderHash = "0".repeat(64);
 const defaultDefinition = compileWeapon(defaultDrawing, createCannonSpec(defaultDrawing, placeholderHash), placeholderHash, DEFAULT_CANNON);
@@ -103,6 +104,9 @@ export function SiegeWorkshop({ platform, scope }: SiegeWorkshopProps) {
   const queryClient = useQueryClient();
   const status = useQuery(siegeStatusOptions(api, scope));
   const session = useQuery(siegeSessionOptions(api, scope, sessionId));
+  const navigation = useNavigation();
+  const requestedBlueprint = navigation.searchParams.get("blueprint") ?? "";
+  const blueprintLibrary = useQuery({ ...siegeLibraryOptions(api, scope), enabled: !!requestedBlueprint });
   useEffect(() => {
     let cancelled = false;
     platform.loadDraft().then(draft => {
@@ -181,6 +185,15 @@ export function SiegeWorkshop({ platform, scope }: SiegeWorkshopProps) {
     }
     setName(blueprint.name);
   };
+  const restoreBlueprintRef = useRef(restoreBlueprint); restoreBlueprintRef.current = restoreBlueprint;
+  const restoredRequestedBlueprint = useRef(false);
+  useEffect(() => {
+    if (restoredRequestedBlueprint.current || !requestedBlueprint || !blueprintLibrary.data) return;
+    const blueprint = blueprintLibrary.data.blueprints.find(item => item.id === requestedBlueprint);
+    if (!blueprint) return;
+    restoredRequestedBlueprint.current = true;
+    restoreBlueprintRef.current(blueprint);
+  }, [requestedBlueprint, blueprintLibrary.data]);
   const loadSample = async (index: number) => {
     const sample = SAMPLES[index]; if (!sample) return;
     const next = structuredClone(sample.drawing); next.revision = currentDrawing.current.revision + 1;

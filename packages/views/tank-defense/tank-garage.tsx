@@ -18,10 +18,13 @@ export function TankGarage({ storage, storageKey, workspace, userId }: { storage
   const { t } = useT("tanks");
   const navigation = useNavigation();
   const sessionId = navigation.searchParams.get("session") ?? "";
+  const requestedCharacter = navigation.searchParams.get("character") ?? "";
+  const requestedStage = Number(navigation.searchParams.get("stage") ?? "");
+  const initialLevelIndex = Number.isInteger(requestedStage) && requestedStage >= 1 && requestedStage <= TANK_LEVELS.length ? requestedStage - 1 : 0;
   const library = useQuery(tankCharactersOptions(workspace.id));
   const session = useQuery(tankSessionOptions(workspace.id, userId, sessionId));
   const create = useCreateTankSession(workspace.id);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(requestedCharacter || null);
   const [selectedMap, setSelectedMap] = useState<string | null>(null);
   const [selectedMode, setSelectedMode] = useState<TankMode | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
@@ -82,7 +85,7 @@ export function TankGarage({ storage, storageKey, workspace, userId }: { storage
   </section>;
 
   return <>
-    <TankBattle key={sessionId || "classic"} storage={storage} storageKey={storageKey} blueprint={frozen?.character.blueprint} levelIndex={frozen ? frozen.levelId - 1 : 0} initialMode={frozen?.mode} frozen={Boolean(frozen)} garage={garage} headerActions={connections} />
+    <TankBattle key={sessionId || "classic"} storage={storage} storageKey={storageKey} workspaceId={workspace.id} blueprint={frozen?.character.blueprint} levelIndex={frozen ? frozen.levelId - 1 : initialLevelIndex} initialMode={frozen?.mode} frozen={Boolean(frozen)} garage={garage} headerActions={connections} />
     <TankCharacterEditor key={editorOpen ? editing ? `${editing.id}@${editing.revision}` : "new" : "closed"} open={editorOpen} onOpenChange={setEditorOpen} workspaceId={workspace.id} character={editing} onSaved={character => { setSelectedId(character.id); setEditorOpen(false); }} />
   </>;
 }

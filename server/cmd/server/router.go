@@ -25,6 +25,7 @@ import (
 	"github.com/auro-ai/auro/server/internal/entitlement"
 	"github.com/auro-ai/auro/server/internal/events"
 	"github.com/auro-ai/auro/server/internal/featureflags"
+	"github.com/auro-ai/auro/server/internal/gameprogress"
 	"github.com/auro-ai/auro/server/internal/handler"
 	"github.com/auro-ai/auro/server/internal/integrations/channel"
 	"github.com/auro-ai/auro/server/internal/integrations/channel/engine"
@@ -2027,6 +2028,12 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 			if opts.Tanks != nil {
 				r.Handle("/api/tanks/*", tankActor((&tanks.HTTP{Service: opts.Tanks, Control: opts.MCPAdmin, AllowedOrigins: allowedOrigins()}).Handler()))
 			}
+			// Personal game progress shared by Siege and Tank Defense. Content
+			// stays in each game's authoritative store; this endpoint only
+			// accumulates stars, best scores and unlocked stages.
+			progress := gameProgressActor((&gameprogress.HTTP{Store: gameprogress.New(pool)}).Handler())
+			r.Handle("/api/game-progress", progress)
+			r.Handle("/api/game-progress/*", progress)
 
 			// Assignee frequency
 			r.Get("/api/assignee-frequency", h.GetAssigneeFrequency)

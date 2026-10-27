@@ -54,6 +54,7 @@ type Character struct {
 	Draft           Draft     `json:"draft"`
 	Blueprint       Blueprint `json:"blueprint"`
 	Cost            int       `json:"cost"`
+	Origin          string    `json:"origin"`
 	CreatedAt       string    `json:"createdAt"`
 }
 type SaveInput struct {
@@ -61,7 +62,21 @@ type SaveInput struct {
 	Draft            Draft  `json:"draft"`
 	CharacterID      string `json:"characterId,omitempty"`
 	ExpectedRevision int    `json:"expectedRevision,omitempty"`
+	// Origin is set by the serving endpoint, never by the client.
+	Origin string `json:"-"`
 }
+
+const (
+	OriginManual = "manual"
+	OriginMCP    = "mcp"
+)
+
+func normalizeCharacter(c *Character) {
+	if c.Origin != OriginMCP {
+		c.Origin = OriginManual
+	}
+}
+
 type SessionInput struct {
 	RequestID   string `json:"requestId"`
 	CharacterID string `json:"characterId"`
@@ -115,7 +130,7 @@ func storedError(err error) error {
 	return err
 }
 
-func (s *Service) List(ctx context.Context, a Actor) ([]Character, error) {
+func (s *Service) List(ctx context.Context, a Actor, mine bool) ([]Character, error) {
 	w, _, e := scope(a)
 	if e != nil {
 		return nil, e
@@ -129,6 +144,10 @@ func (s *Service) List(ctx context.Context, a Actor) ([]Character, error) {
 		var c Character
 		if e = json.Unmarshal(raw, &c); e != nil {
 			return nil, e
+		}
+		normalizeCharacter(&c)
+		if mine && c.OwnerID != a.UserID {
+			continue
 		}
 		out = append(out, c)
 	}
@@ -152,6 +171,9 @@ func readCharacter(ctx context.Context, q *db.Queries, w pgtype.UUID, id string,
 		return c, storedError(e)
 	}
 	e = json.Unmarshal(raw, &c)
+	if e == nil {
+		normalizeCharacter(&c)
+	}
 	return c, e
 }
 func (s *Service) GetCharacter(ctx context.Context, a Actor, id string, revision int) (Character, error) {
@@ -228,6 +250,9 @@ func (s *Service) write(ctx context.Context, a Actor, operation, requestID strin
 
 func (s *Service) Save(ctx context.Context, a Actor, in SaveInput) (Character, error) {
 	var out Character
+	if in.Origin != OriginMCP {
+		in.Origin = OriginManual
+	}
 	validation := Validate(in.Draft, "custom")
 	if !validation.Valid {
 		return out, &Problem{Code: "character_invalid", Message: "The tank character is invalid.", Issues: validation.Errors, Status: 422}
@@ -266,7 +291,7 @@ func (s *Service) Save(ctx context.Context, a Actor, in SaveInput) (Character, e
 			revision = current.Revision + 1
 		}
 		v := Validate(in.Draft, fmt.Sprintf("%s@%d", id, revision))
-		c := Character{ID: id, Revision: revision, WorkspaceID: a.WorkspaceID, OwnerID: a.UserID, RulesVersion: Rules.RulesVersion, CompilerVersion: Rules.CompilerVersion, Draft: in.Draft, Blueprint: *v.Blueprint, Cost: v.Cost, CreatedAt: time.Now().UTC().Format(time.RFC3339)}
+		c := Character{ID: id, Revision: revision, WorkspaceID: a.WorkspaceID, OwnerID: a.UserID, RulesVersion: Rules.RulesVersion, CompilerVersion: Rules.CompilerVersion, Draft: in.Draft, Blueprint: *v.Blueprint, Cost: v.Cost, Origin: in.Origin, CreatedAt: time.Now().UTC().Format(time.RFC3339)}
 		c.ContentHash = digest(struct {
 			Draft     Draft     `json:"draft"`
 			Blueprint Blueprint `json:"blueprint"`
@@ -373,6 +398,9 @@ func (s *Service) CreateSession(ctx context.Context, a Actor, in SessionInput) (
 		return out, e
 	}
 	e = json.Unmarshal(raw, &out)
+	if e == nil {
+		normalizeCharacter(&out.Character)
+	}
 	return out, e
 }
 func (s *Service) GetSession(ctx context.Context, a Actor, id string) (Session, error) {
@@ -392,6 +420,7 @@ func (s *Service) GetSession(ctx context.Context, a Actor, id string) (Session, 
 	if e = json.Unmarshal(raw, &out); e != nil {
 		return out, e
 	}
+	normalizeCharacter(&out.Character)
 	expires, e := time.Parse(time.RFC3339, out.ExpiresAt)
 	if e != nil {
 		return out, e

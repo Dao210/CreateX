@@ -37,6 +37,7 @@
     "./dashboard": "./dashboard/index.ts",
     "./siege": "./siege/index.ts",
     "./tank-defense": "./tank-defense/index.ts",
+    "./me": "./me/index.ts",
     "./tank-defense/tank-defense.css": "./tank-defense/tank-defense.css",
     "./siege/platform/web": "./siege/platform/web.ts",
     "./workspace/workspace-avatar": "./workspace/workspace-avatar.tsx",

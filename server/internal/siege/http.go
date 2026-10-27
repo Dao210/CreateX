@@ -40,6 +40,19 @@ func (h *HTTP) Handler() http.Handler {
 		respond(w, 200, map[string]any{"mode": h.Service.Mode, "ready": h.Service.Ready, "rulesVersion": RulesVersion, "parts": []string{"blade", "hammer", "cannon", "wheel", "shield", "structure"}})
 	})
 	mux.HandleFunc("POST /api/siege/sessions", h.create)
+	mux.HandleFunc("GET /api/siege/library", func(w http.ResponseWriter, r *http.Request) {
+		owner, ok := OwnerFromContext(r.Context())
+		if !ok {
+			fail(w, problem("unauthenticated", 401))
+			return
+		}
+		blueprints, err := h.Service.ListBlueprints(owner)
+		if err != nil {
+			fail(w, err)
+			return
+		}
+		respond(w, 200, map[string]any{"blueprints": blueprints})
+	})
 	mux.HandleFunc("GET /api/siege/sessions/{id}", func(w http.ResponseWriter, r *http.Request) {
 		owner, ok := OwnerFromContext(r.Context())
 		if !ok {

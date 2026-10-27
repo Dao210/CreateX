@@ -23,6 +23,7 @@ vi.mock("@auro/core/paths", () => ({
     skills: () => "/w/skills",
     siege: () => "/w/siege",
     tanks: () => "/w/tanks",
+    me: () => "/w/me",
     settings: () => "/w/settings",
   }),
 }));

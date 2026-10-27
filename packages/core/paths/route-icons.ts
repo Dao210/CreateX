@@ -54,6 +54,7 @@ export type NavLabelKey =
   | "skills"
   | "siege"
   | "tanks"
+  | "me"
   | "settings";
 
 /** Stable identifier for each workspace navigation page. */
@@ -67,6 +68,7 @@ export type WorkspacePageKey =
   | "skills"
   | "siege"
   | "tanks"
+  | "me"
   | "settings";
 
 export interface WorkspacePage {
@@ -94,6 +96,7 @@ export const WORKSPACE_PAGES: Record<WorkspacePageKey, WorkspacePage> = {
   // activity (blueprints are workspace-scoped), not a team-management tool.
   siege: { segment: "siege", icon: "Gamepad2", navKey: "siege" },
   tanks: { segment: "tanks", icon: "Gamepad2", navKey: "tanks" },
+  me: { segment: "me", icon: "CircleUser", navKey: "me" },
   settings: { segment: "settings", icon: "Settings", navKey: "settings" },
 };
 

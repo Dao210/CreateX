@@ -7,12 +7,13 @@ import { Button } from "@auro/ui/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@auro/ui/components/ui/dialog";
 import { CAMPAIGN_HEIGHT, CAMPAIGN_LEVELS, CAMPAIGN_WIDTH, compileCampaignWeapon, createCannonDrawing, createCannonSpec, DEFAULT_CANNON, ENEMY_RECIPES, presetBlueprint, RULES_VERSION, sellPrice, unlockedLevel, upgradePrice, WEAPON_RECIPES,
   type Blueprint, type CampaignBlueprint, type CampaignCheckpoint, type CannonDesign, type WeaponKind, type SiegePlatform } from "@auro/core/siege";
+import { gameProgressOptions, mergeSiegeStars, useSyncSiegeProgress } from "@auro/core/game-progress";
 import { loadArenaArt } from "../arena/art";
 import { paintBattle } from "./painter";
 import type { CampaignEngine, CampaignSnapshot } from "./engine";
 import { createCampaignStorage, defaultLoadout } from "./storage";
 import { GameSound } from "../../common/game-sound";
-import { AppLink } from "../../navigation";
+import { AppLink, useNavigation } from "../../navigation";
 
 const kinds = Object.keys(WEAPON_RECIPES) as WeaponKind[];
 const weaponIcons = { cannon: Target, frost: Snowflake, blade: Swords, hammer: Hammer, burst: Sparkles };
@@ -29,13 +30,21 @@ export function CampaignApp({ platform, scope, workshopHref }: CampaignAppProps)
   const { workspaceId, workspaceSlug, userId } = scope;
   const api = useMemo(() => createSiegeClient({ workspaceId, workspaceSlug, userId }), [workspaceId, workspaceSlug, userId]);
   const store = useMemo(() => createCampaignStorage(platform), [platform]);
+  const navigation = useNavigation();
+  const requestedLevel = Number(navigation.searchParams.get("level") ?? "");
+  const requestedLevelValid = Number.isInteger(requestedLevel) && requestedLevel >= 1 && requestedLevel <= CAMPAIGN_LEVELS.length;
   const paperStyle = useMemo(
     () => ({ "--siege-paper": `url("${platform.assetUrl("workshop-paper")}")` }) as CSSProperties,
     [platform],
   );
   const [initial] = useState(() => ({ progress: store.readProgress(), ...store.readCheckpoint(), ...store.readLoadout() }));
   const [progress, setProgress] = useState(initial.progress);
-  const [levelId, setLevelId] = useState(initial.checkpoint?.levelId ?? Math.min(initial.progress.selectedLevel, unlockedLevel(initial.progress.stars)));
+  const remoteProgress = useQuery(gameProgressOptions(workspaceId));
+  const syncProgress = useSyncSiegeProgress(workspaceId);
+  const progressRef = useRef(progress); progressRef.current = progress;
+  const syncProgressRef = useRef(syncProgress.mutate); syncProgressRef.current = syncProgress.mutate;
+  const remoteProgressApplied = useRef(false);
+  const [levelId, setLevelId] = useState(initial.checkpoint?.levelId ?? (requestedLevelValid ? requestedLevel : Math.min(initial.progress.selectedLevel, unlockedLevel(initial.progress.stars))));
   const [restart, setRestart] = useState(0), [retryLoad, setRetryLoad] = useState(0);
   const [snapshot, setSnapshot] = useState<CampaignSnapshot>(() => emptySnapshot(levelId));
   const [ready, setReady] = useState(false), [error, setError] = useState("");
@@ -69,6 +78,19 @@ export function CampaignApp({ platform, scope, workshopHref }: CampaignAppProps)
     if (!store.writeProgress(progress)) setNotice("浏览器无法保存进度，本次仍可继续。请允许本地存储后重试。");
     if (sound.current) { sound.current.enabled = progress.sound; sound.current.volume = progress.volume; }
   }, [progress, store]);
+  useEffect(() => {
+    if (remoteProgressApplied.current || !remoteProgress.data) return;
+    remoteProgressApplied.current = true;
+    const local = progressRef.current.stars;
+    const remoteStars = remoteProgress.data.siege?.stars;
+    const merged = mergeSiegeStars(local, remoteStars);
+    if (!remoteStars || merged.some((value, index) => value !== local[index])) {
+      setProgress(previous => ({ ...previous, stars: merged }));
+    }
+    if ((!remoteStars && merged.some(Boolean)) || (remoteStars && merged.some((value, index) => value !== remoteStars[index]))) {
+      syncProgressRef.current(merged);
+    }
+  }, [remoteProgress.data]);
   useEffect(() => { if (!store.writeLoadout(loadout)) setNotice("改装未能保存，本次仍可部署。请允许浏览器本地存储。"); }, [loadout, store]);
   useEffect(() => {
     const audio = new GameSound(); sound.current = audio; audio.enabled = progress.sound; audio.volume = progress.volume;
@@ -122,7 +144,12 @@ export function CampaignApp({ platform, scope, workshopHref }: CampaignAppProps)
           recordedResult.current = world; store.clearCheckpoint();
           const result = world.snapshot();
           sound.current?.play(result.phase as "victory" | "defeat", world.tick);
-          if (result.phase === "victory") setProgress(previous => ({ ...previous, stars: previous.stars.map((stars, index) => index === levelId - 1 ? Math.max(stars, result.stars) : stars) }));
+          if (result.phase === "victory") {
+            const current = progressRef.current;
+            const stars = current.stars.map((value, index) => index === levelId - 1 ? Math.max(value, result.stars) : value);
+            setProgress(previous => ({ ...previous, stars }));
+            if (stars.some((value, index) => value !== current.stars[index])) syncProgressRef.current(stars);
+          }
         }
         if (now - lastHUD >= 100 || world.revision !== lastRevision) { setSnapshot(world.snapshot()); lastHUD = now; lastRevision = world.revision; }
         if (!world.paused && document.visibilityState === "visible" && ["running", "intermission"].includes(world.phase)) raf = requestAnimationFrame(frame);

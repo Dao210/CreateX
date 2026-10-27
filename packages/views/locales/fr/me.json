@@ -1,0 +1,57 @@
+{
+  "title": "Mon espace",
+  "summary": {
+    "weapons": "Armes",
+    "stars": "Étoiles",
+    "best": "Meilleur score"
+  },
+  "filters": {
+    "all": "Tout",
+    "siege": "Siège",
+    "tanks": "Défense de chars",
+    "mcp": "Créé via MCP"
+  },
+  "weapons": {
+    "title": "Collection d'armes",
+    "siege_empty": "Aucun plan enregistré.",
+    "tanks_empty": "Aucun personnage char.",
+    "mcp_empty": "Rien n'a encore été créé via MCP.",
+    "siege_error": "Impossible de charger les plans enregistrés.",
+    "tanks_error": "Impossible de charger les personnages char.",
+    "empty_help": "Créez-en un dans l'atelier ou le garage, ou connectez un agent via MCP.",
+    "open_workshop": "Ouvrir l'atelier",
+    "open_garage": "Ouvrir le garage",
+    "mcp": "MCP",
+    "manual": "Manuel",
+    "revision": "v{{revision}}",
+    "created": "Créé le {{date}}",
+    "stats": "Vitesse {{speed}} · Blindage {{armor}} · Intervalle {{cooldown}}",
+    "range": "Portée {{range}}",
+    "ink": "Encre {{ink}}",
+    "cost": "{{cost}} pts",
+    "kind_cannon": "Canon",
+    "kind_blade": "Lame",
+    "kind_hammer": "Marteau",
+    "kind_mixed": "Mixte",
+    "parts": "{{count}} pièces"
+  },
+  "progress": {
+    "title": "Progression",
+    "siege_title": "Campagne Siège",
+    "tanks_title": "Défense de chars",
+    "stars": "{{earned}} / {{total}} étoiles",
+    "next_level": "Suivant : niveau {{level}}",
+    "campaign_complete": "Campagne terminée",
+    "best": "Meilleur {{score}}",
+    "unlocked": "{{unlocked}} / {{total}} niveaux débloqués",
+    "continue_siege": "Continuer la campagne",
+    "continue_tanks": "Continuer la défense",
+    "local": "Enregistré sur cet appareil",
+    "synced": "Synchronisé",
+    "offline": "Synchronisation indisponible. Affichage des records de cet appareil.",
+    "level_stars": "Niveau {{level}} : {{stars}} / 3 étoiles"
+  },
+  "loading": "Chargement de votre collection…",
+  "error": "Impossible de charger votre collection.",
+  "retry": "Réessayer"
+}

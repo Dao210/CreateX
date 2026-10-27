@@ -1,0 +1,57 @@
+{
+  "title": "マイページ",
+  "summary": {
+    "weapons": "武器",
+    "stars": "スター",
+    "best": "ハイスコア"
+  },
+  "filters": {
+    "all": "すべて",
+    "siege": "シージ",
+    "tanks": "戦車防衛",
+    "mcp": "MCP で作成"
+  },
+  "weapons": {
+    "title": "武器コレクション",
+    "siege_empty": "保存された設計図はまだありません。",
+    "tanks_empty": "戦車キャラクターはまだありません。",
+    "mcp_empty": "MCP で作成されたものはまだありません。",
+    "siege_error": "設計図を読み込めませんでした。",
+    "tanks_error": "戦車キャラクターを読み込めませんでした。",
+    "empty_help": "ワークショップやガレージで作成するか、MCP でエージェントを接続してください。",
+    "open_workshop": "ワークショップへ",
+    "open_garage": "ガレージへ",
+    "mcp": "MCP",
+    "manual": "手動作成",
+    "revision": "v{{revision}}",
+    "created": "{{date}} に作成",
+    "stats": "速度 {{speed}} · 装甲 {{armor}} · 間隔 {{cooldown}}",
+    "range": "射程 {{range}}",
+    "ink": "インク {{ink}}",
+    "cost": "{{cost}} ポイント",
+    "kind_cannon": "大砲",
+    "kind_blade": "ブレード",
+    "kind_hammer": "ハンマー",
+    "kind_mixed": "複合",
+    "parts": "{{count}} パーツ"
+  },
+  "progress": {
+    "title": "ゲームの進行",
+    "siege_title": "シージ・キャンペーン",
+    "tanks_title": "戦車防衛",
+    "stars": "{{earned}} / {{total}} スター",
+    "next_level": "次へ：レベル {{level}}",
+    "campaign_complete": "全ステージクリア",
+    "best": "ハイスコア {{score}}",
+    "unlocked": "{{unlocked}} / {{total}} ステージ解放",
+    "continue_siege": "キャンペーンを続ける",
+    "continue_tanks": "防衛を続ける",
+    "local": "この端末に保存",
+    "synced": "同期済み",
+    "offline": "進行状況を同期できません。この端末の記録を表示しています。",
+    "level_stars": "レベル {{level}}：{{stars}} / 3 スター"
+  },
+  "loading": "コレクションを読み込み中…",
+  "error": "コレクションを読み込めませんでした。",
+  "retry": "再試行"
+}

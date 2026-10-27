@@ -33,6 +33,7 @@ import { DesktopRouteErrorPage } from "./components/route-error-page";
 const SiegePage = lazy(() => import("./pages/siege-page").then(module => ({ default: module.SiegePage })));
 const SiegeCampaignPage = lazy(() => import("./pages/siege-page").then(module => ({ default: module.SiegeCampaignPage })));
 import { TanksPage } from "./pages/tank-defense-page";
+import { MePageRoute } from "./pages/me-page";
 
 /**
  * Wraps `SettingsPage` so the desktop-only extra tabs can pull their labels
@@ -154,6 +155,7 @@ export const appRoutes: RouteObject[] = [
           // each game owns the content header, controls and scrolling.
           { path: "siege", element: <Suspense><SiegePage /></Suspense>, handle: { title: "Siege" } },
           { path: "tanks", element: <TanksPage />, handle: { title: "Tank Defense" } },
+          { path: "me", element: <MePageRoute />, handle: { title: "My Space" } },
           {
             path: "siege/campaign",
             element: <Suspense><SiegeCampaignPage /></Suspense>,

@@ -5,6 +5,7 @@ import { SiegeClient } from "./client";
 export interface SiegeScope { workspaceId: string; workspaceSlug: string; userId: string }
 export const siegeKeys = {
   status: (scope: SiegeScope) => ["siege", scope.workspaceId, scope.userId, "status"] as const,
+  library: (scope: SiegeScope) => ["siege", scope.workspaceId, scope.userId, "library"] as const,
   session: (scope: SiegeScope, id: string) => ["siege", scope.workspaceId, scope.userId, "session", id] as const,
 };
 
@@ -17,6 +18,9 @@ export function createSiegeClient(scope: SiegeScope): SiegeClient {
 }
 export function siegeStatusOptions(client: SiegeClient, scope: SiegeScope) {
   return queryOptions({ queryKey: siegeKeys.status(scope), queryFn: () => client.status(), staleTime: 60_000 });
+}
+export function siegeLibraryOptions(client: SiegeClient, scope: SiegeScope) {
+  return queryOptions({ queryKey: siegeKeys.library(scope), queryFn: () => client.library(), staleTime: 15_000 });
 }
 export function siegeSessionOptions(client: SiegeClient, scope: SiegeScope, id: string) {
   return queryOptions({ queryKey: siegeKeys.session(scope, id), queryFn: () => client.read(id), enabled: !!id, retry: false });

@@ -30,6 +30,7 @@ const PAGE_KEYWORDS: Record<WorkspacePageKey, string[]> = {
   skills: ["skills", "library", "技能"],
   siege: ["siege", "game", "workshop", "blueprint", "涂鸦", "攻城", "游戏"],
   tanks: ["tanks", "tank defense", "castle", "坦克", "守城", "戦車", "탱크", "chars"],
+  me: ["me", "mine", "profile", "collection", "weapons", "progress", "我的", "收藏", "武器", "进度"],
   settings: ["settings", "config", "preferences", "设置", "配置"],
 };
 const PAGE_KEYS = Object.keys(WORKSPACE_PAGES) as WorkspacePageKey[];

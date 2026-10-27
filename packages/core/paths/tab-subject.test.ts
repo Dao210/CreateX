@@ -19,6 +19,7 @@ describe("parseTabSubject", () => {
     ["/acme/runtimes", { kind: "page", page: "runtimes" }],
     ["/acme/skills", { kind: "page", page: "skills" }],
     ["/acme/tanks", { kind: "page", page: "tanks" }],
+    ["/acme/me", { kind: "page", page: "me" }],
     ["/acme/settings", { kind: "page", page: "settings" }],
     // Resource details
     ["/acme/issues", { kind: "unknown" }],

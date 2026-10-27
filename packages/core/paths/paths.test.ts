@@ -43,6 +43,7 @@ describe("paths.workspace(slug)", () => {
     expect(ws.skills()).toBe("/acme/skills");
     expect(ws.siege()).toBe("/acme/siege");
     expect(ws.tanks()).toBe("/acme/tanks");
+    expect(ws.me()).toBe("/acme/me");
     expect(ws.skillDetail("skl_123")).toBe("/acme/skills/skl_123");
     expect(ws.settings()).toBe("/acme/settings");
     expect(ws.attachmentPreview("att_42")).toBe("/acme/attachments/att_42/preview");

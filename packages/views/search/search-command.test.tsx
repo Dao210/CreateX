@@ -47,6 +47,12 @@ describe("workspace command search after route retirement", () => {
     fireEvent.click(screen.getByRole("option", { name: "Tank Defense" }), { metaKey: true });
     expect(state.navigate).toHaveBeenCalledWith("/acme/tanks", "background-tab");
   });
+  it("finds the personal collection by its nav name", async () => {
+    renderWithI18n(<SearchCommand />);
+    await userEvent.type(screen.getByPlaceholderText("Type a command or search..."), "my space");
+    await userEvent.click(screen.getByRole("option", { name: "My Space" }));
+    expect(state.navigate).toHaveBeenCalledWith("/acme/me", "push");
+  });
   it("searches workspace members only after typing", async () => {
     state.members = [{ user_id: "user-1", name: "Alice", email: "alice@example.test", role: "member", avatar_url: null }];
     renderWithI18n(<SearchCommand />);

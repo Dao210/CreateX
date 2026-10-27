@@ -1,6 +1,7 @@
 import type { ZodType } from "zod";
 import { AdminAccessSchema, MCPAdminServicesSchema, MCPPolicySchema, MCPActivityPageSchema, type AdminAccess, type MCPAdminService, type MCPPolicy, type MCPActivityPage, type MCPActivityFilter, type UpdateMCPPolicyInput } from "../admin/schema";
 import { TankCharacterSchema, TankCharacterListSchema, TankPlaySessionSchema, type TankCharacter, type TankPlaySession, type SaveTankCharacterInput, type CreateTankSessionInput } from "../tank-defense/characters";
+import { GameProgressSchema, SiegeProgressResponseSchema, TankProgressResponseSchema, type GameProgress, type SiegeProgress, type TankProgress } from "../game-progress/schema";
 import type { IssueWakeup, IssueWakeupInput, IssueWakeupSummaryRow, PausedWakeup, SystemWakeup, WakeupRun, WorkspaceSystemWakeup } from "../types/issue-wakeup";
 import type { WorkspaceWakeupPage, WorkspaceWakeupFilters } from "../types/issue-wakeup";
 import { WorkspaceWakeupPageSchema, IssueWakeupSchema, IssueWakeupSummaryRowSchema, PausedWakeupSchema, SystemWakeupSchema, WakeupRunSchema, WorkspaceSystemWakeupSchema } from "./schemas";
@@ -810,8 +811,8 @@ export class ApiClient {
     this.token = token;
   }
 
-  async listTankCharacters(wsId: string): Promise<TankCharacter[]> {
-    const endpoint = "/api/tanks/v1/characters";
+  async listTankCharacters(wsId: string, mine = false): Promise<TankCharacter[]> {
+    const endpoint = mine ? "/api/tanks/v1/characters?mine=1" : "/api/tanks/v1/characters";
     const raw = await this.fetch<unknown>(endpoint, { headers: { "X-Workspace-ID": wsId, "X-Workspace-Slug": "" } });
     const parsed = parseWithFallback<{ characters: TankCharacter[] } | null>(raw, TankCharacterListSchema, null, { endpoint });
     if (!parsed || parsed.characters.some(character => character.workspaceId !== wsId)) throw new Error("invalid_tank_response");
@@ -840,6 +841,30 @@ export class ApiClient {
     const parsed = parseWithFallback<TankPlaySession | null>(raw, TankPlaySessionSchema, null, { endpoint });
     if (!parsed || parsed.id !== id || parsed.workspaceId !== wsId) throw new Error("invalid_tank_response");
     return parsed;
+  }
+
+  async getGameProgress(wsId: string): Promise<GameProgress> {
+    const endpoint = "/api/game-progress";
+    const raw = await this.fetch<unknown>(endpoint, { headers: { "X-Workspace-ID": wsId, "X-Workspace-Slug": "" } });
+    const parsed = parseWithFallback<GameProgress | null>(raw, GameProgressSchema, null, { endpoint });
+    if (!parsed || parsed.workspaceId !== wsId) throw new Error("invalid_game_progress_response");
+    return parsed;
+  }
+
+  async saveSiegeProgress(wsId: string, stars: number[]): Promise<SiegeProgress> {
+    const endpoint = "/api/game-progress/siege";
+    const raw = await this.fetch<unknown>(endpoint, { method: "PUT", headers: { "X-Workspace-ID": wsId, "X-Workspace-Slug": "" }, body: JSON.stringify({ stars }) });
+    const parsed = parseWithFallback<SiegeProgress & { workspaceId: string } | null>(raw, SiegeProgressResponseSchema, null, { endpoint });
+    if (!parsed || parsed.workspaceId !== wsId) throw new Error("invalid_game_progress_response");
+    return { stars: parsed.stars, updatedAt: parsed.updatedAt };
+  }
+
+  async saveTankProgress(wsId: string, input: { best: number; unlocked: number }): Promise<TankProgress> {
+    const endpoint = "/api/game-progress/tanks";
+    const raw = await this.fetch<unknown>(endpoint, { method: "PUT", headers: { "X-Workspace-ID": wsId, "X-Workspace-Slug": "" }, body: JSON.stringify(input) });
+    const parsed = parseWithFallback<TankProgress & { workspaceId: string } | null>(raw, TankProgressResponseSchema, null, { endpoint });
+    if (!parsed || parsed.workspaceId !== wsId) throw new Error("invalid_game_progress_response");
+    return { best: parsed.best, unlocked: parsed.unlocked, updatedAt: parsed.updatedAt };
   }
 
   /**

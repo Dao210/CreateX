@@ -1,0 +1,57 @@
+{
+  "title": "My Space",
+  "summary": {
+    "weapons": "Weapons",
+    "stars": "Stars",
+    "best": "Best score"
+  },
+  "filters": {
+    "all": "All",
+    "siege": "Siege",
+    "tanks": "Tank Defense",
+    "mcp": "Created via MCP"
+  },
+  "weapons": {
+    "title": "Weapon collection",
+    "siege_empty": "No saved blueprints yet.",
+    "tanks_empty": "No tank characters yet.",
+    "mcp_empty": "Nothing has been created through MCP yet.",
+    "siege_error": "Saved blueprints could not be loaded.",
+    "tanks_error": "Tank characters could not be loaded.",
+    "empty_help": "Create one in the workshop or garage, or connect an agent through MCP.",
+    "open_workshop": "Open workshop",
+    "open_garage": "Open garage",
+    "mcp": "MCP",
+    "manual": "Manual",
+    "revision": "v{{revision}}",
+    "created": "Created {{date}}",
+    "stats": "Speed {{speed}} · Armor {{armor}} · Cooldown {{cooldown}}",
+    "range": "Range {{range}}",
+    "ink": "Ink {{ink}}",
+    "cost": "{{cost}} pts",
+    "kind_cannon": "Cannon",
+    "kind_blade": "Blade",
+    "kind_hammer": "Hammer",
+    "kind_mixed": "Mixed",
+    "parts": "{{count}} parts"
+  },
+  "progress": {
+    "title": "Game progress",
+    "siege_title": "Siege campaign",
+    "tanks_title": "Tank Defense",
+    "stars": "{{earned}} / {{total}} stars",
+    "next_level": "Next: level {{level}}",
+    "campaign_complete": "Campaign complete",
+    "best": "Best {{score}}",
+    "unlocked": "{{unlocked}} / {{total}} stages unlocked",
+    "continue_siege": "Continue campaign",
+    "continue_tanks": "Continue defense",
+    "local": "Saved on this device",
+    "synced": "Synced",
+    "offline": "Progress sync is unavailable. Showing this device's records.",
+    "level_stars": "Level {{level}}: {{stars}} / 3 stars"
+  },
+  "loading": "Loading your collection…",
+  "error": "Your collection could not be loaded.",
+  "retry": "Retry"
+}

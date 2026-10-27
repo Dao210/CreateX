@@ -54,6 +54,17 @@ func (s *testStore) ReadSession(id string, owner Owner) (*Session, error) {
 	}
 	return cloneSession(session), nil
 }
+func (s *testStore) ListSessions(owner Owner) ([]*Session, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	out := make([]*Session, 0)
+	for _, session := range s.sessions {
+		if session.OwnerHash == owner.Hash() {
+			out = append(out, cloneSession(session))
+		}
+	}
+	return out, nil
+}
 func (s *testStore) SaveSession(session *Session) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()

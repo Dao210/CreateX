@@ -182,7 +182,7 @@ MCP-Protocol-Version: 2025-11-25
 }
 ```
 
-成功 `result.structuredContent` 是完整角色包，包含 `id`、`revision`、`contentHash`、`draft`、`blueprint` 和归属信息。使用服务器实际返回的引用创建对局：
+成功 `result.structuredContent` 是完整角色包，包含 `id`、`revision`、`contentHash`、`draft`、`blueprint` 和归属信息。角色包还包含 `origin`（`manual` 或 `mcp`），用于 `/{slug}/me` 个人收藏区分 MCP 创作；`GET /api/tanks/v1/characters?mine=1` 只返回当前账号创建的角色。使用服务器实际返回的引用创建对局：
 
 ```json
 {

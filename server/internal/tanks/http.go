@@ -69,7 +69,7 @@ func (h *HTTP) Handler() http.Handler {
 	})
 	mux.HandleFunc("GET /api/tanks/v1/characters", func(w http.ResponseWriter, r *http.Request) {
 		a, _ := actorFromContext(r.Context())
-		items, e := h.Service.List(r.Context(), a)
+		items, e := h.Service.List(r.Context(), a, r.URL.Query().Get("mine") == "1")
 		if e != nil {
 			failure(w, e)
 			return
@@ -83,6 +83,7 @@ func (h *HTTP) Handler() http.Handler {
 			return
 		}
 		a, _ := actorFromContext(r.Context())
+		in.Origin = OriginManual
 		c, e := h.Service.Save(r.Context(), a, in)
 		if e != nil {
 			failure(w, e)

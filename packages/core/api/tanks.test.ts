@@ -15,10 +15,18 @@ describe("tank API response boundary", () => {
   it("validates the library and binds headers to the requested workspace", async () => {
     const fetcher = response({ characters: [character] });
     const api = new ApiClient("https://api.example.invalid");
-    expect((await api.listTankCharacters(wsId))[0]?.draft.name).toBe(draft.name);
+    const items = await api.listTankCharacters(wsId);
+    expect(items[0]?.draft.name).toBe(draft.name);
+    expect(items[0]?.origin).toBe("manual");
     const init = fetcher.mock.calls[0]![1] as RequestInit;
     expect(new Headers(init.headers).get("X-Workspace-ID")).toBe(wsId);
     expect(new Headers(init.headers).get("X-Workspace-Slug")).toBe("");
+  });
+  it("requests only the caller's characters for the personal collection", async () => {
+    const fetcher = response({ characters: [character] });
+    const items = await new ApiClient("https://api.example.invalid").listTankCharacters(wsId, true);
+    expect(items[0]?.origin).toBe("manual");
+    expect(fetcher.mock.calls[0]![0]).toBe("/api/tanks/v1/characters?mine=1");
   });
   it.each([{}, { characters: [{}] }, { characters: [{ ...character, workspaceId: "33333333-3333-4333-8333-333333333333" }] }, { characters: [{ ...character, blueprint: { ...character.blueprint, speed: 9999 } }] }])("rejects a malformed or mismatched character library", async raw => {
     response(raw);

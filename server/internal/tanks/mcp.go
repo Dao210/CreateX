@@ -253,13 +253,14 @@ func (h *HTTP) callTool(w http.ResponseWriter, r *http.Request, req rpcRequest) 
 	case "tank_save_character":
 		var p SaveInput
 		if decode(&p) {
+			p.Origin = OriginMCP
 			result, err = h.Service.Save(ctx, a, p)
 		}
 	case "tank_list_characters":
 		var empty struct{}
 		if decode(&empty) {
 			var items []Character
-			items, err = h.Service.List(ctx, a)
+			items, err = h.Service.List(ctx, a, false)
 			result = map[string]any{"characters": items}
 		}
 	case "tank_get_character":

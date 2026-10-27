@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type PointerEvent, type ReactNode } from "
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Check, ChevronRight, Flag, Gamepad2, Heart, LockKeyhole, Maximize2, Minimize2, Pause, Play, RotateCcw, Shield, Sparkles, Volume2, VolumeX } from "lucide-react";
 import { Button } from "@auro/ui/components/ui/button";
 import type { StorageAdapter } from "@auro/core/types";
+import { TankProgressSync } from "./tank-progress-sync";
 import { TankDefenseGame, TANK_LEVELS, TANK_DIFFICULTIES, parseTankPreferences, type TankDirection, type TankSnapshot, type TankBlueprint, type TankMode, type TankLevel, type TankDifficulty } from "@auro/core/tank-defense";
 import { GameSound } from "../common/game-sound";
 import { useT } from "../i18n";
@@ -24,7 +25,7 @@ function MapPreview({ level }: { level: TankLevel }) {
   </svg>;
 }
 
-export function TankBattle({ storage, storageKey, blueprint, levelIndex = 0, initialMode = "campaign", frozen = false, garage, headerActions }: { storage: StorageAdapter; storageKey: string; blueprint?: TankBlueprint; levelIndex?: number; initialMode?: TankMode; frozen?: boolean; garage?: ReactNode; headerActions?: ReactNode }) {
+export function TankBattle({ storage, storageKey, workspaceId, blueprint, levelIndex = 0, initialMode = "campaign", frozen = false, garage, headerActions }: { storage: StorageAdapter; storageKey: string; workspaceId?: string; blueprint?: TankBlueprint; levelIndex?: number; initialMode?: TankMode; frozen?: boolean; garage?: ReactNode; headerActions?: ReactNode }) {
   const { t } = useT("tanks");
   const [preferences, setPreferences] = useState(() => {
     try { return parseTankPreferences(storage.getItem(storageKey)); }
@@ -156,6 +157,7 @@ export function TankBattle({ storage, storageKey, blueprint, levelIndex = 0, ini
       clearControls(); game.setPaused(true); setSnapshot(game.snapshot());
     }
   }}>
+    {workspaceId && <TankProgressSync workspaceId={workspaceId} preferences={preferences} onMerge={merged => setPreferences(previous => ({ ...previous, ...merged }))} />}
     <PageHeader>
       <Gamepad2 className="size-4 text-muted-foreground" aria-hidden />
       <h1 className="min-w-0 flex-1 truncate text-body font-medium">{t($ => $.title)}</h1>

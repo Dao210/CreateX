@@ -33,7 +33,7 @@ const BlueprintSchema = z.object({
 export const TankCharacterSchema = z.object({
   id: z.string().uuid(), revision: z.number().int().positive(), workspaceId: z.string().uuid(), ownerId: z.string().uuid(),
   rulesVersion: z.literal(1), compilerVersion: z.literal(1), contentHash: z.string().regex(/^sha256:[0-9a-f]{64}$/),
-  draft: TankCharacterDraftSchema, blueprint: BlueprintSchema, cost: z.number().int(), createdAt: z.string().datetime({ offset: true }),
+  draft: TankCharacterDraftSchema, blueprint: BlueprintSchema, cost: z.number().int(), origin: z.enum(["manual", "mcp"]).default("manual").catch("manual"), createdAt: z.string().datetime({ offset: true }),
 }).superRefine((value, ctx) => {
   try {
     const compiled = compileTankCharacter(value.draft, `${value.id}@${value.revision}`);

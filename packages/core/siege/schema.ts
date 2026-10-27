@@ -70,6 +70,8 @@ export const SessionSchema = z.object({
   id: z.string().uuid(), version: z.number().int().positive(),
   blueprints: z.array(BlueprintSchema).default([]),
 });
+export const LibraryBlueprintSchema = BlueprintSchema.extend({ sessionId: z.string().uuid() });
+export const SiegeLibrarySchema = z.object({ blueprints: z.array(LibraryBlueprintSchema).default([]) });
 export const RecognitionSchema = z.object({
   requestId: z.string().uuid(), drawingHash: z.string(),
   state: z.string(), spec: WeaponSpecSchema.nullable().default(null),
@@ -86,6 +88,8 @@ export type PartType = z.infer<typeof PartTypeSchema>;
 export type Part = z.infer<typeof PartSchema>;
 export type WeaponSpec = z.infer<typeof WeaponSpecSchema>;
 export type Blueprint = z.infer<typeof BlueprintSchema>;
+export type LibraryBlueprint = z.infer<typeof LibraryBlueprintSchema>;
+export type SiegeLibrary = z.infer<typeof SiegeLibrarySchema>;
 export type SiegeSession = z.infer<typeof SessionSchema>;
 export type Recognition = z.infer<typeof RecognitionSchema>;
 export const emptyDrawing = (): Drawing => ({ schemaVersion: 1, revision: 0, gridSize: GRID, strokes: [] });

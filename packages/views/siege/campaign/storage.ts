@@ -4,6 +4,7 @@ import {
   compileCampaignWeapon,
   defaultProgress,
   presetBlueprint,
+  SIEGE_CAMPAIGN_PROGRESS_KEY,
   validCheckpoint,
   WeaponKindSchema,
   type CampaignBlueprint,
@@ -13,7 +14,7 @@ import {
   type WeaponKind,
 } from "@auro/core/siege";
 
-const PROGRESS_KEY = "siege-campaign-progress";
+const PROGRESS_KEY = SIEGE_CAMPAIGN_PROGRESS_KEY;
 const CHECKPOINT_KEY = "siege-campaign-checkpoint";
 const LOADOUT_KEY = "siege-campaign-loadout";
 

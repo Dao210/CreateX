@@ -117,6 +117,32 @@ func (s *pgStore) ReadSession(id string, owner Owner) (*Session, error) {
 	return s.scan(payload)
 }
 
+func (s *pgStore) ListSessions(owner Owner) ([]*Session, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	rows, err := s.pool.Query(ctx, `
+		select payload from siege_session
+		where workspace_id = $1::uuid and user_id = $2::uuid
+		order by updated_at desc`, owner.WorkspaceID, owner.UserID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := make([]*Session, 0)
+	for rows.Next() {
+		var payload []byte
+		if err = rows.Scan(&payload); err != nil {
+			return nil, err
+		}
+		session, err := s.scan(payload)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, session)
+	}
+	return out, rows.Err()
+}
+
 func (s *pgStore) LockSession(id string, owner Owner) (*Session, func(), error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()

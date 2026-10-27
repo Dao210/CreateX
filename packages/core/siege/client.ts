@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { parseWithFallback } from "../api/schema";
-import { SessionSchema, RecognitionSchema, StatusSchema, type Drawing, type WeaponSpec, type CannonDesign } from "./schema";
+import { SessionSchema, RecognitionSchema, StatusSchema, SiegeLibrarySchema, type Drawing, type WeaponSpec, type CannonDesign } from "./schema";
 
 export class SiegeError extends Error {
   constructor(public readonly code: string) { super(code); this.name = "SiegeError"; }
@@ -29,6 +29,7 @@ export class SiegeClient {
     return result;
   }
   status() { return this.request("/status", StatusSchema); }
+  library() { return this.request("/library", SiegeLibrarySchema); }
   create(requestId: string) { return this.request("/sessions", SessionSchema, { requestId }); }
   read(id: string) { return this.request("/sessions/" + encodeURIComponent(id), SessionSchema); }
   recognize(id: string, requestId: string, drawing: Drawing) {

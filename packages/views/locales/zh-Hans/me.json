@@ -1,0 +1,57 @@
+{
+  "title": "我的",
+  "summary": {
+    "weapons": "武器",
+    "stars": "星章",
+    "best": "最高分"
+  },
+  "filters": {
+    "all": "全部",
+    "siege": "涂鸦攻城",
+    "tanks": "坦克守城",
+    "mcp": "MCP 创作"
+  },
+  "weapons": {
+    "title": "武器收藏",
+    "siege_empty": "还没有保存的蓝图。",
+    "tanks_empty": "还没有坦克角色。",
+    "mcp_empty": "还没有通过 MCP 创作的内容。",
+    "siege_error": "蓝图暂时无法读取。",
+    "tanks_error": "坦克角色暂时无法读取。",
+    "empty_help": "去工坊画一把武器、去车库造一辆坦克，或通过 MCP 连接 Agent 创作。",
+    "open_workshop": "去工坊",
+    "open_garage": "去车库",
+    "mcp": "MCP",
+    "manual": "手动创建",
+    "revision": "v{{revision}}",
+    "created": "创建于 {{date}}",
+    "stats": "速度 {{speed}} · 装甲 {{armor}} · 间隔 {{cooldown}}",
+    "range": "射程 {{range}}",
+    "ink": "墨水 {{ink}}",
+    "cost": "{{cost}} 点",
+    "kind_cannon": "火炮",
+    "kind_blade": "刀刃",
+    "kind_hammer": "重锤",
+    "kind_mixed": "混合",
+    "parts": "{{count}} 个部件"
+  },
+  "progress": {
+    "title": "游戏进展",
+    "siege_title": "涂鸦攻城 · 林地闯关",
+    "tanks_title": "坦克守城",
+    "stars": "{{earned}} / {{total}} 星",
+    "next_level": "下一关：第 {{level}} 关",
+    "campaign_complete": "全部关卡完成",
+    "best": "最高分 {{score}}",
+    "unlocked": "已解锁 {{unlocked}} / {{total}} 关",
+    "continue_siege": "继续闯关",
+    "continue_tanks": "继续守城",
+    "local": "本机记录",
+    "synced": "已同步",
+    "offline": "进度同步暂不可用，当前显示本机记录。",
+    "level_stars": "第 {{level}} 关：{{stars}} / 3 星"
+  },
+  "loading": "正在读取你的收藏…",
+  "error": "收藏暂时无法读取。",
+  "retry": "重试"
+}

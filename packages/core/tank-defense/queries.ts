@@ -4,10 +4,14 @@ import type { CreateTankSessionInput, SaveTankCharacterInput } from "./character
 
 export const tankKeys = {
   characters: (wsId: string) => ["tanks", wsId, "characters"] as const,
+  mine: (wsId: string, userId: string) => ["tanks", wsId, userId, "characters"] as const,
   session: (wsId: string, userId: string, id: string) => ["tanks", wsId, userId, "session", id] as const,
 };
 export function tankCharactersOptions(wsId: string) {
   return queryOptions({ queryKey: tankKeys.characters(wsId), queryFn: () => api.listTankCharacters(wsId), staleTime: 10000, refetchInterval: 15000 });
+}
+export function myTankCharactersOptions(wsId: string, userId: string) {
+  return queryOptions({ queryKey: tankKeys.mine(wsId, userId), queryFn: () => api.listTankCharacters(wsId, true), staleTime: 10000, refetchInterval: 15000 });
 }
 export function tankSessionOptions(wsId: string, userId: string, id: string) {
   return queryOptions({ queryKey: tankKeys.session(wsId, userId, id), queryFn: async () => {
