@@ -1,16 +1,12 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
-import { I18nProvider } from "@auro/core/i18n/react";
-import { RESOURCES } from "@auro/views/locales";
+import { describe, expect, it, vi } from "vitest";
 import NotFound from "./not-found";
 
+vi.mock("@/lib/request-locale", () => ({ getRequestLocale: async () => "zh-Hans" }));
+
 describe("NotFound", () => {
-  it("renders the not-found page in the selected locale", () => {
-    render(
-      <I18nProvider locale="zh-Hans" resources={RESOURCES}>
-        <NotFound />
-      </I18nProvider>,
-    );
+  it("renders the not-found page without application providers", async () => {
+    render(await NotFound());
 
     expect(
       screen.getByRole("heading", { name: "页面未找到" }),
@@ -20,7 +16,7 @@ describe("NotFound", () => {
     ).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "返回织个世界" })).toHaveAttribute(
       "href",
-      "/",
+      "/?lang=zh-Hans",
     );
   });
 });

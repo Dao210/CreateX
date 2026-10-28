@@ -1,3 +1,4 @@
+import { worldCopy } from "@/features/reach/i18n/en";
 import { githubUrl, discordUrl } from "../components/shared";
 import type { LandingDict } from "./types";
 
@@ -30,81 +31,7 @@ export function createEnDict(
     imageAlt: "Auro board view \u2014 issues managed by humans and agents",
   },
 
-  world: {
-    eyebrow: "Live world",
-    claim: "The world is already running.",
-    sub: "Build a weapon, send in a character, and see how long it lasts. Nobody steers it. Every minute the world settles on its own \u2014 watching is optional.",
-    primaryCta: "Bring something in",
-    secondaryCta: "Just watch",
-    note: "No download. No signup to watch.",
-    clock: {
-      label: "BEAT",
-      season: "SEASON",
-      alive: "ALIVE",
-      wrecks: "WRECKS",
-      live: "LIVE",
-      preview: "PREVIEW",
-      paused: "PAUSED",
-    },
-    feed: { title: "Chronicle", empty: "Nothing worth recording yet." },
-    rules: {
-      title: "How the world runs",
-      lead: "One beat is one minute. Everything below happens on that clock, whether or not anyone is watching.",
-      items: [
-        {
-          k: "01",
-          f: "60s",
-          t: "It settles itself",
-          d: "Charge burns, rifts move, and anything within reach fights. The outcome is computed, not narrated.",
-        },
-        {
-          k: "02",
-          f: "100 pts",
-          t: "Nothing is balanced for you",
-          d: "A hundred points across five attributes. A build that hits hard dies early; a build that survives rarely leads the kill count.",
-        },
-        {
-          k: "03",
-          f: "30%",
-          t: "Death leaves something",
-          d: "Wrecks keep most of what an entity was. Whoever reaches one first takes back a third of their health \u2014 and inherits the story.",
-        },
-      ],
-    },
-    create: {
-      title: "Bring a weapon or a character",
-      lead: "Both enter the same world. A weapon is a shape with numbers. A character adds a chassis, armour, and a temperament.",
-      weapon: {
-        label: "WEAPON",
-        name: "Long Iron",
-        lines: ["glass blade", "damage +35%", "health \u221215%", "trait: reach"],
-      },
-      character: {
-        label: "CHARACTER",
-        name: "Rust Marshal",
-        lines: [
-          "hammer \u00b7 scrap",
-          "atk 26 \u00b7 tough 30",
-          "agi 12 \u00b7 sense 16",
-          "caution 0.4",
-        ],
-      },
-      cta: "Open the builder",
-    },
-    connect: {
-      title: "Connect your agent",
-      lead: "One URL and one schema. WorkBuddy, Codex, or anything that can post JSON can put a creation into the world.",
-      command: "curl -s /.well-known/reach.json",
-      steps: [
-        "Read the manifest",
-        "Fetch the schema",
-        "Submit, then read the diagnostics",
-      ],
-      agents:
-        "The first submission may fail. One correction should be enough \u2014 that is the contract.",
-    },
-    closing: { line: "The world doesn\u2019t wait.", cta: "Build something", footerNote: "REACH is Auro\u2019s always-on world engine. Same team, same tooling \u2014 pointed at something that does not wait." },
-  },
+  world: worldCopy,
 
   features: {
     teammates: {

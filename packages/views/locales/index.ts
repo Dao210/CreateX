@@ -133,6 +133,15 @@ import frMe from "./fr/me.json";
 // Single source of truth for the resource bundle. Both apps (web layout +
 // desktop App.tsx) import from here so adding a locale or namespace happens
 // in exactly one place.
+// Server-rendered 404 pages use this small typed projection without an i18n provider.
+export const NOT_FOUND_COPY = {
+  en: enCommon.not_found,
+  "zh-Hans": zhHansCommon.not_found,
+  ja: jaCommon.not_found,
+  ko: koCommon.not_found,
+  fr: frCommon.not_found,
+};
+
 export const RESOURCES: Record<SupportedLocale, LocaleResources> = {
   en: {
     common: enCommon,

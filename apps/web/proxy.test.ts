@@ -271,6 +271,27 @@ describe("proxy runtime upstream rewrites", () => {
 });
 
 describe("proxy root and locale handling", () => {
+  it.each(["/", "/about"])("uses the actual marketing copy language on %s for French preferences", (path) => {
+    const res = proxy(makeRequest(`${path}?lang=fr`, { "auro-locale": "fr" }));
+    expect(res.headers.get(`x-middleware-request-${AURO_LOCALE_HEADER}`)).toBe("en");
+    expect(res.cookies.get("auro-locale")).toBeUndefined();
+  });
+
+  it("keeps French available in application routes", () => {
+    const res = proxy(makeRequest("/login?lang=fr"));
+    expect(res.headers.get(`x-middleware-request-${AURO_LOCALE_HEADER}`)).toBe("fr");
+    expect(res.cookies.get("auro-locale")?.value).toBe("fr");
+  });
+
+  it("remembers explicit language URLs without JavaScript", () => {
+    const res = proxy(makeRequest("/about?lang=ja", { "auro-locale": "en" }));
+    expect(res.cookies.get("auro-locale")?.value).toBe("ja");
+    expect(res.headers.get(`x-middleware-request-${AURO_LOCALE_HEADER}`)).toBe("ja");
+  });
+
+  it("does not persist invalid language parameters", () => {
+    expect(proxy(makeRequest("/about?lang=invalid")).cookies.get("auro-locale")).toBeUndefined();
+  });
   it("redirects logged-in root visits to the last workspace", () => {
     const res = proxy(
       makeRequest("/", {

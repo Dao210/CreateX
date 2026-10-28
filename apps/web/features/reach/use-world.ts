@@ -1,67 +1,55 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { fetchSeason, fetchSnapshot, previewSnapshot } from "./api";
-import type { SeasonInfo, WorldSnapshot } from "./types";
+import { useQuery } from "@tanstack/react-query";
+import { fetchSeason, fetchSnapshot } from "./api";
+import { previewSnapshot } from "./preview";
 
 export type WorldSource = "connecting" | "live" | "paused" | "preview";
 
-type World = {
-  snapshot: WorldSnapshot;
-  season: SeasonInfo | null;
-  source: WorldSource;
-  reducedMotion: boolean;
-};
-
-const LIVE_INTERVAL = 8_000;
-const RETRY_INTERVAL = 15_000;
-
-/**
- * Polls the world. Three states matter to the reader and to the copy:
- * - live: real data, refreshed on the beat
- * - paused: we had data, then lost the service; keep the last snapshot visible
- * - preview: never reached the service, so show the labelled fixture
- */
-export function useWorld(): World {
-  const [snapshot, setSnapshot] = useState<WorldSnapshot>(() => previewSnapshot());
-  const [season, setSeason] = useState<SeasonInfo | null>(null);
-  const [source, setSource] = useState<WorldSource>("connecting");
+/** Public queries use their own small cache and run only while the map is visible. */
+export function useWorld(visible: boolean) {
+  const [preview] = useState(previewSnapshot);
+  const [foreground, setForeground] = useState(true);
   const [reducedMotion, setReducedMotion] = useState(false);
-
   useEffect(() => {
     const query = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const sync = () => setReducedMotion(query.matches);
-    sync();
-    query.addEventListener("change", sync);
-    return () => query.removeEventListener("change", sync);
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-    let timer: ReturnType<typeof setTimeout> | null = null;
-    let reached = false;
-
-    const tick = async () => {
-      const [next, info] = await Promise.all([fetchSnapshot(), fetchSeason()]);
-      if (cancelled) return;
-      if (next) {
-        reached = true;
-        setSnapshot(next);
-        setSeason(info);
-        setSource("live");
-        timer = setTimeout(tick, LIVE_INTERVAL);
-        return;
-      }
-      setSource(reached ? "paused" : "preview");
-      timer = setTimeout(tick, RETRY_INTERVAL);
-    };
-
-    void tick();
+    const syncMotion = () => setReducedMotion(query.matches);
+    const syncVisibility = () => setForeground(document.visibilityState !== "hidden");
+    syncMotion();
+    syncVisibility();
+    query.addEventListener("change", syncMotion);
+    document.addEventListener("visibilitychange", syncVisibility);
     return () => {
-      cancelled = true;
-      if (timer) clearTimeout(timer);
+      query.removeEventListener("change", syncMotion);
+      document.removeEventListener("visibilitychange", syncVisibility);
     };
   }, []);
-
-  return { snapshot, season, source, reducedMotion };
+  const active = visible && foreground;
+  const world = useQuery({
+    queryKey: ["public-world", "snapshot"],
+    queryFn: async ({ signal }) => {
+      const snapshot = await fetchSnapshot(signal);
+      if (!snapshot) throw new Error("World snapshot unavailable");
+      return snapshot;
+    },
+    enabled: active,
+    staleTime: 8000,
+    refetchInterval: (query) => query.state.error ? 15000 : 8000,
+    retry: false,
+  });
+  const season = useQuery({
+    queryKey: ["public-world", "season"],
+    queryFn: async ({ signal }) => {
+      const info = await fetchSeason(signal);
+      if (!info) throw new Error("World season unavailable");
+      return info;
+    },
+    enabled: active,
+    staleTime: 60000,
+    refetchInterval: 60000,
+    retry: false,
+  });
+  const source: WorldSource = world.data ? (world.isError ? "paused" : "live") : world.isError ? "preview" : "connecting";
+  return { snapshot: world.data ?? preview, season: season.data ?? null, source, reducedMotion, active };
 }

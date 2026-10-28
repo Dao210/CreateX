@@ -3,25 +3,13 @@ import { SITE_URL } from "@/lib/brand";
 
 export default function robots(): MetadataRoute.Robots {
   return {
-    rules: [
-      {
-        userAgent: "*",
-        allow: ["/", "/about", "/changelog"],
-        disallow: [
-          "/api/",
-          "/ws",
-          "/auth/",
-          "/issues",
-          "/board",
-          "/inbox",
-          "/agents",
-          "/settings",
-          "/my-issues",
-          "/runtimes",
-          "/skills",
-        ],
-      },
-    ],
+    // Page routes must remain crawlable so their noindex metadata can be read.
+    // Blocking them here can leave discovered URLs indexed without a snippet.
+    rules: {
+      userAgent: "*",
+      allow: "/",
+      disallow: ["/api/", "/v1/", "/uploads/", "/ws$", "/health$"],
+    },
     sitemap: `${SITE_URL}/sitemap.xml`,
   };
 }

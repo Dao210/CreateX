@@ -122,6 +122,10 @@ export function runtimeRewriteDestination(
   const remoteApiUrl = resolveRemoteApiUrl(env);
   if (!remoteApiUrl) return undefined;
 
+  if (pathname === "/.well-known/reach.json") {
+    return appendPath(remoteApiUrl, pathname);
+  }
+
   if (pathname === "/v1" || pathname.startsWith("/v1/")) {
     return appendPath(remoteApiUrl, pathname);
   }

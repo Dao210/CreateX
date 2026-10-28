@@ -1,0 +1,100 @@
+import type { WorldDict } from "@/features/landing/i18n/types";
+import { previewNames } from "../preview-names";
+
+export const worldCopy: WorldDict = {
+  map: {"title": "世界预览", "label": "世界地图：角色、武器、补给与裂缝。世界纪事记录近期发生的事件。", "previewData": "预览数据"},
+  explorer: {
+    "title": "每一份创造，都会留下痕迹。",
+    "following": "正在跟随",
+    "overview": "返回全景",
+    "meetNext": "认识另一个",
+    "choose": "认识一份创造",
+    "character": "角色",
+    "weapon": "装备",
+    "alive": "存活",
+    "fallen": "已倒下",
+    "survived": "已走过",
+    "health": "生命",
+    "beats": "拍",
+    "unwritten": "它的故事，仍在继续。",
+    "eventFocus": "世界的一个瞬间",
+    "empty": "世界正等待下一份创造。",
+    "more": "展开更多纪事",
+    "less": "收起纪事",
+    "nextStory": "下一个故事，可以从你的创造开始。",
+    "create": "创造我的第一个角色",
+    "selectHint": "点击角色，跟随它的故事。",
+    "supply": "补给",
+    "rift": "裂缝",
+    "remains": "残骸",
+    "belts": [
+      "第一地带",
+      "第二地带",
+      "第三地带"
+    ],
+    "names": previewNames.zh
+  },
+    eyebrow: "正在运行的世界",
+    claim: "世界已经在跑了。",
+    sub: "造一件武器，送一个角色进去，看它能活多久。没有人操纵它，每分钟自己结算一次。你在不在，都一样。",
+    primaryCta: "带它进来",
+    secondaryCta: "先看看",
+    note: "无需下载，观看不用注册。",
+    clock: {
+      label: "拍",
+      season: "赛季",
+      alive: "存活",
+      wrecks: "残骸",
+      live: "实时",
+      preview: "预览",
+      paused: "已暂停",
+    },
+    feed: { title: "世界纪事", empty: "还没有值得记录的事。" },
+    rules: {
+      title: "世界怎么运转",
+      lead: "一拍是一分钟。下面这些事按这个时钟发生，有没有人看都一样。",
+      items: [
+        {
+          k: "01",
+          f: "60 秒",
+          t: "它自己结算",
+          d: "能量在烧、裂缝在移、够得着的就打起来。结果是算出来的，不是编出来的。",
+        },
+        {
+          k: "02",
+          f: "100 点",
+          t: "没有人为你配平",
+          d: "五项属性共 100 点。打得狠的活得短；活得久，很少能在击杀榜上领先。",
+        },
+        {
+          k: "03",
+          f: "⅓",
+          t: "死亡会留下东西",
+          d: "残骸保留它大半的样子。先到的人拿回三分之一生命值，也接手了这段故事。",
+        },
+      ],
+    },
+    create: {
+      title: "带一件武器，或一个角色",
+      lead: "两者进的是同一个世界。武器是有数字的形状；角色多一个底盘、一副护甲和一种脾气。",
+      weapon: {
+        label: "武器",
+        name: "疾风之刃",
+        lines: ["玻璃刀刃", "伤害 +35%", "生命 −15%", "特性：延展"],
+      },
+      character: {
+        label: "角色",
+        name: "亚瑟",
+        lines: ["锤 · 废铁", "攻 26 · 韧 30", "敏 12 · 感 16", "谨慎 0.4"],
+      },
+      cta: "查看接入方式",
+    },
+    connect: {
+      title: "把你的 Agent 接进来",
+      lead: "一个地址，一份 schema。WorkBuddy、Codex，或任何能发 JSON 的东西，都能把作品送进世界。",
+      command: "curl -s /.well-known/reach.json",
+      steps: ["读清单", "取 schema", "提交，然后看诊断"],
+      agents: "校验结果会指出需要修改的字段，按提示调整后再提交。",
+    },
+    closing: { line: "世界不等你。", cta: "造一个出来", footerNote: "REACH 是 Auro 的常驻世界引擎。同一套团队与工具，只是这次面对的是一个不会等你的东西。" },
+  };

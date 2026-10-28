@@ -1,7 +1,5 @@
 import type { Metadata } from "next";
 import { Instrument_Serif } from "next/font/google";
-import { LocaleProvider } from "@/features/landing/i18n";
-import { getRequestLocale } from "@/lib/request-locale";
 
 // Instrument Serif is the landing display face and is Latin-only. The full
 // `--font-serif` stack (Instrument Serif + the per-locale CJK serif tail) is
@@ -12,6 +10,7 @@ import { getRequestLocale } from "@/lib/request-locale";
 const instrumentSerif = Instrument_Serif({
   subsets: ["latin"],
   weight: "400",
+  preload: false,
   variable: "--font-instrument-serif",
 });
 
@@ -25,12 +24,11 @@ export default async function LandingLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const initialLocale = await getRequestLocale();
 
   return (
     <>
       <div className={`${instrumentSerif.variable} landing-light h-full overflow-x-hidden overflow-y-auto bg-white`}>
-        <LocaleProvider initialLocale={initialLocale}>{children}</LocaleProvider>
+        {children}
       </div>
     </>
   );

@@ -30,7 +30,7 @@ import { useWindowOverlayStore } from "@/stores/window-overlay-store";
 let singletonOwner: symbol | null = null;
 
 /**
- * Desktop equivalent of apps/web/app/[workspaceSlug]/layout.tsx.
+ * Desktop equivalent of apps/web/app/(application)/[workspaceSlug]/layout.tsx.
  *
  * Resolves the URL slug → workspace UUID via the React Query list cache
  * (seeded by AuthInitializer). Children do not render until the workspace

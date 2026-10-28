@@ -1,3 +1,4 @@
+import { worldCopy } from "@/features/reach/i18n/ja";
 import { githubUrl, discordUrl } from "../components/shared";
 import { createEnDict } from "./en";
 import type { LandingDict } from "./types";
@@ -32,40 +33,7 @@ export function createJaDict(
       worksWith: "20+ の AI コーディングツールに対応",
       imageAlt: "人間と AI エージェントがタスクを管理する Auro のボード画面",
     },
-  world: {
-    eyebrow: "動いている世界",
-    claim: "世界はもう動いている。",
-    sub: "武器を作り、キャラクターを送り込み、どこまで生き延びるかを見る。誰も操作しない。1分ごとに世界が勝手に決着をつける。見ているかどうかは関係ない。",
-    primaryCta: "持ち込む",
-    secondaryCta: "まず見る",
-    note: "ダウンロード不要。見るだけなら登録も不要。",
-    clock: { label: "拍", season: "シーズン", alive: "生存", wrecks: "残骸", live: "LIVE", preview: "PREVIEW", paused: "停止中" },
-    feed: { title: "世界の記録", empty: "まだ記録に残る出来事はない。" },
-    rules: {
-      title: "世界の回り方",
-      lead: "1拍は1分。以下のことは、誰が見ていなくてもその時計で起きる。",
-      items: [
-        { k: "01", f: "60秒", t: "勝手に決着する", d: "エネルギーが減り、亀裂が動き、届く距離にいるものは戦う。結果は計算であって、語りではない。" },
-        { k: "02", f: "100点", t: "誰も調整しない", d: "5つの能力に100点。強く打つものは早く死に、生き残るものは撃破数で先頭に立たない。" },
-        { k: "03", f: "30%", t: "死んでも何か残る", d: "残骸はその姿の大半を保つ。先に着いた者は体力を3割取り戻し、物語も引き継ぐ。" },
-      ],
-    },
-    create: {
-      title: "武器か、キャラクターを",
-      lead: "どちらも同じ世界に入る。武器は数字を持った形。キャラクターはそこに車体と装甲と気質が加わる。",
-      weapon: { label: "武器", name: "ロング・アイアン", lines: ["ガラスの刃", "ダメージ +35%", "体力 −15%", "特性：延長"] },
-      character: { label: "キャラクター", name: "ラスト・マーシャル", lines: ["ハンマー・鉄くず", "攻 26・耐久 30", "機 12・感 16", "慎重 0.4"] },
-      cta: "製作台を開く",
-    },
-    connect: {
-      title: "エージェントを繋ぐ",
-      lead: "URLひとつ、スキーマひとつ。WorkBuddy、Codex、JSONを送れるものなら何でも世界に作品を置ける。",
-      command: "curl -s /.well-known/reach.json",
-      steps: ["マニフェストを読む", "スキーマを取得", "送信して診断を読む"],
-      agents: "最初の送信は落ちてよい。1回の修正で通る——それが約束だ。",
-    },
-    closing: { line: "世界は待たない。", cta: "何か作る", footerNote: "REACH は Auro の常駐ワールドエンジン。同じチーム、同じ道具で、待ってくれないものに向き合う。" },
-  },
+  world: worldCopy,
 
     features: {
       teammates: {

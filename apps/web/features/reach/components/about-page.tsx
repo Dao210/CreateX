@@ -1,18 +1,14 @@
-"use client";
-
 import Link from "next/link";
 import { brandForLocale } from "@/lib/brand";
 import { localizedHref } from "@/lib/marketing-urls";
-import { LandingHeader } from "./landing-header";
-import { LandingFooter } from "./landing-footer";
-import { useLocale } from "../i18n";
+import type { SupportedLocale } from "@auro/core/i18n";
+import { MarketingHeader, MarketingFooter } from "@/features/reach/components/marketing-chrome";
 
-export function AboutPageClient() {
-  const { locale } = useLocale();
+export function AboutPage({ locale }: { locale: SupportedLocale }) {
   const brand = brandForLocale(locale);
   return (
     <>
-      <LandingHeader variant="light" />
+      <MarketingHeader locale={locale} light />
       <main className="bg-white text-[#0a0d12]">
         <article className="mx-auto max-w-[800px] px-4 py-16 sm:px-6 sm:py-24">
           <p className="text-caption font-medium uppercase tracking-widest text-[#9d4d25]">{brand.genre}</p>
@@ -27,7 +23,7 @@ export function AboutPageClient() {
           </Link>
         </article>
       </main>
-      <LandingFooter />
+      <MarketingFooter locale={locale} path="/about" />
     </>
   );
 }

@@ -1,23 +1,17 @@
-"use client";
-
 import Link from "next/link";
-import { buttonVariants } from "@auro/ui/components/ui/button";
-import { useT } from "@auro/views/i18n";
+import { NOT_FOUND_COPY } from "@auro/views/locales";
+import { getRequestLocale } from "@/lib/request-locale";
+import { localizedHref } from "@/lib/marketing-urls";
 
-export default function NotFound() {
-  const { t } = useT("common");
+export default async function NotFound() {
+  const locale = await getRequestLocale();
+  const copy = NOT_FOUND_COPY[locale];
   return (
     <main className="flex min-h-screen flex-col items-center justify-center gap-6 px-6 py-24 text-center">
       <p className="text-body font-medium text-muted-foreground">404</p>
-      <h1 className="text-display-sm font-semibold tracking-tight">
-        {t(($) => $.not_found.title)}
-      </h1>
-      <p className="max-w-md text-body text-muted-foreground">
-        {t(($) => $.not_found.description)}
-      </p>
-      <Link href="/" className={buttonVariants({ className: "mt-2" })}>
-        {t(($) => $.not_found.back_to_auro)}
-      </Link>
+      <h1 className="text-display-sm font-semibold tracking-tight">{copy.title}</h1>
+      <p className="max-w-md text-body text-muted-foreground">{copy.description}</p>
+      <Link href={localizedHref("/", locale)} className="mt-2 inline-flex items-center justify-center rounded-lg bg-foreground px-4 py-2 text-body font-medium text-background transition-opacity hover:opacity-85 focus-visible:outline-2 focus-visible:outline-offset-4">{copy.back_to_auro}</Link>
     </main>
   );
 }

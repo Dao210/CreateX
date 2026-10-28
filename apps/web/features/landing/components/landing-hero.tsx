@@ -2,6 +2,8 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import landingBackdrop from "@/public/images/landing-bg.webp";
+import landingPreview from "@/public/images/landing-hero.webp";
 import { ArrowRight, Download } from "lucide-react";
 import { useAuthStore } from "@auro/core/auth";
 import { docsHrefForLocale, useLocale } from "../i18n";
@@ -120,7 +122,8 @@ function LandingBackdrop() {
     <div className="pointer-events-none absolute inset-0">
       {/* This artwork is above the fold, so preload it alongside the product preview. */}
       <Image
-        src="/images/landing-bg.webp"
+        src={landingBackdrop}
+        unoptimized
         alt=""
         fill
         preload
@@ -136,11 +139,12 @@ function ProductImage({ alt }: { alt: string }) {
     <div>
       <div className="relative overflow-hidden border border-white/14">
         <Image
-          src="/images/landing-hero.webp"
+          src={landingPreview}
+          unoptimized
           alt={alt}
           width={2640}
           height={1781}
-          preload
+          loading="eager"
           className="block h-auto w-full"
           sizes="(max-width: 1320px) 100vw, 1320px"
           quality={85}

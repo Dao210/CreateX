@@ -1,3 +1,4 @@
+import { worldCopy } from "@/features/reach/i18n/zh";
 import { githubUrl, discordUrl } from "../components/shared";
 import type { LandingDict } from "./types";
 
@@ -30,71 +31,7 @@ export function createZhDict(
     imageAlt: "Auro \u770b\u677f\u89c6\u56fe\u2014\u2014\u4eba\u7c7b\u548c 智能体 \u534f\u540c\u7ba1\u7406\u4efb\u52a1",
   },
 
-  world: {
-    eyebrow: "正在运行的世界",
-    claim: "世界已经在跑了。",
-    sub: "造一件武器，送一个角色进去，看它能活多久。没有人操纵它，每分钟自己结算一次。你在不在，都一样。",
-    primaryCta: "带它进来",
-    secondaryCta: "先看看",
-    note: "无需下载，观看不用注册。",
-    clock: {
-      label: "拍",
-      season: "赛季",
-      alive: "存活",
-      wrecks: "残骸",
-      live: "实时",
-      preview: "预览",
-      paused: "已暂停",
-    },
-    feed: { title: "世界纪事", empty: "还没有值得记录的事。" },
-    rules: {
-      title: "世界怎么运转",
-      lead: "一拍是一分钟。下面这些事按这个时钟发生，有没有人看都一样。",
-      items: [
-        {
-          k: "01",
-          f: "60 秒",
-          t: "它自己结算",
-          d: "能量在烧、裂缝在移、够得着的就打起来。结果是算出来的，不是编出来的。",
-        },
-        {
-          k: "02",
-          f: "100 点",
-          t: "没有人为你配平",
-          d: "五项属性共 100 点。打得狠的活得短；活得久，很少能在击杀榜上领先。",
-        },
-        {
-          k: "03",
-          f: "30%",
-          t: "死亡会留下东西",
-          d: "残骸保留它大半的样子。先到的人拿回三成血，也接手了这段故事。",
-        },
-      ],
-    },
-    create: {
-      title: "带一件武器，或一个角色",
-      lead: "两者进的是同一个世界。武器是有数字的形状；角色多一个底盘、一副护甲和一种脾气。",
-      weapon: {
-        label: "武器",
-        name: "长铁",
-        lines: ["玻璃刀刃", "伤害 +35%", "生命 −15%", "特性：延展"],
-      },
-      character: {
-        label: "角色",
-        name: "锈帅",
-        lines: ["锤 · 废铁", "攻 26 · 韧 30", "敏 12 · 感 16", "谨慎 0.4"],
-      },
-      cta: "打开创作台",
-    },
-    connect: {
-      title: "把你的 Agent 接进来",
-      lead: "一个地址，一份 schema。WorkBuddy、Codex，或任何能发 JSON 的东西，都能把作品送进世界。",
-      command: "curl -s /.well-known/reach.json",
-      steps: ["读清单", "取 schema", "提交，然后看诊断"],
-      agents: "第一次可能不合格。改一次就该过——这是我们敢承诺的。",
-    },
-    closing: { line: "世界不等你。", cta: "造一个出来", footerNote: "REACH 是 Auro 的常驻世界引擎。同一套团队与工具，只是这次面对的是一个不会等你的东西。" },
-  },
+  world: worldCopy,
 
   features: {
     teammates: {

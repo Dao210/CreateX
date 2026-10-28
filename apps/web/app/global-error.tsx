@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { captureException } from "@auro/core/analytics";
 import type { SupportedLocale } from "@auro/core/i18n";
 import { resolveEmergencyLocale } from "./emergency-locale";
 import { HTML_LANG } from "@/lib/html-lang";
@@ -25,7 +24,9 @@ export default function GlobalError({
   const copy = EMERGENCY_COPY[locale ?? "en"];
 
   useEffect(() => {
-    captureException(error, { source: "global-error", digest: error.digest });
+    void import("@auro/core/analytics")
+      .then(({ captureException }) => captureException(error, { source: "global-error", digest: error.digest }))
+      .catch(() => undefined);
     setLocale(resolveEmergencyLocale());
   }, [error]);
 

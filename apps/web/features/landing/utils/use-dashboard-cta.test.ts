@@ -57,7 +57,7 @@ describe("resolveDashboardCtaHref", () => {
     expect(resolveDashboardCtaHref(fetched([]))).toBe(paths.newWorkspace());
   });
 
-  it("falls back to /issues while the list has not resolved yet", () => {
+  it("uses the login resolver while the list has not resolved yet", () => {
     // /issues is a legacy route the proxy rewrites to the last workspace, so
     // the button still works during hydration. It must not fall back to `/`,
     // which is what made the CTA dead in the first place.
@@ -67,7 +67,7 @@ describe("resolveDashboardCtaHref", () => {
       workspaces: [],
       hasOnboarded: true,
     });
-    expect(href).toBe("/issues");
+    expect(href).toBe("/login");
     expect(href).not.toBe("/");
   });
 });

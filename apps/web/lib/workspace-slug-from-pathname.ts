@@ -2,7 +2,7 @@
  * The workspace slug the router is currently on, read from the live pathname.
  *
  * The URL is the source of truth for workspace identity on web, so this is
- * what `app/[workspaceSlug]/layout.tsx` compares its own `params` slug against
+ * what `app/(application)/[workspaceSlug]/layout.tsx` compares its own `params` slug against
  * before it writes the platform workspace singleton. `usePathname()` returns
  * one value shared by every mounted instance, which is what lets a stale
  * layout recognise that it is no longer the routed one.

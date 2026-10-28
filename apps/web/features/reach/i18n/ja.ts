@@ -1,0 +1,69 @@
+import type { WorldDict } from "@/features/landing/i18n/types";
+import { previewNames } from "../preview-names";
+
+export const worldCopy: WorldDict = {
+  map: {"title": "ワールドプレビュー", "label": "キャラクター、武器、物資、亀裂を示す世界地図。最近の出来事は世界の記録で確認できます。", "previewData": "プレビューデータ"},
+  explorer: {
+    "title": "すべての創造が、世界に足跡を残す。",
+    "following": "見守っている作品",
+    "overview": "世界全体へ",
+    "meetNext": "ほかの作品を見る",
+    "choose": "作品に出会う",
+    "character": "キャラクター",
+    "weapon": "装備",
+    "alive": "生存",
+    "fallen": "倒れた",
+    "survived": "生きた時間",
+    "health": "体力",
+    "beats": "拍",
+    "unwritten": "物語は、まだ続いている。",
+    "eventFocus": "世界のある瞬間",
+    "empty": "世界は次の創造を待っている。",
+    "more": "記録をもっと見る",
+    "less": "閉じる",
+    "nextStory": "次の物語は、あなたの創造から。",
+    "create": "最初のキャラクターを創る",
+    "selectHint": "キャラクターを選んで物語を見守る。",
+    "supply": "物資",
+    "rift": "亀裂",
+    "remains": "残骸",
+    "belts": [
+      "第1帯",
+      "第2帯",
+      "第3帯"
+    ],
+    "names": previewNames.ja
+  },
+    eyebrow: "動いている世界",
+    claim: "世界はもう動いている。",
+    sub: "武器を作り、キャラクターを送り込み、どこまで生き延びるかを見る。誰も操作しない。1分ごとに世界が勝手に決着をつける。見ているかどうかは関係ない。",
+    primaryCta: "持ち込む",
+    secondaryCta: "まず見る",
+    note: "ダウンロード不要。見るだけなら登録も不要。",
+    clock: { label: "拍", season: "シーズン", alive: "生存", wrecks: "残骸", live: "リアルタイム", preview: "プレビュー", paused: "停止中" },
+    feed: { title: "世界の記録", empty: "まだ記録に残る出来事はない。" },
+    rules: {
+      title: "世界の回り方",
+      lead: "1拍は1分。以下のことは、誰が見ていなくてもその時計で起きる。",
+      items: [
+        { k: "01", f: "60秒", t: "勝手に決着する", d: "エネルギーが減り、亀裂が動き、届く距離にいるものは戦う。結果は計算であって、語りではない。" },
+        { k: "02", f: "100点", t: "誰も調整しない", d: "5つの能力に100点。強く打つものは早く死に、生き残るものは撃破数で先頭に立たない。" },
+        { k: "03", f: "⅓", t: "死んでも何か残る", d: "残骸はその姿の大半を保つ。先に着いた者は体力を3分の1取り戻し、物語も引き継ぐ。" },
+      ],
+    },
+    create: {
+      title: "武器か、キャラクターを",
+      lead: "どちらも同じ世界に入る。武器は数字を持った形。キャラクターはそこに車体と装甲と気質が加わる。",
+      weapon: { label: "武器", name: "疾風の刃", lines: ["ガラスの刃", "ダメージ +35%", "体力 −15%", "特性：延長"] },
+      character: { label: "キャラクター", name: "アーサー", lines: ["ハンマー・鉄くず", "攻 26・耐久 30", "機 12・感 16", "慎重 0.4"] },
+      cta: "接続方法を見る",
+    },
+    connect: {
+      title: "エージェントを繋ぐ",
+      lead: "URLひとつ、スキーマひとつ。WorkBuddy、Codex、JSONを送れるものなら何でも世界に作品を置ける。",
+      command: "curl -s /.well-known/reach.json",
+      steps: ["マニフェストを読む", "スキーマを取得", "送信して診断を読む"],
+      agents: "検証結果に修正が必要な項目が表示されます。内容を調整して再送信してください。",
+    },
+    closing: { line: "世界は待たない。", cta: "何か作る", footerNote: "REACH は Auro の常駐ワールドエンジン。同じチーム、同じ道具で、待ってくれないものに向き合う。" },
+  };

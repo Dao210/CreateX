@@ -1,19 +1,12 @@
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import { Inter, Geist_Mono, Source_Serif_4 } from "next/font/google";
-import { ThemeProvider } from "@/components/theme-provider";
-import { Toaster } from "@auro/ui/components/ui/sonner";
 import { cn } from "@auro/ui/lib/utils";
-import { WebProviders } from "@/components/web-providers";
-import { RESOURCES } from "@auro/views/locales";
 import { getRequestLocale } from "@/lib/request-locale";
 import { HTML_LANG } from "@/lib/html-lang";
 import { SITE_TITLE, TITLE_TEMPLATE } from "@/platform/document-title";
-import { BRAND, BRAND_NAME, SITE_URL } from "@/lib/brand";
-import {
-  resolveBrowserApiBaseUrl,
-  resolveBrowserWsUrl,
-} from "@/config/runtime-urls";
+import { BRAND_NAME, SITE_URL, brandForLocale } from "@/lib/brand";
+import { searchVerification } from "@/lib/search-verification";
 import "./globals.css";
 
 // Inter is the Latin UI face. next/font produces a hashed family (`__Inter_xxx`)
@@ -42,6 +35,7 @@ const inter = Inter({
 // here would falsely signal alignment guarantees. Browser default fallback handles
 // the rare mixed case correctly.
 const geistMono = Geist_Mono({
+  preload: false,
   subsets: ["latin"],
   variable: "--font-mono",
   fallback: ["ui-monospace", "SFMono-Regular", "Menlo", "Consolas", "monospace"],
@@ -51,6 +45,7 @@ const geistMono = Geist_Mono({
 // render the font; layout-shift-prevention handled by next/font's synthetic
 // fallback metrics, same as Inter.
 const sourceSerif = Source_Serif_4({
+  preload: false,
   subsets: ["latin"],
   style: ["normal", "italic"],
   variable: "--font-serif",
@@ -73,50 +68,54 @@ export const viewport: Viewport = {
   ],
 };
 
-export const metadata: Metadata = {
-  metadataBase: new URL(SITE_URL),
-  applicationName: BRAND_NAME,
-  title: {
-    default: SITE_TITLE,
-    template: TITLE_TEMPLATE,
-  },
-  description:
-    BRAND.en.description,
-  icons: {
-    icon: [{ url: "/favicon.svg", type: "image/svg+xml" }],
-    shortcut: ["/favicon.svg"],
-    // iOS never reads the manifest's icons for the home screen; it needs its
-    // own opaque, full-bleed square and rounds the corners itself.
-    apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180" }],
-  },
-  // Home-screen behaviour: launch without browser chrome, and label the icon
-  // "Auro" rather than the long SEO <title>. `capable` renders the
-  // standardised `mobile-web-app-capable` tag — Next 16 no longer emits the
-  // deprecated apple-prefixed spelling, so iOS standalone rides on the
-  // manifest's `display` instead (honoured since iOS 16.4).
-  appleWebApp: {
-    capable: true,
-    title: BRAND_NAME,
-    // `default` keeps the web view below the status bar. Going edge-to-edge
-    // (`black-translucent` + viewport-fit=cover) needs env(safe-area-inset-*)
-    // padding, which no surface in the app has yet.
-    statusBarStyle: "default",
-  },
-  openGraph: {
-    type: "website",
-    siteName: BRAND_NAME,
-    locale: "en_US",
-    images: [{ url: "/images/weave-a-world-social.png", width: 1200, height: 630, alt: BRAND.en.slogan }],
-  },
-  twitter: {
-    card: "summary_large_image",
-    images: ["/images/weave-a-world-social.png"],
-  },
-  robots: {
-    index: false,
-    follow: false,
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const brand = brandForLocale(await getRequestLocale());
+  return {
+    metadataBase: new URL(SITE_URL),
+    applicationName: BRAND_NAME,
+    title: {
+      default: SITE_TITLE,
+      template: TITLE_TEMPLATE,
+    },
+    description:
+      brand.description,
+    verification: searchVerification(process.env),
+    icons: {
+      icon: [{ url: "/favicon.svg", type: "image/svg+xml" }],
+      shortcut: ["/favicon.svg"],
+      // iOS never reads the manifest's icons for the home screen; it needs its
+      // own opaque, full-bleed square and rounds the corners itself.
+      apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180" }],
+    },
+    // Home-screen behaviour: launch without browser chrome, and label the icon
+    // with the brand name instead of the long SEO <title>. `capable` renders the
+    // standardised `mobile-web-app-capable` tag — Next 16 no longer emits the
+    // deprecated apple-prefixed spelling, so iOS standalone rides on the
+    // manifest's `display` instead (honoured since iOS 16.4).
+    appleWebApp: {
+      capable: true,
+      title: BRAND_NAME,
+      // `default` keeps the web view below the status bar. Going edge-to-edge
+      // (`black-translucent` + viewport-fit=cover) needs env(safe-area-inset-*)
+      // padding, which no surface in the app has yet.
+      statusBarStyle: "default",
+    },
+    openGraph: {
+      type: "website",
+      siteName: BRAND_NAME,
+      locale: "en_US",
+      images: [{ url: "/images/weave-a-world-social.png", width: 1200, height: 630, alt: brand.slogan }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      images: ["/images/weave-a-world-social.png"],
+    },
+    robots: {
+      index: false,
+      follow: false,
+    },
+  };
+}
 
 export default async function RootLayout({
   children,
@@ -124,9 +123,6 @@ export default async function RootLayout({
   children: React.ReactNode;
 }) {
   const locale = await getRequestLocale();
-  const resources = { [locale]: RESOURCES[locale] };
-  const apiBaseUrl = resolveBrowserApiBaseUrl(process.env);
-  const wsUrl = resolveBrowserWsUrl(process.env);
 
   return (
     <html
@@ -153,17 +149,7 @@ export default async function RootLayout({
             strategy="beforeInteractive"
           />
         )}
-        <ThemeProvider>
-          <WebProviders
-            locale={locale}
-            resources={resources}
-            apiBaseUrl={apiBaseUrl}
-            wsUrl={wsUrl}
-          >
-            {children}
-          </WebProviders>
-          <Toaster />
-        </ThemeProvider>
+        {children}
       </body>
     </html>
   );

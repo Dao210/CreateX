@@ -1,311 +1,216 @@
 <div align="center">
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/logo-dark.svg">
-  <source media="(prefers-color-scheme: light)" srcset="docs/assets/logo-light.svg">
-  <img alt="Auro" src="docs/assets/logo-light.svg" width="50">
-</picture>
+# Weave a World · 织个世界
 
-# Auro
+**Create a Life. Weave a World.**
 
-**Agents that show up on the board.**
+A creative adventure and civilization simulator in development.
+Create characters and equipment, put them to the test, and shape the world's story.
 
-Auro is a source-available workspace where you assign work to AI coding agents the way you'd
-assign it to a teammate — they pick up the issue, report progress, raise blockers, and hand it
-back for review. Self-hostable, works with the agent CLIs you already use, no lock-in.
+[Website](https://weavea.world) · [中文说明](README.zh.md) · [Run locally](#run-locally) · [Agent integration](#create-with-an-agent) · [Documentation](#documentation)
 
-[![CI](https://github.com/auro-ai/auro/actions/workflows/ci.yml/badge.svg)](https://github.com/auro-ai/auro/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/auro-ai/auro?style=flat)](https://github.com/auro-ai/auro/releases)
-[![GitHub stars](https://img.shields.io/github/stars/auro-ai/auro?style=flat)](https://github.com/auro-ai/auro/stargazers)
-[![Discord](https://img.shields.io/badge/Discord-Join-5865F2?logo=discord&logoColor=white)](https://discord.gg/qZKeC2EEB)
-
-<p align="center">
-  <a href="https://www.star-history.com/auro-ai/auro">
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/badge?repo=auro-ai/auro&amp;type=rank&amp;theme=dark" />
-      <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/badge?repo=auro-ai/auro&amp;type=rank" />
-      <img alt="Star History Rank" src="https://api.star-history.com/badge?repo=auro-ai/auro&amp;type=rank" />
-    </picture>
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/badge?repo=auro-ai/auro&amp;type=trending&amp;theme=dark" />
-      <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/badge?repo=auro-ai/auro&amp;type=trending" />
-      <img alt="GitHub Trending Repository of the Day" src="https://api.star-history.com/badge?repo=auro-ai/auro&amp;type=trending" />
-    </picture>
-  </a>
-</p>
-
-[Website](https://auro.ai) · [Docs](https://auro.ai/docs) · [Quickstart](https://auro.ai/docs/cloud-quickstart) · [Download](https://auro.ai/download) · [Vision](VISION.md) · [Self-Hosting](SELF_HOSTING.md) · [Discord](https://discord.gg/qZKeC2EEB) · [X](https://x.com/AuroAI)
-
-**English | [简体中文](README.zh.md)**
+<img src="apps/web/public/images/weave-a-world-social.png" alt="Weave a World — Create a Life. Weave a World." width="900">
 
 </div>
 
-<p align="center">
-  <img src="apps/docs/public/images/docs/workspace-overview.webp" alt="A Auro board where agents and their human teammates are moving work across columns" width="100%">
-</p>
+## The idea
 
-<p align="center">
-  <sub><em>Your next 10 hires won't be human.</em></sub>
-</p>
+**Your creations change the world.**
 
----
+Design a weapon, build a character, or ask an agent to help express an idea. Bring
+that creation into a game, see how it performs, and use what happens to improve
+the next version. The loop we are building toward is:
 
-## What is Auro?
+**Create → Play → Observe → Improve → Leave a mark on the world.**
 
-You already run Claude Code, Codex, and three other agents. Each one lives in its own terminal
-tab, forgets everything when the session ends, and leaves you re-explaining the same context for
-the fourth time today. The more agents you add, the more of your day goes to babysitting them.
+The repository currently contains playable defense games, a negotiation game,
+and an autonomous world prototype. A shared, evolving civilization is the
+longer-term direction; creations do not yet travel freely between these games.
 
-Auro puts those agents and your teammates in one workspace. An agent gets assigned an issue,
-picks it up on its own, works on a runtime you control, comments as it goes, and hands the result
-back for review. The intent, the run, the decisions, and the diff stay connected to the same
-issue — so nobody reconstructs context, and nothing ships without a human saying so.
+## What you can explore today
 
----
+| Experience | What you do | Entry and current scope |
+| --- | --- | --- |
+| **Doodle Siege** | Draw or assemble weapons, test their physical behavior, and defend a castle through a campaign. | `/{workspaceSlug}/siege` and `/{workspaceSlug}/siege/campaign`. Uses the main Web/Desktop application and account. |
+| **Tank Defense** | Build a tank from budgeted parts, then drive and shoot through campaign, blitz, or survival modes. | `/{workspaceSlug}/tanks`. Web/Desktop; keyboard and browser touch controls. External agents can create tanks through MCP. |
+| **Personal collection** | Revisit your Siege blueprints, Tank characters, and personal progress. | `/{workspaceSlug}/me`. Scoped to your account and workspace; personal records are client-reported. |
+| **REACH world preview** | Watch autonomous entities compete for supplies, fight, and leave wrecks. Submit creations through its HTTP API. | Public homepage preview plus a separate experimental world service. The homepage labels live, preview, and disconnected states. The browser creation flow is still pending. |
+| **DEAL** | Negotiate with a debt collector using conversation, evidence, and objects in the room. | Standalone `/deal`, started separately. Supports an explicitly selected rule practice mode or a configured language model. |
 
-## Build the team.
+For Siege and Tanks, sign in at the local Web address, complete onboarding, and
+open the game from the workspace sidebar. Ordinary defense gameplay needs no
+model configuration. Siege also supports manual part confirmation without AI
+recognition. Native mobile game integration is not implemented.
 
-*Claude Code, Codex, Cursor, Kimi — you don't pick one. You hire them all.*
+## Create with an agent
 
-- **[The agent CLIs you already use](#runtimes) →** Claude Code, Codex, Cursor, Copilot, Kimi, OpenCode, and more.
-- **[Agents as teammates](https://auro.ai/docs/agents) →** Give each one a name, a provider, and a runtime — they show up on the board like anyone else.
-- **[Squads](https://auro.ai/docs/squads) →** Put agents and people on one team; the leader routes the work.
-- **[Skills](https://auro.ai/docs/skills) →** Turn a solved problem into a playbook every agent reuses.
-- **[Your own runtime](https://auro.ai/docs/daemon-runtimes) →** Their desk is your machine — a daemon on your laptop or cloud box. Code never leaves it.
+People and agents should be able to create for the same game. Agents produce
+structured drafts; versioned catalogs and deterministic rules validate them and
+derive gameplay attributes.
 
-## Hand off the work.
+**Tank creation is the implemented MCP path:** read the catalog → validate a
+draft → save a character revision → check compatibility → create a frozen
+session → open its `playUrl` and play. The agent helps create the tank; the
+player drives it. Start with the in-game **Connect Agent** action and the
+[Tank MCP guide](docs/tank-character-mcp.md).
 
-*It starts as three rough sentences in an issue. It ends as a pull request.*
+The current contracts have distinct scopes:
 
-- **[Assign an issue](https://auro.ai/docs/assigning-issues) →** Pick an agent as assignee the way you'd pick a colleague — it takes the work from there.
-- **[Autopilots](https://auro.ai/docs/autopilots) →** Run standups, audits, and reports on a cron — nobody to remind.
-- **[Chat](https://auro.ai/docs/chat) →** Ask your workspace a question, or start work without filing anything.
-- **[Projects](https://auro.ai/docs/projects) →** Group work and attach the repos and docs agents need as context.
+| Contract | Status |
+| --- | --- |
+| `tank-defense@1` | Implemented Tank character catalog, HTTP API, MCP, and frozen sessions. |
+| `reach.entity/1` | Experimental REACH entity submission and world rules; separate from Tank characters. |
+| `ground2d@1` | Proposed general assembly contract. The [design specification](docs/character-game-api.md) is not an implemented API. |
 
-## Stay in the loop.
+Client configuration and authentication depend on the MCP client. See the
+[connection guide](docs/codex-mcp-deployment.md) for setup and validation scope.
 
-*Which agent touched this? What did it run? What did it cost? Open the run.*
+## Run locally
 
-- **[Execution log](https://auro.ai/docs/tasks) →** Replay every tool call, command, and error, timestamped.
-- **Steer a running agent →** Reply while it works and the message lands in the current run, not the next one. Claude Code, Codex, and Grok today.
-- **Usage analytics →** See what each run cost, per agent and per issue.
-- **[Review gates](https://auro.ai/docs/issues) →** Work lands in review, not in main. You decide what ships.
-- **[Inbox](https://auro.ai/docs/inbox) →** Get pinged when an agent needs a call, not for every step.
-- **[Retries and timeouts](https://auro.ai/docs/tasks#failures-and-automatic-retries) →** Failed runs retry on their own, or stop and tell you why.
+Run commands from the repository root unless stated otherwise.
 
-## Make it yours.
+### Main application: Siege, Tanks, and your collection
 
-*Your machines, your Git host, your rules — with an audit trail that includes the robots.*
+Prerequisites:
 
-- **[Self-host everything](SELF_HOSTING.md) →** Docker Compose or Helm, on your own infrastructure.
-- **[Your Git host](https://auro.ai/docs/vcs-integration) →** GitHub, GitLab, Gitea, or Forgejo — self-hosted included.
-- **[Workspaces](https://auro.ai/docs/workspaces) →** Separate agents, issues, and settings per team.
-- **[Roles](https://auro.ai/docs/members-roles) and [access scopes](https://auro.ai/docs/agents#permissions-and-access) →** `owner`, `admin`, and `member` — and exactly which agents each member can run.
-- **[Security model](https://auro.ai/docs/security-model) →** What an agent can reach, and what it can't.
-- **[Slack, Feishu/Lark, DingTalk, WeCom, and Telegram](https://auro.ai/docs/channels) →** Trigger and follow agent work where your team already talks. New Feishu/Lark connections are open to mainland-China Feishu only for now; DingTalk, WeCom, and Telegram are [community-maintained](https://auro.ai/docs/community-maintained).
-- **Web, [desktop](https://auro.ai/docs/desktop-app), and [mobile](https://auro.ai/docs/mobile-app) →** The same workspace on macOS, Windows, Linux, iPhone, and iPad — the iOS app builds from source today, not yet on the App Store.
-- **[CLI and API](https://auro.ai/docs/cli) →** Every surface is scriptable. Agents drive Auro through the same CLI you do.
+- Node.js satisfying the root [package.json](package.json) `engines` field.
+- The exact pnpm version in its `packageManager` field.
+- Go as declared in [server/go.mod](server/go.mod).
+- A running PostgreSQL 17+ service with `psql`, `pgcrypto`, and `pg_trgm` available.
 
----
-
-## Get started
-
-- **Cloud** — sign up at **[auro.ai](https://auro.ai)**. No terminal required.
-- **Desktop** — download **[Auro Desktop](https://auro.ai/download)** for macOS, Windows, or
-  Linux. It connects the computer it runs on as a runtime automatically.
-- **Self-host** — run the whole stack on your own infrastructure; see below.
-
-The one prerequisite: the machine that will run agents needs at least one
-[supported agent CLI](#runtimes) installed and signed in — Claude Code, Codex, Cursor, and
-friends. Auro drives them; it doesn't ship them.
-
-<details>
-<summary><b>Self-hosting the whole thing</b></summary>
-
-<br/>
+For a new main checkout, copy the example once and configure `DATABASE_URL` in
+`.env` for an existing PostgreSQL login role:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/auro-ai/auro/main/scripts/install.sh | bash -s -- --with-server
-auro setup self-host
+cp .env.example .env
 ```
 
-On Windows, set `$env:AURO_MODE="with-server"`, then run the PowerShell installer:
-`irm https://raw.githubusercontent.com/auro-ai/auro/main/scripts/install.ps1 | iex`.
+Then install and start:
 
-This pulls the official images from GHCR and requires Docker. See the
-[Self-Hosting Guide](SELF_HOSTING.md); if the selected GHCR tag has not been published yet,
-fall back to `make selfhost-build` from a checkout.
+```bash
+pnpm install --frozen-lockfile
+make up MODE=development
+make status
+```
 
-A self-hosted server sends one anonymous, deployment-level snapshot a day: the release version
-plus bucketed counts, with no names, content, or IDs. Set `DO_NOT_TRACK=1` on the API server to
-turn it off — [what's collected](SELF_HOSTING.md#anonymous-deployment-telemetry).
+Open the Web address reported by `make status`. The managed environment assigns
+ports and a database to this checkout, runs migrations, and starts the API and
+Web. A missing local database can be created when the configured role has
+permission; remote databases must already exist. Docker PostgreSQL is optional
+via `make db-up`.
 
-</details>
+```bash
+make up MODE=production    # Daily local use; builds and reuses .next-local
+make up MODE=development   # Hot reload for editing
+make status                # Addresses, component status, and selected Web mode
+make down                  # Stop this environment and keep its data
+```
 
-### Your first agent in five minutes
+The selected Web mode is remembered per checkout. For a Git worktree, generate
+its `.env.worktree` with `make worktree-env`; do not copy the main checkout's
+`.env`. See [Make commands](docs/make-commands.md) and [scripts/dev-env.sh](scripts/dev-env.sh)
+for environment management.
 
-**1. Connect a computer.** A *runtime* is any machine agents can work on — your laptop, or a
-cloud box. Desktop registers the computer it's running on automatically and detects the agent
-CLIs installed there. On the web — or to add another machine — open **Runtimes** in the sidebar,
-click **Add a computer**, and paste the two commands it shows into a terminal on that machine.
+### DEAL: standalone practice
 
-**2. Create an agent.** Open **Agents** in the sidebar and click **New agent**. Pick the runtime
-you just connected, pick a provider, and give it a name — or let **Build with AI** generate the
-configuration from a description. That name is how it shows up on the board and in comments.
+DEAL needs Node.js, pnpm, and Go, and runs without a workspace account or
+PostgreSQL:
 
-**3. Assign it something.** File an issue and set the agent as assignee. It picks the task up,
-runs it on your machine, comments as it goes, and moves the issue to review when it's done.
+```bash
+pnpm install --frozen-lockfile --filter @auro/deal...
+DEAL_MODEL_MODE=scripted make up C=deal
+make status C=deal
+make down C=deal
+```
 
-Full walkthrough: [Quickstart](https://auro.ai/docs/cloud-quickstart) · [Tutorial](https://auro.ai/docs/tutorial)
+The default Web address is `http://127.0.0.1:13106/deal/`. Sessions and logs live
+in `.deal/`. For model-backed play, configure `DEAL_MODEL_MODE=llm` and
+`DEAL_LLM_*` using [.env.example](.env.example), then restart DEAL. Model failure
+does not silently switch to rule practice. See [DEAL setup and delivery](docs/deal-delivery.md).
 
----
+### REACH: experimental world service
 
-## Runtimes
+REACH currently has its own single-instance, file-backed service. It is not
+started by the main application's `make up`:
 
-Auro does not ship a model. It drives the agent CLIs you already have installed and
-authenticated — 26 of them today — so switching providers is a dropdown, not a migration.
+```bash
+cd server
+REACH_DATA_DIR=.reach REACH_SEED=42 REACH_BEAT_SECONDS=1 go run ./cmd/reach
+```
 
-| Provider | CLI | Provider | CLI |
-| --- | --- | --- | --- |
-| Claude Code | `claude` | OpenAI Codex | `codex` |
-| Cursor Agent | `cursor-agent` | GitHub Copilot CLI | `copilot` |
-| OpenCode | `opencode` | OpenClaw | `openclaw` |
-| Hermes | `hermes` | Pi | `pi` |
-| Antigravity | `agy` | CodeBuddy | `codebuddy` |
-| DevEco Code | `deveco` | Grok | `grok` |
-| Kimi | `kimi` | Kiro CLI | `kiro-cli` |
-| Qoder CLI | `qodercli` | Qoder CN | `qoderclicn` |
-| Qwen Code | `qwen` | QwenPaw | `qwenpaw` |
-| Reasonix | `reasonix` | Trae CLI | `traecli` |
-| DeepSeek Harness | `dsh` | Oh-My-Pi | `omp` |
-| MiniMax Code | `mcode` | Dim | `dim` |
-| Huawei Cloud CodeArts | `codearts` | ZeroClaw | `zeroclaw` |
+The API defaults to `http://127.0.0.1:18107`; discover it at
+`/.well-known/reach.json`. One-second beats are for local demonstrations; the
+default is 60 seconds. Stop the foreground service with Ctrl+C.
 
-Installing and authenticating them: [Install an agent runtime](https://auro.ai/docs/install-agent-runtime) ·
-[Providers](https://auro.ai/docs/providers)
-
----
-
-## Documentation
-
-| I want to… | Start here |
-| --- | --- |
-| Get an agent doing something today | [Quickstart](https://auro.ai/docs/cloud-quickstart) · [Tutorial](https://auro.ai/docs/tutorial) |
-| Understand how the pieces fit | [Core concepts](https://auro.ai/docs/concepts) · [How Auro works](https://auro.ai/docs/how-auro-works) |
-| Create and configure agents | [Agents](https://auro.ai/docs/agents) · [Create an agent](https://auro.ai/docs/agents-create) · [Skills](https://auro.ai/docs/skills) |
-| Get work to an agent | [Triggering agents](https://auro.ai/docs/triggering-agents) · [Assigning issues](https://auro.ai/docs/assigning-issues) · [Mentions](https://auro.ai/docs/mentioning-agents) |
-| Connect my machines | [Daemon and runtimes](https://auro.ai/docs/daemon-runtimes) · [Install an agent runtime](https://auro.ai/docs/install-agent-runtime) |
-| Connect Git and chat tools | [GitHub](https://auro.ai/docs/github-integration) · [Self-hosted Git](https://auro.ai/docs/vcs-integration) · [Channels](https://auro.ai/docs/channels) |
-| Run it on my own infrastructure | [Self-hosting](SELF_HOSTING.md) · [Security model](https://auro.ai/docs/security-model) · [Environment variables](https://auro.ai/docs/environment-variables) |
-| Script it | [CLI reference](https://auro.ai/docs/cli) · [CLI and daemon guide](CLI_AND_DAEMON.md) · [Auth tokens](https://auro.ai/docs/auth-tokens) |
-| Drive Auro from Codex, Claude Code, or Cursor | [Auro CLI skill](https://github.com/auro-ai/auro-cli) |
-| Work out why an agent is stuck | [Runs](https://auro.ai/docs/tasks) · [Troubleshooting](https://auro.ai/docs/troubleshooting) |
-
-The docs are also available in [简体中文](https://auro.ai/docs/zh), [日本語](https://auro.ai/docs/ja),
-[한국어](https://auro.ai/docs/ko), and [Français](https://auro.ai/docs/fr).
-
----
+The homepage uses same-origin `/api/reach` requests by default. Showing this
+service's live world requires routing `/api/reach/*` and
+`/.well-known/reach.json` to it; starting the service alone does not connect the
+homepage. Without a live connection, the homepage can show labeled preview
+data. See the [REACH design and implementation notes](docs/reach-world-prd.md)
+for endpoints and remaining work, including season archival and creator pages.
 
 ## Architecture
 
-```
-   Web (browser)        Desktop (Electron)        iPhone · iPad (Expo)
-         │                      │                          │
-         ▼                      │                          │
-  ┌──────────────┐              │                          │
-  │   Next.js    │              │                          │
-  │ pages + API  │              │                          │
-  │    proxy     │              │                          │
-  └──────┬───────┘              │  HTTPS + WebSocket       │
-         ▼                      ▼                          ▼
-  ┌───────────────────────────────────────────────────────────┐   ┌───────────────┐
-  │                Go backend  (Chi + WebSocket)              │──>│ PostgreSQL 17 │
-  └─────────────────────────────┬─────────────────────────────┘   └───────────────┘
-                                │  runs over WebSocket
-                        ┌───────┴────────┐
-                        │  Agent daemon  │  runs on your machine, next to your code
-                        └───────┬────────┘
-                                │  spawns
-              ┌─────────────────┴──────────────────┐
-              │  Claude Code · Codex · Cursor · …  │
-              └────────────────────────────────────┘
-```
-
-| Layer | Stack |
+| Location | Responsibility |
 | --- | --- |
-| Web | Next.js 16 (App Router) |
-| Desktop | Electron, sharing the web UI packages |
-| Mobile | Expo / React Native (iPhone and iPad) |
-| Backend | Go (Chi router, sqlc, gorilla/websocket) |
-| Database | PostgreSQL 17 (`pgcrypto` + `pg_trgm`) |
-| Agent runtime | Local daemon executing any [supported agent CLI](#runtimes) |
+| `apps/web` | Next.js public game pages and authenticated workspace routes. |
+| `apps/desktop` | Electron host using the shared game views and logic. |
+| `packages/core` | Headless game rules, catalogs, schemas, API clients, and shared state. |
+| `packages/views` | Shared game screens, Canvas rendering, physics, input, and audio. |
+| `packages/ui` | Shared UI primitives and semantic styles. |
+| `server/internal/siege`, `tanks`, `gameprogress` | Main application game APIs, saved creations, and personal progress. |
+| `apps/deal`, `server/internal/deal` | Standalone negotiation game. |
+| `server/internal/reach`, `server/cmd/reach` | Experimental autonomous world engine, HTTP API, and service. |
+| `apps/mobile` | Independent Expo/React Native client; game integration is pending. |
 
----
+The project builds on Auro's account, workspace, agent, and runtime
+infrastructure. Internal `@auro/*` package names and `AURO_*` configuration remain
+in use. Issue, project, my-issues, and squad UI routes are retired; chat is the
+current workspace landing page.
 
-## Development
+## Verification
 
-Contributors: start with the [Contributing Guide](CONTRIBUTING.md).
-
-**Prerequisites:** [Node.js](https://nodejs.org/) 22.13+, [pnpm](https://pnpm.io/) (version per the root `package.json` `packageManager` field, currently `pnpm@12.9.1`), [Go](https://go.dev/) as declared in `server/go.mod`, and PostgreSQL 17+ with `psql`, `pgcrypto`, and `pg_trgm` available.
-
-Start your PostgreSQL service, copy `.env.example` to `.env`, and set `DATABASE_URL`
-to an existing login role and this project's database. For a passwordless local
-role, for example:
-
-```dotenv
-POSTGRES_DB=createx
-POSTGRES_USER=your_user
-POSTGRES_PASSWORD=
-DATABASE_URL=postgres://your_user@localhost:5432/createx?sslmode=disable
-```
+Choose checks for the affected game; detailed commands live in its guide.
+The main frontend and backend checks are:
 
 ```bash
-make dev
+pnpm typecheck
+pnpm lint
+pnpm test
+make test
 ```
 
-`make dev` auto-detects your environment (main checkout or worktree), creates the env file,
-installs dependencies, sets up the database, runs migrations, and starts every service.
-It authenticates through `DATABASE_URL` and creates a missing local database when
-the configured role has `CREATEDB`; remote databases must already exist. Docker is
-optional: run `make db-up` explicitly if you prefer the containerized database.
-Use `make dev ENV_FILE=.env.worktree` to select a different environment file.
+Authenticated game browser tests run against an explicitly started main
+application:
 
-For everyday local use, run `make up MODE=production`. It builds the frontend in
-`apps/web/.next-local`, reuses it while source and build settings match, and runs
-`next start`. `make status` reports the running mode. Use
-`make up MODE=development` to switch back to editing with hot reload. The selected
-mode is retained for this checkout; `make down` keeps its data. Web-only development
-starts directly through pnpm rather than a persistent Turbo process.
+```bash
+pnpm exec playwright test e2e/siege e2e/tanks.spec.ts e2e/tanks-mcp.spec.ts
+```
 
-Console output defaults to warnings and errors. Enable detailed diagnostics with
-`NEXT_PUBLIC_AURO_LOG_LEVEL=debug` for web builds or `VITE_AURO_LOG_LEVEL=debug` for
-the desktop renderer.
+DEAL has its own [checks and Playwright configuration](docs/deal-delivery.md).
+REACH's Go tests run with `(cd server && go test ./internal/reach)`.
+Root frontend checks exclude native mobile; see its [README](apps/mobile/README.md)
+and [agent instructions](apps/mobile/AGENTS.md).
 
+## Documentation
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for the full workflow, worktree support, testing, and
-troubleshooting. The iOS client lives in [`apps/mobile/`](apps/mobile/) — its
-[README](apps/mobile/README.md) covers building it onto your own device.
+| Topic | Guide |
+| --- | --- |
+| Brand and public website | [Brand and search identity](docs/brand-and-seo.md) |
+| Local environment | [Make commands](docs/make-commands.md) |
+| Siege workshop and campaign | [Integration](docs/siege-integration-plan.md) · [Campaign](docs/siege-campaign-delivery.md) |
+| Tank rules and controls | [Tank Defense](docs/tank-defense.md) |
+| Agent-created tanks | [Tank MCP](docs/tank-character-mcp.md) · [Client setup](docs/codex-mcp-deployment.md) |
+| Autonomous world direction | [REACH PRD and prototype status](docs/reach-world-prd.md) |
+| Negotiation game | [DEAL PRD](docs/deal-prd.md) · [Setup and delivery](docs/deal-delivery.md) |
+| Proposed general character protocol | [Design specification](docs/character-game-api.md) |
+| Repository contribution rules | [AGENTS.md](AGENTS.md) |
 
-We release most weekdays, so `main` moves quickly — pull often.
+Design documents may describe work beyond the current implementation. Use their
+implementation notes and the owning source code to determine availability.
 
----
+## License and attribution
 
-## Why "Auro"?
-
-**Mult**iplexed **I**nformation and **C**omputing **A**gent — a nod to Multics, the 1960s
-operating system that introduced time-sharing so several people could use one machine as if each
-had it to themselves.
-
-Software teams have been single-threaded ever since: one engineer, one task, one context switch
-at a time. We think agents make time-sharing relevant again, except the users multiplexing the
-system are now both humans and machines. A small team shouldn't feel small.
-
-The longer argument, and where we think this goes: **[VISION.md](VISION.md)**.
-
----
-
-## License
-
-[Auro License](LICENSE) — the complete Apache License 2.0 text plus additional conditions
-covering hosted services, commercial embedding, and branding. Self-host it, modify it, build on
-it; the exact terms are in the [LICENSE](LICENSE), attribution notices in [NOTICE](NOTICE).
+This repository contains code derived from Auro. The existing
+[Auro License](LICENSE) and [attribution notice](NOTICE) remain applicable;
+consult those files for the terms.

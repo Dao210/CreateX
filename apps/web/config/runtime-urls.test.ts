@@ -345,3 +345,10 @@ describe("dev-only fallbacks", () => {
     expect(resolveDevDocsUrl({})).toBe("http://localhost:4000");
   });
 });
+
+describe("public world manifest", () => {
+  it("routes agent discovery to the configured backend", () => {
+    expect(runtimeRewriteDestination("/.well-known/reach.json", { REMOTE_API_URL: "http://backend:8080" })).toBe("http://backend:8080/.well-known/reach.json");
+    expect(runtimeRewriteDestination("/.well-known/reach.json", {})).toBeUndefined();
+  });
+});

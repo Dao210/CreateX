@@ -9,14 +9,8 @@ import {
 } from "@auro/core/paths";
 import type { Workspace } from "@auro/core/types";
 
-/**
- * While the workspace list is in flight the CTA points at `/issues`, which the
- * proxy rewrites to the last workspace. That keeps the button working during
- * hydration without hiding or disabling it (which would flicker). A visitor
- * with no workspace history lands back on the landing page in that window and
- * can click again once the list resolves.
- */
-const LOADING_FALLBACK_HREF = "/issues";
+/** The login entry resolves the authenticated visitor’s workspace destination. */
+const LOADING_FALLBACK_HREF = "/login";
 
 export function resolveDashboardCtaHref({
   isAuthenticated,

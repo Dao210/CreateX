@@ -2,10 +2,12 @@ import { NextResponse, type NextRequest } from "next/server";
 import { LOCALE_COOKIE } from "@auro/core/i18n";
 import {
   AURO_LOCALE_HEADER,
+  isSupportedLocale,
   resolveLocaleFromSignals,
 } from "./lib/locale-routing";
 import { runtimeRewriteDestination } from "./config/runtime-urls";
 import { isOfficialMarketingHost } from "./lib/public-host";
+import { marketingLocale, SEARCHABLE_PAGES } from "./lib/marketing-urls";
 
 // Old workspace-scoped route segments that existed before the URL refactor
 // (pre-#1131). Any URL with these as the FIRST segment is a legacy URL that
@@ -21,12 +23,13 @@ const LEGACY_ROUTE_SEGMENTS = new Set([
   "usage",
 ]);
 
-function resolveLocale(req: NextRequest): string {
-  return resolveLocaleFromSignals({
+function resolveLocale(req: NextRequest) {
+  const locale = resolveLocaleFromSignals({
     queryLocale: req.nextUrl.searchParams.get("lang"),
     cookieLocale: req.cookies.get(LOCALE_COOKIE)?.value,
     acceptLanguage: req.headers.get("accept-language"),
   });
+  return SEARCHABLE_PAGES.some((path) => path === req.nextUrl.pathname) ? marketingLocale(locale) : locale;
 }
 
 // Forward the resolved locale to RSC layouts via the `x-auro-locale`
@@ -35,8 +38,17 @@ function resolveLocale(req: NextRequest): string {
 // request — without it the value would only sit on the response.
 function nextWithLocale(req: NextRequest): NextResponse {
   const headers = new Headers(req.headers);
-  headers.set(AURO_LOCALE_HEADER, resolveLocale(req));
-  return NextResponse.next({ request: { headers } });
+  const locale = resolveLocale(req);
+  const queryLocale = req.nextUrl.searchParams.get("lang");
+  headers.set(AURO_LOCALE_HEADER, locale);
+  const response = NextResponse.next({ request: { headers } });
+  // Explicit language links work and remember the choice without client JS.
+  if (isSupportedLocale(queryLocale) && req.cookies.get(LOCALE_COOKIE)?.value !== queryLocale) {
+    response.cookies.set(LOCALE_COOKIE, queryLocale, {
+      path: "/", maxAge: 60 * 60 * 24 * 365, sameSite: "lax", secure: req.nextUrl.protocol === "https:",
+    });
+  }
+  return response;
 }
 
 // Next.js 16 renamed `middleware` → `proxy`. API surface (NextRequest /
@@ -114,6 +126,7 @@ export const config = {
   // proxy routes whose upstream origins are resolved from process.env at
   // request time instead of being baked into next.config.js at build time.
   matcher: [
+    "/.well-known/reach.json",
     "/v1/:path*",
     "/api/:path*",
     "/auth/:path*",

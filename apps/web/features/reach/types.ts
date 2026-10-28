@@ -5,6 +5,8 @@
 export type ChronicleText = {
   en: string;
   zh: string;
+  ja?: string;
+  ko?: string;
 };
 
 export type Chronicle = {
@@ -78,5 +80,7 @@ export const WORLD_WIDTH = 2048;
 export const WORLD_HEIGHT = 1024;
 
 export function chronicleLine(text: ChronicleText, locale: string): string {
+  if (locale === "ja" && text.ja) return text.ja;
+  if (locale === "ko" && text.ko) return text.ko;
   return locale.startsWith("zh") ? text.zh : text.en;
 }

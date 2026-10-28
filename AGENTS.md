@@ -24,6 +24,7 @@ Auro is a task management platform where people and agents collaborate on issues
 - Dependency direction is `views -> core + ui`; core and ui remain independent. Shared packages export raw TypeScript compiled by consuming apps.
 - Extract logic used by both web and desktop into the appropriate shared package. Keep framework/Electron APIs in the app layer; inject platform-specific UI through props/slots.
 - Wire shared features into both web routes and the desktop router or overlay. Reuse existing guards/providers such as `DashboardGuard` in `packages/views/layout/`.
+- Public game marketing pages (`/`, `/about`) render in `apps/web/app/(landing)` without application providers. Authenticated/product routes share `app/(application)/layout.tsx`; inherited product marketing pages use `(landing)/(legacy)`. Keep auth, realtime, chat stores and full product locale dictionaries out of public game pages; only the visible world preview hydrates and polls.
 - Each workspace declares its directly imported external dependencies. Use `catalog:` for shared dependencies; mobile pins Expo/React Native dependencies in its own manifest.
 
 ## Development and Verification
