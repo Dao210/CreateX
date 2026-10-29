@@ -342,6 +342,21 @@ func TestJWTSecretBootError(t *testing.T) {
 	}
 }
 
+func TestMainHTTPAddress(t *testing.T) {
+	for _, tc := range []struct{ name, host, want string }{
+		{"default", "", ":28080"},
+		{"loopback", "127.0.0.1", "127.0.0.1:28080"},
+		{"IPv6", "::1", "[::1]:28080"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Setenv("SERVER_HOST", tc.host)
+			if got := mainHTTPAddress("28080"); got != tc.want {
+				t.Fatalf("address = %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
 // TestNewMainHTTPServerTimeouts pins the production timeout defaults on the
 // public HTTP server. These are safety settings, not tuning: removing them,
 // resetting them to zero, or making ReadTimeout/WriteTimeout non-zero would

@@ -25,7 +25,6 @@ export function createZhDict(
     subheading:
       "Auro 是一个源码公开的平台，\u5c06\u7f16\u7801 智能体 \u53d8\u6210\u771f\u6b63\u7684\u961f\u53cb\u3002\u5206\u914d\u4efb\u52a1\u3001\u8ddf\u8e2a\u8fdb\u5ea6\u3001\u79ef\u7d2f\u6280\u80fd\u2014\u2014\u5728\u4e00\u4e2a\u5730\u65b9\u7ba1\u7406\u4f60\u7684\u4eba\u7c7b + 智能体 \u56e2\u961f\u3002",
     cta: "免费开始",
-    downloadDesktop: "下载桌面端",
     talkToSales: "联系商务",
     worksWith: "支持 20+ 种 AI 编程工具",
     imageAlt: "Auro \u770b\u677f\u89c6\u56fe\u2014\u2014\u4eba\u7c7b\u548c 智能体 \u534f\u540c\u7ba1\u7406\u4efb\u52a1",
@@ -247,7 +246,6 @@ export function createZhDict(
           { label: "\u5982\u4f55\u5de5\u4f5c", href: "#how-it-works" },
           { label: "\u6848\u4f8b", href: "/usecases" },
           { label: "更新日志", href: "/changelog" },
-          { label: "下载", href: "/download" },
         ],
       },
       resources: {

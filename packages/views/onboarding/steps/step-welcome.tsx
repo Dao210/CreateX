@@ -2,8 +2,8 @@
 
 import { statusCategoryOfKey } from "@auro/core/issues";
 import { useState } from "react";
-import { ArrowRight, Download, Loader2 } from "lucide-react";
-import { Button, buttonVariants } from "@auro/ui/components/ui/button";
+import { ArrowRight, Loader2 } from "lucide-react";
+import { Button } from "@auro/ui/components/ui/button";
 import { AuroIcon } from "@auro/ui/components/common/auro-icon";
 import { cn } from "@auro/ui/lib/utils";
 import { DragStrip } from "@auro/views/platform";
@@ -31,11 +31,7 @@ import { useT } from "../../i18n";
  * their existing workspace. OnboardingFlow only passes it when the
  * user has ≥ 1 workspace — without that, skipping lands in limbo.
  *
- * `isWeb` flips two things when true: the subheading acknowledges
- * that web users have an extra runtime step (so "3 minutes" stops
- * being a lie), and a "Download Desktop" secondary CTA surfaces
- * before the user has invested in questionnaire / workspace. Desktop
- * bundles a daemon, so the same prompt would be noise there.
+ * `isWeb` labels the primary action as continuing in the browser.
  */
 export function StepWelcome({
   onNext,
@@ -96,58 +92,22 @@ export function StepWelcome({
               <p className="text-title leading-relaxed text-foreground">
                 {t(($) => $.welcome.lede)}
               </p>
-              {isWeb && (
-                <p className="text-body leading-relaxed text-muted-foreground">
-                  {t(($) => $.welcome.lede_web)}
-                </p>
-              )}
             </div>
 
             <div className="flex flex-wrap items-center gap-3">
-              {isWeb ? (
-                <>
-                  {/* `<a>` rather than `<Button onClick={window.open}>`
-                      so middle-click / cmd-click / "Copy link" all
-                      behave and screen readers announce it as a link
-                      (it navigates; `Continue on web` is the button
-                      that mutates flow state). New tab preserves this
-                      onboarding tab in case the desktop install
-                      stalls and the user falls back here. */}
-                  <a
-                    href="/download"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={buttonVariants({ size: "lg" })}
-                  >
-                    <Download className="h-4 w-4" />
-                    {t(($) => $.welcome.download_desktop)}
-                  </a>
-                  <Button
-                    size="lg"
-                    variant="outline"
-                    onClick={handleNext}
-                    disabled={pending !== null}
-                  >
-                    {pending === "next" && (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    )}
-                    {t(($) => $.welcome.continue_on_web)}
-                    <ArrowRight className="h-4 w-4" />
-                  </Button>
-                </>
-              ) : (
-                <Button
-                  size="lg"
-                  onClick={handleNext}
-                  disabled={pending !== null}
-                >
-                  {pending === "next" && (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  )}
-                  {t(($) => $.welcome.start_exploring)}
-                  <ArrowRight className="h-4 w-4" />
-                </Button>
-              )}
+              <Button
+                size="lg"
+                onClick={handleNext}
+                disabled={pending !== null}
+              >
+                {pending === "next" && (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                )}
+                {isWeb
+                  ? t(($) => $.welcome.continue_on_web)
+                  : t(($) => $.welcome.start_exploring)}
+                <ArrowRight className="h-4 w-4" />
+              </Button>
               {onSkip && (
                 <Button
                   size="lg"

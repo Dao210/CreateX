@@ -28,7 +28,6 @@ export function createKoDict(
       subheading:
         "Auro는 코딩 AI 에이전트를 진짜 팀원으로 만들어 주는 소스 공개 플랫폼입니다. 태스크를 맡기고, 진행 상황을 따라가고, 반복되는 노하우를 스킬로 쌓아 두세요. 사람과 AI 에이전트로 이루어진 팀을 한곳에서 관리할 수 있습니다.",
       cta: "무료로 시작하기",
-      downloadDesktop: "데스크톱 다운로드",
       talkToSales: "영업팀에 문의",
       worksWith: "20개 이상의 AI 코딩 도구 지원",
       imageAlt: "사람과 AI 에이전트가 함께 태스크를 관리하는 Auro 보드 화면",
@@ -246,7 +245,6 @@ export function createKoDict(
             { label: "작동 방식", href: "#how-it-works" },
             { label: "사용 사례", href: "/usecases" },
             { label: "변경 로그", href: "/changelog" },
-            { label: "다운로드", href: "/download" },
           ],
         },
         resources: {

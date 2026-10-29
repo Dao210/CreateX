@@ -28,7 +28,6 @@ export function createJaDict(
       subheading:
         "Auro は、コーディングエージェントを本物のチームメンバーに変える、ソースコード公開型のプラットフォームです。タスクを割り当て、進捗を追い、ノウハウをスキルとして積み上げる。人間と AI エージェントから成るチームを、ひとつの場所で管理できます。",
       cta: "無料トライアルを始める",
-      downloadDesktop: "デスクトップ版をダウンロード",
       talkToSales: "営業に相談する",
       worksWith: "20+ の AI コーディングツールに対応",
       imageAlt: "人間と AI エージェントがタスクを管理する Auro のボード画面",
@@ -247,7 +246,6 @@ export function createJaDict(
             { label: "仕組み", href: "#how-it-works" },
             { label: "ユースケース", href: "/usecases" },
             { label: "変更履歴", href: "/changelog" },
-            { label: "ダウンロード", href: "/download" },
           ],
         },
         resources: {

@@ -3,6 +3,8 @@ package profiling
 import (
 	"net/http"
 	httppprof "net/http/pprof"
+	"os"
+	"strings"
 	"time"
 )
 
@@ -20,8 +22,12 @@ func NewHandler() http.Handler {
 }
 
 func NewServer() *http.Server {
+	addr := strings.TrimSpace(os.Getenv("AURO_PPROF_ADDR"))
+	if addr == "" {
+		addr = Addr
+	}
 	return &http.Server{
-		Addr:              Addr,
+		Addr:              addr,
 		Handler:           NewHandler(),
 		ReadHeaderTimeout: 5 * time.Second,
 		IdleTimeout:       30 * time.Second,

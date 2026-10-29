@@ -385,8 +385,8 @@ function OnboardingStepFlow({
       {/* Step 3 has two paths:
             - Desktop (no cliInstructions slot) drives the local daemon's
               runtime list directly.
-            - Web offers Download / CLI / Cloud; under the CLI path it embeds
-              the live probe, and Cloud is a soft exit via the waitlist. */}
+            - Web offers CLI connection steps with a live probe and a
+              static Cloud preview. */}
       {step === "runtime" &&
         workspace &&
         (!runtimeInstructions ? (
