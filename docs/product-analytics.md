@@ -8,7 +8,7 @@ unconfigured deployments send no events unless explicitly configured.
 ```dotenv
 POSTHOG_API_KEY=<project token>
 POSTHOG_HOST=https://us.i.posthog.com
-POSTHOG_PUBLIC_HOST=/api/collect
+POSTHOG_PUBLIC_HOST=https://weavea.world/api/collect
 ANALYTICS_ENVIRONMENT=production
 ANALYTICS_DISABLED=false
 ```
@@ -19,6 +19,8 @@ Application cookies and authorization headers are not forwarded. The browser
 receives the public token and browser host through `/api/config`; Go sends
 directly to `POSTHOG_HOST`. This proxy still sends data to US Cloud; it does
 not change data residency or guarantee reachability on every user network.
+Use an absolute public host so installed Desktop clients resolve ingestion
+against the deployed gateway rather than their renderer's local origin.
 The gateway refreshes upstream DNS through the host's systemd-resolved stub.
 It accepts `CF-Connecting-IP` for analytics only when the connection comes from
 Cloudflare's published ranges; direct connections use their peer address.
@@ -65,6 +67,9 @@ Never add chat text, prompts, passwords, codes, raw drafts or full URLs to
 events. Config responses pass through the shared analytics zod schema.
 
 ## Dashboards and definitions
+
+Versioned query definitions live in [analytics/](analytics/). Saving and
+validating them in the PostHog project is a separate control-plane operation.
 
 Filter all production reports to `environment = production` and exclude
 `is_test = true`. Use Asia/Shanghai as the reporting timezone.

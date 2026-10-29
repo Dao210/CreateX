@@ -17,6 +17,10 @@ func TestPublicHostFromEnv(t *testing.T) {
 	if got := PublicHostFromEnv(); got != "/api/collect" {
 		t.Fatalf("public host = %q", got)
 	}
+	t.Setenv("POSTHOG_PUBLIC_HOST", "https://weavea.world/api/collect")
+	if got := PublicHostFromEnv(); got != "https://weavea.world/api/collect" {
+		t.Fatalf("desktop-safe public host = %q", got)
+	}
 	t.Setenv("POSTHOG_PUBLIC_HOST", "")
 	t.Setenv("POSTHOG_HOST", "https://eu.i.posthog.com")
 	if got := PublicHostFromEnv(); got != "https://eu.i.posthog.com" {
