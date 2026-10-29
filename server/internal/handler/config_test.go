@@ -60,6 +60,7 @@ func TestGetConfigIncludesRuntimeAuthConfig(t *testing.T) {
 	t.Setenv("GOOGLE_CLIENT_ID", "google-client-id")
 	t.Setenv("POSTHOG_API_KEY", "phc_test")
 	t.Setenv("POSTHOG_HOST", "https://eu.i.posthog.com")
+	t.Setenv("POSTHOG_PUBLIC_HOST", "")
 	t.Setenv("AURO_DAEMON_SERVER_URL", "")
 	t.Setenv("AURO_PUBLIC_URL", "https://api.example.com/")
 	t.Setenv("AURO_APP_URL", "https://app.example.com/")

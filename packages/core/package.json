@@ -155,6 +155,7 @@
     "./drafts/*": "./drafts/*.ts",
     "./shortcuts": "./shortcuts/index.ts",
     "./analytics": "./analytics/index.ts",
+    "./analytics/config": "./analytics/config.ts",
     "./diagnostics": "./diagnostics/index.ts",
     "./client-usage": "./client-usage/index.ts",
     "./i18n": "./i18n/index.ts",

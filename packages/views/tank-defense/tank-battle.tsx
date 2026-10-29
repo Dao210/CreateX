@@ -7,6 +7,7 @@ import type { StorageAdapter } from "@auro/core/types";
 import { TankProgressSync } from "./tank-progress-sync";
 import { TankDefenseGame, TANK_LEVELS, TANK_DIFFICULTIES, parseTankPreferences, type TankDirection, type TankSnapshot, type TankBlueprint, type TankMode, type TankLevel, type TankDifficulty } from "@auro/core/tank-defense";
 import { GameSound } from "../common/game-sound";
+import { useBattleTelemetry, useGameOpened } from "../common/game-analytics";
 import { useT } from "../i18n";
 import { PageHeader } from "../layout/page-header";
 import { paintTankBattle } from "./painter";
@@ -33,6 +34,8 @@ export function TankBattle({ storage, storageKey, workspaceId, blueprint, levelI
   });
   const [game, setGame] = useState(() => new TankDefenseGame(TANK_LEVELS[levelIndex]!, { playerBlueprint: blueprint, mode: initialMode, difficulty: preferences.difficulty }));
   const [snapshot, setSnapshot] = useState<TankSnapshot>(() => game.snapshot());
+  useGameOpened("tanks", workspaceId, game.mode);
+  useBattleTelemetry(game, { game: "tanks", workspace_id: workspaceId ?? "", mode: game.mode, level_id: game.level.id, difficulty: game.difficulty }, snapshot.phase, snapshot.paused);
   const root = useRef<HTMLElement>(null), canvas = useRef<HTMLCanvasElement>(null);
   const audio = useRef<GameSound | null>(null);
   const held = useRef<string[]>([]), touchDirection = useRef<TankDirection | null>(null), touchFire = useRef(false);

@@ -31,11 +31,11 @@ export function ReachLanding({ locale }: { locale: SupportedLocale }) {
               {brand.intro}
             </p>
             <div className="mt-6 flex flex-wrap items-center gap-x-3 gap-y-3">
-              <Link href="#create" className={heroButtonClassName("solid")}>
+              <Link href="#create" data-analytics-cta="hero_play" className={heroButtonClassName("solid")}>
                 {brand.play}
                 <ArrowRight className="size-4" aria-hidden />
               </Link>
-              <Link href="#world" className={heroButtonClassName("ghost")}>
+              <Link href="#world" data-analytics-cta="hero_world" className={heroButtonClassName("ghost")}>
                 {brand.world}
               </Link>
               <span className="text-[13px] text-white/48">{copy.note}</span>
@@ -161,7 +161,7 @@ function CreateSection({
           <SpecCard label={character.label} name={character.name} lines={character.lines} />
         </div>
         <div className="mt-8">
-          <Link href="#connect" className={heroButtonClassName("ghost")}>
+          <Link href="#connect" data-analytics-cta="create_connect" className={heroButtonClassName("ghost")}>
             {cta}
             <ArrowRight className="size-4" aria-hidden />
           </Link>
@@ -269,7 +269,7 @@ function Closing({ line, cta }: { line: string; cta: string }) {
         <h2 className="max-w-[14ch] text-[2rem] font-semibold leading-[1.1] tracking-[-0.03em] text-[#E8E1D5] sm:text-[2.6rem]">
           {line}
         </h2>
-        <Link href="#create" className={heroButtonClassName("solid")}>
+        <Link href="#create" data-analytics-cta="closing_play" className={heroButtonClassName("solid")}>
           {cta}
           <ArrowRight className="size-4" aria-hidden />
         </Link>

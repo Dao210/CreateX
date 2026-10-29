@@ -10,6 +10,28 @@ import (
 	"time"
 )
 
+func TestPublicHostFromEnv(t *testing.T) {
+	t.Setenv("POSTHOG_API_KEY", "test")
+	t.Setenv("POSTHOG_HOST", "https://us.i.posthog.com")
+	t.Setenv("POSTHOG_PUBLIC_HOST", "/api/collect")
+	if got := PublicHostFromEnv(); got != "/api/collect" {
+		t.Fatalf("public host = %q", got)
+	}
+	t.Setenv("POSTHOG_PUBLIC_HOST", "")
+	t.Setenv("POSTHOG_HOST", "https://eu.i.posthog.com")
+	if got := PublicHostFromEnv(); got != "https://eu.i.posthog.com" {
+		t.Fatalf("direct host = %q", got)
+	}
+	t.Setenv("POSTHOG_HOST", "")
+	if got := PublicHostFromEnv(); got != "https://us.i.posthog.com" {
+		t.Fatalf("default host = %q", got)
+	}
+	t.Setenv("POSTHOG_API_KEY", "")
+	if got := PublicHostFromEnv(); got != "" {
+		t.Fatalf("disabled host = %q", got)
+	}
+}
+
 func TestPostHogClient_Batching(t *testing.T) {
 	var (
 		mu       sync.Mutex

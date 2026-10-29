@@ -38,14 +38,9 @@ const EventSchemaVersion = 2
 // shipped to PostHog. metrics.RecordEvent consults this set and skips the
 // PostHog Capture for these names while still incrementing the counter.
 //
-// As of MUL-4127, PostHog is no longer used for server-side product analytics:
-// the acquisition / activation / expansion funnel is now read straight from the
-// operational database and from these Grafana counters, so the redundant
-// PostHog copy of every product event was retired. That makes ALL server-side
-// events metrics-only — both the product-behaviour group and the original
-// high-volume runtime/autopilot telemetry are Prometheus-only. PostHog now only
-// receives frontend error/crash telemetry ($exception, client_crash,
-// client_unresponsive); see packages/core/analytics.
+// Signup and onboarding_completed also ship to PostHog for the game funnel.
+// Other existing server events remain metrics-only. Frontend page and game
+// events are captured by packages/core/analytics.
 //
 // Note: agent_task_* lifecycle events are also Prometheus-only, but their
 // Prometheus side is handled by typed BusinessMetrics.RecordTask* methods, so
@@ -54,7 +49,6 @@ const EventSchemaVersion = 2
 var metricsOnlyEvents = map[string]struct{}{
 	// Product-behaviour events — DB + Grafana are the source of truth
 	// (MUL-4127); the PostHog copy was redundant.
-	EventSignup:                        {},
 	EventWorkspaceCreated:              {},
 	EventIssueCreated:                  {},
 	EventIssueExecuted:                 {},
@@ -65,7 +59,6 @@ var metricsOnlyEvents = map[string]struct{}{
 	EventOnboardingQuestionnaireSubmit: {},
 	EventOnboardingSourceSubmit:        {},
 	EventAgentCreated:                  {},
-	EventOnboardingCompleted:           {},
 	EventCloudWaitlistJoined:           {},
 	EventFeedbackSubmitted:             {},
 	EventContactSalesSubmitted:         {},
@@ -83,8 +76,7 @@ var metricsOnlyEvents = map[string]struct{}{
 }
 
 // IsMetricsOnly reports whether an event name is recorded to Prometheus but must
-// not be sent to PostHog. As of MUL-4127 this is true for every server-side
-// event. See metricsOnlyEvents.
+// not be sent to PostHog. See metricsOnlyEvents.
 func IsMetricsOnly(name string) bool {
 	_, ok := metricsOnlyEvents[name]
 	return ok
@@ -152,7 +144,6 @@ func Signup(userID, email, signupSource string) Event {
 			"signup_source": signupSource,
 		},
 		SetOnce: map[string]any{
-			"email":         email,
 			"signup_source": signupSource,
 		},
 	}

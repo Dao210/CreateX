@@ -1,4 +1,5 @@
 import type { SiegeClient } from "@auro/core/siege";
+import { useGameOpened } from "../common/game-analytics";
 import { createSiegeClient, siegeKeys, siegeLibraryOptions, siegeSessionOptions, siegeStatusOptions, type SiegeScope } from "@auro/core/siege/queries";
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -65,6 +66,7 @@ export interface SiegeWorkshopProps {
 }
 
 export function SiegeWorkshop({ platform, scope }: SiegeWorkshopProps) {
+  useGameOpened("siege", scope.workspaceId, "workshop");
   // The transport comes from the platform: /api/siege is workspace-scoped, so
   // the host has to contribute the workspace slug and its own credential.
   const { workspaceId, workspaceSlug, userId } = scope;
@@ -324,7 +326,7 @@ export function SiegeWorkshop({ platform, scope }: SiegeWorkshopProps) {
       </section>
       <section className="arena-panel" aria-labelledby="arena-title"><div className="panel-heading"><div><span className="step-number">02</span><h2 id="arena-title">让设计上场</h2></div>
         <span className="arena-tag">{mode === "practice" ? "TEST ARENA" : "CASTLE DEFENSE"}</span></div>
-        <div className="arena-paper"><Arena definition={runningDefinition} run={run} mode={mode} paused={paused} onPause={() => setPaused(true)} collisions={collisions} onStats={setStats} onError={code => setError(messages[code] ?? code)} assetUrl={platform.assetUrl} />
+        <div className="arena-paper"><Arena definition={runningDefinition} run={run} mode={mode} paused={paused} onPause={() => setPaused(true)} collisions={collisions} onStats={setStats} onError={code => setError(messages[code] ?? code)} assetUrl={platform.assetUrl} workspaceId={scope.workspaceId} />
           {!run && <div className="arena-empty"><Crosshair /><span>你的第一道防线，<br />即将在这里动起来。</span></div>}</div>
         <div className="arena-actions"><Button size="lg" disabled={!compiled.definition} onClick={start}><Play />{mode === "defense" ? run ? "重新守城" : "开始守城" : run ? "重新测试" : "开始测试"}<ArrowRight /></Button>
           <Button variant="outline" disabled={!run || stats.phase === "finished"} onClick={() => setPaused(value => !value)}>{paused ? <Play /> : <Pause />}{paused ? "继续" : "暂停"}</Button>

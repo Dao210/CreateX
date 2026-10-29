@@ -97,6 +97,20 @@ func isDisabled() bool {
 	return v == "true" || v == "1"
 }
 
+// PublicHostFromEnv separates browser proxy routing from server ingestion.
+func PublicHostFromEnv() string {
+	if host := os.Getenv("POSTHOG_PUBLIC_HOST"); host != "" {
+		return host
+	}
+	if host := os.Getenv("POSTHOG_HOST"); host != "" {
+		return host
+	}
+	if os.Getenv("POSTHOG_API_KEY") != "" {
+		return "https://us.i.posthog.com"
+	}
+	return ""
+}
+
 func EnvironmentFromEnv() string {
 	if v := normalizeEnvironment(os.Getenv("ANALYTICS_ENVIRONMENT")); v != "" {
 		return v
