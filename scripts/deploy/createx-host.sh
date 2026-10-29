@@ -135,6 +135,7 @@ locations() {
         proxy_ssl_server_name on;
         proxy_ssl_name us-assets.i.posthog.com;
         proxy_ssl_verify on;
+        proxy_ssl_verify_depth 3;
         proxy_ssl_trusted_certificate /etc/ssl/certs/ca-certificates.crt;
         proxy_pass_request_headers off;
         proxy_set_header Host us-assets.i.posthog.com;
@@ -146,6 +147,7 @@ locations() {
         proxy_ssl_server_name on;
         proxy_ssl_name us-assets.i.posthog.com;
         proxy_ssl_verify on;
+        proxy_ssl_verify_depth 3;
         proxy_ssl_trusted_certificate /etc/ssl/certs/ca-certificates.crt;
         proxy_pass_request_headers off;
         proxy_set_header Host us-assets.i.posthog.com;
@@ -157,6 +159,7 @@ locations() {
         proxy_ssl_server_name on;
         proxy_ssl_name us.i.posthog.com;
         proxy_ssl_verify on;
+        proxy_ssl_verify_depth 3;
         proxy_ssl_trusted_certificate /etc/ssl/certs/ca-certificates.crt;
         proxy_pass_request_headers off;
         proxy_set_header Host us.i.posthog.com;
