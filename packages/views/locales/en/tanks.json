@@ -186,5 +186,13 @@
   "exit_fullscreen": "Exit full screen",
   "fullscreen_unavailable": "Full screen is unavailable in this browser",
   "fullscreen_error": "Could not enter full screen. Try again or allow full screen in your browser.",
-  "friendly_fire_safe": "Your shells cannot damage the base."
+  "friendly_fire_safe": "Your shells cannot damage the base.",
+  "forms": {
+    "basic": "Basic",
+    "enhanced": "Enhanced",
+    "siege": "Siege"
+  },
+  "fortify_timer": "Base fortification countdown",
+  "fortify_time": "Steel fortification · {{seconds}}s",
+  "base_damaged": "Base damaged"
 }

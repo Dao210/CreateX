@@ -38,6 +38,8 @@
 .tank-hud-bar > span { display: inline-flex; align-items: center; gap: 5px; }
 .tank-hud-bar > strong { font-weight: 500; color: #efd18b; }
 .tank-hud-bar .tank-time-critical { color: #ffb59c; }
+.tank-hud-bar .tank-fortify-timer { color: #c4dbe3; }
+.tank-hud-bar .tank-fortify-timer.tank-time-critical { color: #ffc078; }
 .tank-hud-bar .tank-hud-spacer { flex: 1; }
 .tank-hud-bar .tank-base-safe { color: #c5d3a6; }.tank-hud-bar .tank-base-lost { color: #e5a18b; }
 .tank-hud-bar > button { color: #c6ccb6; min-height: 30px; font-size: var(--text-caption); }
@@ -52,6 +54,7 @@
 .tank-enemy-heading { display: flex; justify-content: space-between; align-items: baseline; font-size: var(--text-caption); }.tank-enemy-heading strong { font: 650 var(--text-title-lg) var(--tank-font-mono); }.tank-enemy-heading small { font-size: var(--text-micro); color: var(--muted-foreground); }
 .tank-enemy-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 8px 6px; margin: 13px 0 20px; }.tank-enemy-grid svg { width: 14px; height: 17px; color: var(--muted-foreground); }.tank-enemy-grid .eliminated { color: var(--border); }
 .tank-power { display: flex; align-items: center; gap: 10px; font-size: var(--text-caption); }.tank-power > span { display: flex; align-items: center; gap: 5px; }.tank-power > div { display: flex; flex: 1; gap: 4px; }.tank-power > div > span { height: 4px; flex: 1; background: var(--muted); }.tank-power > div > span.active { background: var(--foreground); }.tank-power strong { font: var(--text-label) var(--tank-font-mono); }
+.tank-status-panel > .tank-form-name { margin-top: 7px; text-align: right; font-size: var(--text-micro); }
 .tank-map-select { padding-top: 20px; border-top: 1px solid var(--border); }.tank-map-select > .tank-panel-label { margin-bottom: 10px; }
 .tank-map-select > button { width: 100%; padding: 11px 9px; display: flex; align-items: center; gap: 11px; text-align: left; border: 1px solid transparent; border-radius: 4px; color: var(--muted-foreground); background: transparent; cursor: pointer; }
 .tank-map-select > button:hover:not(:disabled) { background: var(--surface-hover); }.tank-map-select > button.selected { background: var(--surface-selected); border-color: var(--border); color: var(--foreground); box-shadow: inset 2px 0 var(--foreground); }.tank-map-select > button.selected:hover:not(:disabled) { background: var(--surface-selected); border-color: var(--foreground); }

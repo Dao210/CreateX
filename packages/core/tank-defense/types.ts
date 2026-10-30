@@ -16,12 +16,12 @@ export interface TankActor extends TankPoint {
 }
 export interface TankBullet extends TankPoint { id: number; owner: number; team: TankActor["team"]; direction: TankDirection; speed: number; power: number; alive: boolean }
 export interface TankPickup extends TankPoint { id: number; kind: PickupKind; expire: number }
-export interface TankEffect extends TankPoint { kind: "spark" | "explosion" | "blast" | "spawn"; tick: number }
+export interface TankEffect extends TankPoint { kind: "spark" | "explosion" | "blast" | "spawn" | "upgrade"; tick: number }
 export type TankCue = "shot" | "hit" | "gold" | "upgrade" | "leak" | "victory" | "defeat";
 export interface TankSnapshot {
   difficulty: TankDifficulty; maxLives: number; baseHP: number; maxBaseHP: number; playerHP: number; maxPlayerHP: number;
   mode: TankMode; wave: number; waveKills: number; waveTotal: number; intermission: number; timeLeft: number | null; combo: number; stunned: boolean;
   phase: TankPhase; paused: boolean; tick: number; score: number; lives: number; kills: number; total: number;
-  remaining: number; activeEnemies: number; baseAlive: boolean; power: number; shield: boolean; respawning: boolean;
+  remaining: number; activeEnemies: number; baseAlive: boolean; fortifyTicks: number; power: number; shield: boolean; respawning: boolean;
   playerPosition: TankPoint | null; shots: number; destroyedBricks: number; defeatReason: "base" | "lives" | "time" | null;
 }

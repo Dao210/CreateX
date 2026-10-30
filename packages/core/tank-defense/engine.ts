@@ -12,6 +12,7 @@ const directions: TankDirection[] = ["up", "right", "down", "left"];
 const vector: Record<TankDirection, TankPoint> = { up: { x: 0, y: -1 }, right: { x: 1, y: 0 }, down: { x: 0, y: 1 }, left: { x: -1, y: 0 } };
 const HALF = 14;
 export const TANK_BLITZ_TICKS = 90 * 60;
+export const TANK_FORTIFY_TICKS = 10 * 60;
 export const TANK_PULSE_PERIOD = 360;
 export function tankPulsePhase(tick: number, offset: number): "safe" | "warning" | "active" {
   const phase = (tick + offset) % TANK_PULSE_PERIOD;
@@ -326,11 +327,14 @@ export class TankDefenseGame {
   }
   private collect(pickup: TankPickup) {
     this.score += 250; this.cue("upgrade");
-    if (pickup.kind === "star") this.power = Math.min(2, this.power + 1);
+    if (pickup.kind === "star" && this.power < 2) {
+      this.power++;
+      if (this.player) this.effect(this.player, "upgrade");
+    }
     if (pickup.kind === "shield" && this.player) this.player.invincibleUntil = this.tick + 600;
     if (pickup.kind === "bomb") for (const enemy of [...this.tanks]) if (enemy.team === "enemy") this.destroyEnemy(enemy, false);
     if (pickup.kind === "fortify") {
-      this.fortifyUntil = this.tick + 600;
+      this.fortifyUntil = this.tick + TANK_FORTIFY_TICKS;
       for (const cell of BASE_WALLS) {
         const center = { x: cell % 26 * 20 + 10, y: Math.floor(cell / 26) * 20 + 10 };
         if (!this.tanks.some(actor => overlaps(actor, center, HALF + 10))) this.terrain[cell] = "steel";
@@ -395,7 +399,7 @@ export class TankDefenseGame {
       timeLeft: this.mode === "blitz" ? Math.max(0, Math.ceil((TANK_BLITZ_TICKS - this.tick) / 60)) : null,
       combo: this.tick - this.lastKillAt <= 240 ? this.combo : 0, stunned: !!this.player && this.tick < this.player.stunnedUntil,
       phase: this.phase, paused: this.paused, tick: this.tick, score: this.score, lives: this.lives, kills: this.kills, total: this.roster.length, remaining: this.roster.length - this.waveKills,
-      activeEnemies: this.tanks.filter(t => t.team === "enemy").length, baseAlive: this.baseAlive, power: this.power, shield: !!this.player && this.player.invincibleUntil > this.tick, respawning: !this.player && this.lives > 0,
+      activeEnemies: this.tanks.filter(t => t.team === "enemy").length, baseAlive: this.baseAlive, fortifyTicks: Math.max(0, this.fortifyUntil - this.tick), power: this.power, shield: !!this.player && this.player.invincibleUntil > this.tick, respawning: !this.player && this.lives > 0,
       playerPosition: this.player ? { x: this.player.x, y: this.player.y } : null, shots: this.shots, destroyedBricks: this.destroyedBricks, defeatReason: this.defeatReason };
   }
 }

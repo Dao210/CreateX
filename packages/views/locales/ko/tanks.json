@@ -186,5 +186,13 @@
   "exit_fullscreen": "전체 화면 종료",
   "fullscreen_unavailable": "이 브라우저는 전체 화면을 지원하지 않습니다",
   "fullscreen_error": "전체 화면으로 전환할 수 없습니다. 다시 시도하거나 브라우저에서 허용하세요.",
-  "friendly_fire_safe": "아군 포탄은 기지를 손상시키지 않습니다."
+  "friendly_fire_safe": "아군 포탄은 기지를 손상시키지 않습니다.",
+  "forms": {
+    "basic": "기본형",
+    "enhanced": "강화형",
+    "siege": "공성형"
+  },
+  "fortify_timer": "기지 강화 남은 시간",
+  "fortify_time": "강철 요새화 · {{seconds}}초",
+  "base_damaged": "기지 손상"
 }

@@ -142,6 +142,8 @@ export function TankBattle({ storage, storageKey, workspaceId, blueprint, levelI
   const selectedMode = modes.find(value => value.mode === game.mode)!;
   const difficulties = (["casual", "standard"] as const).map(difficulty => ({ difficulty, name: t($ => $.difficulties[difficulty].name), note: t($ => $.difficulties[difficulty].note) }));
   const selectedDifficulty = difficulties.find(value => value.difficulty === game.difficulty)!;
+  const form = snapshot.power >= 2 ? "siege" : snapshot.power >= 1 ? "enhanced" : "basic";
+  const fortifySeconds = Math.ceil(snapshot.fortifyTicks / 60);
   const inBattle = snapshot.phase === "running";
   const equipment = [
     { kind: "barrel", name: t($ => $.barrel), help: t($ => $.barrel_help) },
@@ -194,7 +196,7 @@ export function TankBattle({ storage, storageKey, workspaceId, blueprint, levelI
             <span><Shield size={13} aria-hidden />{t($ => $.armor)} {snapshot.playerHP}/{snapshot.maxPlayerHP}</span>
           </div>
           <div className="tank-screen-shell"><div className="tank-screen">
-            <canvas ref={canvas} width={1040} height={1040} tabIndex={0} aria-label={t($ => $.battlefield)} data-testid="tank-battlefield" data-character-id={game.player?.blueprint.id ?? ""} data-player-speed={game.player?.blueprint.speed ?? ""} data-player-armor={game.player?.blueprint.armor ?? ""} data-difficulty={snapshot.difficulty} data-lives={snapshot.lives} data-player-hp={snapshot.playerHP} data-base-hp={snapshot.baseHP} data-mode={snapshot.mode} data-wave={snapshot.wave} data-time-left={snapshot.timeLeft ?? ""} data-phase={snapshot.phase} data-paused={snapshot.paused} data-player-x={snapshot.playerPosition?.x.toFixed(2) ?? ""} data-player-y={snapshot.playerPosition?.y.toFixed(2) ?? ""} data-shots={snapshot.shots} data-bricks={snapshot.destroyedBricks}>{t($ => $.ready_help, { lives: snapshot.maxLives })}</canvas>
+            <canvas ref={canvas} width={1040} height={1040} tabIndex={0} aria-label={t($ => $.battlefield)} data-testid="tank-battlefield" data-character-id={game.player?.blueprint.id ?? ""} data-player-speed={game.player?.blueprint.speed ?? ""} data-player-armor={game.player?.blueprint.armor ?? ""} data-power={snapshot.power} data-fortify-ticks={snapshot.fortifyTicks} data-difficulty={snapshot.difficulty} data-lives={snapshot.lives} data-player-hp={snapshot.playerHP} data-base-hp={snapshot.baseHP} data-mode={snapshot.mode} data-wave={snapshot.wave} data-time-left={snapshot.timeLeft ?? ""} data-phase={snapshot.phase} data-paused={snapshot.paused} data-player-x={snapshot.playerPosition?.x.toFixed(2) ?? ""} data-player-y={snapshot.playerPosition?.y.toFixed(2) ?? ""} data-shots={snapshot.shots} data-bricks={snapshot.destroyedBricks}>{t($ => $.ready_help, { lives: snapshot.maxLives })}</canvas>
             {(snapshot.phase === "ready" || snapshot.paused || finished) && <div className={"tank-overlay " + (snapshot.phase === "defeat" ? "tank-overlay-defeat" : "")}>
               <div className="tank-overlay-card">
                 <div className="tank-overlay-emblem" aria-hidden>{snapshot.phase === "defeat" ? <Flag /> : snapshot.paused ? <Pause /> : <Shield />}</div>
@@ -214,7 +216,8 @@ export function TankBattle({ storage, storageKey, workspaceId, blueprint, levelI
             {snapshot.timeLeft !== null && <strong role="timer" className={snapshot.timeLeft <= 15 ? "tank-time-critical" : ""}>{t($ => $.time_left, { seconds: snapshot.timeLeft })}</strong>}
             {snapshot.intermission > 0 ? <strong aria-live="polite">{t($ => $.next_wave, { seconds: snapshot.intermission })}</strong> : snapshot.combo > 1 && <strong>{t($ => $.combo, { count: snapshot.combo })}</strong>}
             <span className="tank-hud-spacer" />
-            <span className={snapshot.baseAlive ? "tank-base-safe" : "tank-base-lost"}><Shield size={14} />{snapshot.baseAlive ? t($ => $.base_safe) : t($ => $.base_lost)} {snapshot.baseHP}/{snapshot.maxBaseHP}</span>
+            <span className={snapshot.baseAlive ? "tank-base-safe" : "tank-base-lost"}><Shield size={14} />{!snapshot.baseAlive ? t($ => $.base_lost) : snapshot.baseHP < snapshot.maxBaseHP ? t($ => $.base_damaged) : t($ => $.base_safe)} {snapshot.baseHP}/{snapshot.maxBaseHP}</span>
+            {snapshot.baseAlive && fortifySeconds > 0 && <strong role="timer" aria-label={t($ => $.fortify_timer)} className={fortifySeconds <= 3 ? "tank-fortify-timer tank-time-critical" : "tank-fortify-timer"}>{t($ => $.fortify_time, { seconds: fortifySeconds })}</strong>}
             <span>{snapshot.respawning ? t($ => $.respawn) : snapshot.stunned ? t($ => $.stunned) : snapshot.shield ? t($ => $.shielded) : t($ => $.protect_base)}</span>
             <Button variant="ghost" size="sm" disabled={snapshot.phase !== "running"} onClick={pause}>{snapshot.paused ? <Play /> : <Pause />}{snapshot.paused ? t($ => $.resume) : t($ => $.pause)}</Button>
           </div>
@@ -243,6 +246,7 @@ export function TankBattle({ storage, storageKey, workspaceId, blueprint, levelI
             <div className="tank-enemy-heading"><span>{t($ => $.remaining)}</span><strong data-testid="tank-remaining">{snapshot.remaining}<small>{` / ${snapshot.total}`}</small></strong></div>
             <div className="tank-enemy-grid" aria-label={t($ => $.remaining)}>{Array.from({ length: snapshot.total }, (_, i) => <svg key={i} viewBox="0 0 16 18" aria-hidden className={i < snapshot.waveKills ? "eliminated" : ""}><path d="M1 4h3v13H1zm11 0h3v13h-3zM5 5h6v11H5zM7 0h2v10H7z" fill="currentColor" /></svg>)}</div>
             <div className="tank-power"><span><Sparkles size={14} />{t($ => $.power)}</span><div>{[0, 1, 2].map(value => <span key={value} className={value <= snapshot.power ? "active" : ""} />)}</div><strong>{snapshot.power + 1}</strong></div>
+            <p className="tank-form-name" role="status">{t($ => $.forms[form])}</p>
           </section>
           {garage}
           <section className="tank-map-select">

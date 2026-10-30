@@ -186,5 +186,13 @@
   "exit_fullscreen": "Quitter le plein écran",
   "fullscreen_unavailable": "Plein écran indisponible dans ce navigateur",
   "fullscreen_error": "Impossible de passer en plein écran. Réessayez ou autorisez-le dans le navigateur.",
-  "friendly_fire_safe": "Vos obus ne blessent pas la base."
+  "friendly_fire_safe": "Vos obus ne blessent pas la base.",
+  "forms": {
+    "basic": "Standard",
+    "enhanced": "Amélioré",
+    "siege": "Siège"
+  },
+  "fortify_timer": "Temps de fortification de la base",
+  "fortify_time": "Fortification en acier · {{seconds}} s",
+  "base_damaged": "Base endommagée"
 }

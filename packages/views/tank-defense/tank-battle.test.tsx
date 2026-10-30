@@ -96,7 +96,7 @@ describe("tank battle operations", () => {
 
 });
 
-describe("tank battlefield keyboard input", () => {
+describe("live tank battlefield", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({} as CanvasRenderingContext2D);
@@ -107,6 +107,30 @@ describe("tank battlefield keyboard input", () => {
     cleanup();
     vi.useRealTimers();
     vi.restoreAllMocks();
+  });
+
+  it("shows the upgraded form and a fortification timer that pauses, warns and disappears", () => {
+    const { storage } = records(); renderWithI18n(<TankBattle storage={storage} storageKey="fixture" />);
+    expect(screen.getByRole("status")).toHaveTextContent("Enhanced");
+    fireEvent.click(screen.getByRole("button", { name: "Start defense" }));
+    act(() => vi.advanceTimersByTime(100));
+    const game = vi.mocked(painter.paintTankBattle).mock.calls.at(-1)![1];
+    game.pickups.push({ ...game.player!, id: 1000, kind: "star", expire: 1000 }, { ...game.player!, id: 1001, kind: "fortify", expire: 1000 });
+    act(() => vi.advanceTimersByTime(100));
+    expect(screen.getByRole("status")).toHaveTextContent("Siege");
+    const timer = screen.getByRole("timer", { name: "Base fortification countdown" });
+    expect(timer).toHaveTextContent("Steel fortification · 10s");
+    game.bullets.push({ id: 1002, owner: 1003, team: "enemy", x: 260, y: 480, direction: "down", speed: 300, power: 0, alive: true });
+    act(() => vi.advanceTimersByTime(100));
+    expect(screen.getByText("Base damaged 2/3")).toBeInTheDocument();
+    act(() => vi.advanceTimersByTime(7100));
+    expect(timer).toHaveClass("tank-time-critical");
+    fireEvent.click(screen.getByRole("button", { name: "Pause" }));
+    const remaining = timer.textContent;
+    act(() => vi.advanceTimersByTime(3000)); expect(timer).toHaveTextContent(remaining!);
+    fireEvent.click(screen.getAllByRole("button", { name: "Resume" })[0]!);
+    act(() => vi.advanceTimersByTime(3200));
+    expect(screen.queryByRole("timer", { name: "Base fortification countdown" })).not.toBeInTheDocument();
   });
 
   it("consumes space on stage completion without advancing or carrying fire into the next stage", () => {

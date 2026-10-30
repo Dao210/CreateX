@@ -186,5 +186,13 @@
   "exit_fullscreen": "全画面を終了",
   "fullscreen_unavailable": "このブラウザーは全画面に対応していません",
   "fullscreen_error": "全画面にできませんでした。再試行するか、ブラウザーで許可してください。",
-  "friendly_fire_safe": "自分の弾は基地を傷つけません。"
+  "friendly_fire_safe": "自分の弾は基地を傷つけません。",
+  "forms": {
+    "basic": "基本型",
+    "enhanced": "強化型",
+    "siege": "攻城型"
+  },
+  "fortify_timer": "基地強化の残り時間",
+  "fortify_time": "鋼鉄強化 · {{seconds}}秒",
+  "base_damaged": "基地損傷"
 }

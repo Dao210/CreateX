@@ -119,6 +119,39 @@ describe("classic tank defense", () => {
     expect(BASE_WALLS.every(cell => level.terrain[cell] === "floor")).toBe(true);
   });
 
+  it("emits a transformation only when a star raises firepower and preserves the character", () => {
+    const blueprint = { ...PLAYER_TANK, appearance: { body: "#4f9a68", accent: "#d5ed99", pattern: "stripe" as const } };
+    const original = structuredClone(blueprint);
+    const game = new TankDefenseGame(arena(), { playerBlueprint: blueprint }); game.start();
+    for (let n = 0; n < 3; n++) {
+      game.pickups.push({ ...game.player!, id: 1000 + n, kind: "star", expire: 1000 }); game.step();
+    }
+    expect(game.power).toBe(2);
+    expect(game.effects.filter(effect => effect.kind === "upgrade")).toHaveLength(2);
+    expect(game.player!.blueprint).toEqual(original);
+    expect(blueprint).toEqual(original);
+  });
+
+  it("counts down fortification in game ticks, freezes on pause, refreshes and expires exactly", () => {
+    const level = arena({ deploymentDelay: 100000 });
+    const game = new TankDefenseGame(level); game.start();
+    const fortify = () => {
+      game.pickups.push({ ...game.player!, id: 1000, kind: "fortify", expire: game.tick + 2 }); game.step();
+    };
+    expect(game.snapshot().fortifyTicks).toBe(0);
+    fortify(); expect(game.snapshot().fortifyTicks).toBe(600);
+    advance(game, 420); expect(game.snapshot().fortifyTicks).toBe(180);
+    game.setPaused(true); advance(game, 120); expect(game.snapshot().fortifyTicks).toBe(180);
+    game.setPaused(false); advance(game, 120); expect(game.snapshot().fortifyTicks).toBe(60);
+    fortify(); expect(game.snapshot().fortifyTicks).toBe(600);
+    advance(game, 599); expect(game.snapshot().fortifyTicks).toBe(1);
+    expect(BASE_WALLS.every(cell => game.terrain[cell] === "steel")).toBe(true);
+    game.step(); expect(game.snapshot().fortifyTicks).toBe(0);
+    expect(BASE_WALLS.every(cell => game.terrain[cell] === "brick" && game.brickHP[cell] === 2)).toBe(true);
+    expect(BASE_WALLS.every(cell => level.terrain[cell] === "floor")).toBe(true);
+    expect(new TankDefenseGame(level).snapshot().fortifyTicks).toBe(0);
+  });
+
   it("a bomb clears active enemies but does not skip unspawned opponents", () => {
     const game = new TankDefenseGame(arena({ enemies: ["scout", "scout"] })); game.start(); advance(game, 30);
     game.pickups.push({ x: 180, y: 500, id: 1000, kind: "bomb", expire: 1000 }); game.step();

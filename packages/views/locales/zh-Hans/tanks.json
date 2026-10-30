@@ -186,5 +186,13 @@
   "exit_fullscreen": "退出全屏",
   "fullscreen_unavailable": "此浏览器不支持游戏全屏",
   "fullscreen_error": "无法进入全屏，请重试或在浏览器中允许全屏。",
-  "friendly_fire_safe": "自己的炮弹不会伤害基地。"
+  "friendly_fire_safe": "自己的炮弹不会伤害基地。",
+  "forms": {
+    "basic": "基础型",
+    "enhanced": "强化型",
+    "siege": "攻坚型"
+  },
+  "fortify_timer": "基地强化倒计时",
+  "fortify_time": "钢铁加固 · {{seconds}} 秒",
+  "base_damaged": "基地受损"
 }
