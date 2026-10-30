@@ -3,7 +3,7 @@ import { createJSONStorage, persist } from "zustand/middleware";
 import { arrayMove } from "@dnd-kit/sortable";
 import { createPersistStorage, defaultStorage } from "@auro/core/platform";
 import { createSafeId } from "@auro/core/utils";
-import { isReservedSlug } from "@auro/core/paths";
+import { isReservedSlug, paths } from "@auro/core/paths";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -374,7 +374,7 @@ function inboxSelectionKeyForUrl(url: string): string | null {
  *     was constructed without the workspace prefix. The router would
  *     interpret `issues` as a workspace slug → NoAccessPage.
  *
- * Normalizes: a bare `/{slug}` (no route segment) becomes `/{slug}/chat` —
+ * Normalizes: a bare `/{slug}` (no route segment) becomes `/{slug}/me` —
  * the workspace's default surface. This replaces the old in-router
  * `<Navigate to="issues">` index redirect (MUL-4741 invariant 1: the router
  * never self-navigates; URLs are normalized before they become sessions).
@@ -399,10 +399,10 @@ export function sanitizeTabPath(path: string): string | null {
     }
     return null;
   }
-  if (segments.length === 1) {
-    return `/${firstSegment}/chat${suffix}`;
-  }
   try {
+    if (segments.length === 1) {
+      return `${paths.workspace(decodeURIComponent(firstSegment)).root()}${suffix}`;
+    }
     if (["my-issues", "issues", "projects", "squads"].includes(decodeURIComponent(segments[1]).toLowerCase())) return null;
   } catch {
     return null;
@@ -437,14 +437,14 @@ function pinnedBoundary(tabs: TabSession[]): number {
   return i;
 }
 
-/** Default entry point for a workspace — its chat page. */
+/** Default entry point for a workspace — its personal game collection. */
 function defaultPathFor(slug: string): string {
-  return `/${slug}/chat`;
+  return paths.workspace(slug).root();
 }
 
 function defaultTabFor(slug: string): TabSession {
   const path = defaultPathFor(slug);
-  return makeSession(path, "Chat");
+  return makeSession(path, "My Space");
 }
 
 const BROWSING_HISTORY_MAX_ENTRIES = 100;
@@ -742,7 +742,9 @@ export const useTabStore = create<TabStore>()(
           // First time entering this workspace — create the group.
           const cleanDesired = desiredPath ? sanitizeTabPath(desiredPath) : null;
           const seedPath = cleanDesired ?? defaultPathFor(slug);
-          const tab = makeSession(seedPath, "Chat");
+          const tab = seedPath === defaultPathFor(slug)
+            ? defaultTabFor(slug)
+            : makeSession(seedPath, "");
           const nextGroup = withBrowsingVisit(
             reconcileGroup(null, [tab], tab.id),
             slug,

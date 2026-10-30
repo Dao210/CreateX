@@ -64,8 +64,8 @@ describe("sanitizeTabPath", () => {
   });
 
   it("normalizes a bare workspace url to its default surface (replaces the in-router index redirect)", () => {
-    expect(sanitizeTabPath("/acme")).toBe("/acme/chat");
-    expect(sanitizeTabPath("/acme?welcome=1")).toBe("/acme/chat?welcome=1");
+    expect(sanitizeTabPath("/acme")).toBe("/acme/me");
+    expect(sanitizeTabPath("/acme?welcome=1")).toBe("/acme/me?welcome=1");
   });
 });
 
@@ -154,15 +154,15 @@ describe("useTabStore actions", () => {
     const s = useTabStore.getState();
     expect(s.activeWorkspaceSlug).toBe("acme");
     expect(s.byWorkspace.acme.tabs).toHaveLength(1);
-    expect(s.byWorkspace.acme.tabs[0].url).toBe("/acme/chat");
-    expect(s.byWorkspace.acme.tabs[0].resourceKey).toBe("/acme/chat");
+    expect(s.byWorkspace.acme.tabs[0].url).toBe("/acme/me");
+    expect(s.byWorkspace.acme.tabs[0].resourceKey).toBe("/acme/me");
     expect(s.byWorkspace.acme.tabs[0].history).toEqual({
-      stack: ["/acme/chat"],
+      stack: ["/acme/me"],
       index: 0,
     });
-    expect(s.byWorkspace.acme.browsingHistory).toEqual(["/acme/chat"]);
+    expect(s.byWorkspace.acme.browsingHistory).toEqual(["/acme/me"]);
     expect(s.byWorkspace.acme.browsingHistoryTitles).toEqual({
-      "/acme/chat": "Chat",
+      "/acme/me": "My Space",
     });
   });
 
@@ -185,16 +185,16 @@ describe("useTabStore actions", () => {
 
   it("switchWorkspace with openPath dedupes into an existing tab with the same resourceKey", () => {
     const store = useTabStore.getState();
-    store.switchWorkspace("acme"); // creates default /acme/chat
+    store.switchWorkspace("acme"); // creates default /acme/me
     store.addTab("/acme/agents", "Projects");
 
-    store.switchWorkspace("acme", "/acme/chat");
+    store.switchWorkspace("acme", "/acme/me");
     const s = useTabStore.getState();
     expect(s.byWorkspace.acme.tabs).toHaveLength(2); // no duplicate created
     const activeTab = s.byWorkspace.acme.tabs.find(
       (t) => t.id === s.byWorkspace.acme.activeTabId,
     );
-    expect(activeTab?.url).toBe("/acme/chat");
+    expect(activeTab?.url).toBe("/acme/me");
   });
 
   it("records the URL of the tab actually restored by a cross-workspace open", () => {
@@ -241,42 +241,42 @@ describe("useTabStore actions", () => {
     store.navigateActiveSession("/acme/chat/issue-1");
     const firstTab = getActiveTab(useTabStore.getState())!;
 
-    const newTabId = store.addTab("/acme/chat", "Chat");
+    const newTabId = store.addTab("/acme/me", "My Space");
     store.setActiveTab(newTabId);
 
     const state = useTabStore.getState();
     const newTab = getActiveTab(state)!;
     expect(firstTab.history).toEqual({
-      stack: ["/acme/chat", "/acme/chat/issue-1"],
+      stack: ["/acme/me", "/acme/chat/issue-1"],
       index: 1,
     });
-    expect(newTab.history).toEqual({ stack: ["/acme/chat"], index: 0 });
+    expect(newTab.history).toEqual({ stack: ["/acme/me"], index: 0 });
     expect(state.byWorkspace.acme.browsingHistory).toEqual([
-      "/acme/chat",
+      "/acme/me",
       "/acme/chat/issue-1",
     ]);
 
     store.goBack();
-    expect(getActiveTab(useTabStore.getState())!.url).toBe("/acme/chat");
+    expect(getActiveTab(useTabStore.getState())!.url).toBe("/acme/me");
     expect(useTabStore.getState().byWorkspace.acme.browsingHistory).toEqual([
-      "/acme/chat",
+      "/acme/me",
       "/acme/chat/issue-1",
     ]);
   });
 
   it("openTab with a different query focuses the existing tab and keeps its url (RFC §8.2 semantic change)", () => {
     const store = useTabStore.getState();
-    store.switchWorkspace("acme"); // default tab at /acme/chat
+    store.switchWorkspace("acme"); // default tab at /acme/me
     const defaultTabId = useTabStore.getState().byWorkspace.acme.tabs[0].id;
 
-    const id = store.openTab("/acme/chat?filter=urgent", "Chat");
+    const id = store.openTab("/acme/me?filter=urgent", "My Space");
 
     const s = useTabStore.getState();
     expect(id).toBe(defaultTabId); // focused, not duplicated
     expect(s.byWorkspace.acme.tabs).toHaveLength(1);
     // The existing tab's own view state (url) wins; the incoming filter does
     // not overwrite it.
-    expect(s.byWorkspace.acme.tabs[0].url).toBe("/acme/chat");
+    expect(s.byWorkspace.acme.tabs[0].url).toBe("/acme/me");
   });
 
   describe("openTab insertion position (MUL-5860)", () => {
@@ -285,20 +285,20 @@ describe("useTabStore actions", () => {
 
     it("inserts the new tab immediately right of the active tab, not at the end", () => {
       const store = useTabStore.getState();
-      store.switchWorkspace("acme"); // A = /acme/chat, active
+      store.switchWorkspace("acme"); // A = /acme/me, active
       store.addTab("/acme/agents", "B");
       store.addTab("/acme/skills", "C");
-      expect(urls()).toEqual(["/acme/chat", "/acme/agents", "/acme/skills"]);
+      expect(urls()).toEqual(["/acme/me", "/acme/agents", "/acme/skills"]);
 
       store.openTab("/acme/chat/d", "D"); // background: A stays active
       const s = useTabStore.getState();
       expect(urls()).toEqual([
-        "/acme/chat",
+        "/acme/me",
         "/acme/chat/d",
         "/acme/agents",
         "/acme/skills",
       ]);
-      expect(getActiveTab(s)?.url).toBe("/acme/chat");
+      expect(getActiveTab(s)?.url).toBe("/acme/me");
     });
 
     it("inserts right of a mid-strip opener", () => {
@@ -312,7 +312,7 @@ describe("useTabStore actions", () => {
       store.openTab("/acme/chat/d", "D", { activate: true });
       const s = useTabStore.getState();
       expect(urls()).toEqual([
-        "/acme/chat",
+        "/acme/me",
         "/acme/agents",
         "/acme/chat/d",
         "/acme/skills",
@@ -329,7 +329,7 @@ describe("useTabStore actions", () => {
 
       store.openTab("/acme/chat/d", "D");
       const s = useTabStore.getState();
-      expect(urls()).toEqual(["/acme/chat", "/acme/chat/d", "/acme/agents"]);
+      expect(urls()).toEqual(["/acme/me", "/acme/chat/d", "/acme/agents"]);
       expect(s.byWorkspace.acme.tabs[0].pinned).toBe(true);
       expect(s.byWorkspace.acme.tabs[1].pinned).toBe(false);
     });
@@ -339,7 +339,7 @@ describe("useTabStore actions", () => {
       store.switchWorkspace("acme"); // A active
       store.addTab("/acme/agents", "B");
       store.addTab("/acme/skills", "C"); // active is still A — must append anyway
-      expect(urls()).toEqual(["/acme/chat", "/acme/agents", "/acme/skills"]);
+      expect(urls()).toEqual(["/acme/me", "/acme/agents", "/acme/skills"]);
     });
 
     it("a dedupe hit focuses the existing tab without reordering", () => {
@@ -350,7 +350,7 @@ describe("useTabStore actions", () => {
 
       store.openTab("/acme/skills", "C again"); // hits C, at the far end
       const s = useTabStore.getState();
-      expect(urls()).toEqual(["/acme/chat", "/acme/agents", "/acme/skills"]);
+      expect(urls()).toEqual(["/acme/me", "/acme/agents", "/acme/skills"]);
       expect(getActiveTab(s)?.url).toBe("/acme/skills");
     });
   });
@@ -363,10 +363,10 @@ describe("useTabStore actions", () => {
     store.closeTab(onlyTabId);
     const s = useTabStore.getState();
     expect(s.byWorkspace.acme.tabs).toHaveLength(1);
-    expect(s.byWorkspace.acme.tabs[0].url).toBe("/acme/chat");
+    expect(s.byWorkspace.acme.tabs[0].url).toBe("/acme/me");
     expect(s.byWorkspace.acme.tabs[0].id).not.toBe(onlyTabId); // fresh tab
     expect(s.byWorkspace.acme.browsingHistory).toEqual([
-      "/acme/chat",
+      "/acme/me",
       "/acme/chat/issue-1",
     ]);
   });
@@ -430,7 +430,7 @@ describe("useTabStore actions", () => {
     const s = useTabStore.getState();
     expect(s.activeWorkspaceSlug).toBe("acme");
     expect(s.byWorkspace.acme.tabs).toHaveLength(1);
-    expect(s.byWorkspace.acme.tabs[0].url).toBe("/acme/chat");
+    expect(s.byWorkspace.acme.tabs[0].url).toBe("/acme/me");
   });
 
   it("validateWorkspaceSlugs reactivates an existing valid group before seeding", () => {
@@ -459,7 +459,7 @@ describe("useTabStore actions", () => {
     expect(Object.keys(s.byWorkspace)).toEqual(["acme"]);
     expect(s.activeWorkspaceSlug).toBe("acme");
     expect(s.byWorkspace.acme.tabs).toHaveLength(1);
-    expect(s.byWorkspace.acme.tabs[0].url).toBe("/acme/chat");
+    expect(s.byWorkspace.acme.tabs[0].url).toBe("/acme/me");
   });
 
   it("reset wipes the whole store", () => {
@@ -495,12 +495,12 @@ describe("navigateActiveSession", () => {
     expect(active.url).toBe("/acme/agents?sort=name");
     expect(active.resourceKey).toBe("/acme/agents");
     expect(active.history).toEqual({
-      stack: ["/acme/chat", "/acme/agents?sort=name"],
+      stack: ["/acme/me", "/acme/agents?sort=name"],
       index: 1,
     });
     expect(useTabStore.getState().byWorkspace.acme.browsingHistory).toEqual([
       "/acme/agents?sort=name",
-      "/acme/chat",
+      "/acme/me",
     ]);
   });
 
@@ -518,7 +518,7 @@ describe("navigateActiveSession", () => {
 
     expect(useTabStore.getState().byWorkspace.acme.browsingHistory).toEqual([
       "/acme/chat/issue-1#comment-comment-1",
-      "/acme/chat",
+      "/acme/me",
     ]);
   });
 
@@ -533,7 +533,7 @@ describe("navigateActiveSession", () => {
     expect(
       useTabStore.getState().byWorkspace.acme.browsingHistoryTitles,
     ).toEqual({
-      "/acme/chat": "Chat",
+      "/acme/me": "My Space",
       "/acme/chat/issue-1": "MUL-1: Fix history",
     });
   });
@@ -552,14 +552,14 @@ describe("navigateActiveSession", () => {
 
     const state = useTabStore.getState();
     expect(getActiveTab(state)?.history).toEqual({
-      stack: ["/acme/chat", "/acme/inbox?issue=issue-b"],
+      stack: ["/acme/me", "/acme/inbox?issue=issue-b"],
       index: 1,
     });
     expect(state.byWorkspace.acme.browsingHistory).toEqual([
       "/acme/inbox?issue=issue-b",
       "/acme/inbox?issue=issue-a",
       "/acme/inbox",
-      "/acme/chat",
+      "/acme/me",
     ]);
   });
 
@@ -582,7 +582,7 @@ describe("navigateActiveSession", () => {
       "/acme/inbox?view=archived&issue=issue-a#comment-comment-1",
       "/acme/inbox?issue=issue-b",
       "/acme/inbox",
-      "/acme/chat",
+      "/acme/me",
     ]);
   });
 
@@ -600,7 +600,7 @@ describe("navigateActiveSession", () => {
 
     expect(useTabStore.getState().byWorkspace.acme.browsingHistory).toEqual([
       "/acme/chat/issue-1",
-      "/acme/chat",
+      "/acme/me",
     ]);
   });
 
@@ -613,7 +613,7 @@ describe("navigateActiveSession", () => {
 
     expect(useTabStore.getState().byWorkspace.acme.browsingHistory).toEqual([
       "/acme/chat/ACM-1",
-      "/acme/chat",
+      "/acme/me",
     ]);
   });
 
@@ -626,7 +626,7 @@ describe("navigateActiveSession", () => {
 
     const active = getActiveTab(useTabStore.getState())!;
     expect(active.history).toEqual({
-      stack: ["/acme/chat", "/acme/agents?sort=name"],
+      stack: ["/acme/me", "/acme/agents?sort=name"],
       index: 1,
     });
   });
@@ -643,7 +643,7 @@ describe("navigateActiveSession", () => {
 
     const active = getActiveTab(useTabStore.getState())!;
     expect(active.history).toEqual({
-      stack: ["/acme/chat", "/acme/inbox"],
+      stack: ["/acme/me", "/acme/inbox"],
       index: 1,
     });
   });
@@ -655,7 +655,7 @@ describe("navigateActiveSession", () => {
     store.navigateActiveSession("/butter/chat");
 
     const active = getActiveTab(useTabStore.getState())!;
-    expect(active.url).toBe("/acme/chat");
+    expect(active.url).toBe("/acme/me");
   });
 
   it("goBack/goForward project the history stack back into the url", () => {
@@ -665,7 +665,7 @@ describe("navigateActiveSession", () => {
 
     store.goBack();
     let active = getActiveTab(useTabStore.getState())!;
-    expect(active.url).toBe("/acme/chat");
+    expect(active.url).toBe("/acme/me");
     expect(active.history.index).toBe(0);
 
     store.goForward();
@@ -686,7 +686,7 @@ describe("navigateActiveSession", () => {
 
     store.goToHistoryIndex(0);
     let active = getActiveTab(useTabStore.getState())!;
-    expect(active.url).toBe("/acme/chat");
+    expect(active.url).toBe("/acme/me");
     expect(active.history.index).toBe(0);
 
     store.goToHistoryIndex(2);
@@ -1255,7 +1255,7 @@ describe("moveTab boundary clamp", () => {
     const tabs = useTabStore.getState().byWorkspace.acme.tabs;
     expect(tabs.map((t) => t.url)).toEqual([
       "/acme/agents",
-      "/acme/chat",
+      "/acme/me",
       "/acme/agents",
     ]);
   });

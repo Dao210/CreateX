@@ -37,7 +37,7 @@ beforeEach(() => {
   overlay.overlay = null;
   auth.logout.mockReset();
   useTabStore.getState().reset();
-  useTabStore.getState().switchWorkspace("acme"); // default tab /acme/chat
+  useTabStore.getState().switchWorkspace("acme"); // default tab /acme/me
   Object.defineProperty(window, "desktopAPI", {
     configurable: true,
     value: {
@@ -82,7 +82,7 @@ describe("openInNewTab", () => {
     getAdapter().openInNewTab!("/acme/agents", "Agents");
 
     const group = acmeGroup();
-    expect(group.tabs.map((t) => t.url)).toEqual(["/acme/chat", "/acme/agents"]);
+    expect(group.tabs.map((t) => t.url)).toEqual(["/acme/me", "/acme/agents"]);
     expect(group.activeTabId).toBe(activeBefore);
   });
 
@@ -118,7 +118,7 @@ describe("push", () => {
     const active = getActiveTab(useTabStore.getState())!;
     expect(active.url).toBe("/acme/skills?sort=name");
     expect(active.history).toEqual({
-      stack: ["/acme/chat", "/acme/skills?sort=name"],
+      stack: ["/acme/me", "/acme/skills?sort=name"],
       index: 1,
     });
   });
@@ -127,7 +127,7 @@ describe("push", () => {
     const getAdapter = renderProvider();
     const before = acmeGroup();
 
-    getAdapter().push("/acme/chat");
+    getAdapter().push("/acme/me");
 
     expect(acmeGroup()).toBe(before);
   });
@@ -148,7 +148,7 @@ describe("push", () => {
     getAdapter().push("/login");
 
     expect(auth.logout).toHaveBeenCalledOnce();
-    expect(getActiveTab(useTabStore.getState())?.url).toBe("/acme/chat");
+    expect(getActiveTab(useTabStore.getState())?.url).toBe("/acme/me");
   });
 
   it("routes transition paths to the window overlay without touching sessions", () => {
@@ -179,7 +179,7 @@ describe("push with pinned active tab", () => {
     const pinned = group.tabs.find((t) => t.id === pinnedId)!;
     const projects = group.tabs.find((t) => t.url === "/acme/skills")!;
     // The pinned tab stays parked on its url; focus follows the new tab.
-    expect(pinned.url).toBe("/acme/chat");
+    expect(pinned.url).toBe("/acme/me");
     expect(group.activeTabId).toBe(projects.id);
   });
 
@@ -187,11 +187,11 @@ describe("push with pinned active tab", () => {
     pinActive();
     const getAdapter = renderProvider();
 
-    getAdapter().push("/acme/chat?filter=open");
+    getAdapter().push("/acme/me?filter=open");
 
     const group = acmeGroup();
     expect(group.tabs).toHaveLength(1); // no new tab
-    expect(group.tabs[0].url).toBe("/acme/chat?filter=open");
+    expect(group.tabs[0].url).toBe("/acme/me?filter=open");
   });
 
   it("leaves cross-workspace push to the workspace switcher (not pin)", () => {
@@ -214,7 +214,7 @@ describe("back", () => {
     getAdapter().back!();
 
     const active = getActiveTab(useTabStore.getState())!;
-    expect(active.url).toBe("/acme/chat");
+    expect(active.url).toBe("/acme/me");
     expect(active.history.index).toBe(0);
   });
 });

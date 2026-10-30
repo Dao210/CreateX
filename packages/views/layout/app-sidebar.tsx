@@ -77,11 +77,7 @@ const AGENT_PREVIEW_LIMIT = 5;
 // Only parameterless paths are valid nav destinations.
 type NavKey =
   | "inbox"
-  | "autopilots"
-  | "agents"
   | "usage"
-  | "runtimes"
-  | "skills"
   | "siege"
   | "tanks"
   | "me"
@@ -91,11 +87,7 @@ type NavKey =
 // icons derived from the destination path via routeIconForPath.
 type NavLabelKey =
   | "inbox"
-  | "autopilots"
-  | "agents"
   | "usage"
-  | "runtimes"
-  | "skills"
   | "siege"
   | "tanks"
   | "me"
@@ -111,13 +103,6 @@ const personalNav: { key: NavKey; labelKey: NavLabelKey }[] = [
   { key: "siege", labelKey: "siege" },
   { key: "me", labelKey: "me" },
   { key: "inbox", labelKey: "inbox" },
-];
-
-const aiTeamNav: { key: NavKey; labelKey: NavLabelKey }[] = [
-  { key: "autopilots", labelKey: "autopilots" },
-  { key: "agents", labelKey: "agents" },
-  { key: "skills", labelKey: "skills" },
-  { key: "runtimes", labelKey: "runtimes" },
 ];
 
 const utilityNav: { key: NavKey; labelKey: NavLabelKey }[] = [
@@ -453,31 +438,6 @@ export function AppSidebar({ topSlot, headerClassName, headerStyle }: AppSidebar
                   </SidebarMenu>
                 </>
               )}
-            </SidebarGroupContent>
-          </SidebarGroup>
-
-          <SidebarGroup>
-            <SidebarGroupLabel>{t(($) => $.sidebar.ai_team_group)}</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu className="gap-0.5">
-                {aiTeamNav.map((item) => {
-                  const href = p[item.key]();
-                  const Icon = routeIconForPath(href);
-                  const isActive = isNavActive(pathname, href);
-                  return (
-                    <SidebarMenuItem key={item.key}>
-                      <SidebarMenuButton
-                        isActive={isActive}
-                        render={<AppLink href={href} />}
-                        className={NAV_ITEM_CLASS_NAME}
-                      >
-                        <Icon />
-                        <span>{t(($) => $.nav[item.labelKey])}</span>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  );
-                })}
-              </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
         </SidebarContent>

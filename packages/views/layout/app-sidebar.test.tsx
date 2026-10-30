@@ -132,11 +132,11 @@ vi.mock("@auro/core/paths", async (importOriginal) => ({
   // nav to derive each item's icon from its href) stay intact; only the
   // workspace/context hooks below are stubbed to control routes in tests.
   ...(await importOriginal<typeof import("@auro/core/paths")>()),
-  paths: { workspace: (slug: string) => ({ root: () => `/${slug}/chat` }) },
+  paths: { workspace: (slug: string) => ({ root: () => `/${slug}/me` }) },
   useCurrentWorkspace: () => ({ id: "ws-1", name: "Acme", slug: "acme" }),
   useWorkspacePaths: () => ({
     inbox: () => "/acme/inbox",
-    root: () => "/acme/chat",
+    root: () => "/acme/me",
     issues: () => "/acme/issues",
     projects: () => "/acme/projects",
     autopilots: () => "/acme/autopilots",
@@ -369,13 +369,16 @@ describe("work group agents", () => {
     expect(container.querySelector('button[data-href="/acme/squads"]')).toBeNull();
   });
 
-  it("links created agents into a chat bound to that agent", () => {
+  it("keeps agent chat shortcuts while hiding the AI Team group and its entries", () => {
     agents.current = [agent("agent-1", "Scout"), agent("agent-2", "Builder")];
-    const { container } = render(<AppSidebar />);
+    const { container } = renderWithI18n(<AppSidebar />);
 
     expect(container.querySelector('button[data-href="/acme/chat?agent=agent-1"]')).toHaveTextContent("Scout");
     expect(container.querySelector('button[data-href="/acme/chat?agent=agent-2"]')).toHaveTextContent("Builder");
-    expect(container.querySelector('button[data-href="/acme/agents"]')).not.toBeNull();
+    expect(screen.queryByText("AI Team")).toBeNull();
+    for (const route of ["autopilots", "agents", "skills", "runtimes"]) {
+      expect(container.querySelector(`button[data-href="/acme/${route}"]`)).toBeNull();
+    }
   });
 
   it("skips archived agents", () => {

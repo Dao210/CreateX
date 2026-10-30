@@ -5,7 +5,7 @@ import { paths } from "./paths";
 /**
  * Priority (onboarded-first):
  *   !hasOnboarded               → /onboarding
- *   hasOnboarded + workspace[0] → /<first.slug>/chat
+ *   hasOnboarded + workspace[0] → /<first.slug>/me
  *   hasOnboarded + no workspace → /workspaces/new
  *
  * V3 invariant: `onboarded_at != null` is the single source of truth for

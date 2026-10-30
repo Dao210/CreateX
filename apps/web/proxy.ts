@@ -111,7 +111,7 @@ export function proxy(req: NextRequest) {
     !isOfficialMarketingHost(req.nextUrl.hostname)
   ) {
     const url = req.nextUrl.clone();
-    url.pathname = `/${lastSlug}/chat`;
+    url.pathname = `/${lastSlug}/me`;
     return NextResponse.redirect(url);
   }
 
