@@ -144,7 +144,7 @@ async function openPrompt() {
 
 function queryRecoveryDialog() {
   return screen.queryByRole("dialog", {
-    name: "This creative space has reached its issue limit",
+    name: "This world has reached its issue limit",
   });
 }
 
@@ -193,7 +193,7 @@ describe("IssueLimitUpgradeDialog", () => {
     expect(queryRecoveryDialog()).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Checking the billing actions available for this creative space…",
+        "Checking the billing actions available for this world…",
       ),
     ).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: "Close" })).toHaveLength(1);
@@ -211,7 +211,7 @@ describe("IssueLimitUpgradeDialog", () => {
 
     expect(
       await screen.findByRole("dialog", {
-        name: "This creative space has reached its autopilot run limit",
+        name: "This world has reached its autopilot run limit",
       }),
     ).toBeInTheDocument();
     expect(
@@ -222,7 +222,7 @@ describe("IssueLimitUpgradeDialog", () => {
     await waitFor(() => {
       expect(
         screen.queryByRole("dialog", {
-          name: "This creative space has reached its autopilot run limit",
+          name: "This world has reached its autopilot run limit",
         }),
       ).not.toBeInTheDocument();
     });
@@ -369,7 +369,7 @@ describe("IssueLimitUpgradeDialog", () => {
 
     expect(
       await screen.findByText(
-        "Ask a creative space owner or admin to upgrade to Pro.",
+        "Ask a world owner or admin to upgrade to Pro.",
       ),
     ).toBeInTheDocument();
     expect(
@@ -409,7 +409,7 @@ describe("IssueLimitUpgradeDialog", () => {
 
     expect(
       screen.getByText(
-        "Delete an existing issue to free space, or contact your creative space administrator.",
+        "Delete an existing issue to free space, or contact your world administrator.",
       ),
     ).toBeInTheDocument();
     expect(

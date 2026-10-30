@@ -547,7 +547,7 @@ describe("IntegrationsTab", () => {
     membersRef.current = [{ user_id: "user-1", role: "member" }];
     renderTab(<IntegrationsTab agent={{ ...agent, owner_id: "user-2" }} />);
     expect(
-      screen.getAllByText(/Only creative space owners and admins can manage this connection/i).length,
+      screen.getAllByText(/Only world owners and admins can manage this connection/i).length,
     ).toBeGreaterThanOrEqual(1);
     expect(screen.queryByTestId("lark-bind-button")).toBeNull();
     expect(screen.queryByTestId("slack-bind-button")).toBeNull();
@@ -570,7 +570,7 @@ describe("IntegrationsTab", () => {
     expect(screen.queryByTestId("telegram-bind-button")).toBeNull();
     // The Slack, WeCom and Telegram sections fall back to the shared members note.
     expect(
-      screen.getAllByText(/Only creative space owners and admins can manage this connection/i),
+      screen.getAllByText(/Only world owners and admins can manage this connection/i),
     ).toHaveLength(3);
   });
 

@@ -10,16 +10,16 @@
   },
   "accepted": {
     "title": "{{workspace_name}}に参加しました！",
-    "redirecting": "クリエイティブスペースへ移動中..."
+    "redirecting": "ワールドへ移動中..."
   },
   "declined": {
     "title": "招待を辞退しました",
-    "description": "このクリエイティブスペースには追加されません。",
+    "description": "このワールドには追加されません。",
     "go_to_dashboard": "ダッシュボードへ移動"
   },
   "main": {
     "join_title": "{{workspace_name}}に参加",
-    "fallback_workspace_name": "クリエイティブスペース",
+    "fallback_workspace_name": "ワールド",
     "invited_role_admin": "さんがあなたをadminとして招待しました。",
     "invited_role_member": "さんがあなたをmemberとして招待しました。",
     "already_handled_accepted": "この招待はすでに承認されています。",
@@ -37,15 +37,15 @@
   "batch": {
     "log_out": "ログアウト",
     "empty_title": "保留中の招待はありません",
-    "empty_hint": "続けて自分のクリエイティブスペースを設定しましょう。",
+    "empty_hint": "続けて自分のワールドを設定しましょう。",
     "empty_continue": "セットアップを続ける",
     "title": "招待を受け取りました",
-    "subtitle": "参加するクリエイティブスペースを選択してください。残りはいつでもサイドバーから処理できます。",
-    "submit_skip": "スキップして自分のクリエイティブスペースを設定",
-    "submit_join_other": "{{count}} 件のクリエイティブスペースに参加",
+    "subtitle": "参加するワールドを選択してください。残りはいつでもサイドバーから処理できます。",
+    "submit_skip": "スキップして自分のワールドを設定",
+    "submit_join_other": "{{count}} 件のワールドに参加",
     "joining": "参加中...",
     "error_generic": "招待を処理できませんでした。もう一度お試しください。",
-    "row_workspace_fallback": "クリエイティブスペース",
+    "row_workspace_fallback": "ワールド",
     "row_inviter_fallback": "誰か",
     "row_invited_admin": "{{inviter}}さんがあなたをadminとして招待しました",
     "row_invited_member": "{{inviter}}さんがあなたをmemberとして招待しました"

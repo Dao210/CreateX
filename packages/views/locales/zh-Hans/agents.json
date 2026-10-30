@@ -135,7 +135,7 @@
     "load_failed_title": "无法加载该智能体",
     "load_failed_default": "获取该智能体时出错。",
     "no_access_title": "你没有访问该智能体的权限",
-    "no_access_hint": "只有该私密智能体的拥有者或创作区管理员可以查看。",
+    "no_access_hint": "只有该私密智能体的拥有者或世界管理员可以查看。",
     "try_again": "重试",
     "archived_banner": "该智能体已归档，无法被分配或提及。",
     "runtime_required_banner": "该智能体的配置和历史记录已保留，但需要绑定运行时后才能运行。",
@@ -199,7 +199,7 @@
     "attention_queued_other": "运行时不可用，当前有 {{count}} 次运行正在排队。"
   },
   "skill_attach": {
-    "trigger_aria": "附加创作区 skill",
+    "trigger_aria": "附加世界 skill",
     "trigger_label": "附加"
   },
   "pickers": {
@@ -292,7 +292,7 @@
       },
       "template": {
         "title": "使用模板",
-        "description": "从整理好的指令和 skill 开始，再根据创作区需要修改每个细节。"
+        "description": "从整理好的指令和 skill 开始，再根据世界需要修改每个细节。"
       },
       "ai": {
         "title": "通过 AI 创建",
@@ -314,8 +314,8 @@
         "description": "只有你可以运行此智能体。"
       },
       "workspace": {
-        "title": "整个创作区",
-        "description": "创作区中的所有成员都可以运行。"
+        "title": "整个世界",
+        "description": "世界中的所有成员都可以运行。"
       },
       "members": {
         "title": "指定成员",
@@ -353,7 +353,7 @@
     "create_and_open": "创建并打开",
     "creating": "正在创建…",
     "create_failed": "无法创建智能体。",
-    "name_conflict": "创作区中已存在同名智能体。",
+    "name_conflict": "世界中已存在同名智能体。",
     "created": "已创建 {{name}}",
     "drafts": {
       "title": "创建草稿",
@@ -381,9 +381,9 @@
       "private_desc": "只有你可以运行该智能体",
       "public_title": "公开",
       "public_desc": "选择谁可以运行该智能体",
-      "public_workspace_option": "创作区内所有人",
+      "public_workspace_option": "世界内所有人",
       "public_members_group": "指定成员",
-      "public_members_empty": "没有可选择的创作区成员",
+      "public_members_empty": "没有可选择的世界成员",
       "public_targets_empty_hint": "至少勾选下方一项——否则该智能体仍为私有。"
     },
     "runtime_label": "运行时",
@@ -412,10 +412,10 @@
     },
     "skills_section": {
       "label": "Skills",
-      "placeholder": "从创作区添加 skill",
+      "placeholder": "从世界添加 skill",
       "selected_other": "已选 {{count}} 个——点击修改",
       "collapse": "收起",
-      "list_empty_multi": "创作区还没有 skill。请先创建或导入一个。",
+      "list_empty_multi": "世界还没有 skill。请先创建或导入一个。",
       "list_loading": "加载中…",
       "list_empty_default": "暂无 skill。",
       "list_no_match": "没有匹配的 skill。",
@@ -456,12 +456,12 @@
       "system_layer_hint": "随 Auro 版本更新。你无法编辑这部分，你在下面写的内容也永远不会被覆盖。",
       "system_layer_show": "查看",
       "system_layer_hide": "收起",
-      "workspace_notes_label": "创作区补充",
+      "workspace_notes_label": "世界补充",
       "workspace_notes_intro": "在下面补充你们团队的上下文和偏好，它们会叠加在 Auro 为这个智能体维护的指令之上。支持 Markdown。",
       "workspace_notes_placeholder": "写下这个智能体应该始终知道的上下文。\n\n# 示例\n我们的主仓库是 github.com/acme/platform。\n即使聊天用中文，任务也一律用英文写。\n周五不部署。"
     },
     "env": {
-      "intro_readonly": "在智能体进程启动时注入。只有创作区所有者 / 管理员可以查看或编辑值；每次解锁和编辑都会写入创作区审计日志。",
+      "intro_readonly": "在智能体进程启动时注入。只有世界所有者 / 管理员可以查看或编辑值；每次解锁和编辑都会写入世界审计日志。",
       "empty_readonly": "尚未配置环境变量。",
       "intro_prefix": "在智能体进程启动时注入（例如 ",
       "intro_separator": "、",
@@ -484,7 +484,7 @@
       "save_failed_toast": "保存环境变量失败",
       "not_revealed_title_other": "已配置 {{count}} 个变量",
       "not_revealed_empty": "尚未配置环境变量。",
-      "not_revealed_hint": "在解锁前所有值保持隐藏。每次解锁与编辑都会写入创作区审计日志。",
+      "not_revealed_hint": "在解锁前所有值保持隐藏。每次解锁与编辑都会写入世界审计日志。",
       "reveal_action": "解锁并编辑",
       "revealing": "正在解锁…",
       "reveal_failed_toast": "加载环境变量值失败",
@@ -515,16 +515,16 @@
       "agent_disabled_badge": "已对该智能体关闭",
       "runtime_disabled_badge": "已在运行时中关闭",
       "runtime_overridden_badge": "已由 Auro 覆盖",
-      "workspace_title": "创作区 MCP Server",
+      "workspace_title": "世界 MCP Server",
       "workspace_action_failed": "无法更新该智能体的 MCP Server",
       "workspace_removed_toast": "已从该智能体移除 MCP Server",
       "workspace_added_toast": "已为该智能体添加 MCP Server",
       "workspace_remove_aria": "从该智能体移除 {{name}}",
       "workspace_remove_action": "移除",
       "workspace_toggle_aria": "为该智能体启用 {{name}}",
-      "workspace_library_empty": "创作区中暂无可分配的 MCP Server。请先前往“创作区设置 → MCP”添加。",
-      "workspace_none_assigned": "该智能体尚未分配创作区 MCP Server。",
-      "workspace_add_action": "从创作区添加",
+      "workspace_library_empty": "世界中暂无可分配的 MCP Server。请先前往“世界设置 → MCP”添加。",
+      "workspace_none_assigned": "该智能体尚未分配世界 MCP Server。",
+      "workspace_add_action": "从世界添加",
       "workspace_loading": "正在加载已分配的 MCP Server...",
       "dialog_name_locked": "保存时不能修改名称。如需重命名，请删除后重新添加。",
       "workspace_overridden_badge": "已覆盖",
@@ -605,7 +605,7 @@
       "invalid_json": "JSON 无效：{{error}}",
       "save_failed_toast": "无法保存 MCP 配置",
       "redacted_title": "已配置，但当前不可见",
-      "redacted_hint": "只有智能体 owner 或创作区 admin 可以查看此配置。",
+      "redacted_hint": "只有智能体 owner 或世界 admin 可以查看此配置。",
       "dialog_json_help": "以 JSON 编辑完整的服务器配置。"
     },
     "composio_mcp": {
@@ -621,7 +621,7 @@
       "redacted_title": "已配置——对你隐藏",
       "redacted_hint": "只有该智能体的创建者才能查看或修改它可使用的应用。",
       "shared_warning": "该智能体已共享。能够运行该智能体的人可以通过它使用你在此启用的 Composio 应用。如果这些应用涉及敏感数据，请改用\"私有\"或缩小访问范围。",
-      "workspace_warning": "公开给创作区：创作区内任何成员都可以通过该智能体使用这些 Composio 应用。"
+      "workspace_warning": "公开给世界：世界内任何成员都可以通过该智能体使用这些 Composio 应用。"
     },
     "runtime_config": {
       "mode_label": "路由模式",
@@ -647,7 +647,7 @@
       "assigned_hint": "关闭后暂停使用，仍保留分配。",
       "runtime_title": "从运行时继承",
       "runtime_hint": "自动从 {{runtime}} 发现；只要该智能体在这个运行时执行，就可以直接使用。",
-      "workspace_badge": "创作区",
+      "workspace_badge": "世界",
       "inherited_badge": "继承",
       "refresh_action": "刷新",
       "no_description": "暂无描述",
@@ -675,7 +675,7 @@
       "remove_failed_toast": "移除 skill 失败",
       "add_dialog_title": "添加 skill",
       "add_dialog_search_placeholder": "搜索 skill",
-      "add_dialog_empty": "全部创作区 skill 都已分配。",
+      "add_dialog_empty": "全部世界 skill 都已分配。",
       "add_dialog_no_match": "没有匹配的 skill。",
       "add_dialog_empty_partial": "已无可添加的 skill——全部都已分配给该智能体。",
       "add_dialog_saving": "添加中…",
@@ -685,7 +685,7 @@
       "add_failed_toast": "添加 skill 失败"
     },
     "integrations": {
-      "members_note": "只有创作区的所有者和管理员可以管理此连接。你可以在\"设置 → 集成\"中查看已连接的 Bot。"
+      "members_note": "只有世界的所有者和管理员可以管理此连接。你可以在\"设置 → 集成\"中查看已连接的 Bot。"
     },
     "activity": {
       "status": {
@@ -754,17 +754,17 @@
       "tooltip": "个人 · 仅 owner 和其授权的人可以运行该智能体"
     },
     "workspace": {
-      "label": "创作区",
-      "tooltip": "创作区 · 创作区内所有人都可以使用该智能体"
+      "label": "世界",
+      "tooltip": "世界 · 世界内所有人都可以使用该智能体"
     }
   },
   "access": {
     "section_title": "谁可以运行该智能体",
     "tooltip": "访问权限 · 谁可以运行该智能体",
     "trigger_private": "仅自己",
-    "trigger_workspace": "创作区",
+    "trigger_workspace": "世界",
     "scope_labels": {
-      "workspace": "创作区",
+      "workspace": "世界",
       "specific_people": "指定成员",
       "owner_only": "仅所有者"
     },
@@ -774,10 +774,10 @@
     "private_title": "仅自己",
     "private_desc": "只有你可以运行该智能体",
     "shared_title": "共享",
-    "shared_desc": "向整个创作区或指定成员开放该智能体",
+    "shared_desc": "向整个世界或指定成员开放该智能体",
     "shared_target_required": "保存前，请至少选择一名成员。",
-    "workspace_title": "整个创作区",
-    "workspace_desc": "默认允许创作区内所有成员运行该智能体",
+    "workspace_title": "整个世界",
+    "workspace_desc": "默认允许世界内所有成员运行该智能体",
     "members_title": "指定成员",
     "members_desc": "只有你选择的人可以运行该智能体",
     "team_title": "公开给团队",
@@ -786,7 +786,7 @@
     "members_group": "成员",
     "public_group": "公开访问",
     "owner_only_readonly": "只有该智能体的所有者可以更改谁能调用它。",
-    "members_empty": "没有可选择的创作区成员",
+    "members_empty": "没有可选择的世界成员",
     "composio_switch_hint": "提示——该智能体已启用 Composio 应用。共享后，所有获得访问权限的人都可以通过该智能体使用这些应用。"
   },
   "profile_card": {

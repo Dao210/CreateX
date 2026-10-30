@@ -68,8 +68,8 @@
   },
   "workspace": {
     "title": "결제 및 요금제",
-    "description": "이 크리에이티브 스페이스의 요금제, 한도, 사용자 좌석 및 Stripe 결제를 관리합니다.",
-    "loading": "크리에이티브 스페이스 결제 정보 불러오는 중",
+    "description": "이 세계의 요금제, 한도, 사용자 좌석 및 Stripe 결제를 관리합니다.",
+    "loading": "세계 결제 정보 불러오는 중",
     "plan": {
       "free": "Free",
       "pro": "Pro",
@@ -103,13 +103,13 @@
     "errors": {
       "action_title": "결제 작업 실패",
       "temporarily_unavailable": "결제 서비스를 일시적으로 사용할 수 없습니다. 잠시 후 다시 시도하세요.",
-      "not_enabled": "이 배포에서는 크리에이티브 스페이스 구독을 사용할 수 없습니다. 관리자에게 문의하세요.",
-      "permission_changed": "현재 크리에이티브 스페이스 역할로는 이 작업을 수행할 수 없습니다. 페이지를 새로고침해 현재 권한을 확인하세요.",
+      "not_enabled": "이 배포에서는 세계 구독을 사용할 수 없습니다. 관리자에게 문의하세요.",
+      "permission_changed": "현재 세계 역할로는 이 작업을 수행할 수 없습니다. 페이지를 새로고침해 현재 권한을 확인하세요.",
       "checkout_response": "서버 응답을 읽을 수 없어 Checkout을 열지 못했습니다. 선택한 결제 주기를 유지하고 다시 시도하세요.",
-      "already_subscribed": "이 크리에이티브 스페이스에는 이미 구독이 있습니다. 현재 요금제를 새로고침했습니다.",
+      "already_subscribed": "이 세계에는 이미 구독이 있습니다. 현재 요금제를 새로고침했습니다.",
       "checkout_failed": "Checkout을 만들지 못했습니다. 잠시 후 다시 시도하세요.",
       "portal_response": "서버 응답을 읽을 수 없어 Billing Portal을 열지 못했습니다.",
-      "portal_unavailable": "이 크리에이티브 스페이스에서는 Billing Portal을 사용할 수 없습니다. 현재 요금제를 새로고침했습니다.",
+      "portal_unavailable": "이 세계에서는 Billing Portal을 사용할 수 없습니다. 현재 요금제를 새로고침했습니다.",
       "portal_failed": "Billing Portal을 열지 못했습니다. 잠시 후 다시 시도하세요."
     },
     "return": {
@@ -120,7 +120,7 @@
       "syncing_description": "결제가 완료되었습니다. Stripe의 요금제 변경 확인을 기다리고 있습니다.",
       "timeout_description": "결제는 접수되었지만 구독이 아직 동기화 중입니다. 잠시 후 페이지를 새로고침하세요.",
       "active_title": "Pro 활성화됨",
-      "active_description": "이 크리에이티브 스페이스에서 이제 Pro를 사용할 수 있습니다."
+      "active_description": "이 세계에서 이제 Pro를 사용할 수 있습니다."
     },
     "past_due": {
       "title": "결제 정보를 확인해야 합니다",
@@ -143,7 +143,7 @@
     },
     "current": {
       "title": "현재 요금제",
-      "plan": "크리에이티브 스페이스 요금제",
+      "plan": "세계 요금제",
       "members": "사용자 좌석",
       "members_description": "에이전트와 대기 중인 초대는 좌석에 포함되지 않습니다.",
       "member_count_other": "멤버 {{count}}명",
@@ -165,7 +165,7 @@
       "title": "구독 관리",
       "description": "결제 수단, 청구서, 구독 취소.",
       "portal": "Stripe Billing Portal",
-      "portal_unavailable": "이 크리에이티브 스페이스에서 사용할 수 있는 Stripe Billing Portal이 없습니다."
+      "portal_unavailable": "이 세계에서 사용할 수 있는 Stripe Billing Portal이 없습니다."
     },
     "limits": {
       "title": "사용량 및 한도",
@@ -202,8 +202,8 @@
       "summary_unavailable_title": "일부 좌석 상세 정보를 불러올 수 없습니다",
       "summary_unavailable_description": "현재 요금제는 계속 표시되지만 구매한 좌석과 예정 좌석 수를 불러오지 못했습니다.",
       "members_over_capacity_title": "멤버 수가 구매한 좌석 수를 초과합니다",
-      "members_over_capacity_description": "이 크리에이티브 스페이스에는 멤버가 {{actual}}명이지만 구매한 좌석은 {{purchased}}개입니다. 더 초대하기 전에 좌석을 추가하거나 멤버를 제거하세요.",
-      "occupancy_over_capacity_description": "이 크리에이티브 스페이스는 구매한 좌석 {{purchased}}개에 대해 {{occupied}}개를 점유하고 있습니다(멤버 {{members}}명, 대기 중인 초대 {{reserved}}건). 더 초대하기 전에 좌석을 추가하거나 멤버를 제거하거나 대기 중인 초대를 취소하세요.",
+      "members_over_capacity_description": "이 세계에는 멤버가 {{actual}}명이지만 구매한 좌석은 {{purchased}}개입니다. 더 초대하기 전에 좌석을 추가하거나 멤버를 제거하세요.",
+      "occupancy_over_capacity_description": "이 세계는 구매한 좌석 {{purchased}}개에 대해 {{occupied}}개를 점유하고 있습니다(멤버 {{members}}명, 대기 중인 초대 {{reserved}}건). 더 초대하기 전에 좌석을 추가하거나 멤버를 제거하거나 대기 중인 초대를 취소하세요.",
       "updated": "좌석 구매를 제출했습니다",
       "available_help": "사용 가능한 좌석 계산 방법"
     },
@@ -246,11 +246,11 @@
     "date_dash": "—"
   },
   "return_page": {
-    "redirecting": "크리에이티브 스페이스 결제 페이지로 돌아갑니다…",
-    "load_failed_title": "크리에이티브 스페이스 결제 페이지를 열 수 없습니다",
-    "load_failed_description": "Stripe에서 돌아왔지만 크리에이티브 스페이스 목록을 불러오지 못해 해당 결제 페이지를 열 수 없었습니다. 크리에이티브 스페이스 설정 → 결제에서 현재 상태를 확인해 주세요.",
-    "workspace_missing_title": "크리에이티브 스페이스를 찾을 수 없습니다",
-    "workspace_missing_description": "Stripe에서 돌아왔지만 이 크리에이티브 스페이스를 사용할 수 없습니다. 삭제되었거나 접근 권한이 변경되었을 수 있습니다. 원하는 크리에이티브 스페이스의 결제 페이지에서 현재 상태를 확인해 주세요.",
+    "redirecting": "세계 결제 페이지로 돌아갑니다…",
+    "load_failed_title": "세계 결제 페이지를 열 수 없습니다",
+    "load_failed_description": "Stripe에서 돌아왔지만 세계 목록을 불러오지 못해 해당 결제 페이지를 열 수 없었습니다. 세계 설정 → 결제에서 현재 상태를 확인해 주세요.",
+    "workspace_missing_title": "세계를 찾을 수 없습니다",
+    "workspace_missing_description": "Stripe에서 돌아왔지만 이 세계를 사용할 수 없습니다. 삭제되었거나 접근 권한이 변경되었을 수 있습니다. 원하는 세계의 결제 페이지에서 현재 상태를 확인해 주세요.",
     "retry": "다시 시도",
     "go_to_app": "Auro로 이동"
   }

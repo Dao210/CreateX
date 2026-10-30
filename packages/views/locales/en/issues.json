@@ -96,7 +96,7 @@
     "author_renamed": "{{captured}} at capture · now {{current}}",
     "author_archived": "archived",
     "author_deleted_agent": "deleted agent",
-    "author_left_workspace": "no longer in creative space",
+    "author_left_workspace": "no longer in world",
     "error_source_changed": "The source changed. Review the refreshed preview, then submit again.",
     "error_agent_unsupported": "This agent runtime must be updated to use captured context. Switch to Manual or update the runtime.",
     "error_server_unsupported": "This server must be updated before it can create a sub-issue with captured context.",
@@ -117,7 +117,7 @@
   },
   "page": {
     "breadcrumb_title": "Issues",
-    "breadcrumb_workspace_fallback": "Creative Space",
+    "breadcrumb_workspace_fallback": "World",
     "empty_title": "No issues yet",
     "move_failed": "Failed to move issue"
   },
@@ -149,7 +149,7 @@
   },
   "scope": {
     "all_label": "All",
-    "all_description": "All issues in this creative space",
+    "all_description": "All issues in this world",
     "members_label": "Members",
     "members_description": "Issues assigned to team members",
     "agents_label": "Agents",
@@ -381,7 +381,7 @@
     "close": "Close preview"
   },
   "detail": {
-    "not_found": "This issue does not exist or has been deleted in this creative space.",
+    "not_found": "This issue does not exist or has been deleted in this world.",
     "breadcrumb_project_unknown": "Unknown project",
     "back": "Back",
     "title_placeholder": "Issue title",
@@ -409,7 +409,7 @@
     "quick_action_blocked": "{{name}} could not be triggered",
     "quick_action_posted": "Comment posted",
     "quick_action_blocked_title": "You can’t run this quick action",
-    "quick_action_blocked_body": "“{{name}}” runs as an agent you’re not allowed to trigger. Ask a creative space admin to make that agent available to the team, or to point this action at a shared one.",
+    "quick_action_blocked_body": "“{{name}}” runs as an agent you’re not allowed to trigger. Ask a world admin to make that agent available to the team, or to point this action at a shared one.",
     "quick_action_blocked_ok": "Got it",
     "pull_requests_loading": "Loading…",
     "pull_request_state_draft": "Draft",
@@ -454,7 +454,7 @@
     "unsubscribe_subtree": "Unsubscribe from this issue and its sub-issues",
     "unsubscribe_subtree_failed": "Could not unsubscribe from the sub-issues. Please try again.",
     "unsubscribe_subtree_succeeded": "Unsubscribed from this issue and its sub-issues.",
-    "unsubscribe_subtree_unsupported": "This creative space's server does not support unsubscribing from sub-issues yet. Try again after the next update.",
+    "unsubscribe_subtree_unsupported": "This world's server does not support unsubscribing from sub-issues yet. Try again after the next update.",
     "subscription_update_failed": "Could not update the subscription. Please try again.",
     "no_subscribers_results": "No results found",
     "change_subscribers_placeholder": "Change subscribers...",
@@ -822,7 +822,7 @@
     "delete_dialog_title_other": "Delete {{count}} issues?",
     "delete_dialog_desc_one": "This action cannot be undone. This will permanently delete the selected issue and all associated data.",
     "delete_dialog_desc_other": "This action cannot be undone. This will permanently delete the selected issues and all associated data.",
-    "delete_dialog_warning": "Any creative space member can delete issues.",
+    "delete_dialog_warning": "Any world member can delete issues.",
     "cancel": "Cancel"
   },
   "card": {
@@ -912,7 +912,7 @@
     }
   },
   "labels_panel": {
-    "intro": "Create and manage labels to categorize issues across your creative space.",
+    "intro": "Create and manage labels to categorize issues across your world.",
     "new_placeholder": "New label name…",
     "new_aria": "New label name",
     "add_action": "Add",
@@ -944,7 +944,7 @@
   },
   "save_view": {
     "title": "Save as view",
-    "hint_workspace": "Based on all creative space issues",
+    "hint_workspace": "Based on all world issues",
     "hint_my_any": "Based on My issues · All",
     "hint_my_assigned": "Based on My issues · Assigned",
     "hint_my_created": "Based on My issues · Created",
@@ -956,7 +956,7 @@
     "name_label": "Name",
     "visibility_label": "Visibility",
     "visibility_private": "Only visible to me",
-    "visibility_workspace": "Visible to creative space members",
+    "visibility_workspace": "Visible to world members",
     "filters_label": "Filters",
     "custom_property": "Custom property",
     "create": "Create view",
@@ -973,8 +973,8 @@
     "update": "Save changes",
     "toast_updated": "View updated",
     "toast_conflict": "Someone else edited this view — reopen it and try again",
-    "hint_workspace_members": "Based on creative space issues assigned to members",
-    "hint_workspace_agents": "Based on creative space issues assigned to agents",
+    "hint_workspace_members": "Based on world issues assigned to members",
+    "hint_workspace_agents": "Based on world issues assigned to agents",
     "scope_label_workspace": "Assignee type",
     "scope_label_my": "Relation to me",
     "variant_all": "Any assignee",
@@ -989,7 +989,7 @@
     "trigger": "Views",
     "empty": "No saved views yet",
     "private_group": "Private",
-    "shared_group": "Shared with creative space",
+    "shared_group": "Shared with world",
     "exit": "Exit view",
     "unavailable": "This view is no longer available",
     "edit": "Edit view"
@@ -1025,7 +1025,7 @@
     "hook_never_run": "This hook has not run yet.",
     "surface_loading": "Loading {{name}}…",
     "surface_unavailable": "{{name}} could not load its interface. The installed version may not include it.",
-    "surface_navigated": "{{name}} tried to replace its panel with a page loaded from elsewhere. It has been stopped and disconnected — tell your creative space admin."
+    "surface_navigated": "{{name}} tried to replace its panel with a page loaded from elsewhere. It has been stopped and disconnected — tell your world admin."
   },
   "wakeups": {
     "title": "Wakeups",
@@ -1111,7 +1111,7 @@
     "stopped_running": "Future wakeups are off · An execution has not finished",
     "next_at": "Next: {{time}}",
     "no_run": "Not run yet",
-    "permission_error": "You cannot manage this wakeup. Contact its creator or a creative space admin.",
+    "permission_error": "You cannot manage this wakeup. Contact its creator or a world admin.",
     "conflict_error": "This rule has changed. Refresh and try again.",
     "conditions": {
       "run_queued": "When {{agent}}’s run is queued",
@@ -1223,7 +1223,7 @@
       "submitting": "Creating…",
       "cancel": "Cancel",
       "error": "Could not create the wakeup. Check the settings and try again.",
-      "capacity_error": "This issue or creative space already has the maximum number of enabled wakeups.",
+      "capacity_error": "This issue or world already has the maximum number of enabled wakeups.",
       "missing_condition": "Choose a condition.",
       "missing_agent": "Choose an agent to wake.",
       "missing_events": "Choose at least one event.",
@@ -1291,8 +1291,8 @@
       "enable": "On for this issue",
       "toggle": "Wake the assignee when sub-issues finish",
       "save_error": "Could not save the system rule.",
-      "default_on": "On by default in this creative space. Change the default in Settings → Wakeups.",
-      "default_off": "Off by default in this creative space. Change the default in Settings → Wakeups.",
+      "default_on": "On by default in this world. Change the default in Settings → Wakeups.",
+      "default_off": "Off by default in this world. Change the default in Settings → Wakeups.",
       "notify_member": "Notify {{name}} in their inbox",
       "instruction": "What to do when woken",
       "instruction_edit": "Edit instruction",

@@ -127,7 +127,7 @@
   },
   "empty_state": {
     "first_time_title": "和你的智能体对话",
-    "first_time_intro": "✨ 它们了解你的创作区——",
+    "first_time_intro": "✨ 它们了解你的世界——",
     "first_time_pillars": "任务、项目、skill",
     "first_time_pillars_suffix": "。",
     "first_time_actions": "让它做一份总结、规划你的一天，或交给它一个小任务。",
@@ -148,7 +148,7 @@
     },
     "recommend": {
       "label": "推荐一个操作",
-      "prompt": "根据你对我的创作区的了解，推荐一个有用的初始操作。"
+      "prompt": "根据你对我的世界的了解，推荐一个有用的初始操作。"
     },
     "customize": "自定义开场建议"
   },
@@ -167,8 +167,8 @@
     },
     "digest": {
       "title": "让日报自己写好",
-      "desc": "每天自动汇总创作区进展，发到你的收件箱。",
-      "prompt": "帮我建一个每天早上自动汇总创作区进展的日报自动化"
+      "desc": "每天自动汇总世界进展，发到你的收件箱。",
+      "prompt": "帮我建一个每天早上自动汇总世界进展的日报自动化"
     },
     "digest_badge": "每天 9:00"
   },

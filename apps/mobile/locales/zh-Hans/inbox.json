@@ -38,8 +38,8 @@
     "notification": "通知",
     "close": "关闭通知",
     "unavailable": "此通知已不可用。",
-    "billing_disabled": "该创作区无法修改账单设置。请联系创作区管理员。",
-    "contact_admin": "请让创作区所有者或管理员查看账单选项。",
+    "billing_disabled": "该世界无法修改账单设置。请联系世界管理员。",
+    "contact_admin": "请让世界所有者或管理员查看账单选项。",
     "review_billing": "查看账单选项",
     "review_billing_web": "在网页端打开 Auro 查看账单选项。"
   },
@@ -78,8 +78,8 @@
     "run_limit_blocked": "已达到上限，本次运行被阻止"
   },
   "body": {
-    "autopilot_title_limit": "自动化 \"{{title}}\" 未启动，因为该创作区已达到当前周期 {{limit}} 次运行的上限。额度将在 {{resetAt}} 重置。",
-    "autopilot_limit": "该创作区已达到当前周期 {{limit}} 次自动化运行的上限。此执行未启动。额度将在 {{resetAt}} 重置。"
+    "autopilot_title_limit": "自动化 \"{{title}}\" 未启动，因为该世界已达到当前周期 {{limit}} 次运行的上限。额度将在 {{resetAt}} 重置。",
+    "autopilot_limit": "该世界已达到当前周期 {{limit}} 次自动化运行的上限。此执行未启动。额度将在 {{resetAt}} 重置。"
   },
   "actions.archive_completed": "归档已完成项",
   "detail.status_todo": "todo",
@@ -88,5 +88,5 @@
   "type.task_completed": "运行完成",
   "type.task_failed": "运行失败",
   "type.run_limit_blocked": "已达到上限，本次运行被阻止",
-  "body.autopilot_title_limit": "自动化 \"{{title}}\" 未启动，因为该创作区已达到当前周期 {{limit}} 次运行的上限。额度将在 {{resetAt}} 重置。"
+  "body.autopilot_title_limit": "自动化 \"{{title}}\" 未启动，因为该世界已达到当前周期 {{limit}} 次运行的上限。额度将在 {{resetAt}} 重置。"
 }

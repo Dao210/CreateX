@@ -24,7 +24,7 @@
     },
     "bootstrapping": {
       "title": "正在启动本地运行时...",
-      "hint": "正在连接创作区..."
+      "hint": "正在连接世界..."
     }
   },
   "mika_setup": {
@@ -128,11 +128,11 @@
     },
     "visibility_hint": {
       "private": "仅你可以在此运行时上创建智能体。",
-      "public": "创作区内任何成员都可以在此运行时上创建智能体。"
+      "public": "世界内任何成员都可以在此运行时上创建智能体。"
     },
     "visibility_hint_readonly": {
       "private": "仅运行时所有者可以在此运行时上创建智能体，也只有他们能切换为「公开」。",
-      "public": "创作区内任何成员都可以在此运行时上创建智能体。只有运行时所有者能切回「私有」。"
+      "public": "世界内任何成员都可以在此运行时上创建智能体。只有运行时所有者能切回「私有」。"
     },
     "visibility_toast_updated": "可见性已设为\"{{visibility}}\"",
     "visibility_toast_failed": "更新可见性失败",
@@ -170,7 +170,7 @@
           "workload_idle": "空闲",
           "workload_working": "运行中",
           "workload_queued": "排队中",
-          "visibility_workspace": "创作区",
+          "visibility_workspace": "世界",
           "visibility_private": "私有"
         }
       }
@@ -255,7 +255,7 @@
     "managed_by_desktop": "由桌面端管理",
     "managed_by_desktop_title": "CLI 二进制由 Auro 桌面端管理——升级桌面端即可升级 CLI。",
     "read_only": "只读",
-    "read_only_title": "只有运行时所有者和创作区管理员可以更新 CLI。",
+    "read_only_title": "只有运行时所有者和世界管理员可以更新 CLI。",
     "local_build": "本地构建",
     "local_build_title": "该运行时报告的不是发布版本，Auro 无法判断是否有可升级的版本。请在这台机器上自行更新。",
     "latest": "最新",
@@ -295,9 +295,9 @@
     "row_actions_aria": "行操作",
     "edit_action": "编辑自定义运行时",
     "delete_action": "删除",
-    "delete_profile_action": "从创作区删除",
-    "delete_permission_hint": "只有运行时所有者和创作区管理员可以删除这个运行时",
-    "delete_admin_hint": "只有运行时所有者和创作区管理员可以删除运行时。",
+    "delete_profile_action": "从世界删除",
+    "delete_permission_hint": "只有运行时所有者和世界管理员可以删除这个运行时",
+    "delete_admin_hint": "只有运行时所有者和世界管理员可以删除运行时。",
     "badge_builtin": "内置",
     "badge_custom": "自定义",
     "badge_registering": "注册中",
@@ -313,10 +313,10 @@
     "add_custom": "添加自定义运行时",
     "this_machine": "这台机器",
     "unassigned_title": "尚未连接到机器的自定义运行时",
-    "unassigned_description": "这些创作区运行时目前没有连接到任何机器。你可以连接装有对应命令的机器，或通过行操作编辑、删除配置。",
+    "unassigned_description": "这些世界运行时目前没有连接到任何机器。你可以连接装有对应命令的机器，或通过行操作编辑、删除配置。",
     "dialog_title": "自定义运行时",
-    "dialog_description": "自定义运行时定义属于整个创作区，会同步到所有已连接的机器。只有机器上能找到对应命令时，才会注册该运行时。",
-    "create_dialog_description": "从 {{machine}} 配置一个自定义命令。定义会同步到整个创作区，但只会在能找到该命令的机器上注册。",
+    "dialog_description": "自定义运行时定义属于整个世界，会同步到所有已连接的机器。只有机器上能找到对应命令时，才会注册该运行时。",
+    "create_dialog_description": "从 {{machine}} 配置一个自定义命令。定义会同步到整个世界，但只会在能找到该命令的机器上注册。",
     "learn_more": "查看配置指南",
     "close": "关闭",
     "add_new": "新建自定义运行时",
@@ -383,12 +383,12 @@
       "error_generic": "保存运行时失败。"
     },
     "delete_dialog": {
-      "title": "从创作区删除自定义运行时？",
-      "description": "\"{{name}}\" 将从此创作区及所有已注册的机器中移除。此操作无法撤销。",
-      "confirm": "从创作区删除",
+      "title": "从世界删除自定义运行时？",
+      "description": "\"{{name}}\" 将从此世界及所有已注册的机器中移除。此操作无法撤销。",
+      "confirm": "从世界删除",
       "cancel": "取消",
       "deleting": "正在删除...",
-      "toast_deleted": "已从创作区删除自定义运行时",
+      "toast_deleted": "已从世界删除自定义运行时",
       "error_bound": "仍有智能体在使用此自定义运行时，无法删除；这些智能体可能位于注册了该运行时的其他机器上。",
       "error_generic": "删除运行时失败。"
     }

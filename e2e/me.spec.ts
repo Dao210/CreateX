@@ -13,8 +13,8 @@ const tankDraft = { profile: "tank-defense@1", name: "MCP 收藏坦克", parts: 
 test.use({ viewport: { width: 1440, height: 980 } });
 test.beforeAll(async () => {
   api = new TestApiClient();
-  await api.login(`me-${run}@auro.ai`, "My Space QA");
-  workspace = await api.createWorkspace("My Space QA", `me-${run}`);
+  await api.login(`me-${run}@auro.ai`, "My Creations QA");
+  workspace = await api.createWorkspace("My Creations QA", `me-${run}`);
   await api.markUserOnboarded();
   token = api.getToken()!;
   workspaceId = workspace.id;
@@ -73,13 +73,14 @@ test("collects MCP characters, saved blueprints and merged progress", async ({ p
   expect(mine.characters[0].origin).toBe("mcp");
 
   await page.goto(`/${workspace.slug}/me`, { waitUntil: "domcontentloaded" });
-  await expect(page.getByRole("heading", { name: "我的", exact: true })).toBeVisible({ timeout: 45000 });
+  await expect(page.getByRole("heading", { name: "我的作品", exact: true })).toBeVisible({ timeout: 45000 });
+  await expect(page.getByText(`当前世界：${workspace.name}`, { exact: true })).toBeVisible();
+  await expect(page.getByRole("tab", { name: "作品", exact: true })).toHaveAttribute("aria-selected", "true");
   await expect(page.getByText("MCP 收藏坦克", { exact: true })).toBeVisible();
   await expect(page.getByText("我的旋转锤", { exact: true })).toBeVisible();
   await expect(page.getByText("MCP", { exact: true })).toBeVisible();
   await expect(page.getByText("5 / 24", { exact: true })).toBeVisible();
-  await expect(page.getByText("5 / 24 星", { exact: true })).toBeVisible();
-  await expect(page.getByText("最高分 001234", { exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "继续闯关", exact: true })).toHaveCount(0);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await page.screenshot({ path: "test-results/me/my-space-desktop.png", fullPage: true });
 
@@ -87,10 +88,18 @@ test("collects MCP characters, saved blueprints and merged progress", async ({ p
   await expect(workshopLink).toHaveAttribute("href", new RegExp(`/${workspace.slug}/siege\\?blueprint=`));
   const garageLink = page.getByRole("link", { name: "去车库", exact: true });
   await expect(garageLink).toHaveAttribute("href", new RegExp(`/${workspace.slug}/tanks\\?character=`));
+  await page.getByRole("tab", { name: "游戏进度", exact: true }).click();
+  await expect(page).toHaveURL(new RegExp(`/${workspace.slug}/me\\?tab=progress$`));
+  await expect(page.getByText("5 / 24 星", { exact: true })).toBeVisible();
+  await expect(page.getByText("最高分 001234", { exact: true })).toBeVisible();
   await expect(page.getByRole("link", { name: "继续闯关", exact: true })).toHaveAttribute("href", `/${workspace.slug}/siege/campaign?level=3`);
   await expect(page.getByRole("link", { name: "继续守城", exact: true })).toHaveAttribute("href", `/${workspace.slug}/tanks?stage=3`);
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await expect(page.getByRole("tab", { name: "游戏进度", exact: true })).toHaveAttribute("aria-selected", "true");
 
   await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole("tab", { name: "作品", exact: true }).click();
+  await expect(page.getByText("MCP 收藏坦克", { exact: true })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await page.screenshot({ path: "test-results/me/my-space-phone.png", fullPage: true });
 });

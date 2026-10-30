@@ -1,14 +1,14 @@
 {
   "page": {
     "title": "Skills",
-    "tagline": "Instructions any agent in this creative space can use.",
+    "tagline": "Instructions any agent in this world can use.",
     "learn_more": "Learn more →",
     "new_skill": "New skill",
     "search_placeholder": "Search skills…",
     "scopes": {
       "all": {
         "label": "All",
-        "description": "All skills in this creative space"
+        "description": "All skills in this world"
       },
       "used": {
         "label": "In use",
@@ -35,7 +35,7 @@
       "try_different": " Try a different query."
     },
     "intro_banner": {
-      "title": "Shared with your creative space.",
+      "title": "Shared with your world.",
       "body": "Anyone can create a skill, import one from a URL or a local folder, or copy one from their local runtime — and every agent can use it.",
       "highlight": "Local runtime skills stay private until you copy one here."
     },
@@ -44,7 +44,7 @@
       "fallback": "Something went wrong fetching the skill list.",
       "retry": "Try again"
     },
-    "supporting_data_warning": "Some creative space data failed to load. Creator attribution, runtime names, or edit permissions may appear incomplete."
+    "supporting_data_warning": "Some world data failed to load. Creator attribution, runtime names, or edit permissions may appear incomplete."
   },
   "table": {
     "name": "Name",
@@ -129,7 +129,7 @@
     "read_only": "Read-only",
     "delete_aria": "Delete skill",
     "delete_tooltip": "Delete skill",
-    "supporting_data_warning": "Some creative space data failed to load. Creator attribution, runtime names, or edit permissions may appear incomplete until the next refresh.",
+    "supporting_data_warning": "Some world data failed to load. Creator attribution, runtime names, or edit permissions may appear incomplete until the next refresh.",
     "delete_file": "Delete file",
     "name_placeholder": "skill-name",
     "description_placeholder": "One sentence describing when an agent should use this skill…",
@@ -229,8 +229,8 @@
       "used_by_other": "Used by {{count}} agents",
       "used_by_empty": "Not assigned to any agent yet. Open an agent's Skills tab to assign.",
       "permissions_owner": "You can edit and delete this skill. Changes take effect on the next agent run.",
-      "permissions_locked_creator": "Only the creator ({{name}}) or a creative space admin can edit this skill.",
-      "permissions_locked": "Only the creator or a creative space admin can edit this skill.",
+      "permissions_locked_creator": "Only the creator ({{name}}) or a world admin can edit this skill.",
+      "permissions_locked": "Only the creator or a world admin can edit this skill.",
       "properties_help": "About skill properties",
       "character_count": "{{count}} characters"
     },
@@ -255,7 +255,7 @@
     "method": {
       "chooser": {
         "title": "New skill",
-        "desc": "Choose how to add a skill to this creative space."
+        "desc": "Choose how to add a skill to this world."
       },
       "manual": {
         "title": "Create manually",
@@ -277,7 +277,7 @@
     "manual": {
       "name_label": "Name",
       "name_placeholder": "e.g. review-helper",
-      "name_hint": "Must be unique within the creative space.",
+      "name_hint": "Must be unique within the world.",
       "description_label": "Description",
       "description_placeholder": "One sentence on when to assign this skill to an agent.",
       "name_conflict_hint": " Try a different name and submit again.",
@@ -333,13 +333,13 @@
     "no_search_results_hint": "No local skills match \"{{query}}\".",
     "ignored_files_hint": "Symlinks, unreadable files, oversized files, and very large bundles are ignored during import.",
     "ready": "Ready to import",
-    "into_workspace": "into this creative space.",
+    "into_workspace": "into this world.",
     "select_skill": "Select a skill to continue.",
-    "import_button": "Import to creative space",
+    "import_button": "Import to world",
     "importing": "Importing…",
     "skill_files_one": "{{count}} file",
     "skill_files_other": "{{count}} files",
-    "skill_name_label": "Creative Space skill name",
+    "skill_name_label": "World skill name",
     "skill_description_label": "Description",
     "skill_description_placeholder": "Optional — describe when an agent should use this skill.",
     "toast_imported": "Skill imported",
@@ -359,7 +359,7 @@
     "bulk_summary_failed": "Failed",
     "conflict_single_title": "A skill with this name already exists",
     "conflict_bulk_title": "{{count}} skills need a decision",
-    "conflict_hint": "Choose whether to overwrite the existing creative space skill, import with a new name, or skip it.",
+    "conflict_hint": "Choose whether to overwrite the existing world skill, import with a new name, or skip it.",
     "conflict_locked_creator": "This skill was created by {{creator}}. Only the creator can overwrite it from local import; edit it from the Skill detail page if you need to change it.",
     "conflict_locked": "Only the creator can overwrite this skill from local import; edit it from the Skill detail page if you need to change it.",
     "conflict_overwrite": "Overwrite",

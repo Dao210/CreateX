@@ -24,7 +24,7 @@
     },
     "bootstrapping": {
       "title": "로컬 런타임 시작 중...",
-      "hint": "크리에이티브 스페이스에 연결 중..."
+      "hint": "세계에 연결 중..."
     }
   },
   "mika_setup": {
@@ -128,11 +128,11 @@
     },
     "visibility_hint": {
       "private": "본인만 이 런타임에 에이전트를 만들 수 있습니다.",
-      "public": "크리에이티브 스페이스 멤버라면 누구나 이 런타임에 에이전트를 만들 수 있습니다."
+      "public": "세계 멤버라면 누구나 이 런타임에 에이전트를 만들 수 있습니다."
     },
     "visibility_hint_readonly": {
       "private": "이 런타임에 에이전트를 만들 수 있는 사람은 런타임 owner뿐이며, 공개로 바꿀 수 있는 사람도 owner뿐입니다.",
-      "public": "크리에이티브 스페이스 멤버라면 누구나 이 런타임에 에이전트를 만들 수 있습니다. 다시 비공개로 바꿀 수 있는 사람은 런타임 owner뿐입니다."
+      "public": "세계 멤버라면 누구나 이 런타임에 에이전트를 만들 수 있습니다. 다시 비공개로 바꿀 수 있는 사람은 런타임 owner뿐입니다."
     },
     "visibility_toast_updated": "공개 범위를 {{visibility}}(으)로 설정했습니다",
     "visibility_toast_failed": "공개 범위를 업데이트하지 못했습니다",
@@ -170,7 +170,7 @@
           "workload_idle": "유휴",
           "workload_working": "작업 중",
           "workload_queued": "대기 중",
-          "visibility_workspace": "크리에이티브 스페이스",
+          "visibility_workspace": "세계",
           "visibility_private": "비공개"
         }
       }
@@ -255,7 +255,7 @@
     "managed_by_desktop": "데스크톱에서 관리",
     "managed_by_desktop_title": "CLI 바이너리는 Auro Desktop에서 관리합니다. CLI를 업그레이드하려면 Desktop을 업데이트하세요.",
     "read_only": "읽기 전용",
-    "read_only_title": "런타임 소유자와 크리에이티브 스페이스 관리자만 CLI를 업데이트할 수 있습니다.",
+    "read_only_title": "런타임 소유자와 세계 관리자만 CLI를 업데이트할 수 있습니다.",
     "local_build": "로컬 빌드",
     "local_build_title": "이 런타임은 릴리스 버전이 아닌 버전을 보고하므로 Auro가 업그레이드 가능 여부를 판단할 수 없습니다. 머신에서 직접 업데이트하세요.",
     "latest": "최신",
@@ -295,9 +295,9 @@
     "row_actions_aria": "행 작업",
     "edit_action": "사용자 지정 런타임 편집",
     "delete_action": "삭제",
-    "delete_profile_action": "크리에이티브 스페이스에서 삭제",
-    "delete_permission_hint": "런타임 소유자와 크리에이티브 스페이스 관리자만 이 런타임을 삭제할 수 있습니다",
-    "delete_admin_hint": "런타임 소유자와 크리에이티브 스페이스 관리자만 런타임을 삭제할 수 있습니다.",
+    "delete_profile_action": "세계에서 삭제",
+    "delete_permission_hint": "런타임 소유자와 세계 관리자만 이 런타임을 삭제할 수 있습니다",
+    "delete_admin_hint": "런타임 소유자와 세계 관리자만 런타임을 삭제할 수 있습니다.",
     "badge_builtin": "기본 제공",
     "badge_custom": "사용자 지정",
     "badge_registering": "등록 중",
@@ -313,10 +313,10 @@
     "add_custom": "사용자 지정 런타임 추가",
     "this_machine": "이 기기",
     "unassigned_title": "기기에 연결되지 않은 사용자 지정 런타임",
-    "unassigned_description": "이 크리에이티브 스페이스 런타임은 현재 어떤 기기에도 연결되어 있지 않습니다. 해당 명령이 있는 기기를 연결하거나 행 작업에서 수정 또는 삭제할 수 있습니다.",
+    "unassigned_description": "이 세계 런타임은 현재 어떤 기기에도 연결되어 있지 않습니다. 해당 명령이 있는 기기를 연결하거나 행 작업에서 수정 또는 삭제할 수 있습니다.",
     "dialog_title": "사용자 지정 런타임",
-    "dialog_description": "사용자 지정 런타임 정의는 크리에이티브 스페이스 전체에 적용되며 연결된 모든 기기에 동기화됩니다. 해당 명령을 사용할 수 있는 기기에서만 런타임이 등록됩니다.",
-    "create_dialog_description": "{{machine}}에서 사용자 지정 명령을 설정합니다. 정의는 크리에이티브 스페이스 전체에 동기화되며 해당 명령을 사용할 수 있는 기기에만 등록됩니다.",
+    "dialog_description": "사용자 지정 런타임 정의는 세계 전체에 적용되며 연결된 모든 기기에 동기화됩니다. 해당 명령을 사용할 수 있는 기기에서만 런타임이 등록됩니다.",
+    "create_dialog_description": "{{machine}}에서 사용자 지정 명령을 설정합니다. 정의는 세계 전체에 동기화되며 해당 명령을 사용할 수 있는 기기에만 등록됩니다.",
     "learn_more": "설정 가이드 보기",
     "close": "닫기",
     "add_new": "새 사용자 지정 런타임",
@@ -383,12 +383,12 @@
       "error_generic": "런타임 저장에 실패했습니다."
     },
     "delete_dialog": {
-      "title": "사용자 지정 런타임을 크리에이티브 스페이스에서 삭제하시겠습니까?",
-      "description": "\"{{name}}\"은(는) 이 크리에이티브 스페이스와 등록된 모든 기기에서 제거됩니다. 이 작업은 되돌릴 수 없습니다.",
-      "confirm": "크리에이티브 스페이스에서 삭제",
+      "title": "사용자 지정 런타임을 세계에서 삭제하시겠습니까?",
+      "description": "\"{{name}}\"은(는) 이 세계와 등록된 모든 기기에서 제거됩니다. 이 작업은 되돌릴 수 없습니다.",
+      "confirm": "세계에서 삭제",
       "cancel": "취소",
       "deleting": "삭제 중…",
-      "toast_deleted": "사용자 지정 런타임이 크리에이티브 스페이스에서 삭제되었습니다",
+      "toast_deleted": "사용자 지정 런타임이 세계에서 삭제되었습니다",
       "error_bound": "아직 에이전트가 사용 중이어서 이 사용자 지정 런타임을 삭제할 수 없습니다. 해당 에이전트는 이 런타임을 등록한 다른 컴퓨터에 있을 수 있습니다.",
       "error_generic": "런타임 삭제에 실패했습니다."
     }

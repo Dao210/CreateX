@@ -162,7 +162,7 @@ describe("useTabStore actions", () => {
     });
     expect(s.byWorkspace.acme.browsingHistory).toEqual(["/acme/me"]);
     expect(s.byWorkspace.acme.browsingHistoryTitles).toEqual({
-      "/acme/me": "My Space",
+      "/acme/me": "My Creations",
     });
   });
 
@@ -241,7 +241,7 @@ describe("useTabStore actions", () => {
     store.navigateActiveSession("/acme/chat/issue-1");
     const firstTab = getActiveTab(useTabStore.getState())!;
 
-    const newTabId = store.addTab("/acme/me", "My Space");
+    const newTabId = store.addTab("/acme/me", "My Creations");
     store.setActiveTab(newTabId);
 
     const state = useTabStore.getState();
@@ -269,7 +269,7 @@ describe("useTabStore actions", () => {
     store.switchWorkspace("acme"); // default tab at /acme/me
     const defaultTabId = useTabStore.getState().byWorkspace.acme.tabs[0].id;
 
-    const id = store.openTab("/acme/me?filter=urgent", "My Space");
+    const id = store.openTab("/acme/me?filter=urgent", "My Creations");
 
     const s = useTabStore.getState();
     expect(id).toBe(defaultTabId); // focused, not duplicated
@@ -533,7 +533,7 @@ describe("navigateActiveSession", () => {
     expect(
       useTabStore.getState().byWorkspace.acme.browsingHistoryTitles,
     ).toEqual({
-      "/acme/me": "My Space",
+      "/acme/me": "My Creations",
       "/acme/chat/issue-1": "MUL-1: Fix history",
     });
   });

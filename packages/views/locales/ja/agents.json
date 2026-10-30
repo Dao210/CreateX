@@ -127,7 +127,7 @@
     "load_failed_title": "エージェントを読み込めませんでした",
     "load_failed_default": "エージェントの取得中に問題が発生しました。",
     "no_access_title": "このエージェントにアクセスできません",
-    "no_access_hint": "この非公開エージェントは、エージェントのオーナーまたはクリエイティブスペースの admin のみが閲覧できます。",
+    "no_access_hint": "この非公開エージェントは、エージェントのオーナーまたはワールドの admin のみが閲覧できます。",
     "try_again": "再試行",
     "archived_banner": "このエージェントはアーカイブされています。割り当てやメンションはできません。",
     "runtime_required_banner": "このエージェントの設定と履歴は保持されていますが、実行するにはランタイムを設定する必要があります。",
@@ -191,7 +191,7 @@
     "attention_queued_other": "ランタイムが利用できないため、{{count}}件の実行が待機中です。"
   },
   "skill_attach": {
-    "trigger_aria": "クリエイティブスペースのスキルを追加",
+    "trigger_aria": "ワールドのスキルを追加",
     "trigger_label": "追加"
   },
   "pickers": {
@@ -281,9 +281,9 @@
       "private_desc": "このエージェントを実行できるのはあなただけです",
       "public_title": "公開",
       "public_desc": "このエージェントを実行できる人を選択します",
-      "public_workspace_option": "クリエイティブスペース全員",
+      "public_workspace_option": "ワールド全員",
       "public_members_group": "特定のメンバー",
-      "public_members_empty": "選択できるクリエイティブスペースメンバーがいません",
+      "public_members_empty": "選択できるワールドメンバーがいません",
       "public_targets_empty_hint": "以下から少なくとも1つを選択してください。そうでないとエージェントはプライベートのままになります。"
     },
     "runtime_label": "ランタイム",
@@ -312,10 +312,10 @@
     },
     "skills_section": {
       "label": "スキル",
-      "placeholder": "クリエイティブスペースからスキルを追加",
+      "placeholder": "ワールドからスキルを追加",
       "selected_other": "{{count}} 件選択中 — クリックして編集",
       "collapse": "折りたたむ",
-      "list_empty_multi": "このクリエイティブスペースにはまだスキルがありません。まず作成またはインポートしてください。",
+      "list_empty_multi": "このワールドにはまだスキルがありません。まず作成またはインポートしてください。",
       "list_loading": "読み込み中...",
       "list_empty_default": "利用可能なスキルがありません。",
       "list_no_match": "一致するスキルがありません。",
@@ -356,12 +356,12 @@
       "system_layer_hint": "Auro のリリースごとに更新されます。編集はできず、下に書いた内容が上書きされることもありません。",
       "system_layer_show": "表示",
       "system_layer_hide": "隠す",
-      "workspace_notes_label": "クリエイティブスペースの補足",
+      "workspace_notes_label": "ワールドの補足",
       "workspace_notes_intro": "チームのコンテキストや好みを下に追加してください。Auro がこのエージェント向けに管理している指示の上に適用されます。Markdown が使えます。",
       "workspace_notes_placeholder": "このエージェントが常に知っておくべきことを書きます。\n\n# 例\nメインリポジトリは github.com/acme/platform です。\nチャットが日本語でも、タスクは英語で書いてください。\n金曜日はデプロイしません。"
     },
     "env": {
-      "intro_readonly": "エージェントプロセスの起動時に注入されます。値の読み取りや編集ができるのはクリエイティブスペースのオーナーと admin のみで、すべての表示と編集はクリエイティブスペースの監査ログに記録されます。",
+      "intro_readonly": "エージェントプロセスの起動時に注入されます。値の読み取りや編集ができるのはワールドのオーナーと admin のみで、すべての表示と編集はワールドの監査ログに記録されます。",
       "empty_readonly": "設定された環境変数はありません。",
       "intro_prefix": "エージェントプロセスの起動時に注入されます（例: ",
       "intro_separator": ", ",
@@ -384,7 +384,7 @@
       "save_failed_toast": "環境変数を保存できませんでした",
       "not_revealed_title_other": "変数 {{count}} 件を設定済み",
       "not_revealed_empty": "設定された環境変数はありません。",
-      "not_revealed_hint": "値は表示するまでマスクされます。すべての表示と編集はクリエイティブスペースの監査ログに記録されます。",
+      "not_revealed_hint": "値は表示するまでマスクされます。すべての表示と編集はワールドの監査ログに記録されます。",
       "reveal_action": "表示して編集",
       "revealing": "表示中...",
       "reveal_failed_toast": "環境変数の値を読み込めませんでした",
@@ -415,16 +415,16 @@
       "agent_disabled_badge": "エージェントで無効",
       "runtime_disabled_badge": "ランタイムで無効",
       "runtime_overridden_badge": "Auro で上書き",
-      "workspace_title": "クリエイティブスペースライブラリから",
+      "workspace_title": "ワールドライブラリから",
       "workspace_action_failed": "このエージェントの MCP サーバーを更新できませんでした",
       "workspace_removed_toast": "このエージェントから MCP サーバーを削除しました",
       "workspace_added_toast": "このエージェントに MCP サーバーを追加しました",
       "workspace_remove_aria": "このエージェントから {{name}} を削除",
       "workspace_remove_action": "削除",
       "workspace_toggle_aria": "このエージェントで {{name}} を有効化",
-      "workspace_library_empty": "このクリエイティブスペースにはまだ割り当て可能な MCP サーバーがありません。クリエイティブスペース設定 → MCP で追加してください。",
-      "workspace_none_assigned": "このエージェントにはまだクリエイティブスペース MCP サーバーが割り当てられていません。",
-      "workspace_add_action": "クリエイティブスペースから追加",
+      "workspace_library_empty": "このワールドにはまだ割り当て可能な MCP サーバーがありません。ワールド設定 → MCP で追加してください。",
+      "workspace_none_assigned": "このエージェントにはまだワールド MCP サーバーが割り当てられていません。",
+      "workspace_add_action": "ワールドから追加",
       "workspace_loading": "割り当て済みサーバーを読み込み中…",
       "dialog_name_locked": "ここでは名前を変更できません。変更すると別のサーバーが追加され、元のサーバーが残ります。削除してから追加し直してください。",
       "workspace_overridden_badge": "上書き",
@@ -505,7 +505,7 @@
       "invalid_json": "無効な JSON: {{error}}",
       "save_failed_toast": "MCP config を保存できませんでした",
       "redacted_title": "設定済み — あなたには非表示",
-      "redacted_hint": "この config を読み取れるのは、エージェントのオーナーまたはクリエイティブスペースの admin のみです。",
+      "redacted_hint": "この config を読み取れるのは、エージェントのオーナーまたはワールドの admin のみです。",
       "dialog_json_help": "サーバー設定全体を JSON で編集します。"
     },
     "composio_mcp": {
@@ -521,7 +521,7 @@
       "redacted_title": "設定済み — あなたには非表示",
       "redacted_hint": "この agent が使用できるアプリを閲覧・変更できるのは作成者のみです。",
       "shared_warning": "このエージェントは共有されています。このエージェントを実行できる人は、ここで有効化した Composio アプリを利用できます。これらのアプリが機微なデータを扱う場合は、Private にするかアクセス範囲を絞ってください。",
-      "workspace_warning": "クリエイティブスペースに公開：クリエイティブスペースの全メンバーがこのエージェントを通じてこれらの Composio アプリを利用できます。"
+      "workspace_warning": "ワールドに公開：ワールドの全メンバーがこのエージェントを通じてこれらの Composio アプリを利用できます。"
     },
     "runtime_config": {
       "mode_label": "ルーティングモード",
@@ -547,7 +547,7 @@
       "assigned_hint": "オフにすると割り当てを残したまま使用を停止できます。",
       "runtime_title": "ランタイムから継承",
       "runtime_hint": "{{runtime}} から自動検出され、このエージェントがそこで実行されるときに利用できます。",
-      "workspace_badge": "クリエイティブスペース",
+      "workspace_badge": "ワールド",
       "inherited_badge": "継承",
       "refresh_action": "更新",
       "no_description": "説明なし",
@@ -575,7 +575,7 @@
       "remove_failed_toast": "スキルを削除できませんでした",
       "add_dialog_title": "スキルを追加",
       "add_dialog_search_placeholder": "スキルを検索",
-      "add_dialog_empty": "すべてのクリエイティブスペースのスキルがすでに割り当てられています。",
+      "add_dialog_empty": "すべてのワールドのスキルがすでに割り当てられています。",
       "add_dialog_no_match": "検索条件に一致するスキルがありません。",
       "add_dialog_empty_partial": "追加できるスキルがありません。このエージェントにはすでにすべてのスキルが割り当てられています。",
       "add_dialog_saving": "追加中...",
@@ -585,7 +585,7 @@
       "add_failed_toast": "スキルを追加できませんでした"
     },
     "integrations": {
-      "members_note": "この接続を管理できるのはクリエイティブスペースのオーナーと管理者のみです。接続済みの Bot は「設定 → 連携」で確認できます。"
+      "members_note": "この接続を管理できるのはワールドのオーナーと管理者のみです。接続済みの Bot は「設定 → 連携」で確認できます。"
     },
     "activity": {
       "status": {
@@ -654,17 +654,17 @@
       "tooltip": "個人 · オーナーとオーナーが許可した人のみがこのエージェントを実行できます"
     },
     "workspace": {
-      "label": "クリエイティブスペース",
-      "tooltip": "クリエイティブスペース · このクリエイティブスペースの全員がこのエージェントを使用できます"
+      "label": "ワールド",
+      "tooltip": "ワールド · このワールドの全員がこのエージェントを使用できます"
     }
   },
   "access": {
     "section_title": "このエージェントを実行できるユーザー",
     "tooltip": "アクセス · 誰がこのエージェントを実行できるか",
     "trigger_private": "自分のみ",
-    "trigger_workspace": "クリエイティブスペース",
+    "trigger_workspace": "ワールド",
     "scope_labels": {
-      "workspace": "クリエイティブスペース",
+      "workspace": "ワールド",
       "specific_people": "特定のメンバー",
       "owner_only": "オーナーのみ"
     },
@@ -674,10 +674,10 @@
     "private_title": "プライベート",
     "private_desc": "あなただけがこのエージェントを実行できます",
     "shared_title": "共有",
-    "shared_desc": "このエージェントを実行できるクリエイティブスペースまたはメンバーを選択します",
-    "shared_target_required": "保存する前に、クリエイティブスペースまたは1人以上のメンバーを選択してください。",
-    "workspace_title": "クリエイティブスペースに公開",
-    "workspace_desc": "このクリエイティブスペースの全員がこのエージェントを実行できます",
+    "shared_desc": "このエージェントを実行できるワールドまたはメンバーを選択します",
+    "shared_target_required": "保存する前に、ワールドまたは1人以上のメンバーを選択してください。",
+    "workspace_title": "ワールドに公開",
+    "workspace_desc": "このワールドの全員がこのエージェントを実行できます",
     "members_title": "特定のメンバーに公開",
     "members_desc": "選択した人だけがこのエージェントを実行できます",
     "team_title": "チームに公開",
@@ -686,7 +686,7 @@
     "members_group": "メンバー",
     "public_group": "公開アクセス",
     "owner_only_readonly": "このエージェントを実行できる相手は、オーナーのみが変更できます。",
-    "members_empty": "選択できるクリエイティブスペースメンバーがいません",
+    "members_empty": "選択できるワールドメンバーがいません",
     "composio_switch_hint": "ご注意 — このエージェントは Composio アプリが有効です。共有すると、アクセス権を持つ全員がこのエージェントを通じてこれらのアプリを利用できます。"
   },
   "profile_card": {
@@ -881,7 +881,7 @@
       },
       "template": {
         "title": "テンプレートを使用",
-        "description": "整理された指示とスキルを基に、クリエイティブスペースに合わせて詳細を調整します。"
+        "description": "整理された指示とスキルを基に、ワールドに合わせて詳細を調整します。"
       },
       "ai": {
         "title": "AI で作成",
@@ -903,8 +903,8 @@
         "description": "このエージェントを実行できるのは自分だけです。"
       },
       "workspace": {
-        "title": "クリエイティブスペース全体",
-        "description": "すべてのクリエイティブスペースメンバーが実行できます。"
+        "title": "ワールド全体",
+        "description": "すべてのワールドメンバーが実行できます。"
       },
       "members": {
         "title": "特定のメンバー",

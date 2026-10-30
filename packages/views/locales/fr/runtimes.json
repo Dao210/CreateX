@@ -24,7 +24,7 @@
     },
     "bootstrapping": {
       "title": "Démarrage du runtime local…",
-      "hint": "Connexion à l’espace créatif..."
+      "hint": "Connexion au monde..."
     }
   },
   "mika_setup": {
@@ -133,11 +133,11 @@
     },
     "visibility_hint": {
       "private": "Vous seul pouvez créer des agents sur ce runtime.",
-      "public": "Tout membre de l'espace créatif peut créer des agents sur ce runtime."
+      "public": "Tout membre du monde peut créer des agents sur ce runtime."
     },
     "visibility_hint_readonly": {
       "private": "Seul le propriétaire du runtime peut y créer des agents, et lui seul peut le passer en Public.",
-      "public": "Tout membre de l'espace créatif peut créer des agents sur ce runtime. Seul son propriétaire peut le repasser en Privé."
+      "public": "Tout membre du monde peut créer des agents sur ce runtime. Seul son propriétaire peut le repasser en Privé."
     },
     "visibility_toast_updated": "Visibilité définie sur {{visibility}}",
     "visibility_toast_failed": "Échec de la mise à jour de la visibilité",
@@ -178,7 +178,7 @@
           "workload_idle": "Au repos",
           "workload_working": "Au travail",
           "workload_queued": "En file d'attente",
-          "visibility_workspace": "Espace créatif",
+          "visibility_workspace": "Monde",
           "visibility_private": "Privé"
         }
       }
@@ -267,7 +267,7 @@
     "managed_by_desktop": "Géré par l'application de bureau",
     "managed_by_desktop_title": "Le binaire du CLI est géré par Auro Desktop — mettez Desktop à jour pour mettre à niveau le CLI.",
     "read_only": "Lecture seule",
-    "read_only_title": "Seuls les propriétaires du runtime et les administrateurs de l'espace créatif peuvent mettre le CLI à jour.",
+    "read_only_title": "Seuls les propriétaires du runtime et les administrateurs du monde peuvent mettre le CLI à jour.",
     "local_build": "Build local",
     "local_build_title": "Ce runtime annonce une version hors publication : Auro ne peut donc pas savoir si une mise à niveau est disponible. Mettez-le à jour depuis la machine elle-même.",
     "latest": "À jour",
@@ -308,9 +308,9 @@
     "row_actions_aria": "Actions de la ligne",
     "edit_action": "Modifier le runtime personnalisé",
     "delete_action": "Supprimer",
-    "delete_profile_action": "Supprimer de l'espace créatif",
-    "delete_permission_hint": "Seuls le propriétaire du runtime et les administrateurs de l'espace créatif peuvent supprimer ce runtime",
-    "delete_admin_hint": "Seuls le propriétaire du runtime et les administrateurs de l'espace créatif peuvent supprimer un runtime.",
+    "delete_profile_action": "Supprimer du monde",
+    "delete_permission_hint": "Seuls le propriétaire du runtime et les administrateurs du monde peuvent supprimer ce runtime",
+    "delete_admin_hint": "Seuls le propriétaire du runtime et les administrateurs du monde peuvent supprimer un runtime.",
     "badge_builtin": "Intégré",
     "badge_custom": "Personnalisé",
     "badge_registering": "Enregistrement",
@@ -326,10 +326,10 @@
     "add_custom": "Ajouter un runtime personnalisé",
     "this_machine": "cette machine",
     "unassigned_title": "Runtimes personnalisés sans machine",
-    "unassigned_description": "Ces runtimes de l'espace créatif ne sont connectés à aucune machine. Connectez une machine disposant des commandes correspondantes, ou utilisez les actions d'une ligne pour les modifier ou les supprimer.",
+    "unassigned_description": "Ces runtimes du monde ne sont connectés à aucune machine. Connectez une machine disposant des commandes correspondantes, ou utilisez les actions d'une ligne pour les modifier ou les supprimer.",
     "dialog_title": "Runtimes personnalisés",
-    "dialog_description": "Les définitions de runtimes personnalisés valent pour tout l'espace créatif et se synchronisent avec chaque machine connectée. Une machine enregistre le runtime dès que la commande y est disponible.",
-    "create_dialog_description": "Configurez une commande personnalisée depuis {{machine}}. La définition se synchronise dans tout l'espace créatif et ne s'enregistre que sur les machines où cette commande est disponible.",
+    "dialog_description": "Les définitions de runtimes personnalisés valent pour tout le monde et se synchronisent avec chaque machine connectée. Une machine enregistre le runtime dès que la commande y est disponible.",
+    "create_dialog_description": "Configurez une commande personnalisée depuis {{machine}}. La définition se synchronise dans tout le monde et ne s'enregistre que sur les machines où cette commande est disponible.",
     "learn_more": "Voir le guide de configuration",
     "close": "Fermer",
     "add_new": "Nouveau runtime personnalisé",
@@ -396,12 +396,12 @@
       "error_generic": "Échec de l'enregistrement du runtime."
     },
     "delete_dialog": {
-      "title": "Supprimer le runtime personnalisé de l'espace créatif ?",
-      "description": "« {{name}} » sera retiré de cet espace créatif et de toutes les machines où il est enregistré. Cette action est irréversible.",
-      "confirm": "Supprimer de l'espace créatif",
+      "title": "Supprimer le runtime personnalisé du monde ?",
+      "description": "« {{name}} » sera retiré de ce monde et de toutes les machines où il est enregistré. Cette action est irréversible.",
+      "confirm": "Supprimer du monde",
       "cancel": "Annuler",
       "deleting": "Suppression…",
-      "toast_deleted": "Runtime personnalisé supprimé de l'espace créatif",
+      "toast_deleted": "Runtime personnalisé supprimé du monde",
       "error_bound": "Ce runtime ne peut pas être supprimé tant que des agents l'utilisent.",
       "error_generic": "Échec de la suppression du runtime."
     }

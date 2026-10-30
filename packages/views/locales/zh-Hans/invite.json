@@ -10,16 +10,16 @@
   },
   "accepted": {
     "title": "你已加入 {{workspace_name}}！",
-    "redirecting": "正在跳转到创作区..."
+    "redirecting": "正在跳转到世界..."
   },
   "declined": {
     "title": "已拒绝邀请",
-    "description": "你将不会加入此创作区。",
+    "description": "你将不会加入此世界。",
     "go_to_dashboard": "前往主页"
   },
   "main": {
     "join_title": "加入 {{workspace_name}}",
-    "fallback_workspace_name": "创作区",
+    "fallback_workspace_name": "世界",
     "invited_role_admin": "邀请你以管理员身份加入。",
     "invited_role_member": "邀请你以成员身份加入。",
     "already_handled_accepted": "此邀请已被接受。",
@@ -37,15 +37,15 @@
   "batch": {
     "log_out": "退出登录",
     "empty_title": "没有待处理的邀请",
-    "empty_hint": "继续创建你自己的创作区。",
+    "empty_hint": "继续创建你自己的世界。",
     "empty_continue": "继续创建",
-    "title": "你被邀请加入创作区",
-    "subtitle": "选择你想加入的创作区。其余的可以之后在侧边栏处理。",
-    "submit_skip": "跳过，创建我自己的创作区",
-    "submit_join_other": "加入 {{count}} 个创作区",
+    "title": "你被邀请加入世界",
+    "subtitle": "选择你想加入的世界。其余的可以之后在侧边栏处理。",
+    "submit_skip": "跳过，创建我自己的世界",
+    "submit_join_other": "加入 {{count}} 个世界",
     "joining": "加入中...",
     "error_generic": "处理邀请失败，请重试。",
-    "row_workspace_fallback": "创作区",
+    "row_workspace_fallback": "世界",
     "row_inviter_fallback": "某人",
     "row_invited_admin": "{{inviter}} 邀请你以管理员身份加入",
     "row_invited_member": "{{inviter}} 邀请你以成员身份加入"

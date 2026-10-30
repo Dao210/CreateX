@@ -68,8 +68,8 @@
   },
   "workspace": {
     "title": "請求とプラン",
-    "description": "このクリエイティブスペースのプラン、上限、ユーザー席、Stripe 請求を管理します。",
-    "loading": "クリエイティブスペースの請求情報を読み込み中",
+    "description": "このワールドのプラン、上限、ユーザー席、Stripe 請求を管理します。",
+    "loading": "ワールドの請求情報を読み込み中",
     "plan": {
       "free": "Free",
       "pro": "Pro",
@@ -103,13 +103,13 @@
     "errors": {
       "action_title": "請求操作に失敗しました",
       "temporarily_unavailable": "請求サービスは一時的に利用できません。しばらくしてから再試行してください。",
-      "not_enabled": "この環境ではクリエイティブスペースのサブスクリプションが有効になっていません。管理者にお問い合わせください。",
-      "permission_changed": "現在のクリエイティブスペース権限ではこの操作を実行できません。ページを更新して権限を確認してください。",
+      "not_enabled": "この環境ではワールドのサブスクリプションが有効になっていません。管理者にお問い合わせください。",
+      "permission_changed": "現在のワールド権限ではこの操作を実行できません。ページを更新して権限を確認してください。",
       "checkout_response": "サーバー応答を読み取れないため Checkout を開けませんでした。選択した期間を変えずに再試行してください。",
-      "already_subscribed": "このクリエイティブスペースにはすでにサブスクリプションがあります。現在のプランを更新しました。",
+      "already_subscribed": "このワールドにはすでにサブスクリプションがあります。現在のプランを更新しました。",
       "checkout_failed": "Checkout を作成できませんでした。しばらくしてから再試行してください。",
       "portal_response": "サーバー応答を読み取れないため Billing Portal を開けませんでした。",
-      "portal_unavailable": "このクリエイティブスペースでは Billing Portal を利用できません。現在のプランを更新しました。",
+      "portal_unavailable": "このワールドでは Billing Portal を利用できません。現在のプランを更新しました。",
       "portal_failed": "Billing Portal を開けませんでした。しばらくしてから再試行してください。"
     },
     "return": {
@@ -120,7 +120,7 @@
       "syncing_description": "支払いが完了しました。Stripe によるプラン変更の確認を待っています。",
       "timeout_description": "支払いは受領済みですが、サブスクリプションは同期中です。しばらくしてからページを更新してください。",
       "active_title": "Pro が有効になりました",
-      "active_description": "このクリエイティブスペースで Pro を利用できます。"
+      "active_description": "このワールドで Pro を利用できます。"
     },
     "past_due": {
       "title": "お支払い方法の確認が必要です",
@@ -143,7 +143,7 @@
     },
     "current": {
       "title": "現在のプラン",
-      "plan": "クリエイティブスペースプラン",
+      "plan": "ワールドプラン",
       "members": "ユーザー席",
       "members_description": "エージェントと保留中の招待は席数に含まれません。",
       "member_count_other": "{{count}}名",
@@ -165,7 +165,7 @@
       "title": "サブスクリプション管理",
       "description": "支払い方法、請求書、解約。",
       "portal": "Stripe Billing Portal",
-      "portal_unavailable": "このクリエイティブスペースで利用できる Stripe Billing Portal はありません。"
+      "portal_unavailable": "このワールドで利用できる Stripe Billing Portal はありません。"
     },
     "limits": {
       "title": "使用量と上限",
@@ -202,8 +202,8 @@
       "summary_unavailable_title": "一部の席数詳細を利用できません",
       "summary_unavailable_description": "現在のプランは表示できますが、購入済みの席数と変更予定の席数を読み込めませんでした。",
       "members_over_capacity_title": "メンバー数が購入済みの席数を超えています",
-      "members_over_capacity_description": "このクリエイティブスペースには {{actual}} 人のメンバーがいますが、購入済みの席は {{purchased}} 席です。さらに招待する前に席を追加するか、メンバーを削除してください。",
-      "occupancy_over_capacity_description": "このクリエイティブスペースは購入済み {{purchased}} 席に対して {{occupied}} 席を占有しています（メンバー {{members}} 人、保留中の招待 {{reserved}} 件）。さらに招待する前に席を追加する、メンバーを削除する、または保留中の招待を取り消してください。",
+      "members_over_capacity_description": "このワールドには {{actual}} 人のメンバーがいますが、購入済みの席は {{purchased}} 席です。さらに招待する前に席を追加するか、メンバーを削除してください。",
+      "occupancy_over_capacity_description": "このワールドは購入済み {{purchased}} 席に対して {{occupied}} 席を占有しています（メンバー {{members}} 人、保留中の招待 {{reserved}} 件）。さらに招待する前に席を追加する、メンバーを削除する、または保留中の招待を取り消してください。",
       "updated": "席数の購入を送信しました",
       "available_help": "利用可能なシート数の計算方法"
     },
@@ -246,11 +246,11 @@
     "date_dash": "—"
   },
   "return_page": {
-    "redirecting": "クリエイティブスペースの請求ページに戻ります…",
-    "load_failed_title": "クリエイティブスペースの請求ページを開けませんでした",
-    "load_failed_description": "Stripe から戻りましたが、クリエイティブスペース一覧を読み込めず該当の請求ページを開けませんでした。「クリエイティブスペース設定 → 請求」で現在の状態を確認してください。",
-    "workspace_missing_title": "クリエイティブスペースが見つかりません",
-    "workspace_missing_description": "Stripe から戻りましたが、このクリエイティブスペースは利用できません。削除されたか、アクセス権が変更された可能性があります。対象のクリエイティブスペースの請求ページで現在の状態を確認してください。",
+    "redirecting": "ワールドの請求ページに戻ります…",
+    "load_failed_title": "ワールドの請求ページを開けませんでした",
+    "load_failed_description": "Stripe から戻りましたが、ワールド一覧を読み込めず該当の請求ページを開けませんでした。「ワールド設定 → 請求」で現在の状態を確認してください。",
+    "workspace_missing_title": "ワールドが見つかりません",
+    "workspace_missing_description": "Stripe から戻りましたが、このワールドは利用できません。削除されたか、アクセス権が変更された可能性があります。対象のワールドの請求ページで現在の状態を確認してください。",
     "retry": "再試行",
     "go_to_app": "Auro を開く"
   }

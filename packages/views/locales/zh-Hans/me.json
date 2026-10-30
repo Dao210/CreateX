@@ -1,7 +1,7 @@
 {
-  "title": "我的",
+  "title": "我的作品",
   "summary": {
-    "weapons": "武器",
+    "weapons": "作品",
     "stars": "星章",
     "best": "最高分"
   },
@@ -12,7 +12,7 @@
     "mcp": "MCP 创作"
   },
   "weapons": {
-    "title": "武器收藏",
+    "title": "作品收藏",
     "siege_empty": "还没有保存的蓝图。",
     "tanks_empty": "还没有坦克角色。",
     "mcp_empty": "还没有通过 MCP 创作的内容。",
@@ -36,7 +36,7 @@
     "parts": "{{count}} 个部件"
   },
   "progress": {
-    "title": "游戏进展",
+    "title": "游戏进度",
     "siege_title": "涂鸦攻城 · 林地闯关",
     "tanks_title": "坦克守城",
     "stars": "{{earned}} / {{total}} 星",
@@ -53,5 +53,10 @@
   },
   "loading": "正在读取你的收藏…",
   "error": "收藏暂时无法读取。",
-  "retry": "重试"
+  "retry": "重试",
+  "scope": "当前世界：{{name}}",
+  "tabs": {
+    "label": "作品与游戏进度",
+    "creations": "作品"
+  }
 }

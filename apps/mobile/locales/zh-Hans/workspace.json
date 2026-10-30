@@ -1,16 +1,16 @@
 {
-  "title": "选择创作区",
+  "title": "选择世界",
   "members": "成员",
   "agents": "智能体",
-  "select": "选择创作区",
+  "select": "选择世界",
   "switch": {
-    "title": "切换创作区",
+    "title": "切换世界",
     "message": "切换到 {{name}}？",
     "confirm": "切换",
-    "current_a11y": "{{name}} 是当前创作区",
+    "current_a11y": "{{name}} 是当前世界",
     "switch_a11y": "切换到 {{name}}"
   },
-  "empty": "你还没有加入任何创作区。请联系创作区管理员以获取邀请。",
+  "empty": "你还没有加入任何世界。请联系世界管理员以获取邀请。",
   "agent": {
     "title": "智能体",
     "empty": "还没有智能体",
@@ -25,7 +25,7 @@
     "signed_in_as": "当前登录账号"
   },
   "errors": {
-    "load_failed": "创作区加载失败：{{message}}"
+    "load_failed": "世界加载失败：{{message}}"
   },
   "pins": {
     "errors": {

@@ -94,7 +94,7 @@
     "author_renamed": "캡처 당시 {{captured}} · 현재 {{current}}",
     "author_archived": "보관됨",
     "author_deleted_agent": "삭제된 에이전트",
-    "author_left_workspace": "더 이상 크리에이티브 스페이스에 없음",
+    "author_left_workspace": "더 이상 세계에 없음",
     "error_source_changed": "원본이 변경되었습니다. 새로고침된 미리보기를 확인한 후 다시 제출하세요.",
     "error_agent_unsupported": "캡처된 컨텍스트를 사용하려면 이 에이전트 런타임을 업데이트해야 합니다. Manual로 전환할 수도 있습니다.",
     "error_server_unsupported": "캡처된 컨텍스트가 있는 하위 태스크를 만들려면 서버를 업데이트해야 합니다.",
@@ -115,7 +115,7 @@
   },
   "page": {
     "breadcrumb_title": "태스크",
-    "breadcrumb_workspace_fallback": "크리에이티브 스페이스",
+    "breadcrumb_workspace_fallback": "세계",
     "empty_title": "아직 태스크가 없습니다",
     "move_failed": "태스크를 이동하지 못했습니다"
   },
@@ -147,7 +147,7 @@
   },
   "scope": {
     "all_label": "전체",
-    "all_description": "이 크리에이티브 스페이스의 모든 태스크",
+    "all_description": "이 세계의 모든 태스크",
     "members_label": "멤버",
     "members_description": "팀 멤버에게 할당된 태스크",
     "agents_label": "에이전트",
@@ -377,7 +377,7 @@
     "close": "미리보기 닫기"
   },
   "detail": {
-    "not_found": "이 크리에이티브 스페이스에 해당 태스크가 없거나 삭제되었습니다.",
+    "not_found": "이 세계에 해당 태스크가 없거나 삭제되었습니다.",
     "breadcrumb_project_unknown": "알 수 없는 프로젝트",
     "back": "뒤로",
     "title_placeholder": "태스크 제목",
@@ -405,7 +405,7 @@
     "quick_action_blocked": "{{name}}을(를) 실행할 수 없습니다",
     "quick_action_posted": "댓글을 게시했습니다",
     "quick_action_blocked_title": "이 퀵 액션을 실행할 수 없습니다",
-    "quick_action_blocked_body": "“{{name}}”은(는) 트리거 권한이 없는 에이전트로 실행됩니다. 크리에이티브 스페이스 관리자에게 해당 에이전트를 팀에 공개하거나 공유 에이전트로 변경해 달라고 요청하세요.",
+    "quick_action_blocked_body": "“{{name}}”은(는) 트리거 권한이 없는 에이전트로 실행됩니다. 세계 관리자에게 해당 에이전트를 팀에 공개하거나 공유 에이전트로 변경해 달라고 요청하세요.",
     "quick_action_blocked_ok": "확인",
     "pull_requests_loading": "불러오는 중...",
     "pull_request_state_draft": "초안",
@@ -783,7 +783,7 @@
     "delete_failed": "태스크를 삭제하지 못했습니다",
     "delete_dialog_title_other": "태스크 {{count}}개를 삭제할까요?",
     "delete_dialog_desc_other": "이 작업은 되돌릴 수 없습니다. 선택한 태스크와 관련 데이터가 영구 삭제됩니다.",
-    "delete_dialog_warning": "크리에이티브 스페이스 멤버라면 누구나 태스크를 삭제할 수 있습니다.",
+    "delete_dialog_warning": "세계 멤버라면 누구나 태스크를 삭제할 수 있습니다.",
     "cancel": "취소"
   },
   "card": {
@@ -873,7 +873,7 @@
     }
   },
   "labels_panel": {
-    "intro": "크리에이티브 스페이스의 태스크를 분류할 라벨을 만들고 관리하세요.",
+    "intro": "세계의 태스크를 분류할 라벨을 만들고 관리하세요.",
     "new_placeholder": "새 라벨 이름...",
     "new_aria": "새 라벨 이름",
     "add_action": "추가",
@@ -905,7 +905,7 @@
   },
   "save_view": {
     "title": "뷰로 저장",
-    "hint_workspace": "크리에이티브 스페이스 전체 태스크 기준으로 생성",
+    "hint_workspace": "세계 전체 태스크 기준으로 생성",
     "hint_my_any": "「내 태스크 · 전체」 기준으로 생성",
     "hint_my_assigned": "「내 태스크 · 나에게 할당됨」 기준으로 생성",
     "hint_my_created": "「내 태스크 · 내가 생성함」 기준으로 생성",
@@ -917,7 +917,7 @@
     "name_label": "이름",
     "visibility_label": "공개 범위",
     "visibility_private": "나만 보기",
-    "visibility_workspace": "크리에이티브 스페이스 구성원에게 표시",
+    "visibility_workspace": "세계 구성원에게 표시",
     "filters_label": "필터",
     "custom_property": "사용자 지정 속성",
     "create": "뷰 만들기",
@@ -934,8 +934,8 @@
     "update": "변경 사항 저장",
     "toast_updated": "뷰가 업데이트되었습니다",
     "toast_conflict": "다른 사용자가 이 뷰를 편집했습니다. 다시 연 후 시도하세요",
-    "hint_workspace_members": "구성원이 담당하는 크리에이티브 스페이스 태스크 기준으로 생성",
-    "hint_workspace_agents": "에이전트가 담당하는 크리에이티브 스페이스 태스크 기준으로 생성",
+    "hint_workspace_members": "구성원이 담당하는 세계 태스크 기준으로 생성",
+    "hint_workspace_agents": "에이전트가 담당하는 세계 태스크 기준으로 생성",
     "scope_label_workspace": "담당자 유형",
     "scope_label_my": "나와의 관계",
     "variant_all": "담당자 무관",
@@ -950,7 +950,7 @@
     "trigger": "뷰",
     "empty": "저장된 뷰가 아직 없습니다",
     "private_group": "비공개",
-    "shared_group": "크리에이티브 스페이스 공유",
+    "shared_group": "세계 공유",
     "exit": "뷰 나가기",
     "unavailable": "이 뷰는 더 이상 사용할 수 없습니다",
     "edit": "뷰 편집"
@@ -986,7 +986,7 @@
     "hook_never_run": "이 훅은 아직 실행되지 않았습니다.",
     "surface_loading": "{{name}} 불러오는 중…",
     "surface_unavailable": "{{name}}의 인터페이스를 불러올 수 없습니다. 설치된 버전에 포함되어 있지 않을 수 있습니다.",
-    "surface_navigated": "{{name}}이(가) 패널을 외부에서 불러온 페이지로 바꾸려 했습니다. 중지하고 연결을 끊었습니다. 크리에이티브 스페이스 관리자에게 알리세요."
+    "surface_navigated": "{{name}}이(가) 패널을 외부에서 불러온 페이지로 바꾸려 했습니다. 중지하고 연결을 끊었습니다. 세계 관리자에게 알리세요."
   },
   "wakeups": {
     "title": "깨우기",
@@ -1183,7 +1183,7 @@
       "submitting": "만드는 중…",
       "cancel": "취소",
       "error": "웨이크업을 만들 수 없습니다. 설정을 확인하고 다시 시도하세요.",
-      "capacity_error": "이 태스크 또는 크리에이티브 스페이스의 활성 웨이크업이 한도에 도달했습니다.",
+      "capacity_error": "이 태스크 또는 세계의 활성 웨이크업이 한도에 도달했습니다.",
       "missing_condition": "조건을 선택하세요.",
       "missing_agent": "깨울 에이전트를 선택하세요.",
       "missing_events": "이벤트를 하나 이상 선택하세요.",
@@ -1249,8 +1249,8 @@
       "enable": "이 태스크에서 사용",
       "toggle": "하위 태스크 완료 시 담당자 깨우기",
       "save_error": "시스템 규칙을 저장할 수 없습니다.",
-      "default_on": "크리에이티브 스페이스 기본값은 켜짐입니다. 기본값은 설정 → 깨우기에서 바꿀 수 있습니다.",
-      "default_off": "크리에이티브 스페이스 기본값은 꺼짐입니다. 기본값은 설정 → 깨우기에서 바꿀 수 있습니다.",
+      "default_on": "세계 기본값은 켜짐입니다. 기본값은 설정 → 깨우기에서 바꿀 수 있습니다.",
+      "default_off": "세계 기본값은 꺼짐입니다. 기본값은 설정 → 깨우기에서 바꿀 수 있습니다.",
       "notify_member": "받은편지함으로 {{name}}에게 알림",
       "instruction": "깨운 뒤 할 일",
       "instruction_edit": "지시 편집",

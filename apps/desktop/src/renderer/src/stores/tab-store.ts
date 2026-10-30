@@ -444,7 +444,7 @@ function defaultPathFor(slug: string): string {
 
 function defaultTabFor(slug: string): TabSession {
   const path = defaultPathFor(slug);
-  return makeSession(path, "My Space");
+  return makeSession(path, "My Creations");
 }
 
 const BROWSING_HISTORY_MAX_ENTRIES = 100;

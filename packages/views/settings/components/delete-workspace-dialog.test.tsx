@@ -51,7 +51,7 @@ describe("DeleteWorkspaceDialog", () => {
         onConfirm={vi.fn()}
       />,
     );
-    expect(screen.getByRole("button", { name: "Delete creative space" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Delete world" })).toBeDisabled();
   });
 
   it("keeps Delete disabled when input doesn't match (case-sensitive)", async () => {
@@ -66,11 +66,11 @@ describe("DeleteWorkspaceDialog", () => {
     );
 
     await user.type(screen.getByRole("textbox"), "ACME"); // wrong case
-    expect(screen.getByRole("button", { name: "Delete creative space" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Delete world" })).toBeDisabled();
 
     await user.clear(screen.getByRole("textbox"));
     await user.type(screen.getByRole("textbox"), "acme "); // trailing space
-    expect(screen.getByRole("button", { name: "Delete creative space" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Delete world" })).toBeDisabled();
   });
 
   it("enables Delete on exact match and calls onConfirm when clicked", async () => {
@@ -86,7 +86,7 @@ describe("DeleteWorkspaceDialog", () => {
     );
 
     await user.type(screen.getByRole("textbox"), "acme");
-    const deleteBtn = screen.getByRole("button", { name: "Delete creative space" });
+    const deleteBtn = screen.getByRole("button", { name: "Delete world" });
     expect(deleteBtn).toBeEnabled();
 
     await user.click(deleteBtn);
@@ -158,8 +158,8 @@ describe("DeleteWorkspaceDialog", () => {
     );
     const input = screen.getByRole("textbox");
     await user.type(input, "My 团队 🚀");
-    expect(screen.getByRole("button", { name: "Delete creative space" })).toBeEnabled();
-    await user.click(screen.getByRole("button", { name: "Delete creative space" }));
+    expect(screen.getByRole("button", { name: "Delete world" })).toBeEnabled();
+    await user.click(screen.getByRole("button", { name: "Delete world" }));
     expect(onConfirm).toHaveBeenCalledTimes(1);
   });
 

@@ -205,7 +205,7 @@ describe("RuntimeLocalSkillImportPanel", () => {
     fireEvent.click(skillButton);
 
     const importButton = screen.getByRole("button", {
-      name: /Import to creative space/i,
+      name: /Import to world/i,
     });
     await waitFor(
       () => {
@@ -342,7 +342,7 @@ describe("RuntimeLocalSkillImportPanel", () => {
     fireEvent.click(selectAllCheckbox);
 
     const importButton = screen.getByRole("button", {
-      name: /Import to creative space/i,
+      name: /Import to world/i,
     });
     await waitFor(() => expect(importButton).not.toBeDisabled(), {
       timeout: 5000,
@@ -488,7 +488,7 @@ describe("RuntimeLocalSkillImportPanel", () => {
     fireEvent.click(skillButton);
 
     const importButton = screen.getByRole("button", {
-      name: /Import to creative space/i,
+      name: /Import to world/i,
     });
     await waitFor(
       () => {
@@ -592,7 +592,7 @@ describe("RuntimeLocalSkillImportPanel", () => {
     fireEvent.click(screen.getByRole("button", { name: /Review Helper/i }));
 
     const importButton = screen.getByRole("button", {
-      name: /Import to creative space/i,
+      name: /Import to world/i,
     });
     await waitFor(() => expect(importButton).not.toBeDisabled(), {
       timeout: 5000,
@@ -658,7 +658,7 @@ describe("RuntimeLocalSkillImportPanel", () => {
     fireEvent.click(screen.getByRole("button", { name: /Review Helper/i }));
 
     const importButton = screen.getByRole("button", {
-      name: /Import to creative space/i,
+      name: /Import to world/i,
     });
     await waitFor(() => expect(importButton).not.toBeDisabled(), {
       timeout: 5000,
@@ -784,7 +784,7 @@ describe("RuntimeLocalSkillImportPanel", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /Review Helper/i }));
     const importButton = screen.getByRole("button", {
-      name: /Import to creative space/i,
+      name: /Import to world/i,
     });
     await waitFor(() => expect(importButton).not.toBeDisabled(), {
       timeout: 5000,
@@ -817,7 +817,7 @@ describe("RuntimeLocalSkillImportPanel", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /Review Helper/i }));
     const importButton = screen.getByRole("button", {
-      name: /Import to creative space/i,
+      name: /Import to world/i,
     });
     await waitFor(() => expect(importButton).not.toBeDisabled(), {
       timeout: 5000,

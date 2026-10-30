@@ -379,16 +379,16 @@ describe("RuntimeDetail visibility section", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /Delete runtime/i }));
     expect(
-      screen.getByText("Delete custom runtime from creative space?"),
+      screen.getByText("Delete custom runtime from world?"),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("alertdialog", {
-        name: "Delete custom runtime from creative space?",
+        name: "Delete custom runtime from world?",
       }),
     ).toBeInTheDocument();
 
     fireEvent.click(
-      screen.getByRole("button", { name: "Delete from creative space" }),
+      screen.getByRole("button", { name: "Delete from world" }),
     );
     await waitFor(() =>
       expect(mockDeleteRuntimeProfile).toHaveBeenCalledWith(profile.id),

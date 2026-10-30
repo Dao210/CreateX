@@ -68,8 +68,8 @@
   },
   "workspace": {
     "title": "Billing",
-    "description": "Manage this creative space's plan, limits, human seats, and Stripe billing.",
-    "loading": "Loading creative space billing",
+    "description": "Manage this world's plan, limits, human seats, and Stripe billing.",
+    "loading": "Loading world billing",
     "plan": {
       "free": "Free",
       "pro": "Pro",
@@ -103,13 +103,13 @@
     "errors": {
       "action_title": "Billing action failed",
       "temporarily_unavailable": "Billing is temporarily unavailable. Retry in a moment.",
-      "not_enabled": "Creative Space subscriptions are not enabled for this deployment. Contact your administrator.",
-      "permission_changed": "Your creative space role no longer allows this action. Refresh the page to see your current access.",
+      "not_enabled": "World subscriptions are not enabled for this deployment. Contact your administrator.",
+      "permission_changed": "Your world role no longer allows this action. Refresh the page to see your current access.",
       "checkout_response": "Checkout could not open because the server response was unreadable. Retry without changing your selected interval.",
-      "already_subscribed": "This creative space already has a subscription. The current plan has been refreshed.",
+      "already_subscribed": "This world already has a subscription. The current plan has been refreshed.",
       "checkout_failed": "Checkout could not be created. Retry in a moment.",
       "portal_response": "The Billing Portal could not open because the server response was unreadable.",
-      "portal_unavailable": "The Billing Portal is not available for this creative space. The current plan has been refreshed.",
+      "portal_unavailable": "The Billing Portal is not available for this world. The current plan has been refreshed.",
       "portal_failed": "The Billing Portal could not be opened. Retry in a moment."
     },
     "return": {
@@ -120,7 +120,7 @@
       "syncing_description": "Payment is complete. We're waiting for Stripe to confirm the plan change.",
       "timeout_description": "Payment was received, but the subscription is still syncing. Refresh this page in a moment.",
       "active_title": "Pro is active",
-      "active_description": "This creative space now has Pro access."
+      "active_description": "This world now has Pro access."
     },
     "past_due": {
       "title": "Payment needs attention",
@@ -143,7 +143,7 @@
     },
     "current": {
       "title": "Current plan",
-      "plan": "Creative Space plan",
+      "plan": "World plan",
       "members": "Human members",
       "members_description": "Agents and pending invitations are not counted as seats.",
       "member_count_one": "{{count}} member",
@@ -167,7 +167,7 @@
       "title": "Subscription management",
       "description": "Payment methods, invoices, and cancellation.",
       "portal": "Stripe Billing Portal",
-      "portal_unavailable": "No Stripe Billing Portal is available for this creative space."
+      "portal_unavailable": "No Stripe Billing Portal is available for this world."
     },
     "limits": {
       "title": "Usage and limits",
@@ -206,8 +206,8 @@
       "summary_unavailable_title": "Some seat details are unavailable",
       "summary_unavailable_description": "The current plan is still shown, but purchased and scheduled seat quantities could not be loaded.",
       "members_over_capacity_title": "Members exceed purchased seats",
-      "members_over_capacity_description": "This creative space has {{actual}} members but only {{purchased}} purchased seats. Add enough seats or remove members before sending more invitations.",
-      "occupancy_over_capacity_description": "This creative space occupies {{occupied}} of {{purchased}} purchased seats ({{members}} members and {{reserved}} pending invitations). Add seats, remove a member, or revoke a pending invitation before inviting someone else.",
+      "members_over_capacity_description": "This world has {{actual}} members but only {{purchased}} purchased seats. Add enough seats or remove members before sending more invitations.",
+      "occupancy_over_capacity_description": "This world occupies {{occupied}} of {{purchased}} purchased seats ({{members}} members and {{reserved}} pending invitations). Add seats, remove a member, or revoke a pending invitation before inviting someone else.",
       "updated": "Seat purchase submitted",
       "available_help": "How available seats are calculated"
     },
@@ -253,11 +253,11 @@
     "date_dash": "—"
   },
   "return_page": {
-    "redirecting": "Returning you to creative space billing…",
-    "load_failed_title": "Could not open creative space billing",
-    "load_failed_description": "You came back from Stripe, but we could not load your creative space list to open the right billing page. Open Creative Space settings → Billing to check the current state.",
-    "workspace_missing_title": "Could not find that creative space",
-    "workspace_missing_description": "You came back from Stripe, but this creative space is no longer available to you — it may have been removed, or your access changed. Open Billing in the creative space you expected to check the current state.",
+    "redirecting": "Returning you to world billing…",
+    "load_failed_title": "Could not open world billing",
+    "load_failed_description": "You came back from Stripe, but we could not load your world list to open the right billing page. Open World settings → Billing to check the current state.",
+    "workspace_missing_title": "Could not find that world",
+    "workspace_missing_description": "You came back from Stripe, but this world is no longer available to you — it may have been removed, or your access changed. Open Billing in the world you expected to check the current state.",
     "retry": "Try again",
     "go_to_app": "Go to Auro"
   }

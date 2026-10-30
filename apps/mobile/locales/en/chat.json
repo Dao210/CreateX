@@ -5,7 +5,7 @@
   "composer": {
     "no_agent": "No agent selected",
     "revoked": "You can no longer run this agent",
-    "no_agents": "No agents in this creative space",
+    "no_agents": "No agents in this world",
     "archived": "This chat is archived",
     "runtime_required": "Agent needs a runtime",
     "replying_to": "Replying to {{name}}",
@@ -31,7 +31,7 @@
     "starter_task_label": "Suggest a first task",
     "starter_task_prompt": "Suggest three useful tasks I could delegate to you.",
     "starter_action_label": "Recommend an action",
-    "starter_action_prompt": "Review what you know about my creative space and recommend a useful first action."
+    "starter_action_prompt": "Review what you know about my world and recommend a useful first action."
   },
   "picker": {
     "title": "Choose an agent",

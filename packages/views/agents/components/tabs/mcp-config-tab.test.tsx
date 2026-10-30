@@ -768,7 +768,7 @@ describe("McpConfigTab workspace servers", () => {
 
     const row = (await screen.findByText("shared-linear")).closest("li")!;
     expect(within(row).getByText("Streamable HTTP")).toBeVisible();
-    expect(screen.getByText(/From the creative space library/)).toBeInTheDocument();
+    expect(screen.getByText(/From the world library/)).toBeInTheDocument();
   });
 
   // The defining property of this model: a library entry nobody assigned must
@@ -778,7 +778,7 @@ describe("McpConfigTab workspace servers", () => {
     renderTab({ mcp_config: null });
 
     expect(
-      await screen.findByText(/No creative space MCP servers assigned/),
+      await screen.findByText(/No world MCP servers assigned/),
     ).toBeInTheDocument();
     expect(screen.queryByText("not-assigned")).toBeNull();
   });
@@ -788,7 +788,7 @@ describe("McpConfigTab workspace servers", () => {
     workspaceMcp.library = [wsServer({ id: "srv-9", name: "pickable" })];
     renderTab({ mcp_config: null });
 
-    await user.click(await screen.findByRole("button", { name: /Add from creative space/ }));
+    await user.click(await screen.findByRole("button", { name: /Add from world/ }));
     const option = await screen.findByRole("menuitem", { name: /pickable/ });
     expect(within(option).getByText("Streamable HTTP")).toBeVisible();
     await user.click(option);
@@ -861,7 +861,7 @@ describe("McpConfigTab workspace servers", () => {
     expect(screen.queryByRole("button", { name: /Rename server fetch/i })).toBeNull();
     expect(screen.queryByRole("button", { name: /Edit configuration fetch/i })).toBeNull();
     expect(screen.queryByRole("button", { name: /Delete MCP server fetch/i })).toBeNull();
-    expect(screen.queryByRole("button", { name: /Add from creative space/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Add from world/ })).toBeNull();
     expect(screen.queryByRole("switch")).toBeNull();
     expect(screen.queryByRole("button", { name: /Remove shared-linear/i })).toBeNull();
   });

@@ -144,7 +144,7 @@
     "load_failed_title": "Couldn't load this agent",
     "load_failed_default": "Something went wrong fetching this agent.",
     "no_access_title": "You don't have access to this agent",
-    "no_access_hint": "Only the agent owner or a creative space admin can view this private agent.",
+    "no_access_hint": "Only the agent owner or a world admin can view this private agent.",
     "try_again": "Try again",
     "archived_banner": "This agent is archived. It cannot be assigned or mentioned.",
     "runtime_required_banner": "This agent kept its configuration and history, but needs a runtime before it can run.",
@@ -209,7 +209,7 @@
     "attention_queued_other": "{{count}} runs are queued while the runtime is unavailable."
   },
   "skill_attach": {
-    "trigger_aria": "Attach a creative space skill",
+    "trigger_aria": "Attach a world skill",
     "trigger_label": "Attach"
   },
   "pickers": {
@@ -302,7 +302,7 @@
       },
       "template": {
         "title": "Use a template",
-        "description": "Start from curated instructions and skills, then adapt every detail to your creative space."
+        "description": "Start from curated instructions and skills, then adapt every detail to your world."
       },
       "ai": {
         "title": "Build with AI",
@@ -324,8 +324,8 @@
         "description": "Only you can run this agent."
       },
       "workspace": {
-        "title": "Entire creative space",
-        "description": "Every creative space member can run it."
+        "title": "Entire world",
+        "description": "Every world member can run it."
       },
       "members": {
         "title": "Specific people",
@@ -391,9 +391,9 @@
       "private_desc": "Only you can run this agent",
       "public_title": "Public",
       "public_desc": "Choose who can run this agent",
-      "public_workspace_option": "Everyone in this creative space",
+      "public_workspace_option": "Everyone in this world",
       "public_members_group": "Specific people",
-      "public_members_empty": "No creative space members to choose from",
+      "public_members_empty": "No world members to choose from",
       "public_targets_empty_hint": "Pick at least one option below — otherwise the agent stays private."
     },
     "runtime_label": "Runtime",
@@ -422,11 +422,11 @@
     },
     "skills_section": {
       "label": "Skills",
-      "placeholder": "Add skills from creative space",
+      "placeholder": "Add skills from world",
       "selected_one": "{{count}} selected — click to edit",
       "selected_other": "{{count}} selected — click to edit",
       "collapse": "Collapse",
-      "list_empty_multi": "No skills in this creative space yet. Create or import one first.",
+      "list_empty_multi": "No skills in this world yet. Create or import one first.",
       "list_loading": "Loading…",
       "list_empty_default": "No skills available.",
       "list_no_match": "No skills match.",
@@ -467,12 +467,12 @@
       "system_layer_hint": "Updates with each Auro release. You can't edit it, and your notes below are never overwritten.",
       "system_layer_show": "Show",
       "system_layer_hide": "Hide",
-      "workspace_notes_label": "Creative Space notes",
+      "workspace_notes_label": "World notes",
       "workspace_notes_intro": "Add your team's context and preferences below. They apply on top of the instructions Auro maintains for this agent. Markdown is supported.",
       "workspace_notes_placeholder": "Add context this agent should always have.\n\n# Example\nOur main repository is github.com/acme/platform.\nWrite issues in English even when we chat in Chinese.\nWe do not deploy on Fridays."
     },
     "env": {
-      "intro_readonly": "Injected into the agent process at launch. Only creative space owners and admins can read or edit values; every reveal and edit is recorded in the creative space audit log.",
+      "intro_readonly": "Injected into the agent process at launch. Only world owners and admins can read or edit values; every reveal and edit is recorded in the world audit log.",
       "empty_readonly": "No environment variables configured.",
       "intro_prefix": "Injected into the agent process at launch (e.g. ",
       "intro_separator": ", ",
@@ -496,7 +496,7 @@
       "not_revealed_title_one": "{{count}} variable configured",
       "not_revealed_title_other": "{{count}} variables configured",
       "not_revealed_empty": "No environment variables configured.",
-      "not_revealed_hint": "Values stay masked until you reveal them. Every reveal and edit is recorded in the creative space audit log.",
+      "not_revealed_hint": "Values stay masked until you reveal them. Every reveal and edit is recorded in the world audit log.",
       "reveal_action": "Reveal & edit",
       "revealing": "Revealing…",
       "reveal_failed_toast": "Failed to load env values",
@@ -527,16 +527,16 @@
       "agent_disabled_badge": "Off for agent",
       "runtime_disabled_badge": "Off in runtime",
       "runtime_overridden_badge": "Overridden by Auro",
-      "workspace_title": "From the creative space library",
+      "workspace_title": "From the world library",
       "workspace_action_failed": "Could not update this agent's MCP servers",
       "workspace_removed_toast": "MCP server removed from this agent",
       "workspace_added_toast": "MCP server added to this agent",
       "workspace_remove_aria": "Remove {{name}} from this agent",
       "workspace_remove_action": "Remove",
       "workspace_toggle_aria": "Enable {{name}} for this agent",
-      "workspace_library_empty": "This creative space has no MCP servers to assign yet. Add them in creative space Settings → MCP.",
-      "workspace_none_assigned": "No creative space MCP servers assigned to this agent yet.",
-      "workspace_add_action": "Add from creative space",
+      "workspace_library_empty": "This world has no MCP servers to assign yet. Add them in world Settings → MCP.",
+      "workspace_none_assigned": "No world MCP servers assigned to this agent yet.",
+      "workspace_add_action": "Add from world",
       "workspace_loading": "Loading assigned servers…",
       "dialog_name_locked": "The name cannot be changed here — renaming would add a second server and leave this one behind. Remove and re-add it instead.",
       "workspace_overridden_badge": "Overridden",
@@ -617,7 +617,7 @@
       "invalid_json": "Invalid JSON: {{error}}",
       "save_failed_toast": "Failed to save MCP config",
       "redacted_title": "Configured — hidden from your view",
-      "redacted_hint": "Only the agent owner or a creative space admin can read this config.",
+      "redacted_hint": "Only the agent owner or a world admin can read this config.",
       "dialog_json_help": "Edit the full server configuration as JSON."
     },
     "composio_mcp": {
@@ -633,7 +633,7 @@
       "redacted_title": "Configured — hidden from your view",
       "redacted_hint": "Only the agent's creator can view or change which apps it may use.",
       "shared_warning": "This agent is shared. People who can run this agent may use the Composio apps you enable here. Use Private or narrow the access list if these apps expose sensitive data.",
-      "workspace_warning": "Public to creative space: any creative space member may use these Composio apps through this agent."
+      "workspace_warning": "Public to world: any world member may use these Composio apps through this agent."
     },
     "runtime_config": {
       "mode_label": "Routing mode",
@@ -659,7 +659,7 @@
       "assigned_hint": "Turn off a skill to pause its use without removing it.",
       "runtime_title": "Inherited from runtime",
       "runtime_hint": "Discovered automatically from {{runtime}} and available whenever this agent runs there.",
-      "workspace_badge": "Creative Space",
+      "workspace_badge": "World",
       "inherited_badge": "Inherited",
       "refresh_action": "Refresh",
       "no_description": "No description",
@@ -687,7 +687,7 @@
       "remove_failed_toast": "Failed to remove skill",
       "add_dialog_title": "Add skill",
       "add_dialog_search_placeholder": "Search skills",
-      "add_dialog_empty": "All creative space skills are already assigned.",
+      "add_dialog_empty": "All world skills are already assigned.",
       "add_dialog_no_match": "No skills match your search.",
       "add_dialog_empty_partial": "No more skills to add — this agent already has all of them.",
       "add_dialog_saving": "Adding…",
@@ -698,7 +698,7 @@
       "add_failed_toast": "Failed to add skill"
     },
     "integrations": {
-      "members_note": "Only creative space owners and admins can manage this connection. You can view connected bots in Settings → Integrations."
+      "members_note": "Only world owners and admins can manage this connection. You can view connected bots in Settings → Integrations."
     },
     "activity": {
       "status": {
@@ -769,17 +769,17 @@
       "tooltip": "Personal · only the owner and people they allow can run this agent"
     },
     "workspace": {
-      "label": "Creative Space",
-      "tooltip": "Creative Space · everyone in this creative space can use this agent"
+      "label": "World",
+      "tooltip": "World · everyone in this world can use this agent"
     }
   },
   "access": {
     "section_title": "Who can run this agent",
     "tooltip": "Access · who may run this agent",
     "trigger_private": "Only me",
-    "trigger_workspace": "Creative Space",
+    "trigger_workspace": "World",
     "scope_labels": {
-      "workspace": "Creative Space",
+      "workspace": "World",
       "specific_people": "Specific people",
       "owner_only": "Owner only"
     },
@@ -789,10 +789,10 @@
     "private_title": "Only me",
     "private_desc": "Only you can run this agent",
     "shared_title": "Shared",
-    "shared_desc": "Choose the creative space or specific people who can run this agent",
+    "shared_desc": "Choose the world or specific people who can run this agent",
     "shared_target_required": "Select at least one person before saving.",
-    "workspace_title": "Entire creative space",
-    "workspace_desc": "All creative space members can run this agent",
+    "workspace_title": "Entire world",
+    "workspace_desc": "All world members can run this agent",
     "members_title": "Specific people",
     "members_desc": "Only the people you pick can run this agent",
     "team_title": "Public to team",
@@ -801,7 +801,7 @@
     "members_group": "People",
     "public_group": "Public access",
     "owner_only_readonly": "Only the agent owner can change who can run this agent.",
-    "members_empty": "No creative space members to choose from",
+    "members_empty": "No world members to choose from",
     "composio_switch_hint": "Heads up — this agent has Composio apps enabled. Sharing it lets everyone with access use those apps through this agent."
   },
   "profile_card": {

@@ -10,16 +10,16 @@
   },
   "accepted": {
     "title": "You joined {{workspace_name}}!",
-    "redirecting": "Redirecting to creative space..."
+    "redirecting": "Redirecting to world..."
   },
   "declined": {
     "title": "Invitation declined",
-    "description": "You won't be added to this creative space.",
+    "description": "You won't be added to this world.",
     "go_to_dashboard": "Go to dashboard"
   },
   "main": {
     "join_title": "Join {{workspace_name}}",
-    "fallback_workspace_name": "creative space",
+    "fallback_workspace_name": "world",
     "invited_role_admin": "invited you to join as an admin.",
     "invited_role_member": "invited you to join as a member.",
     "already_handled_accepted": "This invitation has already been accepted.",
@@ -37,16 +37,16 @@
   "batch": {
     "log_out": "Log out",
     "empty_title": "No pending invitations",
-    "empty_hint": "Continue to set up your own creative space.",
+    "empty_hint": "Continue to set up your own world.",
     "empty_continue": "Continue to setup",
     "title": "You've been invited",
-    "subtitle": "Pick the creative spaces you want to join. You can always handle the rest later from the sidebar.",
-    "submit_skip": "Skip and set up my own creative space",
-    "submit_join_one": "Join 1 creative space",
-    "submit_join_other": "Join {{count}} creative spaces",
+    "subtitle": "Pick the worlds you want to join. You can always handle the rest later from the sidebar.",
+    "submit_skip": "Skip and set up my own world",
+    "submit_join_one": "Join 1 world",
+    "submit_join_other": "Join {{count}} worlds",
     "joining": "Joining...",
     "error_generic": "Failed to process invitations. Please try again.",
-    "row_workspace_fallback": "Creative Space",
+    "row_workspace_fallback": "World",
     "row_inviter_fallback": "Someone",
     "row_invited_admin": "{{inviter}} invited you as an admin",
     "row_invited_member": "{{inviter}} invited you as a member"

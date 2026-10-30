@@ -49,9 +49,19 @@ describe("workspace command search after route retirement", () => {
   });
   it("finds the personal collection by its nav name", async () => {
     renderWithI18n(<SearchCommand />);
-    await userEvent.type(screen.getByPlaceholderText("Type a command or search..."), "my space");
-    await userEvent.click(screen.getByRole("option", { name: "My Space" }));
+    await userEvent.type(screen.getByPlaceholderText("Type a command or search..."), "my creations");
+    await userEvent.click(screen.getByRole("option", { name: "My Creations" }));
     expect(state.navigate).toHaveBeenCalledWith("/acme/me", "push");
+  });
+  it.each([
+    ["world settings", "World settings", "/acme/settings?tab=workspace"],
+    ["profile", "Account settings", "/acme/settings?tab=profile"],
+  ])("finds the correct settings scope for %s", async (query, label, href) => {
+    renderWithI18n(<SearchCommand />);
+    await userEvent.type(screen.getByPlaceholderText("Type a command or search..."), query);
+    expect(screen.queryByRole("option", { name: "My Creations" })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("option", { name: label }));
+    expect(state.navigate).toHaveBeenCalledWith(href, "push");
   });
   it("searches workspace members only after typing", async () => {
     state.members = [{ user_id: "user-1", name: "Alice", email: "alice@example.test", role: "member", avatar_url: null }];

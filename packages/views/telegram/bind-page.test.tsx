@@ -139,8 +139,8 @@ describe("TelegramBindPage", () => {
     ["expired", /invalid or expired/i],
     ["409", /already linked to a different Weave a World user/i],
     ["already bound", /already linked to a different Weave a World user/i],
-    ["403", /isn't a member of this creative space/i],
-    ["workspace member", /isn't a member of this creative space/i],
+    ["403", /isn't a member of this world/i],
+    ["workspace member", /isn't a member of this world/i],
     ["unexpected failure", /something went wrong/i],
   ])("maps a %s redemption failure to the correct message", async (message, expected) => {
     mockAuthState.user = { id: "u1", email: "u@example.com" };

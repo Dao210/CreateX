@@ -203,7 +203,7 @@ describe("AgentMcpTab", () => {
     });
 
     expect(
-      screen.getByText(/any creative space member may use these Composio apps/i),
+      screen.getByText(/any world member may use these Composio apps/i),
     ).toBeTruthy();
   });
 
@@ -217,7 +217,7 @@ describe("AgentMcpTab", () => {
 
     expect(screen.getByText(/This agent is shared\./i)).toBeTruthy();
     expect(
-      screen.queryByText(/any creative space member may use these Composio apps/i),
+      screen.queryByText(/any world member may use these Composio apps/i),
     ).toBeNull();
   });
 
@@ -231,7 +231,7 @@ describe("AgentMcpTab", () => {
 
     expect(screen.queryByText(/This agent is shared\./i)).toBeNull();
     expect(
-      screen.queryByText(/any creative space member may use these Composio apps/i),
+      screen.queryByText(/any world member may use these Composio apps/i),
     ).toBeNull();
   });
 
@@ -252,7 +252,7 @@ describe("AgentMcpTab", () => {
     // Falls back to the generic shared warning (no workspace target
     // resolves to `false`), not the workspace-wide one.
     expect(
-      screen.queryByText(/any creative space member may use these Composio apps/i),
+      screen.queryByText(/any world member may use these Composio apps/i),
     ).toBeNull();
   });
 });

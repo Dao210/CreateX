@@ -1180,7 +1180,7 @@ describe("IssueDetail (shared)", () => {
     renderPeek("nonexistent-id");
     await waitFor(() => {
       expect(
-        screen.getByText("This issue does not exist or has been deleted in this creative space."),
+        screen.getByText("This issue does not exist or has been deleted in this world."),
       ).toBeInTheDocument();
     });
     expect(screen.getByRole("button", { name: "Close preview" })).toBeInTheDocument();
@@ -1768,7 +1768,7 @@ describe("IssueDetail (shared)", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText("This issue does not exist or has been deleted in this creative space."),
+        screen.getByText("This issue does not exist or has been deleted in this world."),
       ).toBeInTheDocument();
     });
   });

@@ -589,7 +589,7 @@ describe("BillingTab", () => {
     [503, "Billing is temporarily unavailable. Retry in a moment."],
     [
       403,
-      "Your creative space role no longer allows this action. Refresh the page to see your current access.",
+      "Your world role no longer allows this action. Refresh the page to see your current access.",
     ],
   ])("maps a %s Checkout response to actionable copy", async (status, copy) => {
     const user = userEvent.setup();
@@ -618,7 +618,7 @@ describe("BillingTab", () => {
 
     expect(
       await screen.findByText(
-        "Creative Space subscriptions are not enabled for this deployment. Contact your administrator.",
+        "World subscriptions are not enabled for this deployment. Contact your administrator.",
       ),
     ).toBeInTheDocument();
   });
@@ -1409,7 +1409,7 @@ describe("BillingTab", () => {
     expect(screen.getByText("Members exceed purchased seats")).toBeInTheDocument();
     expect(
       screen.getByText(
-        "This creative space has 5 members but only 4 purchased seats. Add enough seats or remove members before sending more invitations.",
+        "This world has 5 members but only 4 purchased seats. Add enough seats or remove members before sending more invitations.",
       ),
     ).toBeInTheDocument();
   });

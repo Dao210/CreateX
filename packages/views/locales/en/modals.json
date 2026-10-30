@@ -7,8 +7,8 @@
     "collapse_tooltip": "Collapse"
   },
   "create_workspace": {
-    "title": "Create a new creative space",
-    "description": "Creative Spaces are shared environments where teams can work on projects and issues."
+    "title": "Create a new world",
+    "description": "Worlds are shared environments where teams can work on projects and issues."
   },
   "delete_issue": {
     "title": "Delete issue",
@@ -89,7 +89,7 @@
     "repos_pill_count_one": "{{count}} repo",
     "repos_pill_count_other": "{{count}} repos",
     "repos_heading": "Attach GitHub repos to this project",
-    "repos_empty": "No creative space repos yet. Paste a URL below to attach one ad-hoc.",
+    "repos_empty": "No world repos yet. Paste a URL below to attach one ad-hoc.",
     "repos_search_placeholder": "Search repositories...",
     "repos_search_empty": "No repositories match your search.",
     "repos_url_placeholder": "https://github.com/owner/repo or git@github.com:owner/repo.git",
@@ -128,27 +128,27 @@
     "toast_duplicate_title": "Duplicate issue",
     "toast_duplicate_view": "View existing issue",
     "issue_limit": {
-      "title": "This creative space has reached its issue limit",
-      "checking_description": "Checking the billing actions available for this creative space…",
+      "title": "This world has reached its issue limit",
+      "checking_description": "Checking the billing actions available for this world…",
       "upgrade_description": "Upgrade to Pro to keep creating issues.",
-      "portal_description": "Open Billing Portal to manage this creative space's subscription and restore issue creation.",
-      "contact_description": "Ask a creative space owner or admin to upgrade to Pro.",
-      "billing_description": "Open Billing to see the upgrade options available for this creative space.",
+      "portal_description": "Open Billing Portal to manage this world's subscription and restore issue creation.",
+      "contact_description": "Ask a world owner or admin to upgrade to Pro.",
+      "billing_description": "Open Billing to see the upgrade options available for this world.",
       "billing_unavailable_description": "Billing actions could not be loaded. Open Billing to try again.",
-      "billing_disabled_description": "Delete an existing issue to free space, or contact your creative space administrator.",
+      "billing_disabled_description": "Delete an existing issue to free space, or contact your world administrator.",
       "upgrade_action": "Upgrade to Pro",
       "portal_action": "Open Billing Portal",
       "billing_action": "View Billing"
     },
     "autopilot_quota_limit": {
-      "title": "This creative space has reached its autopilot run limit",
-      "checking_description": "Checking the billing actions available for this creative space…",
+      "title": "This world has reached its autopilot run limit",
+      "checking_description": "Checking the billing actions available for this world…",
       "upgrade_description": "Upgrade to Pro to restore autopilot runs.",
-      "portal_description": "Open Billing Portal to manage this creative space's subscription and restore autopilot runs.",
-      "contact_description": "Ask a creative space owner or admin to upgrade to Pro.",
-      "billing_description": "Open Billing to see the upgrade options available for this creative space.",
+      "portal_description": "Open Billing Portal to manage this world's subscription and restore autopilot runs.",
+      "contact_description": "Ask a world owner or admin to upgrade to Pro.",
+      "billing_description": "Open Billing to see the upgrade options available for this world.",
       "billing_unavailable_description": "Billing actions could not be loaded. Open Billing to try again.",
-      "billing_disabled_description": "Wait for the current allowance to reset, or contact your creative space administrator.",
+      "billing_disabled_description": "Wait for the current allowance to reset, or contact your world administrator.",
       "upgrade_action": "Upgrade to Pro",
       "portal_action": "Open Billing Portal",
       "billing_action": "View Billing"

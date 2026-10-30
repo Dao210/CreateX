@@ -118,7 +118,7 @@
     "archived": "アーカイブ済み",
     "visibility_public": "チーム",
     "visibility_private": "自分のみ",
-    "visibility_public_hint": "クリエイティブスペースの全員",
+    "visibility_public_hint": "ワールドの全員",
     "visibility_private_hint": "自分だけ",
     "field_visibility": "使用できる範囲",
     "public_target_hint": "全員が実行できるエージェントのみ指定できます。",
@@ -170,7 +170,7 @@
     "timezone": {
       "title": "タイムゾーン",
       "browser_suffix": " (ブラウザ)",
-      "hint": "すべてのクリエイティブスペースの日付とグラフに適用します。",
+      "hint": "すべてのワールドの日付とグラフに適用します。",
       "sync_failed": "タイムゾーン設定を保存できませんでした。",
       "search": "タイムゾーンを検索...",
       "empty": "一致するタイムゾーンはありません"
@@ -263,11 +263,11 @@
       },
       "goInbox": {
         "label": "受信トレイへ移動",
-        "description": "クリエイティブスペースの受信トレイを開きます。"
+        "description": "ワールドの受信トレイを開きます。"
       },
       "goChat": {
         "label": "チャットへ移動",
-        "description": "クリエイティブスペースのチャットを開きます。"
+        "description": "ワールドのチャットを開きます。"
       },
       "goIssues": {
         "label": "タスクへ移動",
@@ -279,7 +279,7 @@
       },
       "goAutopilots": {
         "label": "自動化へ移動",
-        "description": "クリエイティブスペースの自動化を開きます。"
+        "description": "ワールドの自動化を開きます。"
       },
       "goAgents": {
         "label": "エージェントへ移動",
@@ -299,7 +299,7 @@
       },
       "goSettings": {
         "label": "設定へ移動",
-        "description": "クリエイティブスペース設定を開きます。"
+        "description": "設定を開きます。"
       }
     },
     "fixed": {
@@ -366,7 +366,7 @@
   "page": {
     "title": "設定",
     "my_account": "マイアカウント",
-    "workspace_fallback": "クリエイティブスペース",
+    "workspace_fallback": "ワールド",
     "tabs": {
       "profile": "プロフィール",
       "preferences": "環境設定",
@@ -389,8 +389,8 @@
       "apps": "接続済みアプリ"
     },
     "groups": {
-      "personal": "個人",
-      "workspace": "クリエイティブスペース",
+      "personal": "アカウント設定",
+      "workspace": "ワールド",
       "issues": "タスクとワークフロー",
       "connections": "接続と拡張機能",
       "device": "このデバイス"
@@ -463,7 +463,7 @@
       "agents_read": "agent 一覧を読み取る",
       "members_read": "メンバー一覧を読み取る",
       "storage_user": "メンバーごとにデータを保存する",
-      "storage_workspace": "クリエイティブスペース共有のデータを保存する",
+      "storage_workspace": "ワールド共有のデータを保存する",
       "net": "{{domain}} にデータを送信する",
       "unknown": "認識できない権限です — インストールしないでください"
     },
@@ -484,7 +484,7 @@
       "hint": "auro.plugin.json とそれが参照するすべてのファイルを含む .zip。",
       "upload": "パッケージをアップロード",
       "published": "{{name}} {{version}} を公開しました",
-      "empty": "このクリエイティブスペースではまだ何も公開されていません。",
+      "empty": "このワールドではまだ何も公開されていません。",
       "delete": "公開したプラグインを削除",
       "deleted": "公開したプラグインを削除しました",
       "installed_version": "使用中",
@@ -533,7 +533,7 @@
     "editor": {
       "create_title": "新規プロパティ",
       "edit_title": "プロパティを編集",
-      "admin_hint": "プロパティ定義を管理できるのはクリエイティブスペースのオーナーと管理者のみです。",
+      "admin_hint": "プロパティ定義を管理できるのはワールドのオーナーと管理者のみです。",
       "icon": "アイコン",
       "choose_icon": "アイコンを選択",
       "remove_icon": "アイコンを削除",
@@ -709,41 +709,41 @@
     "usage_help": "使い方"
   },
   "workspace": {
-    "section_general": "クリエイティブスペース情報",
-    "logo_label": "クリエイティブスペースのアイコン",
+    "section_general": "ワールド情報",
+    "logo_label": "ワールドのアイコン",
     "name_label": "名前",
     "description_label": "説明",
-    "description_placeholder": "このクリエイティブスペースは何に注力していますか？",
+    "description_placeholder": "このワールドは何に注力していますか？",
     "context_label": "エージェントのコンテキスト",
-    "context_placeholder": "このクリエイティブスペースで作業する AI エージェント向けの背景情報とコンテキスト",
+    "context_placeholder": "このワールドで作業する AI エージェント向けの背景情報とコンテキスト",
     "slug_label": "スラッグ",
     "issue_prefix_label": "タスク接頭辞",
     "issue_prefix_hint": "{{example}} のようなタスク番号に使用されます。",
     "save": "保存",
     "saving": "保存中...",
-    "toast_save_failed": "クリエイティブスペース設定を保存できませんでした",
+    "toast_save_failed": "ワールド設定を保存できませんでした",
     "danger_zone": "危険な操作",
-    "leave_title": "クリエイティブスペースを退出",
-    "leave_sole_owner": "あなたは唯一の owner です。先に別のメンバーを owner に昇格させるか、クリエイティブスペースを削除してください。",
-    "leave_sole_member": "あなたは唯一のメンバーです。退出するにはクリエイティブスペースを削除してください。",
-    "leave_default": "このクリエイティブスペースからあなた自身を削除します。",
-    "leave_button": "クリエイティブスペースを退出",
+    "leave_title": "ワールドを退出",
+    "leave_sole_owner": "あなたは唯一の owner です。先に別のメンバーを owner に昇格させるか、ワールドを削除してください。",
+    "leave_sole_member": "あなたは唯一のメンバーです。退出するにはワールドを削除してください。",
+    "leave_default": "このワールドからあなた自身を削除します。",
+    "leave_button": "ワールドを退出",
     "leaving": "退出中...",
-    "leave_confirm_title": "クリエイティブスペースを退出",
+    "leave_confirm_title": "ワールドを退出",
     "leave_confirm_description": "{{name}} から退出しますか？再招待されるまでアクセスできなくなります。",
-    "toast_leave_failed": "クリエイティブスペースから退出できませんでした",
-    "delete_title": "クリエイティブスペースを削除",
-    "delete_description": "このクリエイティブスペースとそのデータを完全に削除します。",
-    "delete_button": "クリエイティブスペースを削除",
+    "toast_leave_failed": "ワールドから退出できませんでした",
+    "delete_title": "ワールドを削除",
+    "delete_description": "このワールドとそのデータを完全に削除します。",
+    "delete_button": "ワールドを削除",
     "deleting": "削除中...",
-    "toast_delete_failed": "クリエイティブスペースを削除できませんでした",
+    "toast_delete_failed": "ワールドを削除できませんでした",
     "confirm_cancel": "キャンセル",
     "confirm_action": "確認",
-    "change_logo_aria": "クリエイティブスペースのロゴを変更",
+    "change_logo_aria": "ワールドのロゴを変更",
     "click_logo_hint": "ロゴをクリックして新しい画像をアップロード",
-    "toast_logo_failed": "クリエイティブスペースのロゴをアップロードできませんでした",
-    "context_hint": "このクリエイティブスペースのエージェントに、実行のたびに渡されます。",
-    "slug_hint": "クリエイティブスペースの URL に使われます。作成後は変更できません。",
+    "toast_logo_failed": "ワールドのロゴをアップロードできませんでした",
+    "context_hint": "このワールドのエージェントに、実行のたびに渡されます。",
+    "slug_hint": "ワールドの URL に使われます。作成後は変更できません。",
     "copy_slug": "slug をコピー",
     "copy_failed": "コピーできませんでした",
     "change_prefix": "プレフィックスを変更...",
@@ -755,12 +755,12 @@
     "prefix_external_warning": "PR タイトル、ブランチ名、ドキュメント、チャット内の古いキー（{{oldExample}} など）は更新されないため、それらのリンクは機能しなくなります。"
   },
   "delete_workspace_dialog": {
-    "title": "クリエイティブスペースを削除",
+    "title": "ワールドを削除",
     "description": "この操作は元に戻せません。すべてのタスク、エージェント、チャット、実行履歴が完全に削除されます。",
     "type_to_confirm_prefix": "確認するには、下に",
     "type_to_confirm_suffix": " と入力してください。",
     "cancel": "キャンセル",
-    "confirm": "クリエイティブスペースを削除",
+    "confirm": "ワールドを削除",
     "deleting": "削除中..."
   },
   "labs": {
@@ -780,7 +780,7 @@
     "connected_bots": "接続済みのボット",
     "loading": "読み込み中…",
     "empty_title": "まだボットが接続されていません",
-    "empty_description_prefix": "このクリエイティブスペースのエージェントを開いて",
+    "empty_description_prefix": "このワールドのエージェントを開いて",
     "empty_description_cta": "Lark に接続",
     "empty_description_suffix": "をクリックすると、対応するボットを設置できます。",
     "revoked_badge": "取り消し済み",
@@ -840,7 +840,7 @@
     "install_error_conflict": "設置を保存できませんでした。別のボットがすでにこのエージェントに接続されている可能性があります。",
     "install_error_installer_bind": "ボットは設置されましたが、Lark の身元情報を連携できませんでした。もう一度お試しいただくか、サポートにお問い合わせください。",
     "install_error_session_lost": "設置セッションが期限切れまたは失われました。もう一度スキャンしてやり直してください。",
-    "install_error_forbidden": "このクリエイティブスペースに Lark ボットを設置する権限がなくなりました。クリエイティブスペース管理者にお問い合わせください。",
+    "install_error_forbidden": "このワールドに Lark ボットを設置する権限がなくなりました。ワールド管理者にお問い合わせください。",
     "install_error_generic": "設置に失敗しました。もう一度お試しください。"
   },
   "composio": {
@@ -884,7 +884,7 @@
     "connected_bots": "接続済みのボット",
     "loading": "読み込み中…",
     "empty_title": "まだボットが接続されていません",
-    "empty_description_prefix": "このクリエイティブスペースのエージェントを開き、",
+    "empty_description_prefix": "このワールドのエージェントを開き、",
     "empty_description_cta": "Slack を接続",
     "empty_description_suffix": "をクリックしてボットをインストールします。",
     "revoked_badge": "取り消し済み",
@@ -892,7 +892,7 @@
     "disconnect": "切断",
     "disconnecting": "切断中…",
     "disconnect_confirm_title": "この Slack ボットを切断しますか？",
-    "disconnect_confirm_description": "このボットはこのクリエイティブスペースの Slack メッセージを受信しなくなります。インストール記録は監査のため保持され、同じエージェントから再インストールできます。",
+    "disconnect_confirm_description": "このボットはこのワールドの Slack メッセージを受信しなくなります。インストール記録は監査のため保持され、同じエージェントから再インストールできます。",
     "disconnect_confirm_cancel": "キャンセル",
     "toast_disconnected": "Slack ボットを切断しました",
     "toast_disconnect_failed": "切断に失敗しました",
@@ -903,7 +903,7 @@
     "agent_bot_connected_label": "Slack に接続済み",
     "agent_bot_disconnect_tooltip": "この Slack ボットをエージェントから解除します。ボットは Slack メッセージを受信しなくなります。",
     "agent_bot_manage_link": "Slack で開く",
-    "agent_bot_manage_tooltip": "このボットの Slack クリエイティブスペースを開きます。",
+    "agent_bot_manage_tooltip": "このボットの Slack ワークスペースを開きます。",
     "byo_dialog_title": "Slack ボットを接続",
     "byo_video_cta": "セットアップ手順の動画を見る",
     "byo_docs_link": "Step-by-step：Auro エージェントを Slack に接続する",
@@ -920,7 +920,7 @@
     "page_description": "DingTalk でエージェントと対話し、/issue でタスクを作成できます。",
     "agent_page_description": "DingTalk でこのエージェントと対話し、/issue でタスクを作成できます。",
     "groups_title": "最近のグループ",
-    "groups_description": "クリエイティブスペースのメンバーが DingTalk アカウントを連携し、グループでこのボットを @メンションすると表示されます。通常は直近 90 日間に利用されたグループだけを表示します。",
+    "groups_description": "ワールドのメンバーが DingTalk アカウントを連携し、グループでこのボットを @メンションすると表示されます。通常は直近 90 日間に利用されたグループだけを表示します。",
     "groups_loading": "グループを読み込み中…",
     "groups_empty": "グループからのメッセージはまだありません。",
     "groups_no_recent": "直近 90 日間に利用されたグループはありません。",
@@ -951,7 +951,7 @@
     "deleted_agent": "削除済みのエージェント",
     "loading": "読み込み中…",
     "empty_title": "まだボットが接続されていません",
-    "empty_description_prefix": "このクリエイティブスペースのエージェントを開き、",
+    "empty_description_prefix": "このワールドのエージェントを開き、",
     "empty_description_cta": "DingTalk を接続",
     "empty_description_suffix": "をクリックしてロボットをインストールします。",
     "revoked_badge": "取り消し済み",
@@ -960,7 +960,7 @@
     "disconnect": "切断",
     "disconnecting": "切断中…",
     "disconnect_confirm_title": "この DingTalk ボットを切断しますか？",
-    "disconnect_confirm_description": "このボットはこのクリエイティブスペースの DingTalk メッセージを受信しなくなります。インストール記録は監査のため保持され、あとでボットを再接続できます。",
+    "disconnect_confirm_description": "このボットはこのワールドの DingTalk メッセージを受信しなくなります。インストール記録は監査のため保持され、あとでボットを再接続できます。",
     "disconnect_confirm_cancel": "キャンセル",
     "toast_disconnected": "DingTalk ボットを切断しました",
     "toast_disconnect_failed": "切断に失敗しました",
@@ -990,7 +990,7 @@
     "connected_bots": "接続済みのボット",
     "loading": "読み込み中…",
     "empty_title": "まだボットが接続されていません",
-    "empty_description_prefix": "このクリエイティブスペースでエージェントを開き",
+    "empty_description_prefix": "このワールドでエージェントを開き",
     "empty_description_cta": "WeCom を接続",
     "empty_description_suffix": "をクリックしてスマートボットをインストールします。",
     "revoked_badge": "無効化済み",
@@ -998,7 +998,7 @@
     "disconnect": "接続を解除",
     "disconnecting": "解除中…",
     "disconnect_confirm_title": "この WeCom ボットを解除しますか？",
-    "disconnect_confirm_description": "このボットはこのクリエイティブスペースの WeCom メッセージを受け取らなくなります。監査のためレコードは保持され、同じエージェントから再インストールできます。",
+    "disconnect_confirm_description": "このボットはこのワールドの WeCom メッセージを受け取らなくなります。監査のためレコードは保持され、同じエージェントから再インストールできます。",
     "disconnect_confirm_cancel": "キャンセル",
     "toast_disconnected": "WeCom ボットを解除しました",
     "toast_disconnect_failed": "接続解除に失敗しました",
@@ -1019,9 +1019,9 @@
     "byo_submitting": "接続中…",
     "byo_cancel": "キャンセル",
     "byo_success_toast": "WeCom ボットを接続しました",
-    "byo_conflict_same_workspace": "このボットはこのクリエイティブスペースの別のエージェントに接続済みです。先にそちらで切断してから、ここに接続してください。",
-    "byo_conflict_archived_agent": "このボットはこのクリエイティブスペースのアーカイブ済みエージェントに接続されています。そのエージェントを復元するか、ボットを切断してから接続してください。",
-    "byo_conflict_other_workspace": "このボットは別の Auro クリエイティブスペースに接続済みです。先にそちらで切断してから接続してください。",
+    "byo_conflict_same_workspace": "このボットはこのワールドの別のエージェントに接続済みです。先にそちらで切断してから、ここに接続してください。",
+    "byo_conflict_archived_agent": "このボットはこのワールドのアーカイブ済みエージェントに接続されています。そのエージェントを復元するか、ボットを切断してから接続してください。",
+    "byo_conflict_other_workspace": "このボットは別の Auro ワールドに接続済みです。先にそちらで切断してから接続してください。",
     "byo_rejected": "ボットを接続できませんでした。WeCom 管理コンソールの Bot ID とシークレット、および長時間接続が有効なスマートボットであることを確認してください。",
     "byo_credentials_rejected": "WeCom がこの Bot ID とシークレットを拒否しました。WeCom 管理コンソールで両方を確認し、長時間接続が有効なスマートボットであることもご確認ください。",
     "byo_credentials_unverifiable": "WeCom に接続できず、このボットを検証できませんでした。認証情報は変更されていません。少し時間をおいてもう一度お試しください。",
@@ -1041,7 +1041,7 @@
     "loading": "読み込み中…",
     "load_failed": "Telegram のインストールを読み込めませんでした",
     "empty_title": "接続済みのボットはまだありません",
-    "empty_description_prefix": "このクリエイティブスペースのエージェントを開き、",
+    "empty_description_prefix": "このワールドのエージェントを開き、",
     "empty_description_cta": "Telegram に接続",
     "empty_description_suffix": "をクリックしてボットをインストールします。",
     "revoked_badge": "無効化済み",
@@ -1049,7 +1049,7 @@
     "disconnect": "切断",
     "disconnecting": "切断中…",
     "disconnect_confirm_title": "この Telegram ボットを切断しますか？",
-    "disconnect_confirm_description": "ボットはこのクリエイティブスペースの Telegram メッセージを受信しなくなります。Auro 内のチャット履歴は保持され、同じエージェントから再接続できます。",
+    "disconnect_confirm_description": "ボットはこのワールドの Telegram メッセージを受信しなくなります。Auro 内のチャット履歴は保持され、同じエージェントから再接続できます。",
     "disconnect_confirm_cancel": "キャンセル",
     "toast_disconnected": "Telegram ボットを切断しました",
     "toast_disconnect_failed": "切断に失敗しました",
@@ -1111,7 +1111,7 @@
       "profile": "プロファイル",
       "server_url": "サーバー URL",
       "device_name": "デバイス名",
-      "workspaces": "クリエイティブスペース",
+      "workspaces": "ワールド",
       "state_stopped": "停止中",
       "state_starting": "起動中…",
       "state_running": "実行中",
@@ -1176,7 +1176,7 @@
     "seat_purchase_capacity_taken": "購入した席はすでに利用できないため、招待は送信されませんでした。現在の席を確認してから再試行してください。",
     "no_members": "メンバーが見つかりません。",
     "revoke_invitation_title": "招待を取り消し",
-    "revoke_invitation_description": "{{email}} への招待を取り消しますか？このクリエイティブスペースに参加できなくなります。",
+    "revoke_invitation_description": "{{email}} への招待を取り消しますか？このワールドに参加できなくなります。",
     "toast_invitation_revoked": "招待を取り消しました",
     "toast_invitation_revoke_failed": "招待を取り消せませんでした",
     "toast_role_updated": "ロールを更新しました",
@@ -1184,12 +1184,12 @@
     "toast_member_removed": "メンバーを削除しました",
     "toast_member_remove_failed": "メンバーを削除できませんでした",
     "remove_member_title": "{{name}} を削除",
-    "remove_member_description": "{{workspace}} から {{name}} を削除しますか？このクリエイティブスペースへのアクセスを失います。",
+    "remove_member_description": "{{workspace}} から {{name}} を削除しますか？このワールドへのアクセスを失います。",
     "confirm_cancel": "キャンセル",
     "confirm_action": "確認",
     "change_role": "ロールを変更",
-    "remove_action": "クリエイティブスペースから削除",
-    "cannot_demote_last_owner_title": "先に別のメンバーを owner に昇格させてください。クリエイティブスペースには少なくとも 1 人の owner が必要です。",
+    "remove_action": "ワールドから削除",
+    "cannot_demote_last_owner_title": "先に別のメンバーを owner に昇格させてください。ワールドには少なくとも 1 人の owner が必要です。",
     "cannot_demote_last_owner": "最後の owner は降格できません",
     "roles": {
       "owner": {
@@ -1252,12 +1252,12 @@
       "account": "アカウント · 全デバイスで同期",
       "device": "このデバイスのみ",
       "device_workspace": "このデバイスのみ · {{name}}",
-      "workspace": "{{name}} クリエイティブスペース",
+      "workspace": "{{name}} ワールド",
       "workspace_only": "{{name}} のみに適用"
     },
     "read_only": {
       "title": "閲覧のみ",
-      "description": "これらの設定を変更できるのはクリエイティブスペースのオーナーと管理者だけです。",
+      "description": "これらの設定を変更できるのはワールドのオーナーと管理者だけです。",
       "contact": "これらの設定を変更できるのはオーナーと管理者だけです。{{names}} に依頼してください。",
       "separator": "、"
     }
@@ -1272,7 +1272,7 @@
   "mcp_sources": {
     "title": "エージェントにツールを与える方法",
     "current": "このページ",
-    "mcp": "管理者が追加してクリエイティブスペースで共有し、エージェントごとに割り当てます。",
+    "mcp": "管理者が追加してワールドで共有し、エージェントごとに割り当てます。",
     "apps": "自分のアカウントで Composio 経由で承認し、自分が所有するエージェントで有効にします。",
     "plugins": "インストールするとツール、定期フック、ストレージを追加でき、プラグインごとに権限を付与します。"
   }

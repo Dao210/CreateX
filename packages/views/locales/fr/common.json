@@ -50,12 +50,12 @@
     "done_title": "Association effectuée.",
     "done_description": "Votre prochain message au bot dans Lark ira directement à l'agent. Vous pouvez fermer cet onglet.",
     "error_title": "Impossible de terminer l'association",
-    "error_admin_hint": "Si le problème persiste, demandez à l'administrateur de l'espace créatif de renvoyer le lien d'association depuis Lark.",
+    "error_admin_hint": "Si le problème persiste, demandez à l'administrateur du monde de renvoyer le lien d'association depuis Lark.",
     "error_missing_token": "Le lien ne contient pas de jeton d'association. Demandez au bot d'en envoyer un nouveau dans Lark.",
     "error_expired": "Ce lien d'association est invalide ou expiré (les liens sont valables 15 minutes). Demandez au bot d'en envoyer un nouveau.",
     "error_already_bound": "Ce compte Lark est déjà associé à un autre utilisateur Weave a World. Tout transfert de compte exige une dissociation explicite au préalable.",
-    "error_not_member": "Vous êtes connecté avec un compte Weave a World qui n'est pas membre de cet espace créatif.",
-    "error_unknown": "Une erreur est survenue. Réessayez et, si le problème persiste, contactez l'administrateur de l'espace créatif."
+    "error_not_member": "Vous êtes connecté avec un compte Weave a World qui n'est pas membre de ce monde.",
+    "error_unknown": "Une erreur est survenue. Réessayez et, si le problème persiste, contactez l'administrateur du monde."
   },
   "slack_bind": {
     "page_title": "Associer votre compte Slack",
@@ -69,8 +69,8 @@
     "error_missing_token": "Le lien ne contient pas de jeton. Écrivez de nouveau au bot dans Slack pour en obtenir un nouveau.",
     "error_expired": "Ce lien est invalide ou expiré (les liens sont valables 15 minutes). Écrivez de nouveau au bot pour en obtenir un nouveau.",
     "error_already_bound": "Ce compte Slack est déjà associé à un autre utilisateur Weave a World. Tout transfert de compte exige une dissociation explicite au préalable.",
-    "error_not_member": "Vous êtes connecté avec un compte Weave a World qui n'est pas membre de cet espace créatif.",
-    "error_unknown": "Une erreur est survenue. Réessayez et, si le problème persiste, contactez l'administrateur de l'espace créatif."
+    "error_not_member": "Vous êtes connecté avec un compte Weave a World qui n'est pas membre de ce monde.",
+    "error_unknown": "Une erreur est survenue. Réessayez et, si le problème persiste, contactez l'administrateur du monde."
   },
   "dingtalk_bind": {
     "page_title": "Associer votre compte DingTalk",
@@ -84,8 +84,8 @@
     "error_missing_token": "Le lien ne contient pas de jeton. Écrivez de nouveau au bot dans DingTalk pour en obtenir un nouveau.",
     "error_expired": "Ce lien est invalide ou expiré (les liens sont valables 15 minutes). Écrivez de nouveau au bot pour en obtenir un nouveau.",
     "error_already_bound": "Ce compte DingTalk est déjà associé à un autre utilisateur Weave a World. Tout transfert de compte exige une dissociation explicite au préalable.",
-    "error_not_member": "Vous êtes connecté avec un compte Weave a World qui n'est pas membre de cet espace créatif.",
-    "error_unknown": "Une erreur est survenue. Réessayez et, si le problème persiste, contactez l'administrateur de l'espace créatif."
+    "error_not_member": "Vous êtes connecté avec un compte Weave a World qui n'est pas membre de ce monde.",
+    "error_unknown": "Une erreur est survenue. Réessayez et, si le problème persiste, contactez l'administrateur du monde."
   },
   "telegram_bind": {
     "page_title": "Associer votre compte Telegram",
@@ -99,8 +99,8 @@
     "error_missing_token": "Le lien ne contient pas de jeton. Écrivez de nouveau au bot dans Telegram pour en obtenir un nouveau.",
     "error_expired": "Ce lien est invalide ou expiré (les liens sont valables 15 minutes). Écrivez de nouveau au bot pour en obtenir un nouveau.",
     "error_already_bound": "Ce compte Telegram est déjà associé à un autre utilisateur Weave a World. Tout transfert de compte exige une dissociation explicite au préalable.",
-    "error_not_member": "Vous êtes connecté avec un compte Weave a World qui n'est pas membre de cet espace créatif.",
-    "error_unknown": "Une erreur est survenue. Réessayez et, si le problème persiste, contactez l'administrateur de l'espace créatif."
+    "error_not_member": "Vous êtes connecté avec un compte Weave a World qui n'est pas membre de ce monde.",
+    "error_unknown": "Une erreur est survenue. Réessayez et, si le problème persiste, contactez l'administrateur du monde."
   },
   "expandable_description": {
     "expand": "Afficher plus",
@@ -118,8 +118,8 @@
     "error_missing_token": "Le lien ne contient pas de jeton. Écrivez de nouveau au bot dans WeCom pour en obtenir un nouveau.",
     "error_expired": "Ce lien est invalide ou expiré (les liens sont valables 15 minutes). Écrivez de nouveau au bot pour en obtenir un nouveau.",
     "error_already_bound": "Cette identité WeCom est déjà associée à un autre utilisateur Weave a World. Tout transfert de compte exige une dissociation explicite au préalable.",
-    "error_not_member": "Vous êtes connecté avec un compte Weave a World qui n'est pas membre de cet espace créatif.",
-    "error_unknown": "Une erreur est survenue. Réessayez et, si le problème persiste, contactez l'administrateur de l'espace créatif."
+    "error_not_member": "Vous êtes connecté avec un compte Weave a World qui n'est pas membre de ce monde.",
+    "error_unknown": "Une erreur est survenue. Réessayez et, si le problème persiste, contactez l'administrateur du monde."
   },
   "not_found": {
     "title": "Page introuvable",

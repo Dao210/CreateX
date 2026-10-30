@@ -11,7 +11,7 @@
     "skills": "Skills",
     "siege": "Siège",
     "tanks": "Défense de chars",
-    "me": "Mon espace",
+    "me": "Mes créations",
     "settings": "Paramètres"
   },
   "tab": {
@@ -37,15 +37,15 @@
     "server_version": "Version du serveur {{version}}"
   },
   "workspace_loader": {
-    "loading_workspace": "Chargement de l'espace créatif…",
+    "loading_workspace": "Chargement du monde…",
     "loading_named_prefix": "Chargement"
   },
   "sidebar": {
     "unpin_tooltip": "Détacher",
-    "workspaces_label": "Espaces créatifs",
-    "create_workspace": "Créer un espace créatif",
+    "workspaces_label": "Mondes",
+    "create_workspace": "Créer un monde",
     "pending_invitations_label": "Invitations en attente",
-    "invitation_workspace_fallback": "Espace créatif",
+    "invitation_workspace_fallback": "Monde",
     "invitation_join": "Rejoindre",
     "invitation_decline": "Refuser",
     "log_out": "Se déconnecter",
@@ -53,14 +53,17 @@
     "new_issue_shortcut": "C",
     "pinned_label": "Épinglés",
     "ai_team_group": "Équipe IA",
-    "my_assistants_group": "Mes assistants",
+    "my_assistants_group": "Assistants du monde",
     "show_more_pins": "Afficher {{count}} de plus…",
     "show_fewer_pins": "Afficher moins",
     "unread_overflow": "99+",
     "discord_card": {
       "title": "Rejoignez notre Discord",
       "dismiss": "Ignorer"
-    }
+    },
+    "world_settings": "Paramètres du monde",
+    "account_settings": "Paramètres du compte",
+    "account_settings_for": "{{name}} · Paramètres du compte"
   },
   "siege": {
     "workshop": "Atelier d’armes",

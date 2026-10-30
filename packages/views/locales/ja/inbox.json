@@ -52,7 +52,7 @@
     "original_input": "元の入力",
     "retry_with_context": "コンテキストを保持して再試行",
     "edit_advanced": "詳細フォームで編集",
-    "autopilot_quota_exceeded_body": "このクリエイティブスペースは現在の期間の自動化実行上限 {{limit}} 回に達しました。実行枠が {{resetAt}} にリセットされるまで、以降の自動化は開始されません。",
+    "autopilot_quota_exceeded_body": "このワールドは現在の期間の自動化実行上限 {{limit}} 回に達しました。実行枠が {{resetAt}} にリセットされるまで、以降の自動化は開始されません。",
     "autopilot_quota_upgrade": "アップグレード方法を見る",
     "archive": "アーカイブ",
     "unarchive": "アーカイブ解除"

@@ -7,8 +7,8 @@
     "collapse_tooltip": "收起"
   },
   "create_workspace": {
-    "title": "创建新创作区",
-    "description": "创作区是团队协作处理项目和任务的共享空间。"
+    "title": "创建新世界",
+    "description": "世界是团队协作处理项目和任务的共享空间。"
   },
   "delete_issue": {
     "title": "删除任务",
@@ -88,7 +88,7 @@
     "repos_pill": "代码仓库",
     "repos_pill_count_other": "{{count}} 个仓库",
     "repos_heading": "为此项目关联 GitHub 仓库",
-    "repos_empty": "还没有创作区级别的仓库。可以在下方粘贴 URL 临时关联一个。",
+    "repos_empty": "还没有世界级别的仓库。可以在下方粘贴 URL 临时关联一个。",
     "repos_search_placeholder": "搜索仓库...",
     "repos_search_empty": "没有匹配的仓库。",
     "repos_url_placeholder": "https://github.com/owner/repo 或 git@github.com:owner/repo.git",
@@ -127,27 +127,27 @@
     "toast_duplicate_title": "已存在同名任务",
     "toast_duplicate_view": "查看已有任务",
     "issue_limit": {
-      "title": "该创作区的任务总数已达到上限",
-      "checking_description": "正在查询该创作区可用的账单操作…",
+      "title": "该世界的任务总数已达到上限",
+      "checking_description": "正在查询该世界可用的账单操作…",
       "upgrade_description": "升级到 Pro 后可继续创建任务。",
-      "portal_description": "打开账单门户管理该创作区的订阅，以恢复任务创建。",
-      "contact_description": "请联系创作区所有者或管理员升级到 Pro。",
-      "billing_description": "请前往账单设置查看该创作区可用的升级选项。",
+      "portal_description": "打开账单门户管理该世界的订阅，以恢复任务创建。",
+      "contact_description": "请联系世界所有者或管理员升级到 Pro。",
+      "billing_description": "请前往账单设置查看该世界可用的升级选项。",
       "billing_unavailable_description": "暂时无法加载账单操作，请前往账单设置重试。",
-      "billing_disabled_description": "请删除已有任务以释放名额，或联系创作区管理员。",
+      "billing_disabled_description": "请删除已有任务以释放名额，或联系世界管理员。",
       "upgrade_action": "升级到 Pro",
       "portal_action": "打开账单门户",
       "billing_action": "查看账单"
     },
     "autopilot_quota_limit": {
-      "title": "该创作区的自动化执行次数已达到上限",
-      "checking_description": "正在查询该创作区可用的账单操作…",
+      "title": "该世界的自动化执行次数已达到上限",
+      "checking_description": "正在查询该世界可用的账单操作…",
       "upgrade_description": "升级到 Pro 后可恢复自动化执行。",
-      "portal_description": "打开账单门户管理该创作区的订阅，以恢复自动化执行。",
-      "contact_description": "请联系创作区所有者或管理员升级到 Pro。",
-      "billing_description": "请前往账单设置查看该创作区可用的升级选项。",
+      "portal_description": "打开账单门户管理该世界的订阅，以恢复自动化执行。",
+      "contact_description": "请联系世界所有者或管理员升级到 Pro。",
+      "billing_description": "请前往账单设置查看该世界可用的升级选项。",
       "billing_unavailable_description": "暂时无法加载账单操作，请前往账单设置重试。",
-      "billing_disabled_description": "请等待当前额度重置，或联系创作区管理员。",
+      "billing_disabled_description": "请等待当前额度重置，或联系世界管理员。",
       "upgrade_action": "升级到 Pro",
       "portal_action": "打开账单门户",
       "billing_action": "查看账单"

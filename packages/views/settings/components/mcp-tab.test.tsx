@@ -525,7 +525,7 @@ describe("McpTab", () => {
     ).toBeNull();
     expect(screen.queryByRole("button", { name: /Remove server/ })).toBeNull();
     expect(
-      screen.getByText(/Only creative space owners and admins/),
+      screen.getByText(/Only world owners and admins/),
     ).toBeInTheDocument();
   });
 

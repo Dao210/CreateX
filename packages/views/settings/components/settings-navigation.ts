@@ -9,6 +9,14 @@ export const CHANNEL_INTEGRATIONS = [
 
 export type ChannelIntegration = (typeof CHANNEL_INTEGRATIONS)[number];
 
+export const ACCOUNT_SETTINGS_TABS = new Set([
+  "profile", "preferences", "notifications", "shortcuts", "apps", "tokens",
+]);
+
+export const WORLD_SETTINGS_TABS = new Set([
+  "workspace", "members", "labels", "billing", "channels", "mcp", "plugins",
+]);
+
 export function isChannelIntegration(
   value: string | null,
 ): value is ChannelIntegration {

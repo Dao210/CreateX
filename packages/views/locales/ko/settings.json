@@ -118,7 +118,7 @@
     "archived": "보관됨",
     "visibility_public": "팀",
     "visibility_private": "나만",
-    "visibility_public_hint": "크리에이티브 스페이스의 모든 사람",
+    "visibility_public_hint": "세계의 모든 사람",
     "visibility_private_hint": "나만",
     "field_visibility": "사용 범위",
     "public_target_hint": "모두가 트리거할 수 있는 에이전트만 지정할 수 있습니다.",
@@ -170,7 +170,7 @@
     "timezone": {
       "title": "시간대",
       "browser_suffix": " (브라우저)",
-      "hint": "모든 크리에이티브 스페이스의 날짜와 차트에 적용됩니다.",
+      "hint": "모든 세계의 날짜와 차트에 적용됩니다.",
       "sync_failed": "시간대 설정을 저장하지 못했습니다.",
       "search": "시간대 검색...",
       "empty": "일치하는 시간대가 없습니다"
@@ -263,11 +263,11 @@
       },
       "goInbox": {
         "label": "받은 편지함으로 이동",
-        "description": "크리에이티브 스페이스 받은 편지함을 엽니다."
+        "description": "세계 받은 편지함을 엽니다."
       },
       "goChat": {
         "label": "채팅으로 이동",
-        "description": "크리에이티브 스페이스 채팅을 엽니다."
+        "description": "세계 채팅을 엽니다."
       },
       "goIssues": {
         "label": "태스크로 이동",
@@ -279,7 +279,7 @@
       },
       "goAutopilots": {
         "label": "자동화로 이동",
-        "description": "크리에이티브 스페이스 자동화를 엽니다."
+        "description": "세계 자동화를 엽니다."
       },
       "goAgents": {
         "label": "에이전트로 이동",
@@ -299,7 +299,7 @@
       },
       "goSettings": {
         "label": "설정으로 이동",
-        "description": "크리에이티브 스페이스 설정을 엽니다."
+        "description": "설정을 엽니다."
       }
     },
     "fixed": {
@@ -366,7 +366,7 @@
   "page": {
     "title": "설정",
     "my_account": "내 계정",
-    "workspace_fallback": "크리에이티브 스페이스",
+    "workspace_fallback": "세계",
     "tabs": {
       "profile": "프로필",
       "preferences": "환경설정",
@@ -389,8 +389,8 @@
       "apps": "연결된 앱"
     },
     "groups": {
-      "personal": "개인",
-      "workspace": "크리에이티브 스페이스",
+      "personal": "계정 설정",
+      "workspace": "세계",
       "issues": "태스크 및 워크플로",
       "connections": "연결 및 확장",
       "device": "이 기기"
@@ -463,7 +463,7 @@
       "agents_read": "agent 목록 읽기",
       "members_read": "멤버 목록 읽기",
       "storage_user": "멤버별로 데이터 저장",
-      "storage_workspace": "크리에이티브 스페이스 공유 데이터 저장",
+      "storage_workspace": "세계 공유 데이터 저장",
       "net": "{{domain}}(으)로 데이터 전송",
       "unknown": "알 수 없는 권한 — 설치하지 마세요"
     },
@@ -484,7 +484,7 @@
       "hint": "auro.plugin.json과 그것이 참조하는 모든 파일이 담긴 .zip입니다.",
       "upload": "패키지 업로드",
       "published": "{{name}} {{version}} 게시됨",
-      "empty": "이 크리에이티브 스페이스에는 아직 게시된 것이 없습니다.",
+      "empty": "이 세계에는 아직 게시된 것이 없습니다.",
       "delete": "게시된 플러그인 삭제",
       "deleted": "게시된 플러그인을 삭제했습니다",
       "installed_version": "사용 중",
@@ -533,7 +533,7 @@
     "editor": {
       "create_title": "새 속성",
       "edit_title": "속성 편집",
-      "admin_hint": "크리에이티브 스페이스 소유자와 관리자만 속성 정의를 관리할 수 있습니다.",
+      "admin_hint": "세계 소유자와 관리자만 속성 정의를 관리할 수 있습니다.",
       "icon": "아이콘",
       "choose_icon": "아이콘 선택",
       "remove_icon": "아이콘 제거",
@@ -709,41 +709,41 @@
     "usage_help": "사용 방법"
   },
   "workspace": {
-    "section_general": "크리에이티브 스페이스 정보",
-    "logo_label": "크리에이티브 스페이스 아이콘",
-    "change_logo_aria": "크리에이티브 스페이스 로고 변경",
+    "section_general": "세계 정보",
+    "logo_label": "세계 아이콘",
+    "change_logo_aria": "세계 로고 변경",
     "click_logo_hint": "로고를 클릭하여 새 이미지를 업로드하세요",
-    "toast_logo_failed": "크리에이티브 스페이스 로고를 업로드하지 못했습니다",
+    "toast_logo_failed": "세계 로고를 업로드하지 못했습니다",
     "name_label": "이름",
     "description_label": "설명",
-    "description_placeholder": "이 크리에이티브 스페이스는 무엇에 집중하나요?",
+    "description_placeholder": "이 세계는 무엇에 집중하나요?",
     "context_label": "에이전트 컨텍스트",
-    "context_placeholder": "이 크리에이티브 스페이스에서 작업하는 AI 에이전트가 알아야 할 배경 정보와 맥락",
+    "context_placeholder": "이 세계에서 작업하는 AI 에이전트가 알아야 할 배경 정보와 맥락",
     "slug_label": "슬러그",
     "issue_prefix_label": "태스크 접두사",
     "issue_prefix_hint": "{{example}} 같은 태스크 번호에 사용됩니다.",
     "save": "저장",
     "saving": "저장하는 중...",
-    "toast_save_failed": "크리에이티브 스페이스 설정을 저장하지 못했습니다",
+    "toast_save_failed": "세계 설정을 저장하지 못했습니다",
     "danger_zone": "위험 영역",
-    "leave_title": "크리에이티브 스페이스 나가기",
-    "leave_sole_owner": "내가 유일한 소유자입니다. 먼저 다른 멤버를 소유자로 승격하거나 크리에이티브 스페이스를 삭제하세요.",
-    "leave_sole_member": "내가 유일한 멤버입니다. 나가려면 크리에이티브 스페이스를 삭제하세요.",
-    "leave_default": "이 크리에이티브 스페이스에서 내 계정을 제거합니다.",
-    "leave_button": "크리에이티브 스페이스 나가기",
+    "leave_title": "세계 나가기",
+    "leave_sole_owner": "내가 유일한 소유자입니다. 먼저 다른 멤버를 소유자로 승격하거나 세계를 삭제하세요.",
+    "leave_sole_member": "내가 유일한 멤버입니다. 나가려면 세계를 삭제하세요.",
+    "leave_default": "이 세계에서 내 계정을 제거합니다.",
+    "leave_button": "세계 나가기",
     "leaving": "나가는 중...",
-    "leave_confirm_title": "크리에이티브 스페이스 나가기",
+    "leave_confirm_title": "세계 나가기",
     "leave_confirm_description": "{{name}}에서 나갈까요? 다시 초대받기 전까지 접근할 수 없습니다.",
-    "toast_leave_failed": "크리에이티브 스페이스에서 나가지 못했습니다",
-    "delete_title": "크리에이티브 스페이스 삭제",
-    "delete_description": "이 크리에이티브 스페이스와 데이터를 영구 삭제합니다.",
-    "delete_button": "크리에이티브 스페이스 삭제",
+    "toast_leave_failed": "세계에서 나가지 못했습니다",
+    "delete_title": "세계 삭제",
+    "delete_description": "이 세계와 데이터를 영구 삭제합니다.",
+    "delete_button": "세계 삭제",
     "deleting": "삭제하는 중...",
-    "toast_delete_failed": "크리에이티브 스페이스를 삭제하지 못했습니다",
+    "toast_delete_failed": "세계를 삭제하지 못했습니다",
     "confirm_cancel": "취소",
     "confirm_action": "확인",
-    "context_hint": "이 크리에이티브 스페이스의 에이전트에게 실행할 때마다 전달됩니다.",
-    "slug_hint": "모든 크리에이티브 스페이스 URL에 쓰이며 생성 후에는 변경할 수 없습니다.",
+    "context_hint": "이 세계의 에이전트에게 실행할 때마다 전달됩니다.",
+    "slug_hint": "모든 세계 URL에 쓰이며 생성 후에는 변경할 수 없습니다.",
     "copy_slug": "slug 복사",
     "copy_failed": "복사하지 못했습니다",
     "change_prefix": "접두사 변경...",
@@ -755,12 +755,12 @@
     "prefix_external_warning": "PR 제목, 브랜치 이름, 문서, 채팅에 있는 이전 키({{oldExample}} 등)는 업데이트되지 않으므로 해당 링크가 작동하지 않습니다."
   },
   "delete_workspace_dialog": {
-    "title": "크리에이티브 스페이스 삭제",
+    "title": "세계 삭제",
     "description": "이 작업은 되돌릴 수 없습니다. 모든 태스크, 에이전트, 채팅, 실행 기록이 영구 삭제됩니다.",
     "type_to_confirm_prefix": "확인하려면 아래에",
     "type_to_confirm_suffix": "을(를) 입력하세요.",
     "cancel": "취소",
-    "confirm": "크리에이티브 스페이스 삭제",
+    "confirm": "세계 삭제",
     "deleting": "삭제하는 중..."
   },
   "labs": {
@@ -781,7 +781,7 @@
     "loading": "불러오는 중…",
     "load_failed": "Telegram 설치를 불러오지 못했습니다",
     "empty_title": "아직 연결된 봇이 없습니다",
-    "empty_description_prefix": "이 크리에이티브 스페이스의 에이전트를 열고",
+    "empty_description_prefix": "이 세계의 에이전트를 열고",
     "empty_description_cta": "Telegram 연결",
     "empty_description_suffix": "을 클릭해 봇을 설치하세요.",
     "revoked_badge": "해지됨",
@@ -789,7 +789,7 @@
     "disconnect": "연결 해제",
     "disconnecting": "해제 중…",
     "disconnect_confirm_title": "이 Telegram 봇의 연결을 해제할까요?",
-    "disconnect_confirm_description": "봇이 이 크리에이티브 스페이스의 Telegram 메시지를 더 이상 수신하지 않습니다. Auro의 대화 기록은 유지되며 같은 에이전트에서 다시 연결할 수 있습니다.",
+    "disconnect_confirm_description": "봇이 이 세계의 Telegram 메시지를 더 이상 수신하지 않습니다. Auro의 대화 기록은 유지되며 같은 에이전트에서 다시 연결할 수 있습니다.",
     "disconnect_confirm_cancel": "취소",
     "toast_disconnected": "Telegram 봇 연결을 해제했습니다",
     "toast_disconnect_failed": "연결 해제에 실패했습니다",
@@ -851,7 +851,7 @@
       "profile": "프로필",
       "server_url": "서버 URL",
       "device_name": "기기 이름",
-      "workspaces": "크리에이티브 스페이스",
+      "workspaces": "세계",
       "state_stopped": "중지됨",
       "state_starting": "시작 중...",
       "state_running": "실행 중",
@@ -916,7 +916,7 @@
     "seat_purchase_capacity_taken": "구매한 좌석을 더 이상 사용할 수 없어 초대가 전송되지 않았습니다. 현재 좌석을 확인한 후 다시 시도하세요.",
     "no_members": "멤버를 찾을 수 없습니다.",
     "revoke_invitation_title": "초대 취소",
-    "revoke_invitation_description": "{{email}}에 보낸 초대를 취소할까요? 더 이상 이 크리에이티브 스페이스에 참가할 수 없습니다.",
+    "revoke_invitation_description": "{{email}}에 보낸 초대를 취소할까요? 더 이상 이 세계에 참가할 수 없습니다.",
     "toast_invitation_revoked": "초대를 취소했습니다",
     "toast_invitation_revoke_failed": "초대를 취소하지 못했습니다",
     "toast_role_updated": "역할을 업데이트했습니다",
@@ -924,12 +924,12 @@
     "toast_member_removed": "멤버를 제거했습니다",
     "toast_member_remove_failed": "멤버를 제거하지 못했습니다",
     "remove_member_title": "{{name}} 제거",
-    "remove_member_description": "{{workspace}}에서 {{name}}님을 제거할까요? 이 크리에이티브 스페이스에 접근할 수 없게 됩니다.",
+    "remove_member_description": "{{workspace}}에서 {{name}}님을 제거할까요? 이 세계에 접근할 수 없게 됩니다.",
     "confirm_cancel": "취소",
     "confirm_action": "확인",
     "change_role": "역할 변경",
-    "remove_action": "크리에이티브 스페이스에서 제거",
-    "cannot_demote_last_owner_title": "먼저 다른 멤버를 소유자로 승격하세요. 크리에이티브 스페이스에는 최소 한 명의 소유자가 필요합니다.",
+    "remove_action": "세계에서 제거",
+    "cannot_demote_last_owner_title": "먼저 다른 멤버를 소유자로 승격하세요. 세계에는 최소 한 명의 소유자가 필요합니다.",
     "cannot_demote_last_owner": "마지막 소유자는 강등할 수 없습니다",
     "roles": {
       "owner": {
@@ -993,7 +993,7 @@
     "connected_bots": "연결된 봇",
     "loading": "불러오는 중…",
     "empty_title": "아직 연결된 봇이 없어요",
-    "empty_description_prefix": "이 크리에이티브 스페이스의 에이전트를 열고",
+    "empty_description_prefix": "이 세계의 에이전트를 열고",
     "empty_description_cta": "Lark에 연결",
     "empty_description_suffix": "을(를) 클릭해 봇을 설치하세요.",
     "revoked_badge": "취소됨",
@@ -1053,7 +1053,7 @@
     "install_error_conflict": "설치를 저장하지 못했어요. 다른 봇이 이미 이 에이전트에 연결되어 있을 수 있어요.",
     "install_error_installer_bind": "봇은 설치되었지만 Lark 신원을 연결하지 못했어요. 다시 시도하거나 지원팀에 문의하세요.",
     "install_error_session_lost": "설치 세션이 만료되었거나 유실되었어요. 다시 스캔해 처음부터 진행하세요.",
-    "install_error_forbidden": "이 크리에이티브 스페이스에 Lark 봇을 설치할 권한이 더 이상 없어요. 크리에이티브 스페이스 관리자에게 문의하세요.",
+    "install_error_forbidden": "이 세계에 Lark 봇을 설치할 권한이 더 이상 없어요. 세계 관리자에게 문의하세요.",
     "install_error_generic": "설치에 실패했어요. 다시 시도하세요."
   },
   "composio": {
@@ -1097,7 +1097,7 @@
     "connected_bots": "연결된 봇",
     "loading": "불러오는 중…",
     "empty_title": "아직 연결된 봇이 없어요",
-    "empty_description_prefix": "이 크리에이티브 스페이스의 에이전트를 열고",
+    "empty_description_prefix": "이 세계의 에이전트를 열고",
     "empty_description_cta": "Slack 연결",
     "empty_description_suffix": "을(를) 클릭해 봇을 설치하세요.",
     "revoked_badge": "해제됨",
@@ -1105,7 +1105,7 @@
     "disconnect": "연결 해제",
     "disconnecting": "연결 해제 중…",
     "disconnect_confirm_title": "이 Slack 봇을 연결 해제할까요?",
-    "disconnect_confirm_description": "봇이 이 크리에이티브 스페이스의 Slack 메시지를 더 이상 받지 않습니다. 설치 기록은 감사를 위해 보관되며, 같은 에이전트에서 다시 설치할 수 있어요.",
+    "disconnect_confirm_description": "봇이 이 세계의 Slack 메시지를 더 이상 받지 않습니다. 설치 기록은 감사를 위해 보관되며, 같은 에이전트에서 다시 설치할 수 있어요.",
     "disconnect_confirm_cancel": "취소",
     "toast_disconnected": "Slack 봇을 연결 해제했어요",
     "toast_disconnect_failed": "연결 해제에 실패했어요",
@@ -1116,7 +1116,7 @@
     "agent_bot_connected_label": "Slack에 연결됨",
     "agent_bot_disconnect_tooltip": "이 Slack 봇을 에이전트에서 연결 해제합니다. 봇이 Slack 메시지를 받지 않게 됩니다.",
     "agent_bot_manage_link": "Slack에서 열기",
-    "agent_bot_manage_tooltip": "이 봇의 Slack 크리에이티브 스페이스를 엽니다.",
+    "agent_bot_manage_tooltip": "이 봇의 Slack 워크스페이스를 엽니다.",
     "byo_dialog_title": "Slack 봇 연결",
     "byo_video_cta": "설정 안내 영상 보기",
     "byo_docs_link": "Step-by-step: Auro 에이전트를 Slack에 연결하기",
@@ -1133,7 +1133,7 @@
     "page_description": "DingTalk에서 에이전트와 대화하거나 /issue로 태스크를 만드세요.",
     "agent_page_description": "DingTalk에서 이 에이전트와 대화하거나 /issue로 태스크를 만드세요.",
     "groups_title": "최근 그룹",
-    "groups_description": "크리에이티브 스페이스 멤버가 DingTalk 계정을 연결하고 그룹에서 이 봇을 @멘션하면 표시됩니다. 기본 목록에는 최근 90일 동안 활동한 그룹만 표시됩니다.",
+    "groups_description": "세계 멤버가 DingTalk 계정을 연결하고 그룹에서 이 봇을 @멘션하면 표시됩니다. 기본 목록에는 최근 90일 동안 활동한 그룹만 표시됩니다.",
     "groups_loading": "그룹을 불러오는 중…",
     "groups_empty": "아직 그룹 메시지가 관찰되지 않았습니다.",
     "groups_no_recent": "최근 90일 동안 활동한 그룹이 없습니다.",
@@ -1164,7 +1164,7 @@
     "deleted_agent": "삭제된 에이전트",
     "loading": "불러오는 중…",
     "empty_title": "아직 연결된 봇이 없어요",
-    "empty_description_prefix": "이 크리에이티브 스페이스의 에이전트를 열고",
+    "empty_description_prefix": "이 세계의 에이전트를 열고",
     "empty_description_cta": "DingTalk 연결",
     "empty_description_suffix": "을(를) 클릭해 로봇을 설치하세요.",
     "revoked_badge": "해제됨",
@@ -1173,7 +1173,7 @@
     "disconnect": "연결 해제",
     "disconnecting": "연결 해제 중…",
     "disconnect_confirm_title": "이 DingTalk 봇을 연결 해제할까요?",
-    "disconnect_confirm_description": "봇이 이 크리에이티브 스페이스의 DingTalk 메시지를 더 이상 받지 않습니다. 설치 기록은 감사를 위해 보관되며, 나중에 봇을 다시 연결할 수 있어요.",
+    "disconnect_confirm_description": "봇이 이 세계의 DingTalk 메시지를 더 이상 받지 않습니다. 설치 기록은 감사를 위해 보관되며, 나중에 봇을 다시 연결할 수 있어요.",
     "disconnect_confirm_cancel": "취소",
     "toast_disconnected": "DingTalk 봇을 연결 해제했어요",
     "toast_disconnect_failed": "연결 해제에 실패했어요",
@@ -1203,7 +1203,7 @@
     "connected_bots": "연결된 봇",
     "loading": "불러오는 중…",
     "empty_title": "아직 연결된 봇이 없어요",
-    "empty_description_prefix": "이 크리에이티브 스페이스에서 에이전트를 열고",
+    "empty_description_prefix": "이 세계에서 에이전트를 열고",
     "empty_description_cta": "WeCom 연결",
     "empty_description_suffix": "을 눌러 스마트봇을 설치하세요.",
     "revoked_badge": "해지됨",
@@ -1211,7 +1211,7 @@
     "disconnect": "연결 해제",
     "disconnecting": "해제 중…",
     "disconnect_confirm_title": "이 WeCom 봇의 연결을 해제할까요?",
-    "disconnect_confirm_description": "봇이 이 크리에이티브 스페이스의 WeCom 메시지를 더 이상 받지 않아요. 감사 기록은 유지되며 같은 에이전트에서 다시 설치할 수 있어요.",
+    "disconnect_confirm_description": "봇이 이 세계의 WeCom 메시지를 더 이상 받지 않아요. 감사 기록은 유지되며 같은 에이전트에서 다시 설치할 수 있어요.",
     "disconnect_confirm_cancel": "취소",
     "toast_disconnected": "WeCom 봇의 연결을 해제했어요",
     "toast_disconnect_failed": "연결 해제 실패",
@@ -1232,9 +1232,9 @@
     "byo_submitting": "연결 중…",
     "byo_cancel": "취소",
     "byo_success_toast": "WeCom 봇을 연결했어요",
-    "byo_conflict_same_workspace": "이 봇은 이미 이 크리에이티브 스페이스의 다른 에이전트에 연결되어 있어요. 거기서 먼저 연결을 해제한 뒤 여기에 연결해 주세요.",
-    "byo_conflict_archived_agent": "이 봇은 이 크리에이티브 스페이스의 보관된 에이전트에 연결되어 있어요. 그 에이전트를 복원하거나 봇 연결을 해제한 뒤 연결해 주세요.",
-    "byo_conflict_other_workspace": "이 봇은 이미 다른 Auro 크리에이티브 스페이스에 연결되어 있어요. 거기서 먼저 연결을 해제한 뒤 연결해 주세요.",
+    "byo_conflict_same_workspace": "이 봇은 이미 이 세계의 다른 에이전트에 연결되어 있어요. 거기서 먼저 연결을 해제한 뒤 여기에 연결해 주세요.",
+    "byo_conflict_archived_agent": "이 봇은 이 세계의 보관된 에이전트에 연결되어 있어요. 그 에이전트를 복원하거나 봇 연결을 해제한 뒤 연결해 주세요.",
+    "byo_conflict_other_workspace": "이 봇은 이미 다른 Auro 세계에 연결되어 있어요. 거기서 먼저 연결을 해제한 뒤 연결해 주세요.",
     "byo_rejected": "봇을 연결하지 못했어요. WeCom 관리 콘솔의 Bot ID와 시크릿, 그리고 장기 연결이 켜진 스마트 봇인지 확인해 주세요.",
     "byo_credentials_rejected": "WeCom이 이 Bot ID와 시크릿을 거부했어요. WeCom 관리 콘솔에서 두 값을 확인하고, 장기 연결이 켜진 스마트 봇인지도 확인해 주세요.",
     "byo_credentials_unverifiable": "WeCom에 연결하지 못해 이 봇을 확인할 수 없었어요. 인증 정보는 변경되지 않았어요. 잠시 후 다시 시도해 주세요.",
@@ -1252,12 +1252,12 @@
       "account": "계정 · 모든 기기에 동기화",
       "device": "이 기기에만",
       "device_workspace": "이 기기에만 · {{name}}",
-      "workspace": "{{name}} 크리에이티브 스페이스",
+      "workspace": "{{name}} 세계",
       "workspace_only": "{{name}}에만 적용"
     },
     "read_only": {
       "title": "보기 전용",
-      "description": "이 설정은 크리에이티브 스페이스 소유자와 관리자만 변경할 수 있습니다.",
+      "description": "이 설정은 세계 소유자와 관리자만 변경할 수 있습니다.",
       "contact": "이 설정은 소유자와 관리자만 변경할 수 있습니다. {{names}}에게 요청하세요.",
       "separator": ", "
     }
@@ -1272,7 +1272,7 @@
   "mcp_sources": {
     "title": "에이전트에 도구를 제공하는 방법",
     "current": "현재 페이지",
-    "mcp": "관리자가 추가해 크리에이티브 스페이스에서 공유하고, 에이전트별로 할당합니다.",
+    "mcp": "관리자가 추가해 세계에서 공유하고, 에이전트별로 할당합니다.",
     "apps": "내 계정으로 Composio를 통해 승인하고, 내가 소유한 에이전트에서 사용합니다.",
     "plugins": "설치하면 도구, 예약 훅, 저장소를 추가할 수 있으며 플러그인마다 권한을 부여합니다."
   }

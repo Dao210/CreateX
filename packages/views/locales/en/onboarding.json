@@ -1,12 +1,14 @@
 {
   "civilization": {
-    "title": "A new civilization",
-    "preparing": "Preparing your creative space…",
-    "creating": "Building your new civilization…",
-    "entering": "Entering your creative space…",
-    "failed": "Your creative space could not be prepared.",
-    "creation_disabled": "Creating creative spaces is disabled. Ask an administrator for an invitation.",
-    "retry": "Try again"
+    "title": "Your world",
+    "preparing": "Preparing your world…",
+    "creating": "Creating your world…",
+    "entering": "Entering your world…",
+    "failed": "Your world could not be prepared.",
+    "creation_disabled": "Creating worlds is disabled. Ask an administrator for an invitation.",
+    "retry": "Try again",
+    "world_name": "{{name}}’s world",
+    "default_world_name": "My world"
   },
   "step_nav": {
     "wordmark": "Weave a World",
@@ -15,7 +17,7 @@
       "label": "About you"
     },
     "workspace": {
-      "label": "Creative Space"
+      "label": "World"
     },
     "runtime": {
       "label": "Meet Mika"
@@ -25,7 +27,7 @@
     "wordmark": "Welcome to Weave a World",
     "headline_line1": "Your AI teammates,",
     "headline_line2": "in",
-    "headline_emphasis": "one creative space.",
+    "headline_emphasis": "one world.",
     "lede": "Assign them work like you'd assign a colleague — they pick it up, update status, and comment when done.",
     "continue_on_web": "Continue on web",
     "start_exploring": "Start exploring",
@@ -144,7 +146,7 @@
   },
   "welcome_after_onboarding": {
     "skip": {
-      "loading": "Setting up your creative space…",
+      "loading": "Setting up your world…",
       "title": "Welcome to Weave a World!",
       "subtitle": "We've added one issue to help you connect a runtime. When it's ready, start with Mika from Runtimes.",
       "got_it": "Got it",
@@ -162,13 +164,13 @@
     }
   },
   "step_workspace": {
-    "eyebrow_first": "Your first creative space",
+    "eyebrow_first": "Your first world",
     "eyebrow_resume": "Pick up or start fresh",
-    "headline_first": "Name your creative space.",
+    "headline_first": "Name your world.",
     "headline_resume": "Continue with {{name}}, or start another.",
-    "lede_first": "A creative space is where your issues, agents, and projects live. You can invite teammates or spin up more creative spaces later.",
-    "lede_resume": "Resume setup with the creative space you already have, or create a new one alongside it — you can belong to any number of creative spaces.",
-    "name_label": "Creative Space name",
+    "lede_first": "A world is where your issues, agents, and projects live. You can invite teammates or spin up more worlds later.",
+    "lede_resume": "Resume setup with the world you already have, or create a new one alongside it — you can belong to any number of worlds.",
+    "name_label": "World name",
     "name_placeholder": "Acme Inc, My Lab, Side Projects…",
     "random_name": "Random",
     "url_label": "URL",
@@ -177,29 +179,29 @@
     "issue_prefix_prefix": "Issues will look like ",
     "issue_prefix_suffix": ". You can change this later in settings.",
     "issue_prefix_pending": "Set the URL above and issue numbers will follow it — or type a prefix here.",
-    "create_new_title": "Create a new creative space",
+    "create_new_title": "Create a new world",
     "hint_opening": "Opening {{name}}.",
     "hint_creating": "Creating {{name}}.",
     "hint_creating_pending": "Creating {{name}}…",
-    "hint_creating_fallback": "your creative space",
-    "hint_name_first": "Name your creative space to create it.",
-    "hint_pick": "Pick your creative space or start a new one.",
+    "hint_creating_fallback": "your world",
+    "hint_name_first": "Name your world to create it.",
+    "hint_pick": "Pick your world or start a new one.",
     "cta_open": "Open {{name}}",
     "cta_create_named": "Create {{name}}",
-    "cta_create_workspace": "Create a creative space",
+    "cta_create_workspace": "Create a world",
     "cta_creating": "Creating…",
     "slug_format_error": "Only lowercase letters, numbers, and hyphens",
-    "slug_taken_error": "That creative space URL is already taken.",
-    "slug_reserved_error": "That creative space URL is reserved and cannot be used.",
-    "slug_conflict_toast": "Choose a different creative space URL",
-    "create_failed_toast": "Couldn't create the creative space",
-    "creation_disabled_eyebrow": "Creating creative spaces is disabled",
+    "slug_taken_error": "That world URL is already taken.",
+    "slug_reserved_error": "That world URL is reserved and cannot be used.",
+    "slug_conflict_toast": "Choose a different world URL",
+    "create_failed_toast": "Couldn't create the world",
+    "creation_disabled_eyebrow": "Creating worlds is disabled",
     "creation_disabled_headline": "Ask your administrator for an invitation.",
-    "creation_disabled_lede": "This Weave a World instance does not allow new creative spaces to be created. Once an administrator invites you to a creative space, accept the invitation and refresh to continue.",
+    "creation_disabled_lede": "This Weave a World instance does not allow new worlds to be created. Once an administrator invites you to a world, accept the invitation and refresh to continue.",
     "creation_disabled_logout": "Log out",
-    "creation_disabled_eyebrow_resume": "Your creative space",
+    "creation_disabled_eyebrow_resume": "Your world",
     "creation_disabled_headline_resume": "Continue with {{name}}.",
-    "creation_disabled_lede_resume": "Creating creative spaces is disabled on this instance, so you'll continue into your existing creative space."
+    "creation_disabled_lede_resume": "Creating worlds is disabled on this instance, so you'll continue into your existing world."
   },
   "step_runtime": {
     "scanning_headline": "Connecting this computer…",
@@ -259,7 +261,7 @@
   },
   "errors": {
     "skip_failed": "Failed to finish onboarding",
-    "mika_setup_failed": "Couldn't start your Mika creative space"
+    "mika_setup_failed": "Couldn't start your Mika world"
   },
   "mika_intro": {
     "headline": "Meet Mika, your first agent teammate.",

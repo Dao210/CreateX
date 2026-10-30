@@ -53,7 +53,7 @@
   "base_defeat": "基地被摧毁。下次留意中路和两翼。",
   "lives_defeat": "坦克已全部损失。重新组织防线。",
   "cleared_help": "击退 {{kills}} 辆敌军 · 得分 {{score}}",
-  "local_records": "进度和纪录保存在此设备，按账号和创作区隔离。",
+  "local_records": "进度和纪录保存在此设备，按账号和世界隔离。",
   "levels": {
     "frontline": {
       "name": "红砖前线",
@@ -130,7 +130,7 @@
     "deploy": "开始新对局",
     "deploying": "准备中…",
     "new_battle_help": "开始新对局时冻结角色版本，当前战斗将重新开始。",
-    "session_error": "无法加载这场对局，请检查有效期、登录账号和创作区。",
+    "session_error": "无法加载这场对局，请检查有效期、登录账号和世界。",
     "loading_session": "正在加载本局角色…",
     "return_classic": "返回经典坦克",
     "library_error": "角色库暂时不可用，请刷新重试。",

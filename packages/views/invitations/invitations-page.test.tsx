@@ -153,7 +153,7 @@ describe("InvitationsPage", () => {
     // Select Acme via its label/checkbox row.
     fireEvent.click(screen.getByText("Acme"));
 
-    fireEvent.click(screen.getByRole("button", { name: /join 1 creative space/i }));
+    fireEvent.click(screen.getByRole("button", { name: /join 1 world/i }));
 
     await waitFor(() => {
       expect(acceptInvitation).toHaveBeenCalledWith("inv-1");
@@ -162,7 +162,7 @@ describe("InvitationsPage", () => {
         workspace_id: "ws-1",
       });
       expect(refreshMe).toHaveBeenCalled();
-      expect(navigate).toHaveBeenCalledWith("/acme/issues");
+      expect(navigate).toHaveBeenCalledWith("/acme/me");
     });
   });
 

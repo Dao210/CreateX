@@ -38,8 +38,8 @@
     "notification": "Notification",
     "close": "Close notification",
     "unavailable": "This notification is no longer available.",
-    "billing_disabled": "Billing changes are unavailable for this creative space. Contact your creative space administrator for help.",
-    "contact_admin": "Ask a creative space owner or admin to review the billing options.",
+    "billing_disabled": "Billing changes are unavailable for this world. Contact your world administrator for help.",
+    "contact_admin": "Ask a world owner or admin to review the billing options.",
     "review_billing": "Review billing options",
     "review_billing_web": "Open Auro on the web to review billing options."
   },
@@ -78,7 +78,7 @@
     "run_limit_blocked": "Run blocked because the limit was reached"
   },
   "body": {
-    "autopilot_title_limit": "Autopilot \"{{title}}\" was not started because this creative space has reached its limit of {{limit}} runs for the current period. The allowance resets {{resetAt}}.",
-    "autopilot_limit": "This creative space has reached its limit of {{limit}} autopilot runs for the current period. This execution was not started. The allowance resets {{resetAt}}."
+    "autopilot_title_limit": "Autopilot \"{{title}}\" was not started because this world has reached its limit of {{limit}} runs for the current period. The allowance resets {{resetAt}}.",
+    "autopilot_limit": "This world has reached its limit of {{limit}} autopilot runs for the current period. This execution was not started. The allowance resets {{resetAt}}."
   }
 }

@@ -53,7 +53,7 @@
   "base_defeat": "The base was destroyed. Watch the center lane and the flanks.",
   "lives_defeat": "All tanks were lost. Build your defense again.",
   "cleared_help": "{{kills}} tanks defeated · {{score}} points",
-  "local_records": "Progress and records are saved on this device for your account and creative space.",
+  "local_records": "Progress and records are saved on this device for your account and world.",
   "levels": {
     "frontline": {
       "name": "Brick Front",
@@ -130,7 +130,7 @@
     "deploy": "Start new battle",
     "deploying": "Preparing…",
     "new_battle_help": "Starts a fresh battle with a frozen character version.",
-    "session_error": "This session could not be loaded. Check its expiry, account and workspace.",
+    "session_error": "This session could not be loaded. Check its expiry, account and world.",
     "loading_session": "Loading the frozen character…",
     "return_classic": "Return to classic tank",
     "library_error": "The character library is unavailable. Refresh to retry.",

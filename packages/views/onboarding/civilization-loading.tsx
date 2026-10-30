@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { matchLocale } from "@auro/core/i18n";
 import { useCivilizationOnboarding } from "@auro/core/onboarding";
+import { useAuthStore } from "@auro/core/auth";
 import type { Workspace } from "@auro/core/types";
 import { AuroIcon } from "@auro/ui/components/common/auro-icon";
 import { Button } from "@auro/ui/components/ui/button";
@@ -14,9 +15,13 @@ import { OnboardingLogoutButton } from "./components/onboarding-logout-button";
 
 export function CivilizationLoading({ onComplete }: { onComplete: (workspace: Workspace) => void }) {
   const { t, i18n } = useT("onboarding");
-  const [identity] = useState(() => randomCelestialWorkspaceIdentity(
-    matchLocale([i18n.resolvedLanguage ?? i18n.language]),
-  ));
+  const name = useAuthStore((state) => state.user?.name?.trim());
+  const [identity] = useState(() => ({
+    ...randomCelestialWorkspaceIdentity(matchLocale([i18n.resolvedLanguage ?? i18n.language])),
+    name: name
+      ? t(($) => $.civilization.world_name, { name })
+      : t(($) => $.civilization.default_world_name),
+  }));
   const { stage, error, workspace, retry } = useCivilizationOnboarding(identity);
   const completed = useRef(false);
 

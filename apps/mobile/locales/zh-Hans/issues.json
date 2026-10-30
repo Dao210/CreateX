@@ -119,7 +119,7 @@
     "assigned": "没有分配给你的任务。",
     "created": "你还没有创建任务。",
     "agents": "没有分配给智能体或小队的任务。",
-    "all": "该创作区还没有任务。",
+    "all": "该世界还没有任务。",
     "members": "没有分配给成员的任务。"
   },
   "menu": {
@@ -162,10 +162,10 @@
     "squad": "小队",
     "no_matches": "没有匹配结果。",
     "no_project": "无项目",
-    "no_projects": "该创作区还没有项目。\n请在网页端创建。",
-    "no_labels": "该创作区还没有标签。",
+    "no_projects": "该世界还没有项目。\n请在网页端创建。",
+    "no_labels": "该世界还没有标签。",
     "create_label": "创建 \"{{name}}\"",
-    "no_members_agents": "该创作区还没有成员或智能体。",
+    "no_members_agents": "该世界还没有成员或智能体。",
     "people": "成员",
     "agents": "智能体",
     "squads": "小队",

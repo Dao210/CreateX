@@ -12,10 +12,10 @@
     "more_agents_other": "and {{count}} other agents"
   },
   "detail": {
-    "workspace_fallback": "Creative Space",
+    "workspace_fallback": "World",
     "members_breadcrumb": "Members",
     "breadcrumb_fallback": "Member",
     "not_found_title": "Member not found",
-    "not_found_description": "This member may have left the creative space."
+    "not_found_description": "This member may have left the world."
   }
 }

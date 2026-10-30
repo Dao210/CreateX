@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import type { ReactElement, ReactNode } from "react";
+import type { ComponentProps, ReactElement } from "react";
 import { renderWithI18n } from "../test/i18n";
 import { MePage } from "./me-page";
 import { compileTankCharacter, tankPreferencesKey, type TankCharacterDraft } from "@auro/core/tank-defense";
@@ -16,7 +16,7 @@ const ids = {
   session: "55555555-5555-4555-8555-555555555555",
 };
 const workspace = { id: ids.workspace, name: "Acme", slug: "acme" };
-const mocks = vi.hoisted(() => ({ list: vi.fn(), progress: vi.fn(), library: vi.fn() }));
+const mocks = vi.hoisted(() => ({ list: vi.fn(), progress: vi.fn(), library: vi.fn(), replace: vi.fn(), search: "", hash: "" }));
 
 vi.mock("@auro/core/auth", () => ({
   useAuthStore: (selector: (state: { user: { id: string; name: string; avatar_url: string | null } }) => unknown) => selector({ user: { id: "11111111-1111-4111-8111-111111111111", name: "Ada", avatar_url: null } }),
@@ -34,9 +34,22 @@ vi.mock("@auro/core/siege/queries", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@auro/core/siege/queries")>()),
   createSiegeClient: () => ({ library: mocks.library }),
 }));
-vi.mock("../navigation", () => ({
-  AppLink: ({ href, children }: { href: string; children: ReactNode }) => <a href={href}>{children}</a>,
-}));
+vi.mock("../navigation", async () => {
+  const { useState } = await import("react");
+  return {
+    AppLink: ({ children, ...props }: ComponentProps<"a">) => <a {...props}>{children}</a>,
+    useNavigation: () => {
+      const [search, setSearch] = useState(mocks.search);
+      return {
+        pathname: "/acme/me", searchParams: new URLSearchParams(search), hash: mocks.hash,
+        replace: (path: string) => {
+          mocks.replace(path);
+          setSearch(path.split("?")[1]?.split("#")[0] ?? "");
+        },
+      };
+    },
+  };
+});
 
 function draft(name: string): TankCharacterDraft {
   const value: TankCharacterDraft = {
@@ -70,12 +83,14 @@ function render(ui: ReactElement) {
 }
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.search = "";
+  mocks.hash = "";
   mocks.list.mockResolvedValue([character("MCP Tank", "mcp"), character("Manual Tank", "manual", ids.manualCharacter)]);
   mocks.library.mockResolvedValue({ blueprints: [blueprint()] });
   mocks.progress.mockResolvedValue({ workspaceId: ids.workspace, siege: { stars: [3, 0, 0, 0, 0, 0, 0, 0], updatedAt: "2026-10-27T00:00:00Z" }, tanks: { best: 900, unlocked: 3, updatedAt: "2026-10-27T00:00:00Z" } });
 });
 
-describe("my space", () => {
+describe("my creations", () => {
   it("shows MCP-created tanks, saved blueprints and the merged progress", async () => {
     render(<MePage storage={storage().adapter} />);
     expect(await screen.findByText("MCP Tank")).toBeInTheDocument();
@@ -83,7 +98,29 @@ describe("my space", () => {
     expect(screen.getByText("MCP")).toBeInTheDocument();
     expect(screen.getAllByText("3 / 24").length).toBeGreaterThan(0);
     expect(screen.getAllByText(/000900/).length).toBeGreaterThan(0);
+    expect(screen.getByRole("heading", { name: "My Creations" })).toBeInTheDocument();
+    expect(screen.getByText("Current world: Acme")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Ada" })).not.toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Creations", selected: true })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Continue campaign" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("tab", { name: "Game progress" }));
     expect(screen.getByText("3 / 24 stars")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Continue campaign" })).toHaveAttribute("href", "/acme/siege/campaign?level=2");
+    expect(mocks.replace).toHaveBeenLastCalledWith("/acme/me?tab=progress");
+  });
+
+  it("opens a linked progress tab and preserves the filter, other parameters and fragment", async () => {
+    mocks.search = "tab=progress&filter=mcp&source=shared";
+    mocks.hash = "#collection";
+    render(<MePage storage={storage().adapter} />);
+    expect(await screen.findByText("3 / 24 stars")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("tab", { name: "Creations" }));
+    expect(mocks.replace).toHaveBeenLastCalledWith("/acme/me?filter=mcp&source=shared#collection");
+    expect(screen.getByText("MCP Tank")).toBeInTheDocument();
+    expect(screen.queryByText("Manual Tank")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "All" }));
+    expect(mocks.replace).toHaveBeenLastCalledWith("/acme/me?source=shared#collection");
+    expect(screen.getByText("Manual Tank")).toBeInTheDocument();
   });
 
   it("filters the collection to MCP-created content", async () => {

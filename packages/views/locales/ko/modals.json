@@ -7,8 +7,8 @@
     "collapse_tooltip": "접기"
   },
   "create_workspace": {
-    "title": "새 크리에이티브 스페이스 만들기",
-    "description": "크리에이티브 스페이스는 팀이 프로젝트와 태스크를 함께 다루는 공유 환경입니다."
+    "title": "새 세계 만들기",
+    "description": "세계는 팀이 프로젝트와 태스크를 함께 다루는 공유 환경입니다."
   },
   "delete_issue": {
     "title": "태스크 삭제",
@@ -88,7 +88,7 @@
     "repos_pill": "저장소",
     "repos_pill_count_other": "저장소 {{count}}개",
     "repos_heading": "이 프로젝트에 GitHub 저장소 연결",
-    "repos_empty": "아직 크리에이티브 스페이스 수준 저장소가 없습니다. 아래에 URL을 붙여 넣어 임시로 연결하세요.",
+    "repos_empty": "아직 세계 수준 저장소가 없습니다. 아래에 URL을 붙여 넣어 임시로 연결하세요.",
     "repos_search_placeholder": "저장소 검색...",
     "repos_search_empty": "검색 결과와 일치하는 저장소가 없습니다.",
     "repos_url_placeholder": "https://github.com/owner/repo 또는 git@github.com:owner/repo.git",
@@ -127,27 +127,27 @@
     "toast_duplicate_title": "중복 태스크",
     "toast_duplicate_view": "기존 태스크 보기",
     "issue_limit": {
-      "title": "이 크리에이티브 스페이스가 태스크 수 한도에 도달했습니다",
-      "checking_description": "이 크리에이티브 스페이스에서 사용할 수 있는 결제 작업을 확인하는 중입니다…",
+      "title": "이 세계가 태스크 수 한도에 도달했습니다",
+      "checking_description": "이 세계에서 사용할 수 있는 결제 작업을 확인하는 중입니다…",
       "upgrade_description": "Pro로 업그레이드하면 태스크를 계속 만들 수 있습니다.",
-      "portal_description": "결제 포털을 열어 이 크리에이티브 스페이스의 구독을 관리하고 태스크 만들기를 복구하세요.",
-      "contact_description": "크리에이티브 스페이스 소유자 또는 관리자에게 Pro 업그레이드를 요청하세요.",
-      "billing_description": "결제 설정에서 이 크리에이티브 스페이스에 사용 가능한 업그레이드 옵션을 확인하세요.",
+      "portal_description": "결제 포털을 열어 이 세계의 구독을 관리하고 태스크 만들기를 복구하세요.",
+      "contact_description": "세계 소유자 또는 관리자에게 Pro 업그레이드를 요청하세요.",
+      "billing_description": "결제 설정에서 이 세계에 사용 가능한 업그레이드 옵션을 확인하세요.",
       "billing_unavailable_description": "결제 작업을 불러오지 못했습니다. 결제 설정을 열어 다시 시도하세요.",
-      "billing_disabled_description": "기존 태스크를 삭제해 공간을 확보하거나 크리에이티브 스페이스 관리자에게 문의하세요.",
+      "billing_disabled_description": "기존 태스크를 삭제해 공간을 확보하거나 세계 관리자에게 문의하세요.",
       "upgrade_action": "Pro로 업그레이드",
       "portal_action": "결제 포털 열기",
       "billing_action": "결제 설정 보기"
     },
     "autopilot_quota_limit": {
-      "title": "이 크리에이티브 스페이스가 오토파일럿 실행 한도에 도달했습니다",
-      "checking_description": "이 크리에이티브 스페이스에서 사용할 수 있는 결제 작업을 확인하는 중입니다…",
+      "title": "이 세계가 오토파일럿 실행 한도에 도달했습니다",
+      "checking_description": "이 세계에서 사용할 수 있는 결제 작업을 확인하는 중입니다…",
       "upgrade_description": "Pro로 업그레이드하면 오토파일럿 실행을 복구할 수 있습니다.",
-      "portal_description": "결제 포털을 열어 이 크리에이티브 스페이스의 구독을 관리하고 오토파일럿 실행을 복구하세요.",
-      "contact_description": "크리에이티브 스페이스 소유자 또는 관리자에게 Pro 업그레이드를 요청하세요.",
-      "billing_description": "결제 설정에서 이 크리에이티브 스페이스에 사용 가능한 업그레이드 옵션을 확인하세요.",
+      "portal_description": "결제 포털을 열어 이 세계의 구독을 관리하고 오토파일럿 실행을 복구하세요.",
+      "contact_description": "세계 소유자 또는 관리자에게 Pro 업그레이드를 요청하세요.",
+      "billing_description": "결제 설정에서 이 세계에 사용 가능한 업그레이드 옵션을 확인하세요.",
       "billing_unavailable_description": "결제 작업을 불러오지 못했습니다. 결제 설정을 열어 다시 시도하세요.",
-      "billing_disabled_description": "현재 실행 할당량이 재설정될 때까지 기다리거나 크리에이티브 스페이스 관리자에게 문의하세요.",
+      "billing_disabled_description": "현재 실행 할당량이 재설정될 때까지 기다리거나 세계 관리자에게 문의하세요.",
       "upgrade_action": "Pro로 업그레이드",
       "portal_action": "결제 포털 열기",
       "billing_action": "결제 설정 보기"

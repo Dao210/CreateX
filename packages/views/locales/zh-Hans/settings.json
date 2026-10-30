@@ -118,7 +118,7 @@
     "archived": "已归档",
     "visibility_public": "团队",
     "visibility_private": "仅自己",
-    "visibility_public_hint": "创作区所有成员",
+    "visibility_public_hint": "世界所有成员",
     "visibility_private_hint": "只有你",
     "field_visibility": "谁可以使用",
     "public_target_hint": "只能选所有成员都能触发的智能体。",
@@ -170,7 +170,7 @@
     "timezone": {
       "title": "时区",
       "browser_suffix": "（浏览器）",
-      "hint": "用于所有创作区的日期和图表。",
+      "hint": "用于所有世界的日期和图表。",
       "sync_failed": "保存时区偏好失败。",
       "search": "搜索时区...",
       "empty": "没有匹配的时区"
@@ -263,11 +263,11 @@
       },
       "goInbox": {
         "label": "前往收件箱",
-        "description": "打开创作区收件箱。"
+        "description": "打开世界收件箱。"
       },
       "goChat": {
         "label": "前往聊天",
-        "description": "打开创作区聊天。"
+        "description": "打开世界聊天。"
       },
       "goIssues": {
         "label": "前往任务",
@@ -279,7 +279,7 @@
       },
       "goAutopilots": {
         "label": "前往自动化",
-        "description": "打开创作区自动化。"
+        "description": "打开世界自动化。"
       },
       "goAgents": {
         "label": "前往智能体",
@@ -299,7 +299,7 @@
       },
       "goSettings": {
         "label": "前往设置",
-        "description": "打开创作区设置。"
+        "description": "打开设置。"
       }
     },
     "fixed": {
@@ -352,7 +352,7 @@
     "empty_title": "暂无共享 MCP Server",
     "disabled_badge": "已禁用",
     "delete_title": "移除共享 MCP Server？",
-    "delete_description": "这会将 {{name}} 从创作区服务库和所有已分配的智能体中移除，从各智能体的下一次运行起生效。",
+    "delete_description": "这会将 {{name}} 从世界服务库和所有已分配的智能体中移除，从各智能体的下一次运行起生效。",
     "delete_confirm": "移除",
     "cancel": "取消",
     "added_toast": "已添加共享 MCP Server",
@@ -366,7 +366,7 @@
   "page": {
     "title": "设置",
     "my_account": "我的账号",
-    "workspace_fallback": "创作区",
+    "workspace_fallback": "世界",
     "tabs": {
       "profile": "个人资料",
       "preferences": "偏好设置",
@@ -389,8 +389,8 @@
       "apps": "已连接应用"
     },
     "groups": {
-      "personal": "个人",
-      "workspace": "创作区",
+      "personal": "账号设置",
+      "workspace": "世界",
       "issues": "任务与工作流",
       "connections": "连接与扩展",
       "device": "本设备"
@@ -463,7 +463,7 @@
       "agents_read": "读取智能体列表",
       "members_read": "读取成员列表",
       "storage_user": "为每位成员单独存储数据",
-      "storage_workspace": "存储创作区共享数据",
+      "storage_workspace": "存储世界共享数据",
       "net": "向 {{domain}} 发送数据",
       "unknown": "无法识别的权限 — 请勿安装"
     },
@@ -484,7 +484,7 @@
       "hint": "一个 .zip，包含 auro.plugin.json 和它引用的所有文件。",
       "upload": "上传产物包",
       "published": "已发布 {{name}} {{version}}",
-      "empty": "这个创作区还没有发布过插件。",
+      "empty": "这个世界还没有发布过插件。",
       "delete": "删除已发布的插件",
       "deleted": "已删除发布的插件",
       "installed_version": "使用中",
@@ -533,7 +533,7 @@
     "editor": {
       "create_title": "新建属性",
       "edit_title": "编辑属性",
-      "admin_hint": "仅创作区 owner 和 admin 可以管理属性定义。",
+      "admin_hint": "仅世界 owner 和 admin 可以管理属性定义。",
       "icon": "图标",
       "choose_icon": "选择图标",
       "remove_icon": "移除图标",
@@ -709,41 +709,41 @@
     "usage_help": "使用方法"
   },
   "workspace": {
-    "section_general": "创作区信息",
-    "logo_label": "创作区图标",
-    "change_logo_aria": "更换创作区图标",
+    "section_general": "世界信息",
+    "logo_label": "世界图标",
+    "change_logo_aria": "更换世界图标",
     "click_logo_hint": "点击图标上传新图片",
-    "toast_logo_failed": "上传创作区图标失败",
+    "toast_logo_failed": "上传世界图标失败",
     "name_label": "名称",
     "description_label": "描述",
-    "description_placeholder": "这个创作区主要做什么？",
+    "description_placeholder": "这个世界主要做什么？",
     "context_label": "智能体上下文",
-    "context_placeholder": "供创作区中的智能体参考的背景信息和上下文",
+    "context_placeholder": "供世界中的智能体参考的背景信息和上下文",
     "slug_label": "Slug",
     "issue_prefix_label": "任务前缀",
     "issue_prefix_hint": "用于任务编号，例如 {{example}}。",
     "save": "保存",
     "saving": "保存中...",
-    "toast_save_failed": "保存创作区设置失败",
+    "toast_save_failed": "保存世界设置失败",
     "danger_zone": "危险操作",
-    "leave_title": "离开创作区",
-    "leave_sole_owner": "你是唯一的所有者。请先把另一位成员升级为所有者，或者删除创作区。",
-    "leave_sole_member": "你是唯一的成员。请删除创作区来离开。",
-    "leave_default": "从该创作区中移除你自己。",
-    "leave_button": "离开创作区",
+    "leave_title": "离开世界",
+    "leave_sole_owner": "你是唯一的所有者。请先把另一位成员升级为所有者，或者删除世界。",
+    "leave_sole_member": "你是唯一的成员。请删除世界来离开。",
+    "leave_default": "从该世界中移除你自己。",
+    "leave_button": "离开世界",
     "leaving": "离开中...",
-    "leave_confirm_title": "离开创作区",
+    "leave_confirm_title": "离开世界",
     "leave_confirm_description": "确认离开 {{name}}？再次加入需要重新被邀请。",
-    "toast_leave_failed": "离开创作区失败",
-    "delete_title": "删除创作区",
-    "delete_description": "永久删除该创作区及其所有数据。",
-    "delete_button": "删除创作区",
+    "toast_leave_failed": "离开世界失败",
+    "delete_title": "删除世界",
+    "delete_description": "永久删除该世界及其所有数据。",
+    "delete_button": "删除世界",
     "deleting": "删除中...",
-    "toast_delete_failed": "删除创作区失败",
+    "toast_delete_failed": "删除世界失败",
     "confirm_cancel": "取消",
     "confirm_action": "确认",
-    "context_hint": "每次运行都会提供给这个创作区里的智能体。",
-    "slug_hint": "用于所有创作区链接，创建后不能修改。",
+    "context_hint": "每次运行都会提供给这个世界里的智能体。",
+    "slug_hint": "用于所有世界链接，创建后不能修改。",
     "copy_slug": "复制 slug",
     "copy_failed": "复制失败",
     "change_prefix": "修改前缀...",
@@ -755,12 +755,12 @@
     "prefix_external_warning": "PR 标题、分支名、文档和聊天里的旧编号（如 {{oldExample}}）不会自动更新，这些链接会失效。"
   },
   "delete_workspace_dialog": {
-    "title": "删除创作区",
+    "title": "删除世界",
     "description": "此操作不可撤销。所有任务、智能体、聊天记录和执行历史都将被永久删除。",
     "type_to_confirm_prefix": "确认请输入",
     "type_to_confirm_suffix": "。",
     "cancel": "取消",
-    "confirm": "删除创作区",
+    "confirm": "删除世界",
     "deleting": "删除中..."
   },
   "labs": {
@@ -780,7 +780,7 @@
     "connected_bots": "已连接的 Bot",
     "loading": "加载中…",
     "empty_title": "尚未连接 Bot",
-    "empty_description_prefix": "在本创作区打开一个智能体，点击",
+    "empty_description_prefix": "在本世界打开一个智能体，点击",
     "empty_description_cta": "绑定到飞书",
     "empty_description_suffix": "即可为它安装 Bot。",
     "revoked_badge": "已撤销",
@@ -840,7 +840,7 @@
     "install_error_conflict": "未能保存安装信息：该智能体可能已绑定其他 Bot。",
     "install_error_installer_bind": "已安装 Bot，但未能绑定你的飞书身份。请重试或联系管理员。",
     "install_error_session_lost": "安装会话已失效或丢失，请重新扫码。",
-    "install_error_forbidden": "你已没有在此创作区安装飞书 Bot 的权限，请联系创作区管理员。",
+    "install_error_forbidden": "你已没有在此世界安装飞书 Bot 的权限，请联系世界管理员。",
     "install_error_generic": "安装失败，请重试。"
   },
   "composio": {
@@ -884,7 +884,7 @@
     "connected_bots": "已连接的 Bot",
     "loading": "加载中…",
     "empty_title": "尚未连接 Bot",
-    "empty_description_prefix": "在本创作区打开一个智能体，点击",
+    "empty_description_prefix": "在本世界打开一个智能体，点击",
     "empty_description_cta": "连接 Slack",
     "empty_description_suffix": "为其安装机器人。",
     "revoked_badge": "已撤销",
@@ -892,7 +892,7 @@
     "disconnect": "断开",
     "disconnecting": "断开中...",
     "disconnect_confirm_title": "断开此 Slack 机器人？",
-    "disconnect_confirm_description": "该机器人将停止接收此创作区的 Slack 消息。安装记录会保留以备审计；你之后可以从同一个智能体重新安装。",
+    "disconnect_confirm_description": "该机器人将停止接收此世界的 Slack 消息。安装记录会保留以备审计；你之后可以从同一个智能体重新安装。",
     "disconnect_confirm_cancel": "取消",
     "toast_disconnected": "已断开 Slack 机器人",
     "toast_disconnect_failed": "断开失败",
@@ -903,7 +903,7 @@
     "agent_bot_connected_label": "已连接到 Slack",
     "agent_bot_disconnect_tooltip": "将此 Slack 机器人从智能体解绑。机器人将停止接收 Slack 消息。",
     "agent_bot_manage_link": "在 Slack 中打开",
-    "agent_bot_manage_tooltip": "打开此机器人所在的 Slack 创作区。",
+    "agent_bot_manage_tooltip": "打开此机器人所在的 Slack 工作区。",
     "byo_dialog_title": "连接 Slack 机器人",
     "byo_video_cta": "观看配置教程视频",
     "byo_docs_link": "Step-by-step：把你的 Auro 智能体连接到 Slack",
@@ -920,7 +920,7 @@
     "page_description": "在钉钉中与智能体对话，或用 /issue 创建任务。",
     "agent_page_description": "在钉钉中与此智能体对话，或用 /issue 创建任务。",
     "groups_title": "近期钉群",
-    "groups_description": "创作区成员关联钉钉账号并在群内 @ 该机器人后，群会显示在这里。默认展示最近 90 天活跃的群。",
+    "groups_description": "世界成员关联钉钉账号并在群内 @ 该机器人后，群会显示在这里。默认展示最近 90 天活跃的群。",
     "groups_loading": "正在加载钉群…",
     "groups_empty": "尚未观察到群消息。",
     "groups_no_recent": "最近 90 天没有活跃群。",
@@ -951,7 +951,7 @@
     "deleted_agent": "已删除的智能体",
     "loading": "加载中…",
     "empty_title": "尚未连接机器人",
-    "empty_description_prefix": "在本创作区打开一个智能体，点击",
+    "empty_description_prefix": "在本世界打开一个智能体，点击",
     "empty_description_cta": "连接钉钉",
     "empty_description_suffix": "为其安装机器人。",
     "revoked_badge": "已撤销",
@@ -960,7 +960,7 @@
     "disconnect": "断开连接",
     "disconnecting": "正在断开…",
     "disconnect_confirm_title": "断开此钉钉机器人？",
-    "disconnect_confirm_description": "该机器人将停止接收此创作区的钉钉消息。安装记录会保留以备审计；你之后可以重新连接该机器人。",
+    "disconnect_confirm_description": "该机器人将停止接收此世界的钉钉消息。安装记录会保留以备审计；你之后可以重新连接该机器人。",
     "disconnect_confirm_cancel": "取消",
     "toast_disconnected": "已断开钉钉机器人",
     "toast_disconnect_failed": "断开失败",
@@ -990,7 +990,7 @@
     "connected_bots": "已连接的机器人",
     "loading": "加载中…",
     "empty_title": "尚未连接机器人",
-    "empty_description_prefix": "在本创作区打开一个智能体，点击",
+    "empty_description_prefix": "在本世界打开一个智能体，点击",
     "empty_description_cta": "连接企业微信",
     "empty_description_suffix": "为其安装智能机器人。",
     "revoked_badge": "已撤销",
@@ -998,7 +998,7 @@
     "disconnect": "断开连接",
     "disconnecting": "正在断开…",
     "disconnect_confirm_title": "断开此企业微信机器人？",
-    "disconnect_confirm_description": "该机器人将停止接收此创作区的企业微信消息。安装记录会保留以备审计；你之后可以从同一个智能体重新安装。",
+    "disconnect_confirm_description": "该机器人将停止接收此世界的企业微信消息。安装记录会保留以备审计；你之后可以从同一个智能体重新安装。",
     "disconnect_confirm_cancel": "取消",
     "toast_disconnected": "已断开企业微信机器人",
     "toast_disconnect_failed": "断开失败",
@@ -1019,9 +1019,9 @@
     "byo_submitting": "连接中…",
     "byo_cancel": "取消",
     "byo_success_toast": "企业微信机器人已连接",
-    "byo_conflict_same_workspace": "该机器人已连接到本创作区的另一个智能体。请先在那里断开，再连接到这里。",
-    "byo_conflict_archived_agent": "该机器人连接在本创作区一个已归档的智能体上。请先恢复那个智能体，或断开它的机器人，再连接到这里。",
-    "byo_conflict_other_workspace": "该机器人已连接到另一个 Auro 创作区。请先在那边断开，再连接到这里。",
+    "byo_conflict_same_workspace": "该机器人已连接到本世界的另一个智能体。请先在那里断开，再连接到这里。",
+    "byo_conflict_archived_agent": "该机器人连接在本世界一个已归档的智能体上。请先恢复那个智能体，或断开它的机器人，再连接到这里。",
+    "byo_conflict_other_workspace": "该机器人已连接到另一个 Auro 世界。请先在那边断开，再连接到这里。",
     "byo_rejected": "无法连接机器人。请核对企业微信管理后台的 Bot ID 与密钥，并确认它是已开启长连接的智能机器人。",
     "byo_credentials_rejected": "企业微信拒绝了这组 Bot ID 和密钥。请在企业微信管理后台核对这两项，并确认它是已开启长连接的智能机器人。",
     "byo_credentials_unverifiable": "没能连上企业微信来校验这个机器人。你的凭据没有被改动，请稍后重试。",
@@ -1041,7 +1041,7 @@
     "loading": "加载中…",
     "load_failed": "加载 Telegram 安装失败",
     "empty_title": "尚未连接机器人",
-    "empty_description_prefix": "在本创作区打开一个智能体，点击",
+    "empty_description_prefix": "在本世界打开一个智能体，点击",
     "empty_description_cta": "连接 Telegram",
     "empty_description_suffix": "为其安装机器人。",
     "revoked_badge": "已撤销",
@@ -1049,7 +1049,7 @@
     "disconnect": "断开连接",
     "disconnecting": "正在断开…",
     "disconnect_confirm_title": "断开此 Telegram 机器人？",
-    "disconnect_confirm_description": "机器人将停止接收本创作区的 Telegram 消息。Auro 中的会话记录会保留；之后可在同一智能体上重新连接。",
+    "disconnect_confirm_description": "机器人将停止接收本世界的 Telegram 消息。Auro 中的会话记录会保留；之后可在同一智能体上重新连接。",
     "disconnect_confirm_cancel": "取消",
     "toast_disconnected": "已断开 Telegram 机器人",
     "toast_disconnect_failed": "断开失败",
@@ -1111,7 +1111,7 @@
       "profile": "配置档案",
       "server_url": "服务器 URL",
       "device_name": "设备名称",
-      "workspaces": "创作区",
+      "workspaces": "世界",
       "state_stopped": "已停止",
       "state_starting": "正在启动...",
       "state_running": "运行中",
@@ -1176,7 +1176,7 @@
     "seat_purchase_capacity_taken": "新购买的席位已不可用，因此没有发送邀请。请检查当前席位后重试。",
     "no_members": "未找到成员。",
     "revoke_invitation_title": "撤销邀请",
-    "revoke_invitation_description": "撤销发给 {{email}} 的邀请？对方将不能再加入该创作区。",
+    "revoke_invitation_description": "撤销发给 {{email}} 的邀请？对方将不能再加入该世界。",
     "toast_invitation_revoked": "已撤销邀请",
     "toast_invitation_revoke_failed": "撤销邀请失败",
     "toast_role_updated": "已更新角色",
@@ -1184,12 +1184,12 @@
     "toast_member_removed": "已移除成员",
     "toast_member_remove_failed": "移除成员失败",
     "remove_member_title": "移除 {{name}}",
-    "remove_member_description": "从 {{workspace}} 中移除 {{name}}？该成员将失去对该创作区的访问权限。",
+    "remove_member_description": "从 {{workspace}} 中移除 {{name}}？该成员将失去对该世界的访问权限。",
     "confirm_cancel": "取消",
     "confirm_action": "确认",
     "change_role": "更改角色",
-    "remove_action": "从创作区移除",
-    "cannot_demote_last_owner_title": "请先把另一位成员升级为所有者——创作区必须至少保留一位所有者。",
+    "remove_action": "从世界移除",
+    "cannot_demote_last_owner_title": "请先把另一位成员升级为所有者——世界必须至少保留一位所有者。",
     "cannot_demote_last_owner": "不能降级最后一位所有者",
     "roles": {
       "owner": {
@@ -1252,12 +1252,12 @@
       "account": "账号 · 所有设备同步",
       "device": "仅本设备",
       "device_workspace": "仅本设备 · {{name}}",
-      "workspace": "{{name}} 创作区",
+      "workspace": "{{name}} 世界",
       "workspace_only": "仅对 {{name}} 生效"
     },
     "read_only": {
       "title": "你只能查看此页",
-      "description": "只有创作区所有者和管理员可以修改这些设置。",
+      "description": "只有世界所有者和管理员可以修改这些设置。",
       "contact": "只有所有者和管理员可以修改这些设置。如需修改，请联系 {{names}}。",
       "separator": "、"
     }
@@ -1272,7 +1272,7 @@
   "mcp_sources": {
     "title": "为智能体接入工具的方式",
     "current": "当前页面",
-    "mcp": "由管理员添加、在创作区内共享，再按智能体分配。",
+    "mcp": "由管理员添加、在世界内共享，再按智能体分配。",
     "apps": "用你自己的账号通过 Composio 授权，在你拥有的智能体上启用。",
     "plugins": "安装后可提供工具、定时 hook 和存储，每个插件单独授权。"
   }

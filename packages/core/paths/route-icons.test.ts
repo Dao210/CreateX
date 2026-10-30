@@ -65,7 +65,7 @@ describe("resolveRouteIconName", () => {
     expect(resolveRouteIconName("/acme/my-issues")).toBe(DEFAULT_ROUTE_ICON_NAME);
     expect(resolveRouteIconName("/acme/siege")).toBe("Gamepad2");
     expect(resolveRouteIconName("/acme/tanks")).toBe("Gamepad2");
-    expect(resolveRouteIconName("/acme/me")).toBe("CircleUser");
+    expect(resolveRouteIconName("/acme/me")).toBe("Shapes");
   });
 
   it("gives sub-routes their parent page icon (sidebar semantics)", () => {

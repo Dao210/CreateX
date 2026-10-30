@@ -144,7 +144,7 @@
     "load_failed_title": "Impossible de charger cet agent",
     "load_failed_default": "Une erreur est survenue lors de la récupération de cet agent.",
     "no_access_title": "Vous n'avez pas accès à cet agent",
-    "no_access_hint": "Seul le propriétaire de l'agent ou un administrateur de l'espace créatif peut consulter cet agent privé.",
+    "no_access_hint": "Seul le propriétaire de l'agent ou un administrateur du monde peut consulter cet agent privé.",
     "try_again": "Réessayer",
     "archived_banner": "Cet agent est archivé. Il ne peut être ni assigné ni mentionné.",
     "runtime_required_banner": "Cet agent a conservé sa configuration et son historique, mais il lui faut un runtime pour pouvoir s'exécuter.",
@@ -209,7 +209,7 @@
     "attention_queued_other": "{{count}} exécutions sont en attente car le runtime est indisponible."
   },
   "skill_attach": {
-    "trigger_aria": "Rattacher un skill de l'espace créatif",
+    "trigger_aria": "Rattacher un skill du monde",
     "trigger_label": "Rattacher"
   },
   "pickers": {
@@ -302,7 +302,7 @@
       },
       "template": {
         "title": "Partir d'un modèle",
-        "description": "Partez d'instructions et de skills sélectionnés, puis adaptez chaque détail à votre espace créatif."
+        "description": "Partez d'instructions et de skills sélectionnés, puis adaptez chaque détail à votre monde."
       },
       "ai": {
         "title": "Construire avec l'IA",
@@ -324,8 +324,8 @@
         "description": "Vous seul pouvez exécuter cet agent."
       },
       "workspace": {
-        "title": "Tout l'espace créatif",
-        "description": "Tous les membres de l'espace créatif peuvent l'exécuter."
+        "title": "Tout le monde",
+        "description": "Tous les membres du monde peuvent l'exécuter."
       },
       "members": {
         "title": "Personnes précises",
@@ -391,9 +391,9 @@
       "private_desc": "Vous seul pouvez exécuter cet agent",
       "public_title": "Public",
       "public_desc": "Choisissez qui peut exécuter cet agent",
-      "public_workspace_option": "Tout le monde dans cet espace créatif",
+      "public_workspace_option": "Tout le monde dans ce monde",
       "public_members_group": "Personnes précises",
-      "public_members_empty": "Aucun membre de l'espace créatif à choisir",
+      "public_members_empty": "Aucun membre du monde à choisir",
       "public_targets_empty_hint": "Choisissez au moins une option ci-dessous — sinon l'agent reste privé."
     },
     "runtime_label": "Runtime",
@@ -422,11 +422,11 @@
     },
     "skills_section": {
       "label": "Skills",
-      "placeholder": "Ajouter des skills de l'espace créatif",
+      "placeholder": "Ajouter des skills du monde",
       "selected_one": "{{count}} sélectionné — cliquez pour modifier",
       "selected_other": "{{count}} sélectionnés — cliquez pour modifier",
       "collapse": "Replier",
-      "list_empty_multi": "Aucun skill dans cet espace créatif. Créez-en un ou importez-en un d'abord.",
+      "list_empty_multi": "Aucun skill dans ce monde. Créez-en un ou importez-en un d'abord.",
       "list_loading": "Chargement…",
       "list_empty_default": "Aucun skill disponible.",
       "list_no_match": "Aucun skill correspondant.",
@@ -467,12 +467,12 @@
       "system_layer_hint": "Mis à jour à chaque version de Auro. Vous ne pouvez pas le modifier, et vos notes ci-dessous ne sont jamais écrasées.",
       "system_layer_show": "Afficher",
       "system_layer_hide": "Masquer",
-      "workspace_notes_label": "Notes de l'espace créatif",
+      "workspace_notes_label": "Notes du monde",
       "workspace_notes_intro": "Ajoutez ci-dessous le contexte et les préférences de votre équipe. Ils s'appliquent par-dessus les instructions que Auro maintient pour cet agent. Le Markdown est pris en charge.",
       "workspace_notes_placeholder": "Ajoutez le contexte que cet agent doit toujours avoir.\n\n# Exemple\nNotre dépôt principal est github.com/acme/platform.\nRédige les tâches en anglais même quand nous discutons en français.\nNous ne déployons pas le vendredi."
     },
     "env": {
-      "intro_readonly": "Injectées dans le processus de l'agent au lancement. Seuls les propriétaires et administrateurs de l'espace créatif peuvent lire ou modifier les valeurs ; chaque affichage et chaque modification sont consignés dans le journal d'audit de l'espace créatif.",
+      "intro_readonly": "Injectées dans le processus de l'agent au lancement. Seuls les propriétaires et administrateurs du monde peuvent lire ou modifier les valeurs ; chaque affichage et chaque modification sont consignés dans le journal d'audit du monde.",
       "empty_readonly": "Aucune variable d'environnement configurée.",
       "intro_prefix": "Injectées dans le processus de l'agent au lancement (par exemple ",
       "intro_separator": ", ",
@@ -496,7 +496,7 @@
       "not_revealed_title_one": "{{count}} variable configurée",
       "not_revealed_title_other": "{{count}} variables configurées",
       "not_revealed_empty": "Aucune variable d'environnement configurée.",
-      "not_revealed_hint": "Les valeurs restent masquées jusqu'à ce que vous les affichiez. Chaque affichage et chaque modification sont consignés dans le journal d'audit de l'espace créatif.",
+      "not_revealed_hint": "Les valeurs restent masquées jusqu'à ce que vous les affichiez. Chaque affichage et chaque modification sont consignés dans le journal d'audit du monde.",
       "reveal_action": "Afficher et modifier",
       "revealing": "Affichage…",
       "reveal_failed_toast": "Échec du chargement des valeurs d'environnement",
@@ -527,16 +527,16 @@
       "agent_disabled_badge": "Désactivé pour l'agent",
       "runtime_disabled_badge": "Désactivé dans le runtime",
       "runtime_overridden_badge": "Remplacé par Auro",
-      "workspace_title": "Depuis la bibliothèque de l'espace créatif",
+      "workspace_title": "Depuis la bibliothèque du monde",
       "workspace_action_failed": "Impossible de mettre à jour les serveurs MCP de cet agent",
       "workspace_removed_toast": "Serveur MCP retiré de cet agent",
       "workspace_added_toast": "Serveur MCP ajouté à cet agent",
       "workspace_remove_aria": "Retirer {{name}} de cet agent",
       "workspace_remove_action": "Supprimer",
       "workspace_toggle_aria": "Activer {{name}} pour cet agent",
-      "workspace_library_empty": "Cet espace créatif n'a encore aucun serveur MCP à assigner. Ajoutez-en dans Paramètres de l'espace créatif → MCP.",
-      "workspace_none_assigned": "Aucun serveur MCP de l'espace créatif n'est encore assigné à cet agent.",
-      "workspace_add_action": "Ajouter depuis l'espace créatif",
+      "workspace_library_empty": "Ce monde n'a encore aucun serveur MCP à assigner. Ajoutez-en dans Paramètres du monde → MCP.",
+      "workspace_none_assigned": "Aucun serveur MCP du monde n'est encore assigné à cet agent.",
+      "workspace_add_action": "Ajouter depuis le monde",
       "workspace_loading": "Chargement des serveurs assignés…",
       "dialog_name_locked": "Le nom ne peut pas être modifié ici — le renommer ajouterait un second serveur et laisserait celui-ci en place. Retirez-le et rajoutez-le plutôt.",
       "workspace_overridden_badge": "Remplacé",
@@ -617,7 +617,7 @@
       "invalid_json": "JSON invalide : {{error}}",
       "save_failed_toast": "Échec de l'enregistrement de la configuration MCP",
       "redacted_title": "Configuré — masqué pour vous",
-      "redacted_hint": "Seul le propriétaire de l'agent ou un administrateur de l'espace créatif peut lire cette configuration.",
+      "redacted_hint": "Seul le propriétaire de l'agent ou un administrateur du monde peut lire cette configuration.",
       "dialog_json_help": "Modifiez la configuration complète du serveur en JSON."
     },
     "composio_mcp": {
@@ -633,7 +633,7 @@
       "redacted_title": "Configuré — masqué pour vous",
       "redacted_hint": "Seul le créateur de l'agent peut voir ou modifier les applications qu'il peut utiliser.",
       "shared_warning": "Cet agent est partagé. Les personnes qui peuvent l'exécuter pourront utiliser les applications Composio que vous activez ici. Passez en Privé ou restreignez la liste d'accès si ces applications exposent des données sensibles.",
-      "workspace_warning": "Public pour l'espace créatif : tout membre de l'espace créatif peut utiliser ces applications Composio via cet agent."
+      "workspace_warning": "Public pour le monde : tout membre du monde peut utiliser ces applications Composio via cet agent."
     },
     "runtime_config": {
       "mode_label": "Mode de routage",
@@ -659,7 +659,7 @@
       "assigned_hint": "Désactivez un skill pour suspendre son utilisation sans le retirer.",
       "runtime_title": "Hérités du runtime",
       "runtime_hint": "Détectés automatiquement depuis {{runtime}} et disponibles chaque fois que cet agent s'y exécute.",
-      "workspace_badge": "Espace créatif",
+      "workspace_badge": "Monde",
       "inherited_badge": "Hérité",
       "refresh_action": "Actualiser",
       "no_description": "Aucune description",
@@ -687,7 +687,7 @@
       "remove_failed_toast": "Échec du retrait du skill",
       "add_dialog_title": "Ajouter un skill",
       "add_dialog_search_placeholder": "Rechercher des skills",
-      "add_dialog_empty": "Tous les skills de l'espace créatif sont déjà assignés.",
+      "add_dialog_empty": "Tous les skills du monde sont déjà assignés.",
       "add_dialog_no_match": "Aucun skill ne correspond à votre recherche.",
       "add_dialog_empty_partial": "Plus aucun skill à ajouter — cet agent les a tous.",
       "add_dialog_saving": "Ajout…",
@@ -698,7 +698,7 @@
       "add_failed_toast": "Échec de l'ajout du skill"
     },
     "integrations": {
-      "members_note": "Seuls les propriétaires et administrateurs de l'espace créatif peuvent gérer cette connexion. Vous pouvez voir les bots connectés dans Paramètres → Intégrations."
+      "members_note": "Seuls les propriétaires et administrateurs du monde peuvent gérer cette connexion. Vous pouvez voir les bots connectés dans Paramètres → Intégrations."
     },
     "activity": {
       "status": {
@@ -766,20 +766,20 @@
   "visibility": {
     "private": {
       "label": "Personnel",
-      "tooltip": "Personnel · vous seul et les administrateurs de l'espace créatif pouvez utiliser cet agent"
+      "tooltip": "Personnel · vous seul et les administrateurs du monde pouvez utiliser cet agent"
     },
     "workspace": {
-      "label": "Espace créatif",
-      "tooltip": "Espace créatif · tout le monde dans cet espace créatif peut utiliser cet agent"
+      "label": "Monde",
+      "tooltip": "Monde · tout le monde dans ce monde peut utiliser cet agent"
     }
   },
   "access": {
     "section_title": "Qui peut exécuter cet agent",
     "tooltip": "Accès · qui peut exécuter cet agent",
     "trigger_private": "Moi uniquement",
-    "trigger_workspace": "Espace créatif",
+    "trigger_workspace": "Monde",
     "scope_labels": {
-      "workspace": "Espace créatif",
+      "workspace": "Monde",
       "specific_people": "Personnes précises",
       "owner_only": "Propriétaire uniquement"
     },
@@ -789,10 +789,10 @@
     "private_title": "Moi uniquement",
     "private_desc": "Vous seul pouvez exécuter cet agent",
     "shared_title": "Partagé",
-    "shared_desc": "Choisissez l'espace créatif ou les personnes précises qui peuvent exécuter cet agent",
+    "shared_desc": "Choisissez le monde ou les personnes précises qui peuvent exécuter cet agent",
     "shared_target_required": "Sélectionnez au moins une personne avant d'enregistrer.",
-    "workspace_title": "Tout l'espace créatif",
-    "workspace_desc": "Tous les membres de l'espace créatif peuvent exécuter cet agent",
+    "workspace_title": "Tout le monde",
+    "workspace_desc": "Tous les membres du monde peuvent exécuter cet agent",
     "members_title": "Personnes précises",
     "members_desc": "Seules les personnes que vous choisissez peuvent exécuter cet agent",
     "team_title": "Public pour l'équipe",
@@ -801,7 +801,7 @@
     "members_group": "Personnes",
     "public_group": "Accès public",
     "owner_only_readonly": "Seul le propriétaire de l'agent peut modifier qui peut l'exécuter.",
-    "members_empty": "Aucun membre de l'espace créatif à choisir",
+    "members_empty": "Aucun membre du monde à choisir",
     "composio_switch_hint": "Attention — cet agent a des applications Composio activées. Le partager permet à toute personne y ayant accès d'utiliser ces applications via cet agent."
   },
   "profile_card": {

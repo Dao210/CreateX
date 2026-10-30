@@ -85,7 +85,7 @@
     "run_blocked_attribution": "実行されませんでした — 実行の責任者を特定できませんでした",
     "run_blocked_already_active": "実行されませんでした — 直近の実行が本件をカバーしています",
     "run_blocked_quota_exceeded": "実行されませんでした — この期間の実行上限に達しました",
-    "run_blocked_issue_limit_reached": "実行されませんでした — クリエイティブスペースのタスク数上限に達しました",
+    "run_blocked_issue_limit_reached": "実行されませんでした — ワールドのタスク数上限に達しました",
     "run_blocked_generic": "実行されませんでした — 実行がブロックされました",
     "section_properties": "プロパティ",
     "section_triggers": "トリガー",
@@ -126,7 +126,7 @@
     "toast_granted": "アクセス権を付与しました",
     "toast_revoked": "アクセス権を削除しました",
     "toast_failed": "アクセス権を更新できませんでした",
-    "owner_note": "作成者とクリエイティブスペース管理者は常にアクセスできます。"
+    "owner_note": "作成者とワールド管理者は常にアクセスできます。"
   },
   "run_status": {
     "issue_created": "タスク作成済み",
@@ -486,7 +486,7 @@
     "running": "実行中",
     "active_runs": "{{count}} 件の実行が進行中",
     "issue_closed": "タスクは終了済み",
-    "read_only": "作成者またはクリエイティブスペース管理者のみが管理できます",
+    "read_only": "作成者またはワールド管理者のみが管理できます",
     "select_row": "{{issue}}、{{agent}} を選択",
     "select_page": "このページの有効な項目を選択",
     "load_error": "読み込めませんでした",

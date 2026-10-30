@@ -85,7 +85,7 @@
     "run_blocked_attribution": "실행되지 않음 — 실행의 책임 구성원을 확인할 수 없습니다",
     "run_blocked_already_active": "실행되지 않음 — 최근 실행이 이미 이 건을 처리했습니다",
     "run_blocked_quota_exceeded": "실행되지 않음 — 이 기간의 실행 한도에 도달했습니다",
-    "run_blocked_issue_limit_reached": "실행되지 않음 — 크리에이티브 스페이스가 태스크 수 한도에 도달했습니다",
+    "run_blocked_issue_limit_reached": "실행되지 않음 — 세계가 태스크 수 한도에 도달했습니다",
     "run_blocked_generic": "실행되지 않음 — 실행이 차단되었습니다",
     "section_properties": "속성",
     "section_triggers": "트리거",
@@ -126,7 +126,7 @@
     "toast_granted": "접근 권한을 부여했습니다",
     "toast_revoked": "접근 권한을 제거했습니다",
     "toast_failed": "접근 권한을 업데이트하지 못했습니다",
-    "owner_note": "작성자와 크리에이티브 스페이스 관리자는 항상 접근할 수 있습니다."
+    "owner_note": "작성자와 세계 관리자는 항상 접근할 수 있습니다."
   },
   "run_status": {
     "issue_created": "태스크 생성됨",
@@ -486,7 +486,7 @@
     "running": "실행 중",
     "active_runs": "진행 중인 실행 {{count}}개",
     "issue_closed": "종료된 작업",
-    "read_only": "생성자 또는 크리에이티브 스페이스 관리자만 관리할 수 있습니다",
+    "read_only": "생성자 또는 세계 관리자만 관리할 수 있습니다",
     "select_row": "{{issue}}, {{agent}} 선택",
     "select_page": "이 페이지의 활성 항목 선택",
     "load_error": "깨우기를 불러오지 못했습니다",

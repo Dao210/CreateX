@@ -1,7 +1,7 @@
 {
-  "title": "Mon espace",
+  "title": "Mes créations",
   "summary": {
-    "weapons": "Armes",
+    "weapons": "Créations",
     "stars": "Étoiles",
     "best": "Meilleur score"
   },
@@ -12,7 +12,7 @@
     "mcp": "Créé via MCP"
   },
   "weapons": {
-    "title": "Collection d'armes",
+    "title": "Collection de créations",
     "siege_empty": "Aucun plan enregistré.",
     "tanks_empty": "Aucun personnage char.",
     "mcp_empty": "Rien n'a encore été créé via MCP.",
@@ -53,5 +53,10 @@
   },
   "loading": "Chargement de votre collection…",
   "error": "Impossible de charger votre collection.",
-  "retry": "Réessayer"
+  "retry": "Réessayer",
+  "scope": "Monde actuel : {{name}}",
+  "tabs": {
+    "label": "Créations et progression",
+    "creations": "Créations"
+  }
 }

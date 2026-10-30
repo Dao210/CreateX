@@ -201,7 +201,7 @@ describe("SettingsPage workspace subscription feature flag", () => {
 describe("SettingsPage information architecture", () => {
   it("groups pages by who they affect, then by topic", () => {
     renderWithI18n(<SettingsPage />);
-    const personal = within(nav()).getByRole("region", { name: /Personal/ });
+    const personal = within(nav()).getByRole("region", { name: /Account settings/ });
     expect(within(personal).getByRole("link", { name: "Preferences" })).toBeInTheDocument();
     expect(within(personal).getByRole("link", { name: "API Tokens" })).toBeInTheDocument();
 
@@ -259,7 +259,7 @@ describe("SettingsPage information architecture", () => {
     shell.appsAvailable = true;
     navigationState.search = "tab=integrations&connected=notion";
     renderWithI18n(<SettingsPage />);
-    const personal = within(nav()).getByRole("region", { name: /Personal/ });
+    const personal = within(nav()).getByRole("region", { name: /Account settings/ });
     expect(
       within(personal).getByRole("link", { name: "Connected apps" }),
     ).toHaveAttribute("aria-current", "page");
@@ -316,7 +316,7 @@ describe("SettingsPage search", () => {
 
     const results = screen.getByRole("listbox", { name: "Search settings" });
     const option = within(results).getByRole("option", { name: /Time zone/ });
-    expect(option).toHaveTextContent("Personal › Preferences");
+    expect(option).toHaveTextContent("Account settings › Preferences");
 
     fireEvent.click(option);
     expect(push).toHaveBeenCalledWith(

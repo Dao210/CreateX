@@ -29,7 +29,7 @@ const { agents, detail, deletePin, invitationApi, navigation, pins, sidebarState
     invalidateQueries: vi.fn(),
     mutations: [] as Array<Record<string, unknown>>,
   },
-  navigation: { current: { pathname: "/acme/issues" } },
+  navigation: { current: { pathname: "/acme/issues", search: "" } },
   summary: { current: [] as { workspace_id: string; count: number }[] },
   workspaces: {
     current: [] as { id: string; name: string; slug: string; avatar_url: string | null }[],
@@ -114,7 +114,7 @@ vi.mock("../auth", () => ({ useLogout: () => vi.fn() }));
 vi.mock("../issues/components/status-icon", () => ({ StatusIcon: () => <span /> }));
 vi.mock("../navigation", () => ({
   AppLink: ({ children, href }: { children: React.ReactNode; href: string }) => <a href={href}>{children}</a>,
-  useNavigation: () => ({ pathname: navigation.current.pathname, push: vi.fn() }),
+  useNavigation: () => ({ pathname: navigation.current.pathname, searchParams: new URLSearchParams(navigation.current.search), push: vi.fn() }),
 }));
 vi.mock("../projects/components/project-icon", () => ({ ProjectIcon: () => <span /> }));
 vi.mock("../workspace/workspace-avatar", () => ({ WorkspaceAvatar: () => <span /> }));
@@ -218,14 +218,14 @@ vi.mock("@tanstack/react-query", async (importOriginal) => ({
 describe("mobile sheet dismissal", () => {
   beforeEach(() => {
     sidebarState.setOpenMobile.mockClear();
-    navigation.current = { pathname: "/acme/issues" };
+    navigation.current = { pathname: "/acme/issues", search: "" };
   });
 
   it("dismisses the sheet once the route changes", () => {
     const { rerender } = render(<AppSidebar />);
     sidebarState.setOpenMobile.mockClear();
 
-    navigation.current = { pathname: "/acme/inbox" };
+    navigation.current = { pathname: "/acme/inbox", search: "" };
     rerender(<AppSidebar />);
 
     expect(sidebarState.setOpenMobile).toHaveBeenCalledWith(false);
@@ -338,11 +338,27 @@ describe("navigation item presentation", () => {
 
     expect(referenceClassName).toBeTruthy();
 
-    for (const href of ["/acme/usage", "/acme/settings"]) {
+    for (const href of ["/acme/usage", "/acme/settings?tab=workspace"]) {
       expect(container.querySelector(`button[data-href="${href}"]`)?.className).toBe(
         referenceClassName,
       );
     }
+  });
+
+  it("separates world settings from account settings and selects only the active scope", () => {
+    navigation.current = { pathname: "/acme/settings", search: "tab=workspace" };
+    const { container, rerender } = renderWithI18n(<AppSidebar />);
+    const worldSettings = () => container.querySelector('button[data-href="/acme/settings?tab=workspace"]');
+    const accountSettings = () => container.querySelector('button[data-href="/acme/settings?tab=profile"]');
+    expect(worldSettings()).toHaveTextContent("World settings");
+    expect(worldSettings()).toHaveAttribute("data-active", "true");
+    expect(accountSettings()).not.toHaveAttribute("data-active", "true");
+    navigation.current.search = "tab=preferences";
+    rerender(<AppSidebar />);
+    expect(worldSettings()).not.toHaveAttribute("data-active", "true");
+    expect(accountSettings()).toHaveAccessibleName("Ada Lovelace · Account settings");
+    expect(accountSettings()).toHaveAttribute("data-active", "true");
+    navigation.current = { pathname: "/acme/issues", search: "" };
   });
 });
 
@@ -356,7 +372,7 @@ describe("work group agents", () => {
 
   beforeEach(() => {
     agents.current = [];
-    navigation.current = { pathname: "/acme/issues" };
+    navigation.current = { pathname: "/acme/issues", search: "" };
   });
 
   it("omits the retired chat entry", () => {

@@ -85,7 +85,7 @@
     "run_blocked_attribution": "Non déclenchée — l'exécution n'a pas pu être attribuée à un membre responsable",
     "run_blocked_already_active": "Non déclenchée — une exécution récente couvre déjà ce cas",
     "run_blocked_quota_exceeded": "Non déclenché — la limite d'exécutions de la période est atteinte",
-    "run_blocked_issue_limit_reached": "Non déclenchée : l'espace créatif a atteint sa limite de tâches",
+    "run_blocked_issue_limit_reached": "Non déclenchée : le monde a atteint sa limite de tâches",
     "run_blocked_generic": "Non déclenchée — l'exécution a été bloquée",
     "section_properties": "Propriétés",
     "section_triggers": "Déclencheurs",
@@ -126,7 +126,7 @@
     "toast_granted": "Accès accordé",
     "toast_revoked": "Accès retiré",
     "toast_failed": "Impossible de mettre à jour l'accès",
-    "owner_note": "Le créateur et les administrateurs de l'espace créatif ont toujours accès."
+    "owner_note": "Le créateur et les administrateurs du monde ont toujours accès."
   },
   "run_status": {
     "issue_created": "Tâche créée",

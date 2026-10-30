@@ -68,8 +68,8 @@
   },
   "workspace": {
     "title": "Facturation",
-    "description": "Gérez le forfait, les limites, les sièges humains et la facturation Stripe de cet espace créatif.",
-    "loading": "Chargement de la facturation de l'espace créatif",
+    "description": "Gérez le forfait, les limites, les sièges humains et la facturation Stripe de ce monde.",
+    "loading": "Chargement de la facturation du monde",
     "plan": {
       "free": "Gratuit",
       "pro": "Pro",
@@ -103,13 +103,13 @@
     "errors": {
       "action_title": "Échec de l'action de facturation",
       "temporarily_unavailable": "La facturation est temporairement indisponible. Réessayez dans un instant.",
-      "not_enabled": "Les abonnements d’espace créatif ne sont pas activés pour ce déploiement. Contactez votre administrateur.",
-      "permission_changed": "Votre rôle dans l'espace créatif n'autorise plus cette action. Actualisez la page pour voir vos droits actuels.",
+      "not_enabled": "Les abonnements de monde ne sont pas activés pour ce déploiement. Contactez votre administrateur.",
+      "permission_changed": "Votre rôle dans le monde n'autorise plus cette action. Actualisez la page pour voir vos droits actuels.",
       "checkout_response": "Le paiement n'a pas pu s'ouvrir car la réponse du serveur était illisible. Réessayez sans changer l'intervalle sélectionné.",
-      "already_subscribed": "Cet espace créatif a déjà un abonnement. Le forfait actuel a été actualisé.",
+      "already_subscribed": "Ce monde a déjà un abonnement. Le forfait actuel a été actualisé.",
       "checkout_failed": "Le paiement n'a pas pu être créé. Réessayez dans un instant.",
       "portal_response": "Le portail de facturation n'a pas pu s'ouvrir car la réponse du serveur était illisible.",
-      "portal_unavailable": "Le portail de facturation n'est pas disponible pour cet espace créatif. Le forfait actuel a été actualisé.",
+      "portal_unavailable": "Le portail de facturation n'est pas disponible pour ce monde. Le forfait actuel a été actualisé.",
       "portal_failed": "Le portail de facturation n'a pas pu être ouvert. Réessayez dans un instant."
     },
     "return": {
@@ -120,7 +120,7 @@
       "syncing_description": "Le paiement est terminé. Nous attendons que Stripe confirme le changement de forfait.",
       "timeout_description": "Le paiement a été reçu, mais l'abonnement est encore en cours de synchronisation. Actualisez cette page dans un instant.",
       "active_title": "Pro est actif",
-      "active_description": "Cet espace créatif a désormais accès à Pro."
+      "active_description": "Ce monde a désormais accès à Pro."
     },
     "past_due": {
       "title": "Le paiement demande votre attention",
@@ -143,7 +143,7 @@
     },
     "current": {
       "title": "Forfait actuel",
-      "plan": "Forfait de l'espace créatif",
+      "plan": "Forfait du monde",
       "members": "Membres humains",
       "members_description": "Les agents et les invitations en attente ne comptent pas comme des sièges.",
       "member_count_one": "{{count}} membre",
@@ -167,7 +167,7 @@
       "title": "Gestion de l'abonnement",
       "description": "Moyens de paiement, factures et résiliation.",
       "portal": "Portail de facturation Stripe",
-      "portal_unavailable": "Aucun portail de facturation Stripe n'est disponible pour cet espace créatif."
+      "portal_unavailable": "Aucun portail de facturation Stripe n'est disponible pour ce monde."
     },
     "limits": {
       "title": "Consommation et limites",
@@ -206,8 +206,8 @@
       "summary_unavailable_title": "Certains détails des sièges sont indisponibles",
       "summary_unavailable_description": "Le forfait actuel reste affiché, mais les quantités de sièges achetées et programmées n'ont pas pu être chargées.",
       "members_over_capacity_title": "Les membres dépassent le nombre de sièges achetés",
-      "members_over_capacity_description": "Cet espace créatif compte {{actual}} membres mais seulement {{purchased}} sièges achetés. Ajoutez suffisamment de sièges ou retirez des membres avant d'envoyer de nouvelles invitations.",
-      "occupancy_over_capacity_description": "Cet espace créatif occupe {{occupied}} des {{purchased}} sièges achetés ({{members}} membres et {{reserved}} invitations en attente). Ajoutez des sièges, retirez un membre ou révoquez une invitation en attente avant d'inviter quelqu'un d'autre.",
+      "members_over_capacity_description": "Ce monde compte {{actual}} membres mais seulement {{purchased}} sièges achetés. Ajoutez suffisamment de sièges ou retirez des membres avant d'envoyer de nouvelles invitations.",
+      "occupancy_over_capacity_description": "Ce monde occupe {{occupied}} des {{purchased}} sièges achetés ({{members}} membres et {{reserved}} invitations en attente). Ajoutez des sièges, retirez un membre ou révoquez une invitation en attente avant d'inviter quelqu'un d'autre.",
       "updated": "Achat de sièges soumis",
       "available_help": "Calcul des sièges disponibles"
     },
@@ -253,11 +253,11 @@
     "date_dash": "—"
   },
   "return_page": {
-    "redirecting": "Retour vers la facturation de l'espace créatif…",
-    "load_failed_title": "Impossible d'ouvrir la facturation de l'espace créatif",
-    "load_failed_description": "Vous revenez de Stripe, mais nous n'avons pas pu charger votre liste d'espaces créatifs pour ouvrir la bonne page de facturation. Ouvrez Paramètres de l'espace créatif → Facturation pour vérifier l'état actuel.",
-    "workspace_missing_title": "Espace créatif introuvable",
-    "workspace_missing_description": "Vous revenez de Stripe, mais cet espace créatif ne vous est plus accessible — il a peut-être été supprimé, ou vos droits ont changé. Ouvrez Facturation dans l'espace créatif attendu pour vérifier l'état actuel.",
+    "redirecting": "Retour vers la facturation du monde…",
+    "load_failed_title": "Impossible d'ouvrir la facturation du monde",
+    "load_failed_description": "Vous revenez de Stripe, mais nous n'avons pas pu charger votre liste de mondes pour ouvrir la bonne page de facturation. Ouvrez Paramètres du monde → Facturation pour vérifier l'état actuel.",
+    "workspace_missing_title": "Monde introuvable",
+    "workspace_missing_description": "Vous revenez de Stripe, mais ce monde ne vous est plus accessible — il a peut-être été supprimé, ou vos droits ont changé. Ouvrez Facturation dans le monde attendu pour vérifier l'état actuel.",
     "retry": "Réessayer",
     "go_to_app": "Aller sur Auro"
   }

@@ -53,7 +53,7 @@
   "base_defeat": "La base a été détruite. Surveillez le centre et les flancs.",
   "lives_defeat": "Tous les chars sont perdus. Reformez votre défense.",
   "cleared_help": "{{kills}} chars détruits · {{score}} points",
-  "local_records": "La progression et les records restent sur cet appareil, par compte et espace créatif.",
+  "local_records": "La progression et les records restent sur cet appareil, par compte et monde.",
   "levels": {
     "frontline": {
       "name": "Front de briques",
@@ -130,7 +130,7 @@
     "deploy": "Nouvelle bataille",
     "deploying": "Préparation…",
     "new_battle_help": "Démarre une nouvelle bataille avec une version figée du personnage.",
-    "session_error": "Impossible de charger cette session. Vérifiez sa validité, le compte et l’espace de travail.",
+    "session_error": "Impossible de charger cette session. Vérifiez sa validité, le compte et le monde.",
     "loading_session": "Chargement du personnage figé…",
     "return_classic": "Revenir au char classique",
     "library_error": "Le garage est indisponible. Actualisez pour réessayer.",

@@ -5,7 +5,7 @@
   "composer": {
     "no_agent": "未选择智能体",
     "revoked": "你已无法运行该智能体",
-    "no_agents": "该创作区没有智能体",
+    "no_agents": "该世界没有智能体",
     "archived": "该聊天已归档",
     "runtime_required": "智能体需要运行时",
     "replying_to": "回复 {{name}}",
@@ -31,7 +31,7 @@
     "starter_task_label": "建议第一个任务",
     "starter_task_prompt": "建议三个适合委托给你的有用任务。",
     "starter_action_label": "推荐一个操作",
-    "starter_action_prompt": "了解我的创作区后，推荐一个有用的首要操作。"
+    "starter_action_prompt": "了解我的世界后，推荐一个有用的首要操作。"
   },
   "picker": {
     "title": "选择智能体",

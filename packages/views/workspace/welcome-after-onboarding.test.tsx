@@ -140,7 +140,7 @@ describe("WelcomeAfterOnboarding", () => {
 
     renderWelcome();
 
-    expect(screen.getByText(/Setting up your creative space/i)).toBeInTheDocument();
+    expect(screen.getByText(/Setting up your world/i)).toBeInTheDocument();
     await waitFor(() => {
       expect(screen.getByText(/Welcome to Weave a World/i)).toBeInTheDocument();
     });

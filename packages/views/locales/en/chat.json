@@ -130,7 +130,7 @@
   },
   "empty_state": {
     "first_time_title": "Chat with your agents",
-    "first_time_intro": "✨ They know your creative space —",
+    "first_time_intro": "✨ They know your world —",
     "first_time_pillars": "issues, projects, skills",
     "first_time_pillars_suffix": ".",
     "first_time_actions": "Ask for a summary, plan your day, or hand off a quick task.",
@@ -151,7 +151,7 @@
     },
     "recommend": {
       "label": "Recommend an action",
-      "prompt": "Review what you know about my creative space and recommend a useful first action."
+      "prompt": "Review what you know about my world and recommend a useful first action."
     },
     "customize": "Customize starters"
   },
@@ -170,8 +170,8 @@
     },
     "digest": {
       "title": "Let the daily digest write itself",
-      "desc": "A morning summary of creative space progress, straight to your inbox.",
-      "prompt": "Set up a daily automation that posts a morning summary of creative space progress"
+      "desc": "A morning summary of world progress, straight to your inbox.",
+      "prompt": "Set up a daily automation that posts a morning summary of world progress"
     },
     "digest_badge": "Daily 9:00"
   },

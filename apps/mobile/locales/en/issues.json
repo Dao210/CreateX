@@ -121,7 +121,7 @@
     "assigned": "No issues assigned to you.",
     "created": "You haven't created any issues.",
     "agents": "No issues assigned to agents or squads.",
-    "all": "No issues in this creative space.",
+    "all": "No issues in this world.",
     "members": "No issues assigned to a member."
   },
   "menu": {
@@ -164,10 +164,10 @@
     "squad": "Squad",
     "no_matches": "No matches.",
     "no_project": "No project",
-    "no_projects": "No projects in this creative space yet.\nCreate them on web.",
-    "no_labels": "No labels in this creative space yet.",
+    "no_projects": "No projects in this world yet.\nCreate them on web.",
+    "no_labels": "No labels in this world yet.",
     "create_label": "Create \"{{name}}\"",
-    "no_members_agents": "No members or agents in this creative space yet.",
+    "no_members_agents": "No members or agents in this world yet.",
     "people": "People",
     "agents": "Agents",
     "squads": "Squads",

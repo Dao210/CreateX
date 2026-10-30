@@ -105,8 +105,8 @@ describe("WecomBindPage", () => {
     ["expired", /invalid or expired/i],
     ["409", /already linked to a different Weave a World user/i],
     ["already bound", /already linked to a different Weave a World user/i],
-    ["403", /isn't a member of this creative space/i],
-    ["workspace member", /isn't a member of this creative space/i],
+    ["403", /isn't a member of this world/i],
+    ["workspace member", /isn't a member of this world/i],
     ["something exploded", /something went wrong/i],
   ])("maps a %s failure to the right message", async (msg, expected) => {
     mockAuthState.user = { id: "u1", email: "u@example.com" };

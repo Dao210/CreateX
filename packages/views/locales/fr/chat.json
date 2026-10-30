@@ -130,7 +130,7 @@
   },
   "empty_state": {
     "first_time_title": "Discutez avec vos agents",
-    "first_time_intro": "✨ Ils connaissent votre espace créatif —",
+    "first_time_intro": "✨ Ils connaissent votre monde —",
     "first_time_pillars": "tâches, projets, skills",
     "first_time_pillars_suffix": ".",
     "first_time_actions": "Demandez un résumé, planifiez votre journée, ou confiez une tâche rapide.",
@@ -151,7 +151,7 @@
     },
     "recommend": {
       "label": "Recommander une action",
-      "prompt": "Examinez ce que vous savez de mon espace créatif et recommandez une première action utile."
+      "prompt": "Examinez ce que vous savez de mon monde et recommandez une première action utile."
     },
     "customize": "Personnaliser les amorces"
   },
@@ -170,8 +170,8 @@
     },
     "digest": {
       "title": "Laissez le résumé quotidien s'écrire tout seul",
-      "desc": "Un résumé matinal de l'avancement de l'espace créatif, directement dans votre boîte de réception.",
-      "prompt": "Mets en place une automatisation quotidienne qui publie un résumé matinal de l'avancement de l'espace créatif"
+      "desc": "Un résumé matinal de l'avancement du monde, directement dans votre boîte de réception.",
+      "prompt": "Mets en place une automatisation quotidienne qui publie un résumé matinal de l'avancement du monde"
     },
     "digest_badge": "Tous les jours à 9 h"
   },

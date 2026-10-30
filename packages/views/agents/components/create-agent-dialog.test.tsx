@@ -335,7 +335,7 @@ describe("CreateAgentDialog access picker (MUL-4010, feature-flag gated)", () =>
 
     // New copy replaces the old one.
     expect(screen.getByText("Only you can run this agent")).toBeInTheDocument();
-    expect(screen.getByText("Entire creative space")).toBeInTheDocument();
+    expect(screen.getByText("Entire world")).toBeInTheDocument();
     expect(screen.getByText("Specific people")).toBeInTheDocument();
 
     fireEvent.change(screen.getByPlaceholderText("e.g. Deep Research Agent"), {

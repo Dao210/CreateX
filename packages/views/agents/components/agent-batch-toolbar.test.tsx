@@ -191,7 +191,7 @@ describe("AgentBatchToolbar — bulk Set access scope", () => {
     fireEvent.click(screen.getByRole("button", { name: "Set access scope" }));
     await screen.findByText(/Applies to 1 agents/);
 
-    fireEvent.click(screen.getByRole("radio", { name: /Entire creative space/ }));
+    fireEvent.click(screen.getByRole("radio", { name: /Entire world/ }));
 
     const apply = screen.getByRole("button", { name: "Apply" });
     await waitFor(() => expect(apply).toBeEnabled());
@@ -202,7 +202,7 @@ describe("AgentBatchToolbar — bulk Set access scope", () => {
       await act(async () => {});
       expect(apply).toBeEnabled();
       expect(
-        screen.getByRole("radio", { name: /Entire creative space/ }),
+        screen.getByRole("radio", { name: /Entire world/ }),
       ).toBeChecked();
     }
   });
@@ -217,7 +217,7 @@ describe("AgentBatchToolbar — bulk Set access scope", () => {
     fireEvent.click(screen.getByRole("button", { name: "Set access scope" }));
     await screen.findByText(/Applies to 2 agents/);
 
-    fireEvent.click(screen.getByRole("radio", { name: /Entire creative space/ }));
+    fireEvent.click(screen.getByRole("radio", { name: /Entire world/ }));
 
     const apply = screen.getByRole("button", { name: "Apply" });
     await waitFor(() => expect(apply).toBeEnabled());
@@ -247,7 +247,7 @@ describe("AgentBatchToolbar — bulk Set access scope", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Set access scope" }));
     await screen.findByText(/Applies to 1 agents/);
-    fireEvent.click(screen.getByRole("radio", { name: /Entire creative space/ }));
+    fireEvent.click(screen.getByRole("radio", { name: /Entire world/ }));
     await waitFor(() =>
       expect(screen.getByRole("button", { name: "Apply" })).toBeEnabled(),
     );
@@ -264,7 +264,7 @@ describe("AgentBatchToolbar — bulk Set access scope", () => {
 
     expect(screen.getByRole("button", { name: "Apply" })).toBeDisabled();
     expect(
-      screen.getByRole("radio", { name: /Entire creative space/ }),
+      screen.getByRole("radio", { name: /Entire world/ }),
     ).not.toBeChecked();
     expect(updateAgentSpy).not.toHaveBeenCalled();
   });

@@ -14,6 +14,26 @@ world changed by player creations. Distinguish the present simulation preview
 from the longer-term virtual civilization direction. Do not invent player
 counts, pricing, ratings, release dates or features.
 
+## Worlds, creations and accounts
+
+The application calls a workspace a **world**: 世界 / World / Monde / ワールド / 세계.
+The first newly created world defaults to the account's nickname in a localized
+name (for example, `小林的世界` or `Jun’s world`). Save that name once and keep
+the generated URL independent. Reuse existing worlds without renaming them;
+additional worlds keep manual naming. A name does not imply private visibility
+or change membership, authorship or access rules.
+
+The world switcher identifies the current scope. `/{slug}/me` is **My Creations**,
+with creations and game progress in separate URL-addressable tabs. Its content
+belongs to the current member in the current world, not an account-wide library.
+World settings open the world's general settings; the account footer opens
+personal settings. Keep these concepts consistent in web, desktop and mobile
+copy. Slack workspaces retain Slack's own terminology.
+
+REACH's public world preview is a separate simulation. Naming an application
+workspace a world does not create a private REACH simulation or publish creations
+to it.
+
 ## Search and sharing
 
 - `/` and `/about` opt in to indexing. Each has explicit `?lang=en`,

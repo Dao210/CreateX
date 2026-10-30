@@ -138,7 +138,7 @@ describe("BillingReturnPage", () => {
 
     await waitFor(() =>
       expect(screen.getByRole("alert")).toHaveTextContent(
-        "Could not find that creative space",
+        "Could not find that world",
       ),
     );
     // The page cannot know the outcome, so it must not claim one.
@@ -154,7 +154,7 @@ describe("BillingReturnPage", () => {
 
     await waitFor(() =>
       expect(screen.getByRole("alert")).toHaveTextContent(
-        "Could not find that creative space",
+        "Could not find that world",
       ),
     );
     expectNoOutcomeClaim();
@@ -196,7 +196,7 @@ describe("BillingReturnPage", () => {
     renderReturn("workspace_id=11111111-1111-1111-1111-111111111111&result=success");
 
     expect(screen.getByRole("alert")).toHaveTextContent(
-      "Could not open creative space billing",
+      "Could not open world billing",
     );
     expectNoOutcomeClaim();
     expect(mockReplace).not.toHaveBeenCalled();
@@ -225,7 +225,7 @@ describe("BillingReturnPage", () => {
     renderReturn("workspace_id=11111111-1111-1111-1111-111111111111&result=success");
 
     expect(screen.getByRole("status")).toHaveTextContent(
-      "Returning you to creative space billing",
+      "Returning you to world billing",
     );
   });
 });
@@ -261,7 +261,7 @@ describe("BillingReturnPage outcome-neutral failure copy", () => {
 
     await waitFor(() =>
       expect(screen.getByRole("alert")).toHaveTextContent(
-        "Could not find that creative space",
+        "Could not find that world",
       ),
     );
     expectNoOutcomeClaim();

@@ -68,8 +68,8 @@
   },
   "workspace": {
     "title": "账单与套餐",
-    "description": "管理这个创作区的套餐、限额、成员席位和 Stripe 账单。",
-    "loading": "正在加载创作区账单",
+    "description": "管理这个世界的套餐、限额、成员席位和 Stripe 账单。",
+    "loading": "正在加载世界账单",
     "plan": {
       "free": "Free",
       "pro": "Pro",
@@ -103,13 +103,13 @@
     "errors": {
       "action_title": "账单操作失败",
       "temporarily_unavailable": "账单服务暂时不可用，请稍后重试。",
-      "not_enabled": "此部署未启用创作区订阅，请联系管理员。",
-      "permission_changed": "你的创作区角色已不允许执行此操作。刷新页面可查看当前权限。",
+      "not_enabled": "此部署未启用世界订阅，请联系管理员。",
+      "permission_changed": "你的世界角色已不允许执行此操作。刷新页面可查看当前权限。",
       "checkout_response": "服务端响应无法读取，无法打开 Checkout。请保留当前周期并重试。",
-      "already_subscribed": "这个创作区已经有订阅，当前套餐已刷新。",
+      "already_subscribed": "这个世界已经有订阅，当前套餐已刷新。",
       "checkout_failed": "无法创建 Checkout，请稍后重试。",
       "portal_response": "服务端响应无法读取，无法打开 Billing Portal。",
-      "portal_unavailable": "这个创作区暂时无法使用 Billing Portal，当前套餐已刷新。",
+      "portal_unavailable": "这个世界暂时无法使用 Billing Portal，当前套餐已刷新。",
       "portal_failed": "无法打开 Billing Portal，请稍后重试。"
     },
     "return": {
@@ -120,7 +120,7 @@
       "syncing_description": "付款已完成，正在等待 Stripe 确认套餐变化。",
       "timeout_description": "付款已收到，但订阅仍在同步。请稍后刷新页面。",
       "active_title": "Pro 已启用",
-      "active_description": "这个创作区现在可以使用 Pro。"
+      "active_description": "这个世界现在可以使用 Pro。"
     },
     "past_due": {
       "title": "付款信息需要处理",
@@ -143,7 +143,7 @@
     },
     "current": {
       "title": "当前套餐",
-      "plan": "创作区套餐",
+      "plan": "世界套餐",
       "members": "成员席位",
       "members_description": "智能体和待接受的邀请不计入席位。",
       "member_count_other": "{{count}} 位成员",
@@ -165,7 +165,7 @@
       "title": "订阅管理",
       "description": "付款方式、发票和取消订阅。",
       "portal": "Stripe Billing Portal",
-      "portal_unavailable": "这个创作区暂时没有可用的 Stripe Billing Portal。"
+      "portal_unavailable": "这个世界暂时没有可用的 Stripe Billing Portal。"
     },
     "limits": {
       "title": "用量与限额",
@@ -202,8 +202,8 @@
       "summary_unavailable_title": "部分席位详情不可用",
       "summary_unavailable_description": "当前套餐仍会显示，但暂时无法加载已购席位和待生效席位。",
       "members_over_capacity_title": "成员数超过已购席位",
-      "members_over_capacity_description": "当前创作区有 {{actual}} 名成员，但只购买了 {{purchased}} 个席位。继续邀请前，请补足席位或移除成员。",
-      "occupancy_over_capacity_description": "当前创作区已占用 {{occupied}} 个席位，但只购买了 {{purchased}} 个（{{members}} 名成员和 {{reserved}} 个待接受邀请）。继续邀请前，请补足席位、移除成员或撤销待接受邀请。",
+      "members_over_capacity_description": "当前世界有 {{actual}} 名成员，但只购买了 {{purchased}} 个席位。继续邀请前，请补足席位或移除成员。",
+      "occupancy_over_capacity_description": "当前世界已占用 {{occupied}} 个席位，但只购买了 {{purchased}} 个（{{members}} 名成员和 {{reserved}} 个待接受邀请）。继续邀请前，请补足席位、移除成员或撤销待接受邀请。",
       "updated": "席位购买已提交",
       "available_help": "可用席位如何计算"
     },
@@ -246,11 +246,11 @@
     "date_dash": "—"
   },
   "return_page": {
-    "redirecting": "正在返回创作区账单页…",
-    "load_failed_title": "无法打开创作区账单页",
-    "load_failed_description": "你已从 Stripe 返回，但我们无法加载创作区列表来打开对应的账单页。请到「创作区设置 → 账单」确认当前状态。",
-    "workspace_missing_title": "找不到该创作区",
-    "workspace_missing_description": "你已从 Stripe 返回，但该创作区对你已不可用——可能已被删除，或你的访问权限发生了变化。请到你预期的那个创作区的账单页确认当前状态。",
+    "redirecting": "正在返回世界账单页…",
+    "load_failed_title": "无法打开世界账单页",
+    "load_failed_description": "你已从 Stripe 返回，但我们无法加载世界列表来打开对应的账单页。请到「世界设置 → 账单」确认当前状态。",
+    "workspace_missing_title": "找不到该世界",
+    "workspace_missing_description": "你已从 Stripe 返回，但该世界对你已不可用——可能已被删除，或你的访问权限发生了变化。请到你预期的那个世界的账单页确认当前状态。",
     "retry": "重试",
     "go_to_app": "前往 Auro"
   }

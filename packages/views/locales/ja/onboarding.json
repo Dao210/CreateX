@@ -1,12 +1,14 @@
 {
   "civilization": {
-    "title": "新しい文明",
-    "preparing": "クリエイティブスペースを準備しています…",
-    "creating": "新しい文明を築いています…",
-    "entering": "クリエイティブスペースに移動しています…",
-    "failed": "クリエイティブスペースを準備できませんでした。",
-    "creation_disabled": "クリエイティブスペースの作成は無効です。管理者に招待を依頼してください。",
-    "retry": "再試行"
+    "title": "あなたのワールド",
+    "preparing": "ワールドを準備しています…",
+    "creating": "ワールドを作成中…",
+    "entering": "ワールドに移動しています…",
+    "failed": "ワールドを準備できませんでした。",
+    "creation_disabled": "ワールドの作成は無効です。管理者に招待を依頼してください。",
+    "retry": "再試行",
+    "world_name": "{{name}}のワールド",
+    "default_world_name": "自分のワールド"
   },
   "step_nav": {
     "wordmark": "Weave a World",
@@ -15,7 +17,7 @@
       "label": "あなたについて"
     },
     "workspace": {
-      "label": "クリエイティブスペース"
+      "label": "ワールド"
     },
     "runtime": {
       "label": "Mika を知る"
@@ -25,7 +27,7 @@
     "wordmark": "Weave a World へようこそ",
     "headline_line1": "あなたの AI チームメイトを、",
     "headline_line2": "ひとつの",
-    "headline_emphasis": "クリエイティブスペースに。",
+    "headline_emphasis": "ワールドに。",
     "lede": "同僚に仕事を任せるようにタスクを割り当てるだけ。エージェントが引き受け、ステータスを更新し、完了したらコメントします。",
     "continue_on_web": "ウェブで続ける",
     "start_exploring": "探索を始める",
@@ -144,7 +146,7 @@
   },
   "welcome_after_onboarding": {
     "skip": {
-      "loading": "クリエイティブスペースを準備中…",
+      "loading": "ワールドを準備中…",
       "title": "Weave a World へようこそ!",
       "subtitle": "ランタイム接続を案内するタスクを 1 つ追加しました。準備できたら Runtimes から Mika と始められます。",
       "got_it": "了解",
@@ -162,13 +164,13 @@
     }
   },
   "step_workspace": {
-    "eyebrow_first": "最初のクリエイティブスペース",
+    "eyebrow_first": "最初のワールド",
     "eyebrow_resume": "続きから、または新規作成",
-    "headline_first": "クリエイティブスペースに名前を付けましょう。",
-    "headline_resume": "{{name}} で続けるか、別のクリエイティブスペースを始めましょう。",
-    "lede_first": "クリエイティブスペースは、タスク、エージェント、プロジェクトが集まる場所です。あとでチームメイトを招待したり、クリエイティブスペースを増やしたりできます。",
-    "lede_resume": "すでにあるクリエイティブスペースでセットアップを続けるか、別に新しいクリエイティブスペースを作成してください。いくつでもクリエイティブスペースに所属できます。",
-    "name_label": "クリエイティブスペース名",
+    "headline_first": "ワールドに名前を付けましょう。",
+    "headline_resume": "{{name}} で続けるか、別のワールドを始めましょう。",
+    "lede_first": "ワールドは、タスク、エージェント、プロジェクトが集まる場所です。あとでチームメイトを招待したり、ワールドを増やしたりできます。",
+    "lede_resume": "すでにあるワールドでセットアップを続けるか、別に新しいワールドを作成してください。いくつでもワールドに所属できます。",
+    "name_label": "ワールド名",
     "name_placeholder": "Acme Inc、My Lab、Side Projects…",
     "random_name": "ランダム",
     "url_label": "URL",
@@ -177,29 +179,29 @@
     "issue_prefix_prefix": "タスクは ",
     "issue_prefix_suffix": " のように表示されます。あとで設定から変更できます。",
     "issue_prefix_pending": "上の URL を入力すると、タスク番号はそれに合わせて決まります。ここに直接入力することもできます。",
-    "create_new_title": "新しいクリエイティブスペースを作成",
+    "create_new_title": "新しいワールドを作成",
     "hint_opening": "{{name}} を開いています。",
     "hint_creating": "{{name}} を作成しています。",
     "hint_creating_pending": "{{name}} を作成中…",
-    "hint_creating_fallback": "クリエイティブスペース",
-    "hint_name_first": "クリエイティブスペースを作成するには名前を入力してください。",
-    "hint_pick": "クリエイティブスペースを選ぶか、新しく始めてください。",
+    "hint_creating_fallback": "ワールド",
+    "hint_name_first": "ワールドを作成するには名前を入力してください。",
+    "hint_pick": "ワールドを選ぶか、新しく始めてください。",
     "cta_open": "{{name}} を開く",
     "cta_create_named": "{{name}} を作成",
-    "cta_create_workspace": "クリエイティブスペースを作成",
+    "cta_create_workspace": "ワールドを作成",
     "cta_creating": "作成中…",
     "slug_format_error": "使用できるのは小文字、数字、ハイフンのみです",
-    "slug_taken_error": "そのクリエイティブスペース URL はすでに使われています。",
-    "slug_reserved_error": "そのクリエイティブスペース URL は予約済みのため使用できません。",
-    "slug_conflict_toast": "別のクリエイティブスペース URL を選んでください",
-    "create_failed_toast": "クリエイティブスペースを作成できませんでした",
-    "creation_disabled_eyebrow": "クリエイティブスペースの作成は無効です",
+    "slug_taken_error": "そのワールド URL はすでに使われています。",
+    "slug_reserved_error": "そのワールド URL は予約済みのため使用できません。",
+    "slug_conflict_toast": "別のワールド URL を選んでください",
+    "create_failed_toast": "ワールドを作成できませんでした",
+    "creation_disabled_eyebrow": "ワールドの作成は無効です",
     "creation_disabled_headline": "管理者に招待を依頼してください。",
-    "creation_disabled_lede": "この Weave a World インスタンスでは新しいクリエイティブスペースを作成できません。管理者からクリエイティブスペースに招待されたら、招待を承諾して更新し、続けてください。",
+    "creation_disabled_lede": "この Weave a World インスタンスでは新しいワールドを作成できません。管理者からワールドに招待されたら、招待を承諾して更新し、続けてください。",
     "creation_disabled_logout": "ログアウト",
-    "creation_disabled_eyebrow_resume": "あなたのクリエイティブスペース",
+    "creation_disabled_eyebrow_resume": "あなたのワールド",
     "creation_disabled_headline_resume": "{{name}} で続けましょう。",
-    "creation_disabled_lede_resume": "このインスタンスではクリエイティブスペースの作成が無効になっているため、既存のクリエイティブスペースへ続けて移動します。"
+    "creation_disabled_lede_resume": "このインスタンスではワールドの作成が無効になっているため、既存のワールドへ続けて移動します。"
   },
   "step_runtime": {
     "scanning_headline": "このコンピュータを接続中…",
@@ -257,7 +259,7 @@
   },
   "errors": {
     "skip_failed": "オンボーディングを完了できませんでした",
-    "mika_setup_failed": "Mika クリエイティブスペースを開始できませんでした"
+    "mika_setup_failed": "Mika ワールドを開始できませんでした"
   },
   "mika_intro": {
     "headline": "最初のエージェント仲間、Mika を紹介します。",

@@ -76,7 +76,7 @@ describe("AccessCell", () => {
         invocation_targets: [{ target_type: "workspace", target_id: "" }],
       }),
     );
-    expect(screen.getByText("Creative Space")).toBeInTheDocument();
+    expect(screen.getByText("World")).toBeInTheDocument();
   });
 
   it("renders 'Specific people' for a public_to agent with a member target", () => {
@@ -89,7 +89,7 @@ describe("AccessCell", () => {
       }),
     );
     expect(screen.getByText("Specific people")).toBeInTheDocument();
-    expect(screen.queryByText("Creative Space")).not.toBeInTheDocument();
+    expect(screen.queryByText("World")).not.toBeInTheDocument();
   });
 
   it("prefers 'Workspace' when a workspace target sits alongside member targets", () => {
@@ -102,7 +102,7 @@ describe("AccessCell", () => {
         ],
       }),
     );
-    expect(screen.getByText("Creative Space")).toBeInTheDocument();
+    expect(screen.getByText("World")).toBeInTheDocument();
   });
 
   it("renders 'Specific people' for a public_to agent with no targets", () => {

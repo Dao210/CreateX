@@ -94,7 +94,7 @@
     "author_renamed": "捕获时为 {{captured}} · 现为 {{current}}",
     "author_archived": "已归档",
     "author_deleted_agent": "智能体已删除",
-    "author_left_workspace": "已不在创作区",
+    "author_left_workspace": "已不在世界",
     "error_source_changed": "来源已发生变化。请检查刷新后的预览，再次提交。",
     "error_agent_unsupported": "此智能体运行时需要更新后才能使用已捕获上下文。请切换到手动模式或更新运行时。",
     "error_server_unsupported": "服务端需要更新后才能创建带已捕获上下文的子任务。",
@@ -115,7 +115,7 @@
   },
   "page": {
     "breadcrumb_title": "任务",
-    "breadcrumb_workspace_fallback": "创作区",
+    "breadcrumb_workspace_fallback": "世界",
     "empty_title": "还没有任务",
     "move_failed": "移动任务失败"
   },
@@ -147,7 +147,7 @@
   },
   "scope": {
     "all_label": "全部",
-    "all_description": "创作区内的全部任务",
+    "all_description": "世界内的全部任务",
     "members_label": "成员",
     "members_description": "分配给成员的任务",
     "agents_label": "智能体",
@@ -377,7 +377,7 @@
     "close": "关闭预览"
   },
   "detail": {
-    "not_found": "这个任务不存在或已在该创作区被删除。",
+    "not_found": "这个任务不存在或已在该世界被删除。",
     "breadcrumb_project_unknown": "未知项目",
     "back": "返回",
     "title_placeholder": "任务标题",
@@ -405,7 +405,7 @@
     "quick_action_blocked": "无法触发 {{name}}",
     "quick_action_posted": "评论已发布",
     "quick_action_blocked_title": "你无法执行这条快捷操作",
-    "quick_action_blocked_body": "\"{{name}}\"由一个你无权触发的智能体执行。可以请创作区管理员把该智能体开放给团队，或把这条操作改绑一个共享的智能体。",
+    "quick_action_blocked_body": "\"{{name}}\"由一个你无权触发的智能体执行。可以请世界管理员把该智能体开放给团队，或把这条操作改绑一个共享的智能体。",
     "quick_action_blocked_ok": "知道了",
     "pull_requests_loading": "加载中...",
     "pull_request_state_draft": "Draft",
@@ -783,7 +783,7 @@
     "delete_failed": "删除任务失败",
     "delete_dialog_title_other": "删除 {{count}} 个任务？",
     "delete_dialog_desc_other": "此操作无法撤销，所选任务及其全部关联数据都会被永久删除。",
-    "delete_dialog_warning": "任何创作区成员都可以删除任务。",
+    "delete_dialog_warning": "任何世界成员都可以删除任务。",
     "cancel": "取消"
   },
   "card": {
@@ -873,7 +873,7 @@
     }
   },
   "labels_panel": {
-    "intro": "创建和管理标签，用于在创作区内分类任务。",
+    "intro": "创建和管理标签，用于在世界内分类任务。",
     "new_placeholder": "新标签名称...",
     "new_aria": "新标签名称",
     "add_action": "添加",
@@ -905,7 +905,7 @@
   },
   "save_view": {
     "title": "保存为视图",
-    "hint_workspace": "基于创作区全部任务创建",
+    "hint_workspace": "基于世界全部任务创建",
     "hint_my_any": "基于「我的任务 · 全部」创建",
     "hint_my_assigned": "基于「我的任务 · 分配给我」创建",
     "hint_my_created": "基于「我的任务 · 我创建的」创建",
@@ -917,7 +917,7 @@
     "name_label": "名称",
     "visibility_label": "可见性",
     "visibility_private": "仅自己可见",
-    "visibility_workspace": "创作区成员可见",
+    "visibility_workspace": "世界成员可见",
     "filters_label": "筛选",
     "custom_property": "自定义属性",
     "create": "创建视图",
@@ -934,8 +934,8 @@
     "update": "保存修改",
     "toast_updated": "视图已更新",
     "toast_conflict": "视图已被他人修改，请重新打开后再试",
-    "hint_workspace_members": "基于创作区中成员负责的任务创建",
-    "hint_workspace_agents": "基于创作区中智能体负责的任务创建",
+    "hint_workspace_members": "基于世界中成员负责的任务创建",
+    "hint_workspace_agents": "基于世界中智能体负责的任务创建",
     "scope_label_workspace": "负责人类型",
     "scope_label_my": "与我的关系",
     "variant_all": "不限负责人",
@@ -950,7 +950,7 @@
     "trigger": "视图",
     "empty": "还没有保存的视图",
     "private_group": "私有",
-    "shared_group": "创作区共享",
+    "shared_group": "世界共享",
     "exit": "退出视图",
     "unavailable": "该视图已不可用",
     "edit": "编辑视图"
@@ -986,7 +986,7 @@
     "hook_never_run": "该 hook 尚未运行过。",
     "surface_loading": "正在加载 {{name}}…",
     "surface_unavailable": "{{name}} 的界面无法加载，已安装的版本可能不包含它。",
-    "surface_navigated": "{{name}} 试图把面板替换成从别处加载的页面。已经拦下并断开连接，建议告知创作区管理员。"
+    "surface_navigated": "{{name}} 试图把面板替换成从别处加载的页面。已经拦下并断开连接，建议告知世界管理员。"
   },
   "wakeups": {
     "title": "唤醒",
@@ -1072,7 +1072,7 @@
     "stopped_running": "后续唤醒已关闭 · 仍有执行未结束",
     "next_at": "下次 {{time}}",
     "no_run": "尚未运行",
-    "permission_error": "无管理权限，请联系创建者或创作区管理员。",
+    "permission_error": "无管理权限，请联系创建者或世界管理员。",
     "conflict_error": "规则已更新，请刷新后重试。",
     "conditions": {
       "run_queued": "当 {{agent}} 的运行进入队列时",
@@ -1183,7 +1183,7 @@
       "submitting": "创建中…",
       "cancel": "取消",
       "error": "无法创建唤醒，请检查设置后重试。",
-      "capacity_error": "此任务或创作区开启的唤醒已达上限。",
+      "capacity_error": "此任务或世界开启的唤醒已达上限。",
       "missing_condition": "请选择条件。",
       "missing_agent": "请选择要唤醒的智能体。",
       "missing_events": "请至少选择一个事件。",
@@ -1249,8 +1249,8 @@
       "enable": "在此任务上启用",
       "toggle": "子任务结束时唤醒负责人",
       "save_error": "无法保存系统规则。",
-      "default_on": "创作区默认开启，可在「设置 → 唤醒」中修改默认值。",
-      "default_off": "创作区默认关闭，可在「设置 → 唤醒」中修改默认值。",
+      "default_on": "世界默认开启，可在「设置 → 唤醒」中修改默认值。",
+      "default_off": "世界默认关闭，可在「设置 → 唤醒」中修改默认值。",
       "notify_member": "通过收件箱通知 {{name}}",
       "instruction": "唤醒后要做什么",
       "instruction_edit": "编辑指令",

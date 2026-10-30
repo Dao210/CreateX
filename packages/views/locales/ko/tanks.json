@@ -53,7 +53,7 @@
   "base_defeat": "기지가 파괴되었습니다. 중앙과 양쪽 측면을 살피세요.",
   "lives_defeat": "모든 탱크를 잃었습니다. 방어선을 다시 구축하세요.",
   "cleared_help": "{{kills}}대 격파 · {{score}}점",
-  "local_records": "진행 상황과 기록은 이 기기에 계정 및 크리에이티브 스페이스별로 저장됩니다.",
+  "local_records": "진행 상황과 기록은 이 기기에 계정 및 세계별로 저장됩니다.",
   "levels": {
     "frontline": {
       "name": "벽돌 전선",

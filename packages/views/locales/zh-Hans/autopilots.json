@@ -85,7 +85,7 @@
     "run_blocked_attribution": "未触发——无法确定本次运行的负责成员",
     "run_blocked_already_active": "未触发——最近已有一次运行覆盖了本次",
     "run_blocked_quota_exceeded": "未触发——本周期的运行额度已用尽",
-    "run_blocked_issue_limit_reached": "未触发——创作区任务总数已达到上限",
+    "run_blocked_issue_limit_reached": "未触发——世界任务总数已达到上限",
     "run_blocked_generic": "未触发——本次运行已被拦截",
     "section_properties": "属性",
     "section_triggers": "触发器",
@@ -126,7 +126,7 @@
     "toast_granted": "已授予访问权限",
     "toast_revoked": "已移除访问权限",
     "toast_failed": "更新访问权限失败",
-    "owner_note": "创建者和创作区管理员始终拥有访问权限。"
+    "owner_note": "创建者和世界管理员始终拥有访问权限。"
   },
   "run_status": {
     "issue_created": "已创建任务",
@@ -486,7 +486,7 @@
     "running": "运行中",
     "active_runs": "{{count}} 个运行未结束",
     "issue_closed": "任务已关闭",
-    "read_only": "仅创建者或创作区管理员可管理此唤醒",
+    "read_only": "仅创建者或世界管理员可管理此唤醒",
     "select_row": "选择 {{issue}}，{{agent}}",
     "select_page": "选择本页已开启的唤醒",
     "load_error": "无法加载唤醒",

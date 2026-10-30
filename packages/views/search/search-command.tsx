@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Check, Monitor, Moon, SearchIcon, Sun } from "lucide-react";
+import { Check, CircleUser, Monitor, Moon, SearchIcon, Sun } from "lucide-react";
 import { Command as CommandPrimitive } from "cmdk";
 import { useQuery } from "@tanstack/react-query";
 import { useWorkspaceId } from "@auro/core/hooks";
@@ -30,8 +30,8 @@ const PAGE_KEYWORDS: Record<WorkspacePageKey, string[]> = {
   skills: ["skills", "library", "技能"],
   siege: ["siege", "game", "workshop", "blueprint", "涂鸦", "攻城", "游戏"],
   tanks: ["tanks", "tank defense", "castle", "坦克", "守城", "戦車", "탱크", "chars"],
-  me: ["me", "mine", "profile", "collection", "weapons", "progress", "我的", "收藏", "武器", "进度"],
-  settings: ["settings", "config", "preferences", "设置", "配置"],
+  me: ["me", "mine", "creations", "collection", "weapons", "progress", "我的", "作品", "收藏", "武器", "进度"],
+  settings: ["world", "settings", "config", "世界", "设置", "配置"],
 };
 const PAGE_KEYS = Object.keys(WORKSPACE_PAGES) as WorkspacePageKey[];
 const GROUP_CLASS = "p-2 [&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-caption [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground";
@@ -56,8 +56,20 @@ export function SearchCommand() {
   // The launcher mounts this module on demand. Directory data is fetched only
   // after typing, and its existing workspace cache is reused across openings.
   const { data: members = [] } = useQuery({ ...memberListOptions(wsId), enabled: open && !!q });
-  const pages = useMemo(() => PAGE_KEYS.map((key) => ({ key, label: tNav(($) => $.nav[WORKSPACE_PAGES[key].navKey]) })), [tNav]);
-  const filteredPages = pages.filter((page) => !q || matchesRow(page.label, PAGE_KEYWORDS[page.key], q));
+  const pages = useMemo(() => [
+    ...PAGE_KEYS.map((key) => ({
+      key,
+      label: key === "settings" ? tNav(($) => $.sidebar.world_settings) : tNav(($) => $.nav[WORKSPACE_PAGES[key].navKey]),
+      href: key === "settings" ? `${paths.settings()}?tab=workspace` : paths[key](),
+      keywords: PAGE_KEYWORDS[key],
+    })),
+    {
+      key: "account", label: tNav(($) => $.sidebar.account_settings),
+      href: `${paths.settings()}?tab=profile`,
+      keywords: ["account", "profile", "preferences", "settings", "账号", "个人资料", "偏好", "设置"],
+    },
+  ], [paths, tNav]);
+  const filteredPages = pages.filter((page) => !q || matchesRow(page.label, page.keywords, q));
   const wantsMembers = q.length >= 3 && ["members", "people", "users", "team"].some((word) => word.startsWith(q));
   const filteredMembers = q ? members.filter((member) => wantsMembers || matchesRow(member.name, [member.email, ...(q.length >= 3 ? [member.role] : [])], q)).slice(0, 10) : [];
   const commands = [
@@ -103,8 +115,8 @@ export function SearchCommand() {
           <CommandPrimitive.List className="max-h-[min(400px,50vh)] overflow-y-auto overflow-x-hidden">
             {filteredPages.length > 0 && <CommandPrimitive.Group heading={t(($) => $.groups.pages)} className={GROUP_CLASS}>
               {filteredPages.map((page) => {
-                const Icon = routeIconForPath(paths[page.key]());
-                return <CommandPrimitive.Item key={page.key} value={`page:${page.key}`} onSelect={() => openPath(paths[page.key]())} className={ROW_CLASS}>
+                const Icon = page.key === "account" ? CircleUser : routeIconForPath(page.href);
+                return <CommandPrimitive.Item key={page.key} value={`page:${page.key}`} onSelect={() => openPath(page.href)} className={ROW_CLASS}>
                   <Icon className="size-4 shrink-0 text-muted-foreground" /><HighlightText text={page.label} query={query} />
                 </CommandPrimitive.Item>;
               })}

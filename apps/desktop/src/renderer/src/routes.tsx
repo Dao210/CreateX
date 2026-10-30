@@ -155,7 +155,7 @@ export const appRoutes: RouteObject[] = [
           // each game owns the content header, controls and scrolling.
           { path: "siege", element: <Suspense><SiegePage /></Suspense>, handle: { title: "Siege" } },
           { path: "tanks", element: <TanksPage />, handle: { title: "Tank Defense" } },
-          { path: "me", element: <MePageRoute />, handle: { title: "My Space" } },
+          { path: "me", element: <MePageRoute />, handle: { title: "My Creations" } },
           {
             path: "siege/campaign",
             element: <Suspense><SiegeCampaignPage /></Suspense>,

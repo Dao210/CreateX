@@ -11,7 +11,7 @@
     "skills": "スキル",
     "siege": "シージ",
     "tanks": "戦車防衛",
-    "me": "マイページ",
+    "me": "自分の作品",
     "settings": "設定"
   },
   "tab": {
@@ -37,15 +37,15 @@
     "server_version": "サーバーバージョン {{version}}"
   },
   "workspace_loader": {
-    "loading_workspace": "クリエイティブスペースを読み込み中…",
+    "loading_workspace": "ワールドを読み込み中…",
     "loading_named_prefix": "読み込み中"
   },
   "sidebar": {
     "unpin_tooltip": "ピン留めを解除",
-    "workspaces_label": "クリエイティブスペース",
-    "create_workspace": "クリエイティブスペースを作成",
+    "workspaces_label": "ワールド",
+    "create_workspace": "ワールドを作成",
     "pending_invitations_label": "保留中の招待",
-    "invitation_workspace_fallback": "クリエイティブスペース",
+    "invitation_workspace_fallback": "ワールド",
     "invitation_join": "参加",
     "invitation_decline": "辞退",
     "log_out": "ログアウト",
@@ -53,14 +53,17 @@
     "new_issue_shortcut": "C",
     "pinned_label": "ピン留め済み",
     "ai_team_group": "AI チーム",
-    "my_assistants_group": "マイアシスタント",
+    "my_assistants_group": "ワールドのアシスタント",
     "show_more_pins": "さらに {{count}} 件を表示…",
     "show_fewer_pins": "表示を減らす",
     "unread_overflow": "99+",
     "discord_card": {
       "title": "Discord に参加",
       "dismiss": "閉じる"
-    }
+    },
+    "world_settings": "ワールド設定",
+    "account_settings": "アカウント設定",
+    "account_settings_for": "{{name}} · アカウント設定"
   },
   "siege": {
     "workshop": "武器工房",

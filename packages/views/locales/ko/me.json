@@ -1,7 +1,7 @@
 {
-  "title": "내 공간",
+  "title": "내 작품",
   "summary": {
-    "weapons": "무기",
+    "weapons": "작품",
     "stars": "별",
     "best": "최고 기록"
   },
@@ -12,7 +12,7 @@
     "mcp": "MCP로 생성"
   },
   "weapons": {
-    "title": "무기 컬렉션",
+    "title": "작품 컬렉션",
     "siege_empty": "저장된 설계도가 없습니다.",
     "tanks_empty": "탱크 캐릭터가 없습니다.",
     "mcp_empty": "아직 MCP로 생성된 콘텐츠가 없습니다.",
@@ -53,5 +53,10 @@
   },
   "loading": "컬렉션을 불러오는 중…",
   "error": "컬렉션을 불러오지 못했습니다.",
-  "retry": "다시 시도"
+  "retry": "다시 시도",
+  "scope": "현재 세계: {{name}}",
+  "tabs": {
+    "label": "작품과 게임 진행",
+    "creations": "작품"
+  }
 }

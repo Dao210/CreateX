@@ -1,12 +1,14 @@
 {
   "civilization": {
-    "title": "Une nouvelle civilisation",
-    "preparing": "Préparation de votre espace créatif…",
-    "creating": "Création de votre nouvelle civilisation…",
-    "entering": "Ouverture de votre espace créatif…",
-    "failed": "Impossible de préparer votre espace créatif.",
-    "creation_disabled": "La création d’espaces créatifs est désactivée. Demandez une invitation à un administrateur.",
-    "retry": "Réessayer"
+    "title": "Votre monde",
+    "preparing": "Préparation de votre monde…",
+    "creating": "Création de votre monde…",
+    "entering": "Ouverture de votre monde…",
+    "failed": "Impossible de préparer votre monde.",
+    "creation_disabled": "La création de mondes est désactivée. Demandez une invitation à un administrateur.",
+    "retry": "Réessayer",
+    "world_name": "Le monde de {{name}}",
+    "default_world_name": "Mon monde"
   },
   "step_nav": {
     "wordmark": "Weave a World",
@@ -15,7 +17,7 @@
       "label": "À propos de vous"
     },
     "workspace": {
-      "label": "Espace créatif"
+      "label": "Monde"
     },
     "runtime": {
       "label": "Rencontrez Mika"
@@ -25,7 +27,7 @@
     "wordmark": "Bienvenue sur Weave a World",
     "headline_line1": "Vos coéquipiers IA,",
     "headline_line2": "dans",
-    "headline_emphasis": "un seul espace créatif.",
+    "headline_emphasis": "un seul monde.",
     "lede": "Confiez-leur du travail comme à un collègue — ils s'en saisissent, mettent à jour le statut et commentent une fois terminé.",
     "continue_on_web": "Continuer sur le web",
     "start_exploring": "Commencer l'exploration",
@@ -144,7 +146,7 @@
   },
   "welcome_after_onboarding": {
     "skip": {
-      "loading": "Configuration de votre espace créatif…",
+      "loading": "Configuration de votre monde…",
       "title": "Bienvenue sur Weave a World !",
       "subtitle": "Nous avons ajouté une tâche pour vous aider à connecter un runtime. Une fois prêt, commencez avec Mika depuis Runtimes.",
       "got_it": "Compris",
@@ -162,13 +164,13 @@
     }
   },
   "step_workspace": {
-    "eyebrow_first": "Votre premier espace créatif",
+    "eyebrow_first": "Votre premier monde",
     "eyebrow_resume": "Reprendre ou repartir de zéro",
-    "headline_first": "Nommez votre espace créatif.",
+    "headline_first": "Nommez votre monde.",
     "headline_resume": "Continuez avec {{name}}, ou créez-en un autre.",
-    "lede_first": "Un espace créatif réunit vos tâches, vos agents et vos projets. Vous pourrez inviter des coéquipiers ou en créer d'autres plus tard.",
-    "lede_resume": "Reprenez la configuration avec l'espace créatif que vous avez déjà, ou créez-en un nouveau à côté — vous pouvez appartenir à autant d'espaces que vous voulez.",
-    "name_label": "Nom de l'espace créatif",
+    "lede_first": "Un monde réunit vos tâches, vos agents et vos projets. Vous pourrez inviter des coéquipiers ou en créer d'autres plus tard.",
+    "lede_resume": "Reprenez la configuration avec le monde que vous avez déjà, ou créez-en un nouveau à côté — vous pouvez appartenir à autant d'espaces que vous voulez.",
+    "name_label": "Nom du monde",
     "name_placeholder": "Acme Inc, Mon labo, Projets perso…",
     "random_name": "Aléatoire",
     "url_label": "URL",
@@ -177,29 +179,29 @@
     "issue_prefix_prefix": "Les tâches ressembleront à ",
     "issue_prefix_suffix": ". Vous pourrez le changer plus tard dans les paramètres.",
     "issue_prefix_pending": "Définissez l'URL ci-dessus et les numéros de tâches la suivront — ou saisissez un préfixe ici.",
-    "create_new_title": "Créer un espace créatif",
+    "create_new_title": "Créer un monde",
     "hint_opening": "Ouverture de {{name}}.",
     "hint_creating": "Création de {{name}}.",
     "hint_creating_pending": "Création de {{name}}…",
-    "hint_creating_fallback": "votre espace créatif",
-    "hint_name_first": "Nommez votre espace créatif pour le créer.",
-    "hint_pick": "Choisissez votre espace créatif ou créez-en un nouveau.",
+    "hint_creating_fallback": "votre monde",
+    "hint_name_first": "Nommez votre monde pour le créer.",
+    "hint_pick": "Choisissez votre monde ou créez-en un nouveau.",
     "cta_open": "Ouvrir {{name}}",
     "cta_create_named": "Créer {{name}}",
-    "cta_create_workspace": "Créer un espace créatif",
+    "cta_create_workspace": "Créer un monde",
     "cta_creating": "Création…",
     "slug_format_error": "Uniquement des lettres minuscules, des chiffres et des traits d'union",
-    "slug_taken_error": "Cette URL d'espace créatif est déjà prise.",
-    "slug_reserved_error": "Cette URL d'espace créatif est réservée et ne peut pas être utilisée.",
-    "slug_conflict_toast": "Choisissez une autre URL d'espace créatif",
-    "create_failed_toast": "Impossible de créer l'espace créatif",
-    "creation_disabled_eyebrow": "La création d'espaces créatifs est désactivée",
+    "slug_taken_error": "Cette URL de monde est déjà prise.",
+    "slug_reserved_error": "Cette URL de monde est réservée et ne peut pas être utilisée.",
+    "slug_conflict_toast": "Choisissez une autre URL de monde",
+    "create_failed_toast": "Impossible de créer le monde",
+    "creation_disabled_eyebrow": "La création de mondes est désactivée",
     "creation_disabled_headline": "Demandez une invitation à votre administrateur.",
-    "creation_disabled_lede": "Cette instance Weave a World n'autorise pas la création de nouveaux espaces créatifs. Dès qu'un administrateur vous invite, acceptez l'invitation et actualisez pour continuer.",
+    "creation_disabled_lede": "Cette instance Weave a World n'autorise pas la création de nouveaux mondes. Dès qu'un administrateur vous invite, acceptez l'invitation et actualisez pour continuer.",
     "creation_disabled_logout": "Se déconnecter",
-    "creation_disabled_eyebrow_resume": "Votre espace créatif",
+    "creation_disabled_eyebrow_resume": "Votre monde",
     "creation_disabled_headline_resume": "Continuez avec {{name}}.",
-    "creation_disabled_lede_resume": "La création d'espaces créatifs est désactivée sur cette instance : vous continuerez donc dans votre espace existant."
+    "creation_disabled_lede_resume": "La création de mondes est désactivée sur cette instance : vous continuerez donc dans votre espace existant."
   },
   "step_runtime": {
     "scanning_headline": "Connexion de cet ordinateur…",
@@ -259,7 +261,7 @@
   },
   "errors": {
     "skip_failed": "Échec de la finalisation de la prise en main",
-    "mika_setup_failed": "Impossible de démarrer votre espace créatif Mika"
+    "mika_setup_failed": "Impossible de démarrer votre monde Mika"
   },
   "mika_intro": {
     "headline": "Rencontrez Mika, votre premier coéquipier agent.",

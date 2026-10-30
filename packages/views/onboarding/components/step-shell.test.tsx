@@ -101,7 +101,7 @@ describe("onboarding progress rail", () => {
 
     const current = container.querySelector('[aria-current="step"]')!;
     expect(current).toBeInTheDocument();
-    expect(current.textContent).toContain("Creative Space");
+    expect(current.textContent).toContain("World");
   });
 
   // Forward navigation has to run the current step's validation and submit, so

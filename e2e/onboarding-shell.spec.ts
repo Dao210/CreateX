@@ -7,7 +7,8 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
     await page.emulateMedia({ reducedMotion: "reduce", colorScheme: viewport.width === 390 ? "dark" : "light" });
     await context.addCookies([{ name: "auro-locale", value: "zh-Hans", url: baseURL! }]);
     const api = new TestApiClient();
-    await api.login(`civilization-shell-${viewport.width}-${Date.now()}@localhost`, "新文明测试");
+    const nickname = "世界命名测试";
+    await api.login(`world-shell-${viewport.width}-${Date.now()}@localhost`, nickname);
     await page.addInitScript((token) => localStorage.setItem("auro_token", token!), api.getToken());
     let release!: () => void;
     const gate = new Promise<void>((resolve) => { release = resolve; });
@@ -18,15 +19,16 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
     });
     try {
       await page.goto("/onboarding");
-      await expect(page.getByRole("heading", { name: "新文明", exact: true })).toBeVisible();
-      await expect(page.getByRole("status")).toHaveText("正在进入工作区…", { timeout: 30000 });
+      await expect(page.getByRole("heading", { name: "你的世界", exact: true })).toBeVisible();
+      await expect(page.getByRole("status")).toHaveText("正在进入世界…", { timeout: 30000 });
+      expect((await api.getWorkspaces()).map((world) => world.name)).toEqual([`${nickname}的世界`]);
       await expect(page.getByRole("textbox")).toHaveCount(0);
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-      const headingBox = await page.getByRole("heading", { name: "新文明", exact: true }).boundingBox();
+      const headingBox = await page.getByRole("heading", { name: "你的世界", exact: true }).boundingBox();
       expect(headingBox!.y + headingBox!.height).toBeLessThan(viewport.height);
       await page.screenshot({ path: testInfo.outputPath(`civilization-${viewport.width}.png`) });
       release();
-      await expect(page).toHaveURL(/\/[^/]+\/issues$/, { timeout: 30000 });
+      await expect(page).toHaveURL(/\/[^/]+\/me$/, { timeout: 30000 });
     } finally {
       release();
       for (const workspace of await api.getWorkspaces()) {

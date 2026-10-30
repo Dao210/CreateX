@@ -1,14 +1,14 @@
 {
   "page": {
     "title": "Skills",
-    "tagline": "Des instructions que n'importe quel agent de cet espace créatif peut utiliser.",
+    "tagline": "Des instructions que n'importe quel agent de ce monde peut utiliser.",
     "learn_more": "En savoir plus →",
     "new_skill": "Nouveau skill",
     "search_placeholder": "Rechercher des skills…",
     "scopes": {
       "all": {
         "label": "Tous",
-        "description": "Tous les skills de cet espace créatif"
+        "description": "Tous les skills de ce monde"
       },
       "used": {
         "label": "Utilisés",
@@ -35,7 +35,7 @@
       "try_different": " Essayez une autre recherche."
     },
     "intro_banner": {
-      "title": "Partagés avec votre espace créatif.",
+      "title": "Partagés avec votre monde.",
       "body": "Chacun peut créer un skill, en importer un depuis une URL ou un dossier local, ou en copier un depuis son runtime local : tous les agents pourront l'utiliser.",
       "highlight": "Les skills d'un runtime local restent privés tant que vous n'en copiez pas un ici."
     },
@@ -44,7 +44,7 @@
       "fallback": "Une erreur est survenue lors de la récupération de la liste des skills.",
       "retry": "Réessayer"
     },
-    "supporting_data_warning": "Certaines données de l'espace créatif n'ont pas pu être chargées. L'attribution des créateurs, les noms de runtimes ou les droits de modification peuvent apparaître incomplets."
+    "supporting_data_warning": "Certaines données du monde n'ont pas pu être chargées. L'attribution des créateurs, les noms de runtimes ou les droits de modification peuvent apparaître incomplets."
   },
   "table": {
     "name": "Nom",
@@ -129,7 +129,7 @@
     "read_only": "Lecture seule",
     "delete_aria": "Supprimer le skill",
     "delete_tooltip": "Supprimer le skill",
-    "supporting_data_warning": "Certaines données de l'espace créatif n'ont pas pu être chargées. L'attribution des créateurs, les noms de runtimes ou les droits de modification peuvent apparaître incomplets jusqu'à la prochaine actualisation.",
+    "supporting_data_warning": "Certaines données du monde n'ont pas pu être chargées. L'attribution des créateurs, les noms de runtimes ou les droits de modification peuvent apparaître incomplets jusqu'à la prochaine actualisation.",
     "delete_file": "Supprimer le fichier",
     "name_placeholder": "nom-du-skill",
     "description_placeholder": "Une phrase décrivant quand un agent doit utiliser ce skill…",
@@ -229,8 +229,8 @@
       "used_by_other": "Utilisé par {{count}} agents",
       "used_by_empty": "Assigné à aucun agent pour l'instant. Ouvrez l'onglet Skills d'un agent pour l'assigner.",
       "permissions_owner": "Vous pouvez modifier et supprimer ce skill. Les changements prennent effet à la prochaine exécution d'agent.",
-      "permissions_locked_creator": "Seuls le créateur ({{name}}) ou un administrateur de l'espace créatif peuvent modifier ce skill.",
-      "permissions_locked": "Seuls le créateur ou un administrateur de l'espace créatif peuvent modifier ce skill.",
+      "permissions_locked_creator": "Seuls le créateur ({{name}}) ou un administrateur du monde peuvent modifier ce skill.",
+      "permissions_locked": "Seuls le créateur ou un administrateur du monde peuvent modifier ce skill.",
       "properties_help": "À propos des propriétés du skill",
       "character_count": "{{count}} caractères"
     },
@@ -255,7 +255,7 @@
     "method": {
       "chooser": {
         "title": "Nouveau skill",
-        "desc": "Choisissez comment ajouter un skill à cet espace créatif."
+        "desc": "Choisissez comment ajouter un skill à ce monde."
       },
       "manual": {
         "title": "Créer manuellement",
@@ -277,7 +277,7 @@
     "manual": {
       "name_label": "Nom",
       "name_placeholder": "ex. review-helper",
-      "name_hint": "Doit être unique dans l'espace créatif.",
+      "name_hint": "Doit être unique dans le monde.",
       "description_label": "Description",
       "description_placeholder": "Une phrase sur le moment où assigner ce skill à un agent.",
       "name_conflict_hint": " Essayez un autre nom et renvoyez le formulaire.",
@@ -333,13 +333,13 @@
     "no_search_results_hint": "Aucun skill local ne correspond à « {{query}} ».",
     "ignored_files_hint": "Les liens symboliques, les fichiers illisibles, les fichiers trop volumineux et les ensembles très gros sont ignorés à l'importation.",
     "ready": "Prêt à importer",
-    "into_workspace": "dans cet espace créatif.",
+    "into_workspace": "dans ce monde.",
     "select_skill": "Sélectionnez un skill pour continuer.",
-    "import_button": "Importer dans l'espace créatif",
+    "import_button": "Importer dans le monde",
     "importing": "Importation…",
     "skill_files_one": "{{count}} fichier",
     "skill_files_other": "{{count}} fichiers",
-    "skill_name_label": "Nom du skill dans l'espace créatif",
+    "skill_name_label": "Nom du skill dans le monde",
     "skill_description_label": "Description",
     "skill_description_placeholder": "Facultatif — décrivez quand un agent doit utiliser ce skill.",
     "toast_imported": "Skill importé",
@@ -359,7 +359,7 @@
     "bulk_summary_failed": "En échec",
     "conflict_single_title": "Un skill portant ce nom existe déjà",
     "conflict_bulk_title": "{{count}} skills demandent une décision",
-    "conflict_hint": "Choisissez d'écraser le skill existant de l'espace créatif, de l'importer sous un nouveau nom, ou de l'ignorer.",
+    "conflict_hint": "Choisissez d'écraser le skill existant du monde, de l'importer sous un nouveau nom, ou de l'ignorer.",
     "conflict_locked_creator": "Ce skill a été créé par {{creator}}. Seul le créateur peut l'écraser depuis une importation locale ; modifiez-le depuis la page de détail du skill si vous devez le changer.",
     "conflict_locked": "Seul le créateur peut écraser ce skill depuis une importation locale ; modifiez-le depuis la page de détail du skill si vous devez le changer.",
     "conflict_overwrite": "Écraser",

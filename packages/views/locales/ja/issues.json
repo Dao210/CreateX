@@ -94,7 +94,7 @@
     "author_renamed": "保存時 {{captured}} · 現在 {{current}}",
     "author_archived": "アーカイブ済み",
     "author_deleted_agent": "削除されたエージェント",
-    "author_left_workspace": "クリエイティブスペースに所属していません",
+    "author_left_workspace": "ワールドに所属していません",
     "error_source_changed": "参照元が変更されました。更新されたプレビューを確認して、もう一度送信してください。",
     "error_agent_unsupported": "保存済みコンテキストを使うには、このエージェントのランタイムを更新してください。Manual に切り替えることもできます。",
     "error_server_unsupported": "保存済みコンテキスト付きのサブタスクを作成するには、サーバーの更新が必要です。",
@@ -115,7 +115,7 @@
   },
   "page": {
     "breadcrumb_title": "タスク",
-    "breadcrumb_workspace_fallback": "クリエイティブスペース",
+    "breadcrumb_workspace_fallback": "ワールド",
     "empty_title": "まだタスクがありません",
     "move_failed": "タスクを移動できませんでした"
   },
@@ -147,7 +147,7 @@
   },
   "scope": {
     "all_label": "すべて",
-    "all_description": "このクリエイティブスペースのすべてのタスク",
+    "all_description": "このワールドのすべてのタスク",
     "members_label": "メンバー",
     "members_description": "チームメンバーに割り当てられたタスク",
     "agents_label": "エージェント",
@@ -377,7 +377,7 @@
     "close": "プレビューを閉じる"
   },
   "detail": {
-    "not_found": "このタスクはこのクリエイティブスペースに存在しないか、削除されています。",
+    "not_found": "このタスクはこのワールドに存在しないか、削除されています。",
     "breadcrumb_project_unknown": "不明なプロジェクト",
     "back": "戻る",
     "title_placeholder": "タスクのタイトル",
@@ -405,7 +405,7 @@
     "quick_action_blocked": "{{name}} を実行できませんでした",
     "quick_action_posted": "コメントを投稿しました",
     "quick_action_blocked_title": "このクイックアクションは実行できません",
-    "quick_action_blocked_body": "「{{name}}」は、あなたが実行を許可されていないエージェントで動作します。クリエイティブスペース管理者にそのエージェントをチームへ公開してもらうか、共有エージェントへの変更を依頼してください。",
+    "quick_action_blocked_body": "「{{name}}」は、あなたが実行を許可されていないエージェントで動作します。ワールド管理者にそのエージェントをチームへ公開してもらうか、共有エージェントへの変更を依頼してください。",
     "quick_action_blocked_ok": "了解",
     "pull_requests_loading": "読み込み中...",
     "pull_request_state_draft": "ドラフト",
@@ -783,7 +783,7 @@
     "delete_failed": "タスクを削除できませんでした",
     "delete_dialog_title_other": "タスク {{count}} 件を削除しますか？",
     "delete_dialog_desc_other": "この操作は元に戻せません。選択したタスクと関連データがすべて完全に削除されます。",
-    "delete_dialog_warning": "クリエイティブスペースのメンバーであれば誰でもタスクを削除できます。",
+    "delete_dialog_warning": "ワールドのメンバーであれば誰でもタスクを削除できます。",
     "cancel": "キャンセル"
   },
   "card": {
@@ -873,7 +873,7 @@
     }
   },
   "labels_panel": {
-    "intro": "クリエイティブスペース全体でタスクを分類するラベルを作成・管理します。",
+    "intro": "ワールド全体でタスクを分類するラベルを作成・管理します。",
     "new_placeholder": "新しいラベル名...",
     "new_aria": "新しいラベル名",
     "add_action": "追加",
@@ -905,7 +905,7 @@
   },
   "save_view": {
     "title": "ビューとして保存",
-    "hint_workspace": "クリエイティブスペースの全タスクをもとに作成",
+    "hint_workspace": "ワールドの全タスクをもとに作成",
     "hint_my_any": "「マイタスク · すべて」をもとに作成",
     "hint_my_assigned": "「マイタスク · 自分に割り当て」をもとに作成",
     "hint_my_created": "「マイタスク · 自分が作成」をもとに作成",
@@ -917,7 +917,7 @@
     "name_label": "名前",
     "visibility_label": "公開範囲",
     "visibility_private": "自分のみ",
-    "visibility_workspace": "クリエイティブスペースのメンバーに表示",
+    "visibility_workspace": "ワールドのメンバーに表示",
     "filters_label": "フィルター",
     "custom_property": "カスタムプロパティ",
     "create": "ビューを作成",
@@ -934,8 +934,8 @@
     "update": "変更を保存",
     "toast_updated": "ビューを更新しました",
     "toast_conflict": "他のユーザーがこのビューを編集しました。開き直してから再試行してください",
-    "hint_workspace_members": "メンバーが担当するクリエイティブスペースのタスクをもとに作成",
-    "hint_workspace_agents": "エージェントが担当するクリエイティブスペースのタスクをもとに作成",
+    "hint_workspace_members": "メンバーが担当するワールドのタスクをもとに作成",
+    "hint_workspace_agents": "エージェントが担当するワールドのタスクをもとに作成",
     "scope_label_workspace": "担当者タイプ",
     "scope_label_my": "自分との関係",
     "variant_all": "担当者を問わない",
@@ -950,7 +950,7 @@
     "trigger": "ビュー",
     "empty": "保存されたビューはまだありません",
     "private_group": "プライベート",
-    "shared_group": "クリエイティブスペース共有",
+    "shared_group": "ワールド共有",
     "exit": "ビューを終了",
     "unavailable": "このビューは利用できなくなりました",
     "edit": "ビューを編集"
@@ -986,7 +986,7 @@
     "hook_never_run": "このフックはまだ実行されていません。",
     "surface_loading": "{{name}} を読み込んでいます…",
     "surface_unavailable": "{{name}} のインターフェースを読み込めません。インストール済みのバージョンに含まれていない可能性があります。",
-    "surface_navigated": "{{name}} がパネルを外部から読み込んだページに置き換えようとしました。停止して接続を切りました。クリエイティブスペース管理者に知らせてください。"
+    "surface_navigated": "{{name}} がパネルを外部から読み込んだページに置き換えようとしました。停止して接続を切りました。ワールド管理者に知らせてください。"
   },
   "wakeups": {
     "title": "ウェイクアップ",
@@ -1183,7 +1183,7 @@
       "submitting": "作成中…",
       "cancel": "キャンセル",
       "error": "ウェイクアップを作成できませんでした。設定を確認して再試行してください。",
-      "capacity_error": "このタスクまたはクリエイティブスペースの有効なウェイクアップは上限に達しています。",
+      "capacity_error": "このタスクまたはワールドの有効なウェイクアップは上限に達しています。",
       "missing_condition": "条件を選択してください。",
       "missing_agent": "起こすエージェントを選択してください。",
       "missing_events": "イベントを 1 つ以上選択してください。",
@@ -1249,8 +1249,8 @@
       "enable": "このタスクで有効",
       "toggle": "サブタスク完了時に担当者を起こす",
       "save_error": "システムルールを保存できませんでした。",
-      "default_on": "クリエイティブスペースでは既定でオン。既定値は「設定 → ウェイクアップ」で変更できます。",
-      "default_off": "クリエイティブスペースでは既定でオフ。既定値は「設定 → ウェイクアップ」で変更できます。",
+      "default_on": "ワールドでは既定でオン。既定値は「設定 → ウェイクアップ」で変更できます。",
+      "default_off": "ワールドでは既定でオフ。既定値は「設定 → ウェイクアップ」で変更できます。",
       "notify_member": "{{name}} に受信トレイで通知",
       "instruction": "起きたあとにすること",
       "instruction_edit": "指示を編集",

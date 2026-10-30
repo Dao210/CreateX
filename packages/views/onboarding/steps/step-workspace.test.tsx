@@ -97,9 +97,9 @@ describe("StepWorkspace — DISABLE_WORKSPACE_CREATION gate", () => {
     renderStep({ existing: null, disabled: false });
 
     expect(
-      screen.getByText("Name your creative space.", { exact: false }),
+      screen.getByText("Name your world.", { exact: false }),
     ).toBeInTheDocument();
-    expect(screen.getByLabelText("Creative Space name")).toBeInTheDocument();
+    expect(screen.getByLabelText("World name")).toBeInTheDocument();
     expect(screen.getByLabelText("URL")).toBeInTheDocument();
   });
 
@@ -111,7 +111,7 @@ describe("StepWorkspace — DISABLE_WORKSPACE_CREATION gate", () => {
         exact: false,
       }),
     ).toBeInTheDocument();
-    expect(screen.queryByLabelText("Creative Space name")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("World name")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("URL")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /log out/i })).toBeInTheDocument();
   });
@@ -171,7 +171,7 @@ describe("StepWorkspace — random workspace identity", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Random" }));
 
-    const name = screen.getByLabelText("Creative Space name") as HTMLInputElement;
+    const name = screen.getByLabelText("World name") as HTMLInputElement;
     const slug = screen.getByLabelText("URL") as HTMLInputElement;
     const expectedSlugPrefix = name.value
       .toLowerCase()
@@ -197,7 +197,7 @@ describe("StepWorkspace — issue prefix", () => {
   it("derives the prefix from the slug, not the name", () => {
     renderStep({ existing: null, disabled: false });
 
-    fireEvent.change(screen.getByLabelText("Creative Space name"), {
+    fireEvent.change(screen.getByLabelText("World name"), {
       target: { value: "Acme Inc" },
     });
 
@@ -211,7 +211,7 @@ describe("StepWorkspace — issue prefix", () => {
   it("fills the URL and prefix from a Chinese name", () => {
     renderStep({ existing: null, disabled: false });
 
-    fireEvent.change(screen.getByLabelText("Creative Space name"), {
+    fireEvent.change(screen.getByLabelText("World name"), {
       target: { value: "蜘蛛侠" },
     });
 
@@ -227,7 +227,7 @@ describe("StepWorkspace — issue prefix", () => {
   it("shows no prefix at all when the name romanizes to nothing", () => {
     renderStep({ existing: null, disabled: false });
 
-    fireEvent.change(screen.getByLabelText("Creative Space name"), {
+    fireEvent.change(screen.getByLabelText("World name"), {
       target: { value: "スパイダーマン" },
     });
 
@@ -254,7 +254,7 @@ describe("StepWorkspace — issue prefix", () => {
   it("follows a hand-typed URL over the romanized one", () => {
     renderStep({ existing: null, disabled: false });
 
-    fireEvent.change(screen.getByLabelText("Creative Space name"), {
+    fireEvent.change(screen.getByLabelText("World name"), {
       target: { value: "前端团队" },
     });
     expect(prefixInput().value).toBe("QIAN");
@@ -271,7 +271,7 @@ describe("StepWorkspace — issue prefix", () => {
   it("stops following the slug once the user edits it, and normalizes input", () => {
     renderStep({ existing: null, disabled: false });
 
-    fireEvent.change(screen.getByLabelText("Creative Space name"), {
+    fireEvent.change(screen.getByLabelText("World name"), {
       target: { value: "Acme Inc" },
     });
     fireEvent.change(prefixInput(), { target: { value: "fe-team!" } });
@@ -292,7 +292,7 @@ describe("StepWorkspace — issue prefix", () => {
     mockCreateMutate.mockClear();
     renderStep({ existing: null, disabled: false });
 
-    fireEvent.change(screen.getByLabelText("Creative Space name"), {
+    fireEvent.change(screen.getByLabelText("World name"), {
       target: { value: "前端团队" },
     });
     fireEvent.change(screen.getByLabelText("URL"), {
@@ -313,7 +313,7 @@ describe("StepWorkspace — issue prefix", () => {
     mockCreateMutate.mockClear();
     renderStep({ existing: null, disabled: false });
 
-    fireEvent.change(screen.getByLabelText("Creative Space name"), {
+    fireEvent.change(screen.getByLabelText("World name"), {
       target: { value: "Acme Inc" },
     });
     fireEvent.change(prefixInput(), { target: { value: "" } });

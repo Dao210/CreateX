@@ -4,10 +4,10 @@
     "title": "账号",
     "sign_out": "退出登录",
     "sign_out_message": "你需要重新登录才能在此设备上使用 Auro。",
-    "workspace": "创作区",
-    "workspaces": "创作区",
+    "workspace": "世界",
+    "workspaces": "世界",
     "notifications_subtitle": "收件箱和系统提醒",
-    "load_failed": "创作区加载失败"
+    "load_failed": "世界加载失败"
   },
   "profile": {
     "title": "个人资料",
@@ -40,9 +40,9 @@
     "saved": "通知设置已保存"
   },
   "workspace": {
-    "switch": "切换创作区",
-    "select": "选择创作区",
-    "empty": "还没有创作区"
+    "switch": "切换世界",
+    "select": "选择世界",
+    "empty": "还没有世界"
   },
   "avatar": {
     "take": "拍照",

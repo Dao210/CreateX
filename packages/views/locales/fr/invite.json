@@ -10,16 +10,16 @@
   },
   "accepted": {
     "title": "Vous avez rejoint {{workspace_name}} !",
-    "redirecting": "Redirection vers l'espace créatif..."
+    "redirecting": "Redirection vers le monde..."
   },
   "declined": {
     "title": "Invitation refusée",
-    "description": "Vous ne serez pas ajouté à cet espace créatif.",
+    "description": "Vous ne serez pas ajouté à ce monde.",
     "go_to_dashboard": "Aller au tableau de bord"
   },
   "main": {
     "join_title": "Rejoindre {{workspace_name}}",
-    "fallback_workspace_name": "espace créatif",
+    "fallback_workspace_name": "monde",
     "invited_role_admin": "vous a invité à le rejoindre en tant qu'administrateur.",
     "invited_role_member": "vous a invité à le rejoindre en tant que membre.",
     "already_handled_accepted": "Cette invitation a déjà été acceptée.",
@@ -37,16 +37,16 @@
   "batch": {
     "log_out": "Se déconnecter",
     "empty_title": "Aucune invitation en attente",
-    "empty_hint": "Poursuivez pour configurer votre propre espace créatif.",
+    "empty_hint": "Poursuivez pour configurer votre propre monde.",
     "empty_continue": "Passer à la configuration",
     "title": "Vous avez été invité",
-    "subtitle": "Choisissez les espaces créatifs que vous voulez rejoindre. Vous pourrez toujours traiter les autres plus tard depuis la barre latérale.",
-    "submit_skip": "Ignorer et configurer mon propre espace créatif",
-    "submit_join_one": "Rejoindre 1 espace créatif",
-    "submit_join_other": "Rejoindre {{count}} espaces créatifs",
+    "subtitle": "Choisissez les mondes que vous voulez rejoindre. Vous pourrez toujours traiter les autres plus tard depuis la barre latérale.",
+    "submit_skip": "Ignorer et configurer mon propre monde",
+    "submit_join_one": "Rejoindre 1 monde",
+    "submit_join_other": "Rejoindre {{count}} mondes",
     "joining": "Adhésion...",
     "error_generic": "Échec du traitement des invitations. Veuillez réessayer.",
-    "row_workspace_fallback": "Espace créatif",
+    "row_workspace_fallback": "Monde",
     "row_inviter_fallback": "Quelqu'un",
     "row_invited_admin": "{{inviter}} vous a invité en tant qu'administrateur",
     "row_invited_member": "{{inviter}} vous a invité en tant que membre"

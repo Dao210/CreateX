@@ -11,7 +11,7 @@
     "skills": "Skills",
     "siege": "涂鸦攻城",
     "tanks": "坦克守城",
-    "me": "我的世界",
+    "me": "我的作品",
     "settings": "设置"
   },
   "tab": {
@@ -37,15 +37,15 @@
     "server_version": "服务器版本 {{version}}"
   },
   "workspace_loader": {
-    "loading_workspace": "正在加载创作区...",
+    "loading_workspace": "正在加载世界...",
     "loading_named_prefix": "正在加载"
   },
   "sidebar": {
     "unpin_tooltip": "取消固定",
-    "workspaces_label": "创作区",
-    "create_workspace": "新建创作区",
+    "workspaces_label": "世界",
+    "create_workspace": "新建世界",
     "pending_invitations_label": "待处理的邀请",
-    "invitation_workspace_fallback": "创作区",
+    "invitation_workspace_fallback": "世界",
     "invitation_join": "加入",
     "invitation_decline": "拒绝",
     "log_out": "退出登录",
@@ -53,14 +53,17 @@
     "new_issue_shortcut": "C",
     "pinned_label": "固定",
     "ai_team_group": "AI 团队",
-    "my_assistants_group": "我的助手",
+    "my_assistants_group": "世界助手",
     "show_more_pins": "再显示 {{count}} 项...",
     "show_fewer_pins": "收起",
     "unread_overflow": "99+",
     "discord_card": {
       "title": "加入 Discord",
       "dismiss": "关闭"
-    }
+    },
+    "world_settings": "世界设置",
+    "account_settings": "账号设置",
+    "account_settings_for": "{{name}} · 账号设置"
   },
   "siege": {
     "workshop": "武器工坊",

@@ -1,14 +1,14 @@
 {
   "page": {
     "title": "스킬",
-    "tagline": "이 크리에이티브 스페이스의 모든 에이전트가 사용할 수 있는 지침입니다.",
+    "tagline": "이 세계의 모든 에이전트가 사용할 수 있는 지침입니다.",
     "learn_more": "자세히 보기 →",
     "new_skill": "새 스킬",
     "search_placeholder": "스킬 검색...",
     "scopes": {
       "all": {
         "label": "전체",
-        "description": "이 크리에이티브 스페이스의 모든 스킬"
+        "description": "이 세계의 모든 스킬"
       },
       "used": {
         "label": "사용 중",
@@ -35,7 +35,7 @@
       "try_different": " 다른 검색어를 시도해 보세요."
     },
     "intro_banner": {
-      "title": "크리에이티브 스페이스와 공유됩니다.",
+      "title": "세계와 공유됩니다.",
       "body": "누구나 스킬을 만들거나 URL이나 로컬 폴더에서 가져오거나 로컬 런타임에서 복사할 수 있으며, 모든 에이전트가 사용할 수 있습니다.",
       "highlight": "로컬 런타임 스킬은 여기로 복사하기 전까지 비공개로 유지됩니다."
     },
@@ -44,7 +44,7 @@
       "fallback": "스킬 목록을 가져오는 중 문제가 발생했습니다.",
       "retry": "다시 시도"
     },
-    "supporting_data_warning": "일부 크리에이티브 스페이스 데이터를 불러오지 못했습니다. 생성자 표시, 런타임 이름, 수정 권한이 불완전하게 보일 수 있습니다."
+    "supporting_data_warning": "일부 세계 데이터를 불러오지 못했습니다. 생성자 표시, 런타임 이름, 수정 권한이 불완전하게 보일 수 있습니다."
   },
   "table": {
     "name": "이름",
@@ -121,7 +121,7 @@
     "read_only": "읽기 전용",
     "delete_aria": "스킬 삭제",
     "delete_tooltip": "스킬 삭제",
-    "supporting_data_warning": "일부 크리에이티브 스페이스 데이터를 불러오지 못했습니다. 다음 새로고침 전까지 생성자 표시, 런타임 이름, 수정 권한이 불완전하게 보일 수 있습니다.",
+    "supporting_data_warning": "일부 세계 데이터를 불러오지 못했습니다. 다음 새로고침 전까지 생성자 표시, 런타임 이름, 수정 권한이 불완전하게 보일 수 있습니다.",
     "delete_file": "파일 삭제",
     "name_placeholder": "skill-name",
     "description_placeholder": "에이전트가 이 스킬을 언제 써야 하는지 한 문장으로 설명하세요...",
@@ -215,8 +215,8 @@
       "used_by_other": "에이전트 {{count}}개가 사용 중",
       "used_by_empty": "아직 어떤 에이전트에도 할당되지 않았습니다. 에이전트의 스킬 탭에서 할당하세요.",
       "permissions_owner": "이 스킬을 편집하고 삭제할 수 있습니다. 변경 사항은 다음 에이전트 실행부터 적용됩니다.",
-      "permissions_locked_creator": "작성자({{name}}) 또는 크리에이티브 스페이스 관리자만 이 스킬을 편집할 수 있습니다.",
-      "permissions_locked": "작성자 또는 크리에이티브 스페이스 관리자만 이 스킬을 편집할 수 있습니다.",
+      "permissions_locked_creator": "작성자({{name}}) 또는 세계 관리자만 이 스킬을 편집할 수 있습니다.",
+      "permissions_locked": "작성자 또는 세계 관리자만 이 스킬을 편집할 수 있습니다.",
       "properties_help": "skill 속성 정보",
       "character_count": "{{count}}자"
     },
@@ -256,13 +256,13 @@
       },
       "runtime": {
         "title": "런타임에서 복사",
-        "desc": "로컬 런타임에 설치된 스킬을 크리에이티브 스페이스로 가져옵니다."
+        "desc": "로컬 런타임에 설치된 스킬을 세계로 가져옵니다."
       }
     },
     "manual": {
       "name_label": "이름",
       "name_placeholder": "예: review-helper",
-      "name_hint": "크리에이티브 스페이스 안에서 고유해야 합니다.",
+      "name_hint": "세계 안에서 고유해야 합니다.",
       "description_label": "설명",
       "description_placeholder": "이 스킬을 에이전트에 언제 할당해야 하는지 한 문장으로 적어 주세요.",
       "name_conflict_hint": " 다른 이름으로 다시 제출하세요.",
@@ -317,12 +317,12 @@
     "no_search_results_hint": "\"{{query}}\"와 일치하는 로컬 스킬이 없습니다.",
     "ignored_files_hint": "심볼릭 링크, 읽을 수 없는 파일, 너무 큰 파일과 번들은 가져오기에서 제외됩니다.",
     "ready": "가져올 준비 완료",
-    "into_workspace": "이 크리에이티브 스페이스로 가져옵니다.",
+    "into_workspace": "이 세계로 가져옵니다.",
     "select_skill": "계속하려면 스킬을 선택하세요.",
-    "import_button": "크리에이티브 스페이스로 가져오기",
+    "import_button": "세계로 가져오기",
     "importing": "가져오는 중...",
     "skill_files_other": "파일 {{count}}개",
-    "skill_name_label": "크리에이티브 스페이스 스킬 이름",
+    "skill_name_label": "세계 스킬 이름",
     "skill_description_label": "설명",
     "skill_description_placeholder": "선택 사항 — 에이전트가 이 스킬을 언제 써야 하는지 설명하세요.",
     "toast_imported": "스킬을 가져왔습니다",
@@ -342,7 +342,7 @@
     "bulk_summary_failed": "실패",
     "conflict_single_title": "이 이름의 스킬이 이미 있습니다",
     "conflict_bulk_title": "{{count}}개의 스킬에 결정이 필요합니다",
-    "conflict_hint": "기존 크리에이티브 스페이스 스킬을 덮어쓸지, 새 이름으로 가져올지, 건너뛸지 선택하세요.",
+    "conflict_hint": "기존 세계 스킬을 덮어쓸지, 새 이름으로 가져올지, 건너뛸지 선택하세요.",
     "conflict_locked_creator": "이 스킬은 {{creator}}님이 만들었습니다. 로컬 가져오기에서 덮어쓰기는 생성자만 할 수 있습니다. 변경이 필요하면 스킬 상세 페이지에서 편집하세요.",
     "conflict_locked": "로컬 가져오기에서 이 스킬은 생성자만 덮어쓸 수 있습니다. 변경이 필요하면 스킬 상세 페이지에서 편집하세요.",
     "conflict_overwrite": "덮어쓰기",

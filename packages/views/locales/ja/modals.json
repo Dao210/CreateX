@@ -7,8 +7,8 @@
     "collapse_tooltip": "折りたたむ"
   },
   "create_workspace": {
-    "title": "新しいクリエイティブスペースを作成",
-    "description": "クリエイティブスペースは、チームがプロジェクトやタスクに取り組む共有環境です。"
+    "title": "新しいワールドを作成",
+    "description": "ワールドは、チームがプロジェクトやタスクに取り組む共有環境です。"
   },
   "delete_issue": {
     "title": "タスクを削除",
@@ -88,7 +88,7 @@
     "repos_pill": "リポジトリ",
     "repos_pill_count_other": "{{count}} 個のリポジトリ",
     "repos_heading": "このプロジェクトに GitHub リポジトリを接続",
-    "repos_empty": "まだクリエイティブスペースレベルのリポジトリがありません。下に URL を貼り付けてアドホックに接続してください。",
+    "repos_empty": "まだワールドレベルのリポジトリがありません。下に URL を貼り付けてアドホックに接続してください。",
     "repos_search_placeholder": "リポジトリを検索...",
     "repos_search_empty": "検索に一致するリポジトリがありません。",
     "repos_url_placeholder": "https://github.com/owner/repo または git@github.com:owner/repo.git",
@@ -127,27 +127,27 @@
     "toast_duplicate_title": "重複タスク",
     "toast_duplicate_view": "既存のタスクを表示",
     "issue_limit": {
-      "title": "このクリエイティブスペースはタスク数の上限に達しました",
-      "checking_description": "このクリエイティブスペースで利用可能な請求操作を確認しています…",
+      "title": "このワールドはタスク数の上限に達しました",
+      "checking_description": "このワールドで利用可能な請求操作を確認しています…",
       "upgrade_description": "Pro にアップグレードすると、引き続きタスクを作成できます。",
-      "portal_description": "請求ポータルを開いてクリエイティブスペースのサブスクリプションを管理し、タスク作成を再開してください。",
-      "contact_description": "クリエイティブスペースの所有者または管理者に Pro へのアップグレードを依頼してください。",
-      "billing_description": "請求設定を開いて、このクリエイティブスペースで利用可能なアップグレードオプションを確認してください。",
+      "portal_description": "請求ポータルを開いてワールドのサブスクリプションを管理し、タスク作成を再開してください。",
+      "contact_description": "ワールドの所有者または管理者に Pro へのアップグレードを依頼してください。",
+      "billing_description": "請求設定を開いて、このワールドで利用可能なアップグレードオプションを確認してください。",
       "billing_unavailable_description": "請求操作を読み込めませんでした。請求設定を開いて再試行してください。",
-      "billing_disabled_description": "既存のタスクを削除して空きを作るか、クリエイティブスペースの管理者に連絡してください。",
+      "billing_disabled_description": "既存のタスクを削除して空きを作るか、ワールドの管理者に連絡してください。",
       "upgrade_action": "Pro にアップグレード",
       "portal_action": "請求ポータルを開く",
       "billing_action": "請求設定を表示"
     },
     "autopilot_quota_limit": {
-      "title": "このクリエイティブスペースはオートパイロット実行数の上限に達しました",
-      "checking_description": "このクリエイティブスペースで利用可能な請求操作を確認しています…",
+      "title": "このワールドはオートパイロット実行数の上限に達しました",
+      "checking_description": "このワールドで利用可能な請求操作を確認しています…",
       "upgrade_description": "Pro にアップグレードすると、オートパイロット実行を再開できます。",
-      "portal_description": "請求ポータルを開いてクリエイティブスペースのサブスクリプションを管理し、オートパイロット実行を再開してください。",
-      "contact_description": "クリエイティブスペースの所有者または管理者に Pro へのアップグレードを依頼してください。",
-      "billing_description": "請求設定を開いて、このクリエイティブスペースで利用可能なアップグレードオプションを確認してください。",
+      "portal_description": "請求ポータルを開いてワールドのサブスクリプションを管理し、オートパイロット実行を再開してください。",
+      "contact_description": "ワールドの所有者または管理者に Pro へのアップグレードを依頼してください。",
+      "billing_description": "請求設定を開いて、このワールドで利用可能なアップグレードオプションを確認してください。",
       "billing_unavailable_description": "請求操作を読み込めませんでした。請求設定を開いて再試行してください。",
-      "billing_disabled_description": "現在の実行枠がリセットされるまで待つか、クリエイティブスペースの管理者に連絡してください。",
+      "billing_disabled_description": "現在の実行枠がリセットされるまで待つか、ワールドの管理者に連絡してください。",
       "upgrade_action": "Pro にアップグレード",
       "portal_action": "請求ポータルを開く",
       "billing_action": "請求設定を表示"

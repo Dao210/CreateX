@@ -11,10 +11,10 @@
     "more_agents_other": "他 {{count}} 件のエージェント"
   },
   "detail": {
-    "workspace_fallback": "クリエイティブスペース",
+    "workspace_fallback": "ワールド",
     "members_breadcrumb": "メンバー",
     "breadcrumb_fallback": "メンバー",
     "not_found_title": "メンバーが見つかりません",
-    "not_found_description": "このメンバーはクリエイティブスペースから退出した可能性があります。"
+    "not_found_description": "このメンバーはワールドから退出した可能性があります。"
   }
 }

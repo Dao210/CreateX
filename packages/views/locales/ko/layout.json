@@ -11,7 +11,7 @@
     "skills": "스킬",
     "siege": "시즈",
     "tanks": "탱크 방어전",
-    "me": "내 공간",
+    "me": "내 작품",
     "settings": "설정"
   },
   "tab": {
@@ -37,15 +37,15 @@
     "server_version": "서버 버전 {{version}}"
   },
   "workspace_loader": {
-    "loading_workspace": "크리에이티브 스페이스 로딩 중...",
+    "loading_workspace": "세계 로딩 중...",
     "loading_named_prefix": "로딩 중"
   },
   "sidebar": {
     "unpin_tooltip": "고정 해제",
-    "workspaces_label": "크리에이티브 스페이스",
-    "create_workspace": "크리에이티브 스페이스 만들기",
+    "workspaces_label": "세계",
+    "create_workspace": "세계 만들기",
     "pending_invitations_label": "대기 중인 초대",
-    "invitation_workspace_fallback": "크리에이티브 스페이스",
+    "invitation_workspace_fallback": "세계",
     "invitation_join": "참가",
     "invitation_decline": "거절",
     "log_out": "로그아웃",
@@ -53,14 +53,17 @@
     "new_issue_shortcut": "C",
     "pinned_label": "고정됨",
     "ai_team_group": "AI 팀",
-    "my_assistants_group": "내 어시스턴트",
+    "my_assistants_group": "세계 도우미",
     "show_more_pins": "{{count}}개 더 보기…",
     "show_fewer_pins": "접기",
     "unread_overflow": "99+",
     "discord_card": {
       "title": "Discord 참여하기",
       "dismiss": "닫기"
-    }
+    },
+    "world_settings": "세계 설정",
+    "account_settings": "계정 설정",
+    "account_settings_for": "{{name}} · 계정 설정"
   },
   "siege": {
     "workshop": "무기 공방",

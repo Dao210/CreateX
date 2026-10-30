@@ -4,10 +4,10 @@
     "title": "Account",
     "sign_out": "Sign out",
     "sign_out_message": "You'll need to sign in again to use Auro on this device.",
-    "workspace": "Creative Space",
-    "workspaces": "Creative Spaces",
+    "workspace": "World",
+    "workspaces": "Worlds",
     "notifications_subtitle": "Inbox and system alerts",
-    "load_failed": "Failed to load creative spaces"
+    "load_failed": "Failed to load worlds"
   },
   "profile": {
     "title": "Profile",
@@ -40,9 +40,9 @@
     "saved": "Notification settings saved"
   },
   "workspace": {
-    "switch": "Switch creative space",
-    "select": "Select creative space",
-    "empty": "No creative spaces yet"
+    "switch": "Switch world",
+    "select": "Select world",
+    "empty": "No worlds yet"
   },
   "avatar": {
     "take": "Take Photo",

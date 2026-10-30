@@ -53,6 +53,7 @@ import { api } from "@auro/core/api";
 import { useLogout } from "../auth";
 import { routeIconForPath } from "./route-icon-components";
 import { useT } from "../i18n";
+import { ACCOUNT_SETTINGS_TABS, WORLD_SETTINGS_TABS, resolveSettingsLocation } from "../settings/components/settings-navigation";
 
 // Top-level nav items stay active when the user is on a child route
 // (e.g. "Projects" stays lit on /:slug/projects/:id). Pinned items keep
@@ -96,12 +97,11 @@ type NavLabelKey =
 // Nav icons are NOT declared here: they are derived from each item's
 // destination path at render time, so the sidebar and the desktop tab bar
 // always agree. See route-icon-components.tsx.
-// The two games lead the workspace navigation so they are one click away from
-// anywhere in the workspace; Doodle Siege sits directly under Tank Defense.
+// The collection is the workspace home; both games remain one click away.
 const personalNav: { key: NavKey; labelKey: NavLabelKey }[] = [
+  { key: "me", labelKey: "me" },
   { key: "tanks", labelKey: "tanks" },
   { key: "siege", labelKey: "siege" },
-  { key: "me", labelKey: "me" },
   { key: "inbox", labelKey: "inbox" },
 ];
 
@@ -124,12 +124,14 @@ interface AppSidebarProps {
 
 export function AppSidebar({ topSlot, headerClassName, headerStyle }: AppSidebarProps = {}) {
   const { t } = useT("layout");
-  const { pathname, push } = useNavigation();
+  const { pathname, searchParams, push } = useNavigation();
   const user = useAuthStore((s) => s.user);
   const logout = useLogout();
   const workspace = useCurrentWorkspace();
   const p = useWorkspacePaths();
   const profileHref = `${p.settings()}?tab=profile`;
+  const settingsTab = resolveSettingsLocation(searchParams).tab;
+  const onSettingsPage = isNavActive(pathname, p.settings());
   const { data: workspaces = EMPTY_WORKSPACES } = useQuery(workspaceListOptions());
   const { data: myInvitations = EMPTY_INVITATIONS } = useQuery(myInvitationListOptions());
 
@@ -246,7 +248,7 @@ export function AppSidebar({ topSlot, headerClassName, headerStyle }: AppSidebar
                       </span>
                       {isCollapsed ? null : (
                         <>
-                          <span className="flex-1 truncate font-medium">
+                          <span className="flex-1 truncate font-medium" title={workspace?.name}>
                             {workspace?.name ?? "Auro"}
                           </span>
                           <ChevronDown className="size-3 text-muted-foreground" />
@@ -290,7 +292,7 @@ export function AppSidebar({ topSlot, headerClassName, headerStyle }: AppSidebar
                         }
                       >
                         <WorkspaceAvatar name={ws.name} avatarUrl={ws.avatar_url} size="sm" />
-                        <span className="flex-1 truncate">{ws.name}</span>
+                        <span className="flex-1 truncate" title={ws.name}>{ws.name}</span>
                         {/* Points at the specific workspace holding unread
                             inbox items. Sits in the same right-edge slot as the
                             active-workspace check; the active workspace is
@@ -446,17 +448,18 @@ export function AppSidebar({ topSlot, headerClassName, headerStyle }: AppSidebar
           <SidebarMenu className="gap-0.5">
             <AdminEntry />
             {utilityNav.map((item) => {
-              const href = p[item.key]();
+              const href = item.key === "settings" ? `${p.settings()}?tab=workspace` : p[item.key]();
               const Icon = routeIconForPath(href);
               return (
                 <SidebarMenuItem key={item.key}>
                   <SidebarMenuButton
-                    isActive={isNavActive(pathname, href)}
+                    isActive={item.key === "settings" ? onSettingsPage && WORLD_SETTINGS_TABS.has(settingsTab) : isNavActive(pathname, href)}
                     render={<AppLink href={href} />}
+                    onClick={() => setOpenMobile(false)}
                     className={NAV_ITEM_CLASS_NAME}
                   >
                     <Icon />
-                    <span>{t(($) => $.nav[item.labelKey])}</span>
+                    <span>{item.key === "settings" ? t(($) => $.sidebar.world_settings) : t(($) => $.nav[item.labelKey])}</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               );
@@ -476,10 +479,12 @@ export function AppSidebar({ topSlot, headerClassName, headerStyle }: AppSidebar
               <SidebarMenuItem>
                 <SidebarMenuButton
                   render={<AppLink href={profileHref} />}
+                  isActive={onSettingsPage && ACCOUNT_SETTINGS_TABS.has(settingsTab)}
+                  aria-label={t(($) => $.sidebar.account_settings_for, { name: user?.name ?? "" })}
                   // The profile link only changes the settings tab, so the
                   // pathname-driven sheet dismissal above cannot see it.
                   onClick={() => setOpenMobile(false)}
-                  className="text-muted-foreground hover:bg-transparent hover:text-foreground active:bg-transparent"
+                  className={NAV_ITEM_CLASS_NAME}
                 >
                   <ActorAvatar
                     name={user?.name ?? ""}
@@ -488,6 +493,7 @@ export function AppSidebar({ topSlot, headerClassName, headerStyle }: AppSidebar
                     size="xs"
                   />
                   <span className="flex-1 truncate">{user?.name}</span>
+                  {!isCollapsed && <span className="shrink-0 text-caption">{t(($) => $.sidebar.account_settings)}</span>}
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>

@@ -1,16 +1,16 @@
 {
-  "title": "Select a creative space",
+  "title": "Select a world",
   "members": "Members",
   "agents": "Agents",
-  "select": "Select creative space",
+  "select": "Select world",
   "switch": {
-    "title": "Switch creative space",
+    "title": "Switch world",
     "message": "Switch to {{name}}?",
     "confirm": "Switch",
-    "current_a11y": "{{name}} is the current creative space",
+    "current_a11y": "{{name}} is the current world",
     "switch_a11y": "Switch to {{name}}"
   },
-  "empty": "You don't belong to any creative spaces yet. Contact your creative space admin to be invited.",
+  "empty": "You don't belong to any worlds yet. Contact your world admin to be invited.",
   "agent": {
     "coming_soon": "Agents coming soon.",
     "title": "Agents",
@@ -25,7 +25,7 @@
     "signed_in_as": "Signed in as"
   },
   "errors": {
-    "load_failed": "Failed to load creative spaces: {{message}}"
+    "load_failed": "Failed to load worlds: {{message}}"
   },
   "pins": {
     "errors": {

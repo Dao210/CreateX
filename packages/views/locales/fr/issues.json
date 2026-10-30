@@ -96,7 +96,7 @@
     "author_renamed": "{{captured}} lors de la capture · maintenant {{current}}",
     "author_archived": "archivé",
     "author_deleted_agent": "agent supprimé",
-    "author_left_workspace": "n'est plus dans l'espace créatif",
+    "author_left_workspace": "n'est plus dans le monde",
     "error_source_changed": "La source a changé. Vérifiez l'aperçu actualisé, puis soumettez à nouveau.",
     "error_agent_unsupported": "Ce runtime d'agent doit être mis à jour pour utiliser le contexte capturé. Passez en mode Manuel ou mettez le runtime à jour.",
     "error_server_unsupported": "Ce serveur doit être mis à jour pour créer une sous-tâche avec un contexte capturé.",
@@ -117,7 +117,7 @@
   },
   "page": {
     "breadcrumb_title": "Tâches",
-    "breadcrumb_workspace_fallback": "Espace créatif",
+    "breadcrumb_workspace_fallback": "Monde",
     "empty_title": "Aucune tâche pour l'instant",
     "move_failed": "Échec du déplacement de la tâche"
   },
@@ -149,7 +149,7 @@
   },
   "scope": {
     "all_label": "Toutes",
-    "all_description": "Toutes les tâches de cet espace créatif",
+    "all_description": "Toutes les tâches de ce monde",
     "members_label": "Membres",
     "members_description": "Tâches assignées aux membres de l'équipe",
     "agents_label": "Agents",
@@ -381,7 +381,7 @@
     "close": "Fermer l'aperçu"
   },
   "detail": {
-    "not_found": "Cette tâche n'existe pas ou a été supprimée dans cet espace créatif.",
+    "not_found": "Cette tâche n'existe pas ou a été supprimée dans ce monde.",
     "breadcrumb_project_unknown": "Projet inconnu",
     "back": "Retour",
     "title_placeholder": "Titre de la tâche",
@@ -409,7 +409,7 @@
     "quick_action_blocked": "Impossible de déclencher {{name}}",
     "quick_action_posted": "Commentaire publié",
     "quick_action_blocked_title": "Vous ne pouvez pas exécuter cette action rapide",
-    "quick_action_blocked_body": "« {{name}} » s'exécute sous un agent que vous n'êtes pas autorisé à déclencher. Demandez à un administrateur de l'espace créatif de rendre cet agent accessible à l'équipe, ou de rattacher cette action à un agent partagé.",
+    "quick_action_blocked_body": "« {{name}} » s'exécute sous un agent que vous n'êtes pas autorisé à déclencher. Demandez à un administrateur du monde de rendre cet agent accessible à l'équipe, ou de rattacher cette action à un agent partagé.",
     "quick_action_blocked_ok": "Compris",
     "pull_requests_loading": "Chargement…",
     "pull_request_state_draft": "Brouillon",
@@ -454,7 +454,7 @@
     "unsubscribe_subtree": "Se désabonner de cette tâche et de ses sous-tâches",
     "unsubscribe_subtree_failed": "Impossible de se désabonner des sous-tâches. Veuillez réessayer.",
     "unsubscribe_subtree_succeeded": "Désabonnement effectué pour cette tâche et ses sous-tâches.",
-    "unsubscribe_subtree_unsupported": "Le serveur de cet espace créatif ne prend pas encore en charge le désabonnement des sous-tâches. Réessayez après la prochaine mise à jour.",
+    "unsubscribe_subtree_unsupported": "Le serveur de ce monde ne prend pas encore en charge le désabonnement des sous-tâches. Réessayez après la prochaine mise à jour.",
     "subscription_update_failed": "Impossible de mettre à jour l'abonnement. Veuillez réessayer.",
     "no_subscribers_results": "Aucun résultat",
     "change_subscribers_placeholder": "Modifier les abonnés...",
@@ -822,7 +822,7 @@
     "delete_dialog_title_other": "Supprimer {{count}} tâches ?",
     "delete_dialog_desc_one": "Cette action est irréversible. La tâche sélectionnée et toutes ses données associées seront définitivement supprimées.",
     "delete_dialog_desc_other": "Cette action est irréversible. Les tâches sélectionnées et toutes leurs données associées seront définitivement supprimées.",
-    "delete_dialog_warning": "Tout membre de l'espace créatif peut supprimer des tâches.",
+    "delete_dialog_warning": "Tout membre du monde peut supprimer des tâches.",
     "cancel": "Annuler"
   },
   "card": {
@@ -912,7 +912,7 @@
     }
   },
   "labels_panel": {
-    "intro": "Créez et gérez des étiquettes pour classer les tâches dans tout votre espace créatif.",
+    "intro": "Créez et gérez des étiquettes pour classer les tâches dans tout votre monde.",
     "new_placeholder": "Nom de la nouvelle étiquette…",
     "new_aria": "Nom de la nouvelle étiquette",
     "add_action": "Ajouter",
@@ -944,7 +944,7 @@
   },
   "save_view": {
     "title": "Enregistrer comme vue",
-    "hint_workspace": "Fondée sur toutes les tâches de l'espace créatif",
+    "hint_workspace": "Fondée sur toutes les tâches du monde",
     "hint_my_any": "Fondée sur Mes tâches · Toutes",
     "hint_my_assigned": "Fondée sur Mes tâches · Assignées",
     "hint_my_created": "Fondée sur Mes tâches · Créées",
@@ -956,7 +956,7 @@
     "name_label": "Nom",
     "visibility_label": "Visibilité",
     "visibility_private": "Visible par moi seul",
-    "visibility_workspace": "Visible par les membres de l'espace créatif",
+    "visibility_workspace": "Visible par les membres du monde",
     "filters_label": "Filtres",
     "custom_property": "Propriété personnalisée",
     "create": "Créer la vue",
@@ -973,8 +973,8 @@
     "update": "Enregistrer les modifications",
     "toast_updated": "Vue mise à jour",
     "toast_conflict": "Quelqu'un d'autre a modifié cette vue — rouvrez-la et réessayez",
-    "hint_workspace_members": "Fondée sur les tâches de l'espace créatif assignées à des membres",
-    "hint_workspace_agents": "Fondée sur les tâches de l'espace créatif assignées à des agents",
+    "hint_workspace_members": "Fondée sur les tâches du monde assignées à des membres",
+    "hint_workspace_agents": "Fondée sur les tâches du monde assignées à des agents",
     "scope_label_workspace": "Type d'assigné",
     "scope_label_my": "Relation avec moi",
     "variant_all": "Tout assigné",
@@ -989,7 +989,7 @@
     "trigger": "Vues",
     "empty": "Aucune vue enregistrée pour l'instant",
     "private_group": "Privées",
-    "shared_group": "Partagées avec l'espace créatif",
+    "shared_group": "Partagées avec le monde",
     "exit": "Quitter la vue",
     "unavailable": "Cette vue n'est plus disponible",
     "edit": "Modifier la vue"
@@ -1025,7 +1025,7 @@
     "hook_never_run": "Ce hook n'a encore jamais été exécuté.",
     "surface_loading": "Chargement de {{name}}…",
     "surface_unavailable": "{{name}} n'a pas pu charger son interface. La version installée ne la contient peut-être pas.",
-    "surface_navigated": "{{name}} a tenté de remplacer son panneau par une page chargée depuis une autre source. Il a été arrêté et déconnecté : prévenez l'administrateur de votre espace créatif."
+    "surface_navigated": "{{name}} a tenté de remplacer son panneau par une page chargée depuis une autre source. Il a été arrêté et déconnecté : prévenez l'administrateur de votre monde."
   },
   "wakeups": {
     "title": "Réveils",
@@ -1223,7 +1223,7 @@
       "submitting": "Création…",
       "cancel": "Annuler",
       "error": "Impossible de créer le réveil. Vérifiez les réglages et réessayez.",
-      "capacity_error": "Cette tâche ou cet espace créatif a atteint le nombre maximal de réveils actifs.",
+      "capacity_error": "Cette tâche ou ce monde a atteint le nombre maximal de réveils actifs.",
       "missing_condition": "Choisissez une condition.",
       "missing_agent": "Choisissez l’agent à réveiller.",
       "missing_events": "Choisissez au moins un événement.",
@@ -1291,8 +1291,8 @@
       "enable": "Activé pour cette tâche",
       "toggle": "Réveiller le responsable à la fin des sous-tâches",
       "save_error": "Impossible d’enregistrer la règle système.",
-      "default_on": "Activé par défaut dans cet espace créatif. Modifiez la valeur par défaut dans Paramètres → Réveils.",
-      "default_off": "Désactivé par défaut dans cet espace créatif. Modifiez la valeur par défaut dans Paramètres → Réveils.",
+      "default_on": "Activé par défaut dans ce monde. Modifiez la valeur par défaut dans Paramètres → Réveils.",
+      "default_off": "Désactivé par défaut dans ce monde. Modifiez la valeur par défaut dans Paramètres → Réveils.",
       "notify_member": "Notifier {{name}} dans sa boîte de réception",
       "instruction": "Que faire au réveil",
       "instruction_edit": "Modifier l’instruction",

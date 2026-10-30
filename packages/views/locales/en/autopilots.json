@@ -85,7 +85,7 @@
     "run_blocked_attribution": "Not triggered — the run couldn't be attributed to a responsible member",
     "run_blocked_already_active": "Not triggered — a recent run already covers this",
     "run_blocked_quota_exceeded": "Not triggered — the run limit for this period has been reached",
-    "run_blocked_issue_limit_reached": "Not triggered — the creative space has reached its issue limit",
+    "run_blocked_issue_limit_reached": "Not triggered — the world has reached its issue limit",
     "run_blocked_generic": "Not triggered — the run was blocked",
     "section_properties": "Properties",
     "section_triggers": "Triggers",
@@ -126,7 +126,7 @@
     "toast_granted": "Access granted",
     "toast_revoked": "Access removed",
     "toast_failed": "Couldn't update access",
-    "owner_note": "The creator and creative space admins always have access."
+    "owner_note": "The creator and world admins always have access."
   },
   "run_status": {
     "issue_created": "Issue Created",
@@ -489,7 +489,7 @@
     "running": "Running",
     "active_runs": "{{count}} active runs",
     "issue_closed": "Issue closed",
-    "read_only": "Only the creator or a creative space admin can manage this wakeup",
+    "read_only": "Only the creator or a world admin can manage this wakeup",
     "select_row": "Select {{issue}}, {{agent}}",
     "select_page": "Select enabled wakeups on this page",
     "load_error": "Could not load wakeups",

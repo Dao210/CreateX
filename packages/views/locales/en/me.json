@@ -1,7 +1,7 @@
 {
-  "title": "My Space",
+  "title": "My Creations",
   "summary": {
-    "weapons": "Weapons",
+    "weapons": "Creations",
     "stars": "Stars",
     "best": "Best score"
   },
@@ -12,7 +12,7 @@
     "mcp": "Created via MCP"
   },
   "weapons": {
-    "title": "Weapon collection",
+    "title": "Creation collection",
     "siege_empty": "No saved blueprints yet.",
     "tanks_empty": "No tank characters yet.",
     "mcp_empty": "Nothing has been created through MCP yet.",
@@ -53,5 +53,10 @@
   },
   "loading": "Loading your collection…",
   "error": "Your collection could not be loaded.",
-  "retry": "Retry"
+  "retry": "Retry",
+  "scope": "Current world: {{name}}",
+  "tabs": {
+    "label": "Creations and game progress",
+    "creations": "Creations"
+  }
 }

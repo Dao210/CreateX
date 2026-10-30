@@ -11,7 +11,7 @@
     "skills": "Skills",
     "siege": "Siege",
     "tanks": "Tank Defense",
-    "me": "My Space",
+    "me": "My Creations",
     "settings": "Settings"
   },
   "tab": {
@@ -37,15 +37,15 @@
     "server_version": "Server version {{version}}"
   },
   "workspace_loader": {
-    "loading_workspace": "Loading creative space…",
+    "loading_workspace": "Loading world…",
     "loading_named_prefix": "Loading"
   },
   "sidebar": {
     "unpin_tooltip": "Unpin",
-    "workspaces_label": "Creative Spaces",
-    "create_workspace": "Create a creative space",
+    "workspaces_label": "Worlds",
+    "create_workspace": "Create a world",
     "pending_invitations_label": "Pending invitations",
-    "invitation_workspace_fallback": "Creative Space",
+    "invitation_workspace_fallback": "World",
     "invitation_join": "Join",
     "invitation_decline": "Decline",
     "log_out": "Log out",
@@ -53,14 +53,17 @@
     "new_issue_shortcut": "C",
     "pinned_label": "Pinned",
     "ai_team_group": "AI Team",
-    "my_assistants_group": "My Assistants",
+    "my_assistants_group": "World assistants",
     "show_more_pins": "Show {{count}} more…",
     "show_fewer_pins": "Show fewer",
     "unread_overflow": "99+",
     "discord_card": {
       "title": "Join our Discord",
       "dismiss": "Dismiss"
-    }
+    },
+    "world_settings": "World settings",
+    "account_settings": "Account settings",
+    "account_settings_for": "{{name}} · Account settings"
   },
   "siege": {
     "workshop": "Weapon workshop",
