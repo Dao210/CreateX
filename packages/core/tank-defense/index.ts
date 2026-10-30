@@ -5,3 +5,4 @@ export * from "./preferences";
 export * from "./characters";
 export * from "./queries";
 export * from "./difficulty";
+export * from "./mcp-connection";

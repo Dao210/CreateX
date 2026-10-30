@@ -14,7 +14,7 @@ import { TankBattle } from "./tank-battle";
 import { TankCharacterEditor } from "./tank-character-editor";
 import { TankMCPConnection } from "./tank-mcp-connection";
 
-export function TankGarage({ storage, storageKey, workspace, userId }: { storage: StorageAdapter; storageKey: string; workspace: { id: string; slug: string }; userId: string }) {
+export function TankGarage({ storage, storageKey, workspace, userId }: { storage: StorageAdapter; storageKey: string; workspace: { id: string; slug: string; name?: string }; userId: string }) {
   const { t } = useT("tanks");
   const navigation = useNavigation();
   const sessionId = navigation.searchParams.get("session") ?? "";
@@ -36,7 +36,7 @@ export function TankGarage({ storage, storageKey, workspace, userId }: { storage
   const currentMode = selectedMode ?? frozen?.mode ?? "campaign";
   const selected = library.data?.find(character => character.id === currentId);
   const path = `/${workspace.slug}/tanks`;
-  const connections = <TankMCPConnection workspaceId={workspace.id} />;
+  const connections = <TankMCPConnection workspace={workspace} userId={userId} />;
 
   if (sessionId && (session.isPending || session.isError || !session.data)) {
     return <main className="tank-defense-page"><PageHeader><h1 className="flex-1 text-body font-medium">{t($ => $.title)}</h1>{connections}</PageHeader>

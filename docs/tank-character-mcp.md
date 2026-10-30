@@ -6,6 +6,18 @@
 
 ## 1. 接入与首次使用
 
+### 让 Agent 自动配置（默认）
+
+打开 `/{workspaceSlug}/tanks`，点击「连接 Agent」→「复制连接指令」，粘贴到 Codex 或其他能够执行本地安装、配置 MCP 的 Agent 中。Web 和 Desktop 使用同一流程。指令自动携带当前站点、API 地址、世界及账号 ID，不包含登录令牌。
+
+Agent 读取当前 Web 站点的 `/.well-known/tanks-mcp/setup.md`，下载同目录的 `connect.mjs`。这是随 Web 一起分发、使用 Node.js 22+ 内置模块的独立 stdio 连接器，不依赖上游 Auro 发布包、Go 编译或 daemon。首次使用通过现有 `/login?cli_callback=…&cli_state=…` 浏览器流程登录游戏页面的同一账号，并沿用现有 PAT API。连接器验证账号、世界访问权限及 `tank_get_catalog` 后，输出当前客户端所需的配置，不修改其他 MCP 连接。
+
+凭据保存在用户目录 `~/.createx/tanks-mcp/`，按 API 地址、世界和账号隔离，Unix 文件权限为 `0600`。MCP 配置只包含 Node 与连接器的绝对路径及连接参数，不包含令牌。默认安装只做只读验收，不创建角色或对局；客户端工具尚未重载时，Agent 应明确给出下一步，不得仅凭配置保存成功宣称当前对话已连接。
+
+安装说明及连接器必须随 Web 的 `public/` 目录部署。默认 Web 测试会在原生 Node 子进程中验证公开下载的连接器，只使用临时本地 HTTP 服务和虚构凭据，不查找或执行真实 Agent CLI。
+
+### 手动配置（高级）
+
 Codex 从环境启动、CLI 登录、配置到实际调用验收的完整步骤见[在 Codex 中部署与接入 Createx MCP](codex-mcp-deployment.md)。
 
 先启动 Auro，再构建带 `tanks mcp` 命令的 CLI：
@@ -16,7 +28,7 @@ cd server
 go build -o bin/auro ./cmd/auro
 ```
 
-打开 `/{workspaceSlug}/tanks`，点击「连接 Agent」，复制当前工作区的配置。外部 Agent 运行的机器必须能访问配置中的服务地址；本机 `localhost` 地址不能交给另一台机器上的 Agent。
+打开 `/{workspaceSlug}/tanks`，点击「连接 Agent」，展开「手动配置」后复制当前世界的配置。外部 Agent 运行的机器必须能访问配置中的服务地址；本机 `localhost` 地址不能交给另一台机器上的 Agent。
 
 开发环境中如果 PATH 中的 `auro` 仍是旧版本，将配置的 `command` 改为本项目 `server/bin/auro` 的绝对路径。不要覆盖其他项目的 CLI 链接。
 

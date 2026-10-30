@@ -85,6 +85,14 @@
 .tank-editor-preview p { margin: 4px 0 0; }
 .tank-mcp-config { max-height: 250px; overflow: auto; padding: 14px; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--muted); font: var(--text-caption) var(--font-mono); line-height: 1.8; }
 .tank-mcp-endpoint { display: block; overflow-wrap: anywhere; font-size: var(--text-caption); }
+.tank-mcp-connect { display: grid; gap: 10px; padding-block: 8px; }
+.tank-mcp-connect p { margin: 0; }
+.tank-mcp-instructions { min-height: 180px; max-height: 300px; font-size: var(--text-caption); overflow-wrap: anywhere; }
+.tank-mcp-manual-trigger { padding-inline: 0; color: var(--muted-foreground); }
+.tank-mcp-manual-trigger[data-panel-open] svg { transform: rotate(180deg); }
+.tank-mcp-manual-content { display: grid; gap: 10px; padding-top: 6px; min-width: 0; }
+.tank-mcp-manual-content .tank-form-field, .tank-mcp-manual-content pre, .tank-mcp-manual-content p { margin: 0; }
+.tank-mcp-guide { width: fit-content; font-size: var(--text-caption); text-decoration: underline; text-underline-offset: 3px; }
 .tank-session-state { padding: 32px; font-size: var(--text-body); }.tank-session-state button { margin: 10px 10px 0 0; }
 @container tank-defense (max-width: 700px) {
   .tank-layout { display: flex; flex-direction: column; gap: 24px; }
