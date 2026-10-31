@@ -4,10 +4,10 @@ import { previewNames } from "../preview-names";
 export const worldCopy: WorldDict = {
   hero: {
     prefix: "创造",
-    words: ["武器", "角色", "规则", "生命"],
+    words: ["一条鱼。", "一只鸟。", "一只老虎。"],
     suffix: "",
-    separator: "，",
-    world: "编织世界",
+    separator: "",
+    world: "编织世界。",
   },
   map: {"title": "世界预览", "label": "世界地图：角色、武器、补给与裂缝。世界纪事记录近期发生的事件。", "previewData": "预览数据"},
   explorer: {

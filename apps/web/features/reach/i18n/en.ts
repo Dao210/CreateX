@@ -4,7 +4,7 @@ import { previewNames } from "../preview-names";
 export const worldCopy: WorldDict = {
   hero: {
     prefix: "Create ",
-    words: ["a weapon.", "a character.", "the rules.", "a life."],
+    words: ["a fish.", "a bird.", "a tiger."],
     suffix: "",
     separator: "",
     world: "Weave a World.",

@@ -56,7 +56,7 @@ export type ContactSalesOption = { value: string; label: string };
 export type WorldDict = {
   hero: {
     prefix: string;
-    words: [string, string, string, string];
+    words: [string, string, string];
     suffix: string;
     separator: string;
     world: string;

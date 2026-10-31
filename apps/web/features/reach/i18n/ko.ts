@@ -4,7 +4,7 @@ import { previewNames } from "../preview-names";
 export const worldCopy: WorldDict = {
   hero: {
     prefix: "",
-    words: ["무기를", "캐릭터를", "규칙을", "생명을"],
+    words: ["물고기를", "새를", "호랑이를"],
     suffix: " 만들고",
     separator: ",",
     world: "세계를 엮으세요.",

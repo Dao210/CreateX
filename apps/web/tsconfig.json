@@ -45,7 +45,9 @@
     ".next-local/types/**/*.ts",
     ".next-local/dev/types/**/*.ts",
     ".next-createx/types/**/*.ts",
-    ".next-createx/dev/types/**/*.ts"
+    ".next-createx/dev/types/**/*.ts",
+    ".next-ga-check/types/**/*.ts",
+    ".next-ga-check/dev/types/**/*.ts"
   ],
   "exclude": [
     "node_modules"

@@ -59,6 +59,8 @@ const sourceSerif = Source_Serif_4({
   ],
 });
 
+const GA_MEASUREMENT_ID = "G-HQJ8WZDQR0";
+
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
@@ -150,6 +152,24 @@ export default async function RootLayout({
           />
         )}
         {children}
+        {/* Google Analytics 4. Production-only so local dev and Playwright
+            runs never report pageviews to the live property. afterInteractive
+            keeps both tags off the hydration-critical path; GA4's enhanced
+            measurement reports App Router client-side navigations. */}
+        {process.env.NODE_ENV === "production" && (
+          <>
+            <Script
+              src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
+              strategy="afterInteractive"
+            />
+            <Script id="google-analytics" strategy="afterInteractive">
+              {`window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', '${GA_MEASUREMENT_ID}');`}
+            </Script>
+          </>
+        )}
       </body>
     </html>
   );

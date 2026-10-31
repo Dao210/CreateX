@@ -31,7 +31,7 @@
 .track {
   display: grid;
   grid-auto-rows: 1.2em;
-  animation: rotate-words 10.8s cubic-bezier(0.22, 0.61, 0.36, 1) infinite;
+  animation: rotate-words 7.35s cubic-bezier(0.22, 0.61, 0.36, 1) infinite;
 }
 
 .separator {
@@ -48,14 +48,13 @@
   font-size: clamp(1.5rem, 6.6vw, 2.3rem);
 }
 
-/* Five equal rows include the first word twice. Each move takes 450ms;
-   weapons, characters and rules hold for 2s, then life holds for 3s. */
+/* Four equal rows include the first phrase twice. Each phrase holds for 2s,
+   followed by a 450ms upward transition. */
 @keyframes rotate-words {
-  0%, 18.518519% { transform: translateY(0); }
-  22.685185%, 41.203704% { transform: translateY(-20%); }
-  45.370370%, 63.888889% { transform: translateY(-40%); }
-  68.055556%, 95.833333% { transform: translateY(-60%); }
-  100% { transform: translateY(-80%); }
+  0%, 27.210884% { transform: translateY(0); }
+  33.333333%, 60.544218% { transform: translateY(-25%); }
+  66.666667%, 93.877551% { transform: translateY(-50%); }
+  100% { transform: translateY(-75%); }
 }
 
 @media (min-width: 640px) {
@@ -93,7 +92,7 @@
 @media (prefers-reduced-motion: reduce) {
   .track {
     animation: none;
-    transform: translateY(-60%);
+    transform: none;
   }
 
   .wordWindow {
