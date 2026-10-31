@@ -37,3 +37,14 @@ describe("tank API response boundary", () => {
     await expect(new ApiClient("https://api.example.invalid").getTankSession(wsId, id)).rejects.toThrow("invalid_tank_response");
   });
 });
+
+it.each([{ xp: -1 }, { xp: 2701 }, { xp: 1.5 }, { xp: "100" }])("rejects malformed permanent experience", async progression => {
+  response({ characters: [{ ...character, progression }] });
+  await expect(new ApiClient("https://api.example.invalid").listTankCharacters(wsId)).rejects.toThrow("invalid_tank_response");
+});
+it("rejects a mismatched training registration or settlement identity", async () => {
+  response({ id, sessionId: wsId, characterId: id, levelId: 1 });
+  await expect(new ApiClient("https://api.example.invalid").startTankTraining(wsId, id, { requestId: id, levelId: 1 })).rejects.toThrow("invalid_tank_response");
+  response({ runId: wsId, characterId: id, awardedXp: 10, progression: { xp: 10 } });
+  await expect(new ApiClient("https://api.example.invalid").settleTankTraining(wsId, id, id, { ticks: 100, kills: 1, outcome: "defeat" })).rejects.toThrow("invalid_tank_response");
+});

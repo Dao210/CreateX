@@ -18,6 +18,12 @@ export function paintTank(ctx: CanvasRenderingContext2D, tank: Pick<TankActor, "
   ctx.fillStyle = color;
   for (let y = -11 + tread; y < 13; y += 6) { ctx.fillRect(-14, y, 5, 3); ctx.fillRect(9, y, 5, 3); }
   ctx.fillRect(-8, -11, 16, 24); ctx.fillStyle = appearance?.accent ?? (player ? "#b58b42" : "#768773"); ctx.fillRect(-6, -8, 12, 19);
+  const evolution = player ? tank.blueprint.evolution ?? 0 : 0;
+  if (evolution > 0) {
+    ctx.fillStyle = metal; ctx.fillRect(-16, -8, 3, 18); ctx.fillRect(13, -8, 3, 18);
+    ctx.fillStyle = accent; ctx.fillRect(-16, -8, 2, 5); ctx.fillRect(14, -8, 2, 5);
+    if (evolution > 1) { ctx.fillRect(-11, 13, 5, 2); ctx.fillRect(6, 13, 5, 2); }
+  }
   const turret = tier === 2 ? 9 : tier === 1 ? 7 : 6;
   const barrel = tier === 2 ? 4 : 3, muzzle = -18 - tier * 2 - deployment;
   ctx.fillStyle = appearance ? "#090909" : "#080e0a"; ctx.fillRect(-turret - 1, -6, turret * 2 + 2, 15);

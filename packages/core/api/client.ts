@@ -2,6 +2,7 @@ import type { ZodType } from "zod";
 import { LifeSnapshotSchema, type LifeSnapshot } from "../agent-life/schema";
 import { AdminAccessSchema, MCPAdminServicesSchema, MCPPolicySchema, MCPActivityPageSchema, type AdminAccess, type MCPAdminService, type MCPPolicy, type MCPActivityPage, type MCPActivityFilter, type UpdateMCPPolicyInput } from "../admin/schema";
 import { TankCharacterSchema, TankCharacterListSchema, TankPlaySessionSchema, type TankCharacter, type TankPlaySession, type SaveTankCharacterInput, type CreateTankSessionInput } from "../tank-defense/characters";
+import { TankTrainingRunSchema, TankTrainingResultSchema, type TankTrainingRun, type TankTrainingResult, type StartTankTrainingInput, type SettleTankTrainingInput } from "../tank-defense/progression";
 import { GameProgressSchema, SiegeProgressResponseSchema, TankProgressResponseSchema, type GameProgress, type SiegeProgress, type TankProgress } from "../game-progress/schema";
 import type { IssueWakeup, IssueWakeupInput, IssueWakeupSummaryRow, PausedWakeup, SystemWakeup, WakeupRun, WorkspaceSystemWakeup } from "../types/issue-wakeup";
 import type { WorkspaceWakeupPage, WorkspaceWakeupFilters } from "../types/issue-wakeup";
@@ -841,6 +842,22 @@ export class ApiClient {
     const raw = await this.fetch<unknown>(endpoint, { headers: { "X-Workspace-ID": wsId, "X-Workspace-Slug": "" } });
     const parsed = parseWithFallback<TankPlaySession | null>(raw, TankPlaySessionSchema, null, { endpoint });
     if (!parsed || parsed.id !== id || parsed.workspaceId !== wsId) throw new Error("invalid_tank_response");
+    return parsed;
+  }
+
+  async startTankTraining(wsId: string, sessionId: string, input: StartTankTrainingInput): Promise<TankTrainingRun> {
+    const endpoint = `/api/tanks/v1/sessions/${encodeURIComponent(sessionId)}/runs`;
+    const raw = await this.fetch<unknown>(endpoint, { method: "POST", headers: { "X-Workspace-ID": wsId, "X-Workspace-Slug": "" }, body: JSON.stringify(input) });
+    const parsed = parseWithFallback<TankTrainingRun | null>(raw, TankTrainingRunSchema, null, { endpoint });
+    if (!parsed || parsed.sessionId !== sessionId || parsed.id !== input.requestId || parsed.levelId !== input.levelId) throw new Error("invalid_tank_response");
+    return parsed;
+  }
+
+  async settleTankTraining(wsId: string, sessionId: string, runId: string, input: SettleTankTrainingInput): Promise<TankTrainingResult> {
+    const endpoint = `/api/tanks/v1/sessions/${encodeURIComponent(sessionId)}/runs/${encodeURIComponent(runId)}/settle`;
+    const raw = await this.fetch<unknown>(endpoint, { method: "POST", headers: { "X-Workspace-ID": wsId, "X-Workspace-Slug": "" }, body: JSON.stringify(input) });
+    const parsed = parseWithFallback<TankTrainingResult | null>(raw, TankTrainingResultSchema, null, { endpoint });
+    if (!parsed || parsed.runId !== runId) throw new Error("invalid_tank_response");
     return parsed;
   }
 

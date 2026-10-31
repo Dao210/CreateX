@@ -102,6 +102,7 @@ var workspaceDeletionManifest = map[string]workspaceDeleteAction{
 	"tank_character":                     workspaceDelete,
 	"tank_character_revision":            workspaceDelete,
 	"tank_play_session":                  workspaceDelete,
+	"tank_training_run":                  workspaceDelete,
 	"tank_request":                       workspaceDelete,
 	"member":                             workspaceDelete,
 	"agent_mcp_server":                   workspaceDelete,

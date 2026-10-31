@@ -5,7 +5,7 @@ import { Button } from "@auro/ui/components/ui/button";
 import { Input } from "@auro/ui/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@auro/ui/components/ui/dialog";
 import { ApiError } from "@auro/core/api";
-import { compileTankCharacter, useSaveTankCharacter, type TankCharacterDraft, type TankCharacter } from "@auro/core/tank-defense";
+import { applyTankGrowth, compileTankCharacter, useSaveTankCharacter, type TankCharacterDraft, type TankCharacter } from "@auro/core/tank-defense";
 import { useT } from "../i18n";
 
 export function TankCharacterEditor({ open, onOpenChange, workspaceId, character, onSaved }: { open: boolean; onOpenChange: (open: boolean) => void; workspaceId: string; character: TankCharacter | null; onSaved: (character: TankCharacter) => void }) {
@@ -15,6 +15,7 @@ export function TankCharacterEditor({ open, onOpenChange, workspaceId, character
   const request = useRef<{ input: string; id: string } | null>(null);
   let preview: ReturnType<typeof compileTankCharacter> | null = null;
   try { preview = compileTankCharacter(draft); } catch { /* Invalid drafts remain editable. */ }
+  const previewBlueprint = preview ? applyTankGrowth(preview.blueprint, character?.progression?.xp) : null;
   const submit = async (event: FormEvent) => {
     event.preventDefault(); if (!preview) return;
     const input = { draft, ...(character ? { characterId: character.id, expectedRevision: character.revision } : {}) };
@@ -35,7 +36,7 @@ export function TankCharacterEditor({ open, onOpenChange, workspaceId, character
           <label className="tank-form-field"><span>{t($ => $.garage.accent_color)}</span><Input type="color" value={draft.appearance.accent} onChange={event => setDraft({ ...draft, appearance: { ...draft.appearance, accent: event.currentTarget.value } })} /></label>
         </div>
         <label className="tank-form-field"><span>{t($ => $.garage.pattern)}</span><select value={draft.appearance.pattern} onChange={event => { const value = event.currentTarget.value; if (value === "solid" || value === "stripe" || value === "cross") setDraft({ ...draft, appearance: { ...draft.appearance, pattern: value } }); }}>{(["solid", "stripe", "cross"] as const).map(pattern => <option key={pattern} value={pattern}>{t($ => $.garage[pattern])}</option>)}</select></label>
-        <div role="status" className={preview ? "tank-editor-preview" : "tank-garage-error"}>{preview ? <>{t($ => $.garage.budget, { cost: preview.cost })}<p>{t($ => $.garage.stats, { speed: preview.blueprint.speed, armor: preview.blueprint.armor, cooldown: preview.blueprint.fireInterval })}</p></> : t($ => $.garage.invalid_draft)}</div>
+        <div role="status" className={preview ? "tank-editor-preview" : "tank-garage-error"}>{preview ? <>{t($ => $.garage.budget, { cost: preview.cost })}<p>{t($ => $.garage.stats, { speed: previewBlueprint!.speed, armor: previewBlueprint!.armor, cooldown: previewBlueprint!.fireInterval })}</p></> : t($ => $.garage.invalid_draft)}</div>
         {save.isError && <p role="alert" className="tank-garage-error">{save.error instanceof ApiError && save.error.status === 409 ? t($ => $.garage.conflict) : t($ => $.garage.save_error)}</p>}
       </div>
       <DialogFooter><Button type="button" variant="outline" disabled={save.isPending} onClick={() => onOpenChange(false)}>{t($ => $.garage.cancel)}</Button><Button type="submit" disabled={!preview || save.isPending} aria-busy={save.isPending}>{save.isPending ? t($ => $.garage.saving) : t($ => $.garage.save)}</Button></DialogFooter>

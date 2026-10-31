@@ -279,3 +279,5 @@ cd server && go test ./internal/tanks ./internal/cli -run 'Test(Tank|Strict)' -c
 - [OpenAI Docs：Codex MCP](https://learn.chatgpt.com/docs/extend/mcp?surface=cli)：stdio / HTTP、项目配置和服务重载。
 - [WorkBuddy 连接器](https://open.workbuddy.cn/docs/connector)：MCP 接入和凭据管理；不同客户端入口的传输能力需单独确认。
 - [MCP Streamable HTTP](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports) 与 [Tools](https://modelcontextprotocol.io/specification/2025-11-25/server/tools)：协议行为。
+
+永久等级、经验结算和冻结成长配置见 [坦克永久成长](tank-permanent-growth.md)。

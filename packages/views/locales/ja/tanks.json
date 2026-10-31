@@ -203,5 +203,15 @@
   },
   "fortify_timer": "基地強化の残り時間",
   "fortify_time": "鋼鉄強化 · {{seconds}}秒",
-  "base_damaged": "基地損傷"
+  "base_damaged": "基地損傷",
+  "growth": {
+    "level": "Lv.{{level}}",
+    "experience": "経験値 {{earned}} / {{required}}",
+    "max_level": "最大レベル",
+    "awarded": "+{{xp}} 経験値 · Lv.{{level}}",
+    "start_error": "訓練を登録できませんでした。もう一度開始してください。",
+    "settle_error": "経験値はまだ保存されていません。次の戦闘の前に再試行してください。",
+    "retry": "経験値の保存を再試行",
+    "redeploy": "レベルアップしました。再配備すると強化された性能が適用されます。"
+  }
 }

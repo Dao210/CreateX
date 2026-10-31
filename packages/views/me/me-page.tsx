@@ -20,6 +20,7 @@ import {
 } from "@auro/core/siege";
 import { createSiegeClient, siegeLibraryOptions } from "@auro/core/siege/queries";
 import {
+  applyTankGrowth,
   TANK_LEVELS,
   TANK_DIFFICULTIES,
   myTankCharactersOptions,
@@ -38,6 +39,7 @@ import { AppLink, useNavigation } from "../navigation";
 import { PageHeader } from "../layout/page-header";
 import { useLocale, useT } from "../i18n";
 import { BlueprintPreview } from "./blueprint-preview";
+import { TankGrowth } from "../tank-defense/tank-growth";
 import { TankPreview } from "../tank-defense/tank-preview";
 
 type Filter = "all" | "siege" | "tanks" | "mcp";
@@ -202,6 +204,7 @@ function SiegeCard({ blueprint, locale, workshopHref }: { blueprint: LibraryBlue
 function TankCard({ character, locale, garageHref, workspaceId, power }: { character: TankCharacter; locale: string; garageHref: string; workspaceId: string; power: number }) {
   const { t } = useT("me");
   const { t: tankT } = useT("tanks");
+  const grownBlueprint = applyTankGrowth(character.blueprint, character.progression?.xp);
   const navigation = useNavigation();
   const create = useCreateTankSession(workspaceId);
   const request = useRef<{ input: string; id: string } | null>(null);
@@ -216,13 +219,14 @@ function TankCard({ character, locale, garageHref, workspaceId, power }: { chara
     } catch { /* The mutation exposes retry without losing the character. */ }
   };
   return <Card size="sm" className="h-full overflow-hidden" role="group" aria-label={character.draft.name}>
-    <div className="flex aspect-[4/3] items-center justify-center bg-muted/25 p-4"><TankPreview blueprint={character.blueprint} name={character.draft.name} power={power} className="h-full max-h-40 w-auto" /></div>
+    <div className="flex aspect-[4/3] items-center justify-center bg-muted/25 p-4"><TankPreview blueprint={grownBlueprint} name={character.draft.name} power={power} className="h-full max-h-40 w-auto" /></div>
     <CardHeader className="gap-1">
       <div className="flex min-w-0 items-center gap-2"><CardTitle className="truncate">{character.draft.name}</CardTitle><Badge variant={character.origin === "mcp" ? "default" : "secondary"}>{character.origin === "mcp" ? t(($) => $.weapons.mcp) : t(($) => $.weapons.manual)}</Badge></div>
       <CardDescription>{t(($) => $.weapons.revision, { revision: character.revision })} · {t(($) => $.weapons.created, { date: formatDate(character.createdAt, locale) })}</CardDescription>
     </CardHeader>
     <CardContent className="space-y-3">
-      <p className="text-caption text-muted-foreground">{t(($) => $.weapons.stats, { speed: character.blueprint.speed, armor: character.blueprint.armor, cooldown: character.blueprint.fireInterval })}</p>
+      <TankGrowth xp={character.progression?.xp} />
+      <p className="text-caption text-muted-foreground">{t(($) => $.weapons.stats, { speed: grownBlueprint.speed, armor: grownBlueprint.armor, cooldown: grownBlueprint.fireInterval })}</p>
       <div className="flex flex-wrap items-center gap-2"><Button size="xs" disabled={create.isPending} aria-busy={create.isPending} onClick={() => void play()}><Play />{create.isPending ? tankT(($) => $.garage.deploying) : t(($) => $.weapons.play)}</Button><AppLink href={garageHref} className={buttonVariants({ size: "xs", variant: "outline" })}>{t(($) => $.weapons.open_garage)}</AppLink><Badge variant="outline">{t(($) => $.weapons.cost, { cost: character.cost })}</Badge></div>
       {create.isError && <p role="alert" className="text-caption text-destructive">{tankT(($) => $.garage.save_error)}</p>}
     </CardContent>

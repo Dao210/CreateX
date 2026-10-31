@@ -1,6 +1,7 @@
 import { z } from "zod";
 import catalog from "./character-catalog.json";
 import type { TankBlueprint, TankMode } from "./types";
+import { applyTankGrowth, TankGrowthSchema } from "./progression";
 
 export const TANK_CHARACTER_CATALOG = catalog;
 const nameSchema = z.string().refine(value => [...value].length >= 1 && [...value].length <= 40 && value === value.trim() && !/\p{Cc}/u.test(value));
@@ -33,7 +34,7 @@ const BlueprintSchema = z.object({
 export const TankCharacterSchema = z.object({
   id: z.string().uuid(), revision: z.number().int().positive(), workspaceId: z.string().uuid(), ownerId: z.string().uuid(),
   rulesVersion: z.literal(1), compilerVersion: z.literal(1), contentHash: z.string().regex(/^sha256:[0-9a-f]{64}$/),
-  draft: TankCharacterDraftSchema, blueprint: BlueprintSchema, cost: z.number().int(), origin: z.enum(["manual", "mcp"]).default("manual").catch("manual"), createdAt: z.string().datetime({ offset: true }),
+  draft: TankCharacterDraftSchema, blueprint: BlueprintSchema, cost: z.number().int(), origin: z.enum(["manual", "mcp"]).default("manual").catch("manual"), createdAt: z.string().datetime({ offset: true }), progression: TankGrowthSchema.optional(),
 }).superRefine((value, ctx) => {
   try {
     const compiled = compileTankCharacter(value.draft, `${value.id}@${value.revision}`);
@@ -45,8 +46,12 @@ export const TankCharacterListSchema = z.object({ characters: z.array(TankCharac
 export const TankPlaySessionSchema = z.object({
   id: z.string().uuid(), workspaceId: z.string().uuid(), ownerId: z.string().uuid(), rulesVersion: z.literal(1),
   mapId: z.enum(["frontline", "river", "steel", "depot", "circuit", "citadel"]), mapVersion: z.literal(1), levelId: z.number().int().min(1).max(6), mode: z.enum(["campaign", "blitz", "survival"]),
-  character: TankCharacterSchema, createdAt: z.string().datetime({ offset: true }), expiresAt: z.string().datetime({ offset: true }), playPath: z.string(), playUrl: z.string().url(),
+  character: TankCharacterSchema, loadout: BlueprintSchema.extend({ evolution: z.number().int().min(0).max(2).default(0) }).optional(), progression: TankGrowthSchema.optional(), createdAt: z.string().datetime({ offset: true }), expiresAt: z.string().datetime({ offset: true }), playPath: z.string(), playUrl: z.string().url(),
 }).superRefine((value, ctx) => {
+  if (value.loadout) {
+    const expected = applyTankGrowth(value.character.blueprint, value.progression?.xp);
+    if (Object.keys(expected).some(key => JSON.stringify(expected[key as keyof TankBlueprint]) !== JSON.stringify(value.loadout![key as keyof typeof value.loadout]))) ctx.addIssue({ code: "custom", message: "Deployment does not match frozen growth" });
+  }
   const map = catalog.maps.find(map => map.id === value.mapId);
   if (map?.levelId !== value.levelId || value.character.workspaceId !== value.workspaceId) ctx.addIssue({ code: "custom", message: "Session scope or map mismatch" });
   try {

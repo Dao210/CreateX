@@ -2,6 +2,7 @@
 import { describe, expect, it } from "vitest";
 import cases from "./character-cases.json";
 import { compileTankCharacter, TankCharacterDraftSchema, TankCharacterSchema, TankPlaySessionSchema, TANK_CHARACTER_CATALOG } from "./characters";
+import { applyTankGrowth } from "./progression";
 import { TankDefenseGame } from "./engine";
 import { TANK_LEVELS } from "./levels";
 
@@ -51,6 +52,9 @@ describe("tank character contract", () => {
     const playPath = `/acme/tanks?session=${id}`;
     const session = { id, workspaceId, ownerId: id, rulesVersion: 1, mapId: "river", mapVersion: 1, levelId: 2, mode: "campaign", character, createdAt: "2026-10-24T00:00:00Z", expiresAt: "2026-10-25T00:00:00Z", playPath, playUrl: `https://example.invalid${playPath}` };
     expect(TankPlaySessionSchema.safeParse(session).success).toBe(true);
+    const grown = { ...session, progression: { xp: 700 }, loadout: applyTankGrowth(character.blueprint, 700) };
+    expect(TankPlaySessionSchema.safeParse(grown).success).toBe(true);
+    expect(TankPlaySessionSchema.safeParse({ ...grown, loadout: { ...grown.loadout, speed: 999 } }).success).toBe(false);
     expect(TankPlaySessionSchema.safeParse({ ...session, levelId: 1 }).success).toBe(false);
     expect(TankPlaySessionSchema.safeParse({ ...session, rulesVersion: 2 }).success).toBe(false);
     expect(TankPlaySessionSchema.safeParse({ ...session, playPath: "//evil.invalid/tanks" }).success).toBe(false);

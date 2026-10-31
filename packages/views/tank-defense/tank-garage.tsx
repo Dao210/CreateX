@@ -1,5 +1,9 @@
 "use client";
 
+import { applyTankGrowth, tankGrowth } from "@auro/core/tank-defense";
+import { TankGrowth } from "./tank-growth";
+import { useTankTraining } from "./use-tank-training";
+
 import { useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Plus, RefreshCw, Wrench } from "lucide-react";
@@ -32,10 +36,13 @@ export function TankGarage({ storage, storageKey, workspace, userId }: { storage
   const [editing, setEditing] = useState<TankCharacter | null>(null);
   const request = useRef<{ input: string; id: string } | null>(null);
   const frozen = sessionId ? session.data : undefined;
+  const training = useTankTraining(workspace.id, frozen, userId);
+  const deployedBlueprint = frozen ? frozen.loadout ?? applyTankGrowth(frozen.character.blueprint, frozen.progression?.xp) : undefined;
   const currentId = requestedCharacter ?? frozen?.character.id ?? "";
   const currentMap = selectedMap ?? frozen?.mapId ?? "frontline";
   const currentMode = selectedMode ?? frozen?.mode ?? "campaign";
   const selected = library.data?.find(character => character.id === currentId);
+  const selectedBlueprint = selected ? applyTankGrowth(selected.blueprint, selected.progression?.xp) : undefined;
   const path = `/${workspace.slug}/tanks`;
   const connections = <TankMCPConnection workspace={workspace} userId={userId} />;
   const selectCharacter = (id: string) => {
@@ -58,6 +65,7 @@ export function TankGarage({ storage, storageKey, workspace, userId }: { storage
   }
 
   const deploy = async (begin = false) => {
+    try { await training.finishActive(); } catch { return; }
     if (!currentId) { setAutoStartId(begin ? "classic" : null); navigation.replace(path); return; }
     const map = TANK_LEVELS.find(level => level.key === currentMap);
     if (!selected || !map) return;
@@ -87,26 +95,31 @@ export function TankGarage({ storage, storageKey, workspace, userId }: { storage
     {characterUnavailable && !library.isError && <p role="alert" className="tank-garage-error">{t($ => $.garage.character_unavailable)}</p>}
     {!library.isPending && !library.isError && !library.data?.length && <p>{t($ => $.garage.empty)}</p>}
     {selected && <>
-      <div className="tank-character-swatch"><i style={{ backgroundColor: selected.draft.appearance.body, borderColor: selected.draft.appearance.accent }} aria-hidden /><span>{t($ => $.garage.stats, { speed: selected.blueprint.speed, armor: selected.blueprint.armor, cooldown: selected.blueprint.fireInterval })}</span></div>
+      <TankGrowth xp={selected.progression?.xp} />
+      <div className="tank-character-swatch"><i style={{ backgroundColor: selected.draft.appearance.body, borderColor: selected.draft.appearance.accent }} aria-hidden /><span>{t($ => $.garage.stats, { speed: selectedBlueprint!.speed, armor: selectedBlueprint!.armor, cooldown: selectedBlueprint!.fireInterval })}</span></div>
       <label className="tank-form-field"><span>{t($ => $.garage.start_map)}</span><select value={currentMap} disabled={create.isPending} onChange={event => setSelectedMap(event.currentTarget.value)}>{TANK_LEVELS.map(level => <option key={level.key} value={level.key}>{t($ => $.levels[level.key].name)}</option>)}</select></label>
       <label className="tank-form-field"><span>{t($ => $.mode)}</span><select value={currentMode} disabled={create.isPending} onChange={event => { const value = event.currentTarget.value; if (value === "campaign" || value === "blitz" || value === "survival") setSelectedMode(value); }}>{(["campaign", "blitz", "survival"] as const).map(mode => <option key={mode} value={mode}>{t($ => $.modes[mode].name)}</option>)}</select></label>
     </>}
-    <div className="tank-garage-actions"><Button size="sm" disabled={create.isPending || Boolean(currentId && !selected)} aria-busy={create.isPending} onClick={() => void deploy()}>{create.isPending ? t($ => $.garage.deploying) : t($ => $.garage.deploy)}</Button>
+    <div className="tank-garage-actions"><Button size="sm" disabled={create.isPending || training.busy || training.settleError || Boolean(currentId && !selected)} aria-busy={create.isPending} onClick={() => void deploy()}>{create.isPending ? t($ => $.garage.deploying) : t($ => $.garage.deploy)}</Button>
       {selected?.ownerId === userId && <Button size="icon-sm" variant="outline" aria-label={t($ => $.garage.edit)} onClick={() => { setEditing(selected); setEditorOpen(true); }}><Wrench /></Button>}
     </div>
+    {training.startError && <p role="alert">{t($ => $.growth.start_error)}</p>}
+    {training.settleError && <div role="alert"><p>{t($ => $.growth.settle_error)}</p><Button size="sm" variant="outline" disabled={training.busy} onClick={training.retry}>{t($ => $.growth.retry)}</Button></div>}
+    {training.result?.characterId === currentId && <p role="status">{t($ => $.growth.awarded, { xp: training.result.awardedXp, level: tankGrowth(training.result.progression.xp).level })}</p>}
+    {frozen && selected && tankGrowth(selected.progression?.xp).level > tankGrowth(frozen.progression?.xp).level && <p>{t($ => $.growth.redeploy)}</p>}
     <p>{t($ => $.garage.new_battle_help)}</p>
   </section>;
 
   return <>
     <TankBattle
       key={sessionId || "classic"} storage={storage} storageKey={storageKey} workspaceId={workspace.id}
-      blueprint={frozen?.character.blueprint} levelIndex={frozen ? frozen.levelId - 1 : initialLevelIndex} initialMode={frozen?.mode}
+      training={training} blueprint={deployedBlueprint} levelIndex={frozen ? frozen.levelId - 1 : initialLevelIndex} initialMode={frozen?.mode}
       frozen={Boolean(frozen)} garage={garage} headerActions={connections}
       notice={<TankConnectionReturn />}
       onStart={selectionChanged ? () => void deploy(true) : undefined}
       startDisabled={selectionChanged && Boolean(currentId && !selected)} startPending={create.isPending}
       autoStart={autoStartId === (sessionId || "classic")}
-      readyLoadout={selectionChanged ? selected && { name: selected.draft.name, blueprint: selected.blueprint } : frozen && { name: frozen.character.draft.name, blueprint: frozen.character.blueprint }}
+      readyLoadout={selectionChanged ? selected && { name: selected.draft.name, blueprint: selectedBlueprint! } : frozen && { name: frozen.character.draft.name, blueprint: deployedBlueprint! }}
       launchError={launchError}
     />
     <TankCharacterEditor key={editorOpen ? editing ? `${editing.id}@${editing.revision}` : "new" : "closed"} open={editorOpen} onOpenChange={setEditorOpen} workspaceId={workspace.id} character={editing} onSaved={character => { selectCharacter(character.id); setEditorOpen(false); }} />

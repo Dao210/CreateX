@@ -1,6 +1,7 @@
 import { queryOptions, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api";
 import type { CreateTankSessionInput, SaveTankCharacterInput } from "./characters";
+import type { StartTankTrainingInput, SettleTankTrainingInput } from "./progression";
 
 export const tankKeys = {
   characters: (wsId: string) => ["tanks", wsId, "characters"] as const,
@@ -22,7 +23,26 @@ export function tankSessionOptions(wsId: string, userId: string, id: string) {
 }
 export function useSaveTankCharacter(wsId: string) {
   const client = useQueryClient();
-  return useMutation({ mutationFn: (input: SaveTankCharacterInput) => api.saveTankCharacter(wsId, input), onSuccess: () => client.invalidateQueries({ queryKey: tankKeys.characters(wsId) }) });
+  return useMutation({ mutationFn: (input: SaveTankCharacterInput) => api.saveTankCharacter(wsId, input), onSuccess: () => invalidateTankLibraries(client, wsId) });
+}
+
+function invalidateTankLibraries(client: ReturnType<typeof useQueryClient>, wsId: string) {
+  return client.invalidateQueries({ predicate: query => query.queryKey[0] === "tanks" && query.queryKey[1] === wsId && query.queryKey.at(-1) === "characters" });
+}
+
+export function useStartTankTraining(wsId: string) {
+  return useMutation({ mutationFn: ({ sessionId, characterId, ...input }: StartTankTrainingInput & { sessionId: string; characterId: string }) => api.startTankTraining(wsId, sessionId, input).then(result => {
+    if (result.characterId !== characterId) throw new Error("invalid_tank_response");
+    return result;
+  }) });
+}
+
+export function useSettleTankTraining(wsId: string) {
+  const client = useQueryClient();
+  return useMutation({ mutationFn: ({ sessionId, runId, characterId, ...input }: SettleTankTrainingInput & { sessionId: string; runId: string; characterId: string }) => api.settleTankTraining(wsId, sessionId, runId, input).then(result => {
+    if (result.characterId !== characterId) throw new Error("invalid_tank_response");
+    return result;
+  }), onSuccess: () => invalidateTankLibraries(client, wsId) });
 }
 export function useCreateTankSession(wsId: string) {
   const client = useQueryClient();

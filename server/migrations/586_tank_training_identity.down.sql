@@ -1,0 +1,1 @@
+DROP INDEX CONCURRENTLY IF EXISTS tank_training_identity;

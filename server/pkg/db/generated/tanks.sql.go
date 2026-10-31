@@ -11,6 +11,63 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const addTankExperience = `-- name: AddTankExperience :one
+UPDATE tank_character SET experience = LEAST(experience + $1::integer, $2::integer)
+WHERE workspace_id = $3 AND user_id = $4 AND id = $5
+RETURNING experience
+`
+
+type AddTankExperienceParams struct {
+	Award         int32       `json:"award"`
+	MaxExperience int32       `json:"max_experience"`
+	WorkspaceID   pgtype.UUID `json:"workspace_id"`
+	UserID        pgtype.UUID `json:"user_id"`
+	ID            pgtype.UUID `json:"id"`
+}
+
+func (q *Queries) AddTankExperience(ctx context.Context, arg AddTankExperienceParams) (int32, error) {
+	row := q.db.QueryRow(ctx, addTankExperience,
+		arg.Award,
+		arg.MaxExperience,
+		arg.WorkspaceID,
+		arg.UserID,
+		arg.ID,
+	)
+	var experience int32
+	err := row.Scan(&experience)
+	return experience, err
+}
+
+const cancelActiveTankTraining = `-- name: CancelActiveTankTraining :exec
+UPDATE tank_training_run SET settled_at = now() WHERE workspace_id = $1 AND user_id = $2 AND settled_at IS NULL
+`
+
+type CancelActiveTankTrainingParams struct {
+	WorkspaceID pgtype.UUID `json:"workspace_id"`
+	UserID      pgtype.UUID `json:"user_id"`
+}
+
+func (q *Queries) CancelActiveTankTraining(ctx context.Context, arg CancelActiveTankTrainingParams) error {
+	_, err := q.db.Exec(ctx, cancelActiveTankTraining, arg.WorkspaceID, arg.UserID)
+	return err
+}
+
+const countRecentTankTraining = `-- name: CountRecentTankTraining :one
+SELECT count(*) FROM tank_training_run WHERE workspace_id = $1 AND user_id = $2 AND started_at > now() - interval '1 day'
+`
+
+type CountRecentTankTrainingParams struct {
+	WorkspaceID pgtype.UUID `json:"workspace_id"`
+	UserID      pgtype.UUID `json:"user_id"`
+}
+
+func (q *Queries) CountRecentTankTraining(ctx context.Context, arg CountRecentTankTrainingParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countRecentTankTraining, arg.WorkspaceID, arg.UserID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countTankCharacters = `-- name: CountTankCharacters :one
 SELECT count(*) FROM tank_character WHERE workspace_id = $1
 `
@@ -39,7 +96,7 @@ func (q *Queries) CountTankPlaySessions(ctx context.Context, arg CountTankPlaySe
 }
 
 const getTankCharacter = `-- name: GetTankCharacter :one
-SELECT id, workspace_id, user_id, revision, payload, updated_at FROM tank_character WHERE workspace_id = $1 AND id = $2
+SELECT id, workspace_id, user_id, revision, payload, updated_at, experience FROM tank_character WHERE workspace_id = $1 AND id = $2
 `
 
 type GetTankCharacterParams struct {
@@ -57,6 +114,7 @@ func (q *Queries) GetTankCharacter(ctx context.Context, arg GetTankCharacterPara
 		&i.Revision,
 		&i.Payload,
 		&i.UpdatedAt,
+		&i.Experience,
 	)
 	return i, err
 }
@@ -120,6 +178,34 @@ func (q *Queries) GetTankRequest(ctx context.Context, arg GetTankRequestParams) 
 	)
 	var i GetTankRequestRow
 	err := row.Scan(&i.BodyHash, &i.Response)
+	return i, err
+}
+
+const getTankTrainingRun = `-- name: GetTankTrainingRun :one
+SELECT id, workspace_id, user_id, session_id, character_id, level_id, started_at, settled_at, body_hash, result FROM tank_training_run WHERE workspace_id = $1 AND user_id = $2 AND id = $3 FOR UPDATE
+`
+
+type GetTankTrainingRunParams struct {
+	WorkspaceID pgtype.UUID `json:"workspace_id"`
+	UserID      pgtype.UUID `json:"user_id"`
+	ID          pgtype.UUID `json:"id"`
+}
+
+func (q *Queries) GetTankTrainingRun(ctx context.Context, arg GetTankTrainingRunParams) (TankTrainingRun, error) {
+	row := q.db.QueryRow(ctx, getTankTrainingRun, arg.WorkspaceID, arg.UserID, arg.ID)
+	var i TankTrainingRun
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.UserID,
+		&i.SessionID,
+		&i.CharacterID,
+		&i.LevelID,
+		&i.StartedAt,
+		&i.SettledAt,
+		&i.BodyHash,
+		&i.Result,
+	)
 	return i, err
 }
 
@@ -192,23 +278,59 @@ func (q *Queries) InsertTankRequest(ctx context.Context, arg InsertTankRequestPa
 	return err
 }
 
-const listTankCharacters = `-- name: ListTankCharacters :many
-SELECT payload FROM tank_character WHERE workspace_id = $1 ORDER BY updated_at DESC, id
+const insertTankTrainingRun = `-- name: InsertTankTrainingRun :exec
+INSERT INTO tank_training_run (id, workspace_id, user_id, session_id, character_id, level_id) VALUES ($1, $2, $3, $4, $5, $6)
 `
 
-func (q *Queries) ListTankCharacters(ctx context.Context, workspaceID pgtype.UUID) ([][]byte, error) {
-	rows, err := q.db.Query(ctx, listTankCharacters, workspaceID)
+type InsertTankTrainingRunParams struct {
+	ID          pgtype.UUID `json:"id"`
+	WorkspaceID pgtype.UUID `json:"workspace_id"`
+	UserID      pgtype.UUID `json:"user_id"`
+	SessionID   pgtype.UUID `json:"session_id"`
+	CharacterID pgtype.UUID `json:"character_id"`
+	LevelID     int32       `json:"level_id"`
+}
+
+func (q *Queries) InsertTankTrainingRun(ctx context.Context, arg InsertTankTrainingRunParams) error {
+	_, err := q.db.Exec(ctx, insertTankTrainingRun,
+		arg.ID,
+		arg.WorkspaceID,
+		arg.UserID,
+		arg.SessionID,
+		arg.CharacterID,
+		arg.LevelID,
+	)
+	return err
+}
+
+const listTankCharacters = `-- name: ListTankCharacters :many
+SELECT payload, experience FROM tank_character WHERE workspace_id = $1 AND (NOT $2::boolean OR user_id = $3) ORDER BY updated_at DESC, id
+`
+
+type ListTankCharactersParams struct {
+	WorkspaceID pgtype.UUID `json:"workspace_id"`
+	Mine        bool        `json:"mine"`
+	UserID      pgtype.UUID `json:"user_id"`
+}
+
+type ListTankCharactersRow struct {
+	Payload    []byte `json:"payload"`
+	Experience int32  `json:"experience"`
+}
+
+func (q *Queries) ListTankCharacters(ctx context.Context, arg ListTankCharactersParams) ([]ListTankCharactersRow, error) {
+	rows, err := q.db.Query(ctx, listTankCharacters, arg.WorkspaceID, arg.Mine, arg.UserID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := [][]byte{}
+	items := []ListTankCharactersRow{}
 	for rows.Next() {
-		var payload []byte
-		if err := rows.Scan(&payload); err != nil {
+		var i ListTankCharactersRow
+		if err := rows.Scan(&i.Payload, &i.Experience); err != nil {
 			return nil, err
 		}
-		items = append(items, payload)
+		items = append(items, i)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -234,6 +356,20 @@ func (q *Queries) PruneTankSessions(ctx context.Context, workspaceID pgtype.UUID
 	return err
 }
 
+const pruneTankTraining = `-- name: PruneTankTraining :exec
+DELETE FROM tank_training_run WHERE workspace_id = $1 AND user_id = $2 AND started_at < now() - interval '7 days'
+`
+
+type PruneTankTrainingParams struct {
+	WorkspaceID pgtype.UUID `json:"workspace_id"`
+	UserID      pgtype.UUID `json:"user_id"`
+}
+
+func (q *Queries) PruneTankTraining(ctx context.Context, arg PruneTankTrainingParams) error {
+	_, err := q.db.Exec(ctx, pruneTankTraining, arg.WorkspaceID, arg.UserID)
+	return err
+}
+
 const putTankCharacter = `-- name: PutTankCharacter :exec
 INSERT INTO tank_character (id, workspace_id, user_id, revision, payload)
 VALUES ($1, $2, $3, $4, $5)
@@ -256,6 +392,29 @@ func (q *Queries) PutTankCharacter(ctx context.Context, arg PutTankCharacterPara
 		arg.UserID,
 		arg.Revision,
 		arg.Payload,
+	)
+	return err
+}
+
+const settleTankTrainingRun = `-- name: SettleTankTrainingRun :exec
+UPDATE tank_training_run SET settled_at = now(), body_hash = $4, result = $5 WHERE workspace_id = $1 AND user_id = $2 AND id = $3
+`
+
+type SettleTankTrainingRunParams struct {
+	WorkspaceID pgtype.UUID `json:"workspace_id"`
+	UserID      pgtype.UUID `json:"user_id"`
+	ID          pgtype.UUID `json:"id"`
+	BodyHash    pgtype.Text `json:"body_hash"`
+	Result      []byte      `json:"result"`
+}
+
+func (q *Queries) SettleTankTrainingRun(ctx context.Context, arg SettleTankTrainingRunParams) error {
+	_, err := q.db.Exec(ctx, settleTankTrainingRun,
+		arg.WorkspaceID,
+		arg.UserID,
+		arg.ID,
+		arg.BodyHash,
+		arg.Result,
 	)
 	return err
 }

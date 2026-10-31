@@ -203,5 +203,15 @@
   },
   "fortify_timer": "Base fortification countdown",
   "fortify_time": "Steel fortification · {{seconds}}s",
-  "base_damaged": "Base damaged"
+  "base_damaged": "Base damaged",
+  "growth": {
+    "level": "Lv.{{level}}",
+    "experience": "{{earned}} / {{required}} XP",
+    "max_level": "Max level",
+    "awarded": "+{{xp}} XP · Lv.{{level}}",
+    "start_error": "Training could not be registered. Start again to retry.",
+    "settle_error": "Experience has not been saved. Retry before starting another battle.",
+    "retry": "Retry settlement",
+    "redeploy": "Your tank leveled up. Deploy again to use its improved stats."
+  }
 }

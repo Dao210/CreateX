@@ -203,5 +203,15 @@
   },
   "fortify_timer": "기지 강화 남은 시간",
   "fortify_time": "강철 요새화 · {{seconds}}초",
-  "base_damaged": "기지 손상"
+  "base_damaged": "기지 손상",
+  "growth": {
+    "level": "Lv.{{level}}",
+    "experience": "경험치 {{earned}} / {{required}}",
+    "max_level": "최대 레벨",
+    "awarded": "+{{xp}} 경험치 · Lv.{{level}}",
+    "start_error": "훈련을 등록하지 못했습니다. 다시 시작해 주세요.",
+    "settle_error": "경험치가 아직 저장되지 않았습니다. 다음 전투 전에 다시 시도해 주세요.",
+    "retry": "경험치 저장 재시도",
+    "redeploy": "탱크의 레벨이 올랐습니다. 다시 배치하면 성장한 능력치가 적용됩니다."
+  }
 }

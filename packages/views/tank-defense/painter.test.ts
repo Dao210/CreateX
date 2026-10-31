@@ -36,6 +36,16 @@ describe("tank transformation rendering", () => {
     }
   });
 
+  it("keeps permanent evolution visible independently of temporary firepower", () => {
+    const evolved = { ...player, blueprint: { ...player.blueprint, evolution: 2 } };
+    for (const power of [0, 1, 2]) {
+      const shapes = draw(evolved, { power, reducedMotion: true });
+      expect(shapes).not.toEqual(draw(player, { power, reducedMotion: true }));
+      expect(shapes).toContainEqual(["fillStyle", player.blueprint.appearance.body]);
+      expect(shapes).toContainEqual(["fillStyle", player.blueprint.appearance.accent]);
+    }
+  });
+
   it("does not move an enemy's cannon when the player transforms", () => {
     const enemy = { ...player, team: "enemy" as const };
     expect(draw(enemy, { power: 2, upgradeAge: 0 })).toEqual(draw(enemy, { power: 0 }));

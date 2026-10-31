@@ -203,5 +203,15 @@
   },
   "fortify_timer": "基地强化倒计时",
   "fortify_time": "钢铁加固 · {{seconds}} 秒",
-  "base_damaged": "基地受损"
+  "base_damaged": "基地受损",
+  "growth": {
+    "level": "Lv.{{level}}",
+    "experience": "经验 {{earned}} / {{required}}",
+    "max_level": "已满级",
+    "awarded": "+{{xp}} 经验 · Lv.{{level}}",
+    "start_error": "训练登记失败，请再次开始重试。",
+    "settle_error": "经验尚未保存，请重试结算后再开始下一场。",
+    "retry": "重试结算",
+    "redeploy": "坦克已升级，重新部署后使用成长属性。"
+  }
 }

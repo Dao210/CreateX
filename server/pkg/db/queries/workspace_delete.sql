@@ -702,6 +702,9 @@ deleted_siege_budgets AS (
 deleted_game_progress AS (
     DELETE FROM game_progress WHERE workspace_id = $1
 ),
+deleted_tank_training AS (
+    DELETE FROM tank_training_run WHERE workspace_id = $1
+),
 deleted_tank_requests AS (
     DELETE FROM tank_request WHERE workspace_id = $1
 ),

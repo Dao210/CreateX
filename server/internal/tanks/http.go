@@ -146,6 +146,34 @@ func (h *HTTP) Handler() http.Handler {
 		}
 		send(w, 200, s)
 	})
+	mux.HandleFunc("POST /api/tanks/v1/sessions/{id}/runs", func(w http.ResponseWriter, r *http.Request) {
+		var in TrainingStart
+		if e := readInput(w, r, &in); e != nil {
+			failure(w, e)
+			return
+		}
+		a, _ := actorFromContext(r.Context())
+		out, e := h.Service.StartTraining(r.Context(), a, r.PathValue("id"), in)
+		if e != nil {
+			failure(w, e)
+			return
+		}
+		send(w, 200, out)
+	})
+	mux.HandleFunc("POST /api/tanks/v1/sessions/{id}/runs/{run}/settle", func(w http.ResponseWriter, r *http.Request) {
+		var in TrainingSummary
+		if e := readInput(w, r, &in); e != nil {
+			failure(w, e)
+			return
+		}
+		a, _ := actorFromContext(r.Context())
+		out, e := h.Service.SettleTraining(r.Context(), a, r.PathValue("id"), r.PathValue("run"), in)
+		if e != nil {
+			failure(w, e)
+			return
+		}
+		send(w, 200, out)
+	})
 	mux.HandleFunc("/api/tanks/mcp", h.mcp)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Cache-Control", "no-store")

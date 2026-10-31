@@ -1579,6 +1579,7 @@ type TankCharacter struct {
 	Revision    int32              `json:"revision"`
 	Payload     []byte             `json:"payload"`
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+	Experience  int32              `json:"experience"`
 }
 
 type TankCharacterRevision struct {
@@ -1604,6 +1605,19 @@ type TankRequest struct {
 	BodyHash    string             `json:"body_hash"`
 	Response    []byte             `json:"response"`
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+}
+
+type TankTrainingRun struct {
+	ID          pgtype.UUID        `json:"id"`
+	WorkspaceID pgtype.UUID        `json:"workspace_id"`
+	UserID      pgtype.UUID        `json:"user_id"`
+	SessionID   pgtype.UUID        `json:"session_id"`
+	CharacterID pgtype.UUID        `json:"character_id"`
+	LevelID     int32              `json:"level_id"`
+	StartedAt   pgtype.Timestamptz `json:"started_at"`
+	SettledAt   pgtype.Timestamptz `json:"settled_at"`
+	BodyHash    pgtype.Text        `json:"body_hash"`
+	Result      []byte             `json:"result"`
 }
 
 type TaskMessage struct {

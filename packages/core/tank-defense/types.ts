@@ -7,7 +7,7 @@ export type TankMode = "campaign" | "blitz" | "survival";
 export type PickupKind = "star" | "shield" | "bomb" | "fortify";
 
 export interface TankBlueprint {
-  id: string; speed: number; armor: number; projectileSpeed: number; fireInterval: number; score: number;
+  id: string; speed: number; armor: number; projectileSpeed: number; fireInterval: number; score: number; evolution?: number;
   appearance?: { body: string; accent: string; pattern: "solid" | "stripe" | "cross" };
 }
 export interface TankActor extends TankPoint {

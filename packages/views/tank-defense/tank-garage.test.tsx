@@ -4,10 +4,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderWithI18n } from "../test/i18n";
 import { TankGarage } from "./tank-garage";
 import { TankCharacterEditor } from "./tank-character-editor";
-import { compileTankCharacter, type TankCharacterDraft } from "@auro/core/tank-defense";
+import { applyTankGrowth, compileTankCharacter, type TankCharacterDraft } from "@auro/core/tank-defense";
 
-const mocks = vi.hoisted(() => ({ list: vi.fn(), session: vi.fn(), save: vi.fn(), create: vi.fn(), replace: vi.fn(), search: "", hash: "", listeners: new Set<() => void>() }));
-vi.mock("@auro/core/api", async importOriginal => ({ ...await importOriginal<typeof import("@auro/core/api")>(), api: { listTankCharacters: mocks.list, getTankSession: mocks.session, saveTankCharacter: mocks.save, createTankSession: mocks.create, getBaseUrl: () => "https://api.example.invalid" } }));
+const mocks = vi.hoisted(() => ({ list: vi.fn(), session: vi.fn(), save: vi.fn(), start: vi.fn(), settle: vi.fn(), create: vi.fn(), replace: vi.fn(), search: "", hash: "", listeners: new Set<() => void>() }));
+vi.mock("@auro/core/api", async importOriginal => ({ ...await importOriginal<typeof import("@auro/core/api")>(), api: { listTankCharacters: mocks.list, getTankSession: mocks.session, saveTankCharacter: mocks.save, createTankSession: mocks.create, startTankTraining: mocks.start, settleTankTraining: mocks.settle, getBaseUrl: () => "https://api.example.invalid" } }));
 vi.mock("../navigation", async () => {
   const { useSyncExternalStore } = await import("react");
   return { useNavigation: () => {
@@ -130,4 +130,30 @@ it("preserves a failed editor draft and retries the same intended save", async (
   expect(screen.getByRole("textbox", { name: "Tank name" })).toHaveValue("My forest tank");
   fireEvent.click(screen.getByRole("button", { name: "Save character" })); await waitFor(() => expect(saved).toHaveBeenCalled());
   expect(mocks.save.mock.calls[1]![1].requestId).toBe(mocks.save.mock.calls[0]![1].requestId);
+});
+
+it("registers owned training before play and retries the same run before settling an explicit end", async () => {
+  const grown = { ...session, progression: { xp: 700 }, loadout: applyTankGrowth(character.blueprint, 700) };
+  mocks.search = `session=${session.id}`; mocks.session.mockResolvedValue(grown); mocks.list.mockResolvedValue([{ ...character, progression: { xp: 700 } }]);
+  mocks.start.mockRejectedValueOnce(new Error("offline")).mockImplementation((_ws, sessionId, input) => Promise.resolve({ id: input.requestId, sessionId, characterId: character.id, levelId: input.levelId }));
+  mocks.settle.mockImplementation((_ws, _session, runId) => Promise.resolve({ runId, characterId: character.id, awardedXp: 0, progression: { xp: 700 } }));
+  render(<TankGarage workspace={{ id: "workspace", slug: "acme" }} userId="user" storageKey="test" storage={storage} />);
+  await screen.findByText("Lv.5");
+  const battlefield = screen.getByTestId("tank-battlefield");
+  expect(battlefield).toHaveAttribute("data-player-speed", "56");
+  fireEvent.click(screen.getByRole("button", { name: "Modify tank" }));
+  expect(screen.getByRole("dialog")).toHaveTextContent("Speed 56");
+  fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+  await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+  fireEvent.click(screen.getByRole("button", { name: "Start defense" }));
+  await screen.findByText("Training could not be registered. Start again to retry.");
+  expect(battlefield).toHaveAttribute("data-phase", "ready");
+  fireEvent.click(screen.getByRole("button", { name: "Start defense" }));
+  await waitFor(() => expect(battlefield).toHaveAttribute("data-phase", "running"));
+  expect(mocks.start.mock.calls[1]![2].requestId).toBe(mocks.start.mock.calls[0]![2].requestId);
+  fireEvent.click(screen.getByRole("button", { name: "Pause" }));
+  fireEvent.click(screen.getByRole("button", { name: "End run" }));
+  await waitFor(() => expect(battlefield).toHaveAttribute("data-phase", "ready"));
+  expect(mocks.settle).toHaveBeenCalledTimes(1);
+  expect(mocks.settle.mock.calls[0]![3]).toEqual({ ticks: 0, kills: 0, outcome: "abandoned" });
 });

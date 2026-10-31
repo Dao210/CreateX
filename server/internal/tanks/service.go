@@ -56,6 +56,7 @@ type Character struct {
 	Cost            int       `json:"cost"`
 	Origin          string    `json:"origin"`
 	CreatedAt       string    `json:"createdAt"`
+	Progression     *Growth   `json:"progression,omitempty"`
 }
 type SaveInput struct {
 	RequestID        string `json:"requestId"`
@@ -86,19 +87,21 @@ type SessionInput struct {
 	Mode        string `json:"mode,omitempty"`
 }
 type Session struct {
-	ID           string    `json:"id"`
-	WorkspaceID  string    `json:"workspaceId"`
-	OwnerID      string    `json:"ownerId"`
-	RulesVersion int       `json:"rulesVersion"`
-	MapID        string    `json:"mapId"`
-	Mode         string    `json:"mode"`
-	MapVersion   int       `json:"mapVersion"`
-	LevelID      int       `json:"levelId"`
-	Character    Character `json:"character"`
-	CreatedAt    string    `json:"createdAt"`
-	ExpiresAt    string    `json:"expiresAt"`
-	PlayPath     string    `json:"playPath"`
-	PlayURL      string    `json:"playUrl"`
+	Loadout      *Blueprint `json:"loadout,omitempty"`
+	ID           string     `json:"id"`
+	WorkspaceID  string     `json:"workspaceId"`
+	OwnerID      string     `json:"ownerId"`
+	RulesVersion int        `json:"rulesVersion"`
+	MapID        string     `json:"mapId"`
+	Mode         string     `json:"mode"`
+	MapVersion   int        `json:"mapVersion"`
+	LevelID      int        `json:"levelId"`
+	Character    Character  `json:"character"`
+	Progression  *Growth    `json:"progression,omitempty"`
+	CreatedAt    string     `json:"createdAt"`
+	ExpiresAt    string     `json:"expiresAt"`
+	PlayPath     string     `json:"playPath"`
+	PlayURL      string     `json:"playUrl"`
 }
 type Service struct {
 	Pool   *pgxpool.Pool
@@ -131,24 +134,22 @@ func storedError(err error) error {
 }
 
 func (s *Service) List(ctx context.Context, a Actor, mine bool) ([]Character, error) {
-	w, _, e := scope(a)
+	w, u, e := scope(a)
 	if e != nil {
 		return nil, e
 	}
-	rows, e := db.New(s.Pool).ListTankCharacters(ctx, w)
+	rows, e := db.New(s.Pool).ListTankCharacters(ctx, db.ListTankCharactersParams{WorkspaceID: w, UserID: u, Mine: mine})
 	if e != nil {
 		return nil, e
 	}
 	out := make([]Character, 0, len(rows))
 	for _, raw := range rows {
 		var c Character
-		if e = json.Unmarshal(raw, &c); e != nil {
+		if e = json.Unmarshal(raw.Payload, &c); e != nil {
 			return nil, e
 		}
 		normalizeCharacter(&c)
-		if mine && c.OwnerID != a.UserID {
-			continue
-		}
+		c.Progression = &Growth{XP: int(raw.Experience)}
 		out = append(out, c)
 	}
 	return out, nil
@@ -166,6 +167,7 @@ func readCharacter(ctx context.Context, q *db.Queries, w pgtype.UUID, id string,
 		var row db.TankCharacter
 		row, e = q.GetTankCharacter(ctx, db.GetTankCharacterParams{WorkspaceID: w, ID: i})
 		raw = row.Payload
+		c.Progression = &Growth{XP: int(row.Experience)}
 	}
 	if e != nil {
 		return c, storedError(e)
@@ -267,6 +269,7 @@ func (s *Service) Save(ctx context.Context, a Actor, in SaveInput) (Character, e
 	}
 	raw, e := s.write(ctx, a, "save_character", in.RequestID, in, func(q *db.Queries, w, u pgtype.UUID) (any, error) {
 		id, revision := in.CharacterID, 1
+		growth := &Growth{}
 		if id == "" {
 			count, e := q.CountTankCharacters(ctx, w)
 			if e != nil {
@@ -285,6 +288,7 @@ func (s *Service) Save(ctx context.Context, a Actor, in SaveInput) (Character, e
 				return nil, problem("not_found", 404)
 			}
 			id = current.ID
+			growth = current.Progression
 			if current.Revision != in.ExpectedRevision {
 				return nil, problem("revision_conflict", 409)
 			}
@@ -309,6 +313,7 @@ func (s *Service) Save(ctx context.Context, a Actor, in SaveInput) (Character, e
 		if e = q.InsertTankCharacterRevision(ctx, db.InsertTankCharacterRevisionParams{CharacterID: cid, Revision: int32(revision), WorkspaceID: w, Payload: payload}); e != nil {
 			return nil, e
 		}
+		c.Progression = growth
 		return c, nil
 	})
 	if e != nil {
@@ -383,7 +388,16 @@ func (s *Service) CreateSession(ctx context.Context, a Actor, in SessionInput) (
 		id := uuid.NewString()
 		path := "/" + url.PathEscape(workspace.Slug) + "/tanks?session=" + id
 		playURL := strings.TrimRight(s.AppURL, "/") + path
-		out := Session{ID: id, WorkspaceID: a.WorkspaceID, OwnerID: a.UserID, RulesVersion: Rules.RulesVersion, MapID: m.ID, Mode: in.Mode, MapVersion: m.Version, LevelID: m.LevelID, Character: c, CreatedAt: now.Format(time.RFC3339), ExpiresAt: expires.Format(time.RFC3339), PlayPath: path, PlayURL: playURL}
+		currentCharacterID, e := inputUUID(c.ID)
+		if e != nil {
+			return nil, e
+		}
+		current, e := q.GetTankCharacter(ctx, db.GetTankCharacterParams{WorkspaceID: w, ID: currentCharacterID})
+		if e != nil {
+			return nil, storedError(e)
+		}
+		loadout := applyGrowth(c.Blueprint, int(current.Experience))
+		out := Session{Loadout: &loadout, Progression: &Growth{XP: int(current.Experience)}, ID: id, WorkspaceID: a.WorkspaceID, OwnerID: a.UserID, RulesVersion: Rules.RulesVersion, MapID: m.ID, Mode: in.Mode, MapVersion: m.Version, LevelID: m.LevelID, Character: c, CreatedAt: now.Format(time.RFC3339), ExpiresAt: expires.Format(time.RFC3339), PlayPath: path, PlayURL: playURL}
 		payload, _ := json.Marshal(out)
 		sid, e := inputUUID(id)
 		if e != nil {
@@ -404,6 +418,9 @@ func (s *Service) CreateSession(ctx context.Context, a Actor, in SessionInput) (
 	return out, e
 }
 func (s *Service) GetSession(ctx context.Context, a Actor, id string) (Session, error) {
+	return readSession(ctx, db.New(s.Pool), a, id)
+}
+func readSession(ctx context.Context, q *db.Queries, a Actor, id string) (Session, error) {
 	var out Session
 	w, u, e := scope(a)
 	if e != nil {
@@ -413,7 +430,7 @@ func (s *Service) GetSession(ctx context.Context, a Actor, id string) (Session, 
 	if e != nil {
 		return out, e
 	}
-	raw, e := db.New(s.Pool).GetTankPlaySession(ctx, db.GetTankPlaySessionParams{WorkspaceID: w, UserID: u, ID: sid})
+	raw, e := q.GetTankPlaySession(ctx, db.GetTankPlaySessionParams{WorkspaceID: w, UserID: u, ID: sid})
 	if e != nil {
 		return out, storedError(e)
 	}

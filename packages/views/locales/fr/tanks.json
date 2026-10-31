@@ -203,5 +203,15 @@
   },
   "fortify_timer": "Temps de fortification de la base",
   "fortify_time": "Fortification en acier · {{seconds}} s",
-  "base_damaged": "Base endommagée"
+  "base_damaged": "Base endommagée",
+  "growth": {
+    "level": "Niv.{{level}}",
+    "experience": "{{earned}} / {{required}} EXP",
+    "max_level": "Niveau maximal",
+    "awarded": "+{{xp}} EXP · Niv.{{level}}",
+    "start_error": "Impossible d’enregistrer l’entraînement. Relancez le combat pour réessayer.",
+    "settle_error": "L’expérience n’a pas été enregistrée. Réessayez avant le prochain combat.",
+    "retry": "Réessayer l’enregistrement",
+    "redeploy": "Votre char a gagné un niveau. Redéployez-le pour appliquer ses nouvelles caractéristiques."
+  }
 }

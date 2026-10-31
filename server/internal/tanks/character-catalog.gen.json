@@ -177,5 +177,83 @@
   "actions": [
     "four_direction_move",
     "fire"
-  ]
+  ],
+  "progression": {
+    "version": 1,
+    "xpPerKill": 10,
+    "completionXp": 40,
+    "maxRunXp": 300,
+    "levels": [
+      {
+        "xp": 0,
+        "speed": 0,
+        "armor": 0,
+        "fireIntervalReduction": 0,
+        "evolution": 0
+      },
+      {
+        "xp": 100,
+        "speed": 2,
+        "armor": 0,
+        "fireIntervalReduction": 0,
+        "evolution": 0
+      },
+      {
+        "xp": 250,
+        "speed": 3,
+        "armor": 0,
+        "fireIntervalReduction": 0,
+        "evolution": 0
+      },
+      {
+        "xp": 450,
+        "speed": 4,
+        "armor": 0,
+        "fireIntervalReduction": 1,
+        "evolution": 0
+      },
+      {
+        "xp": 700,
+        "speed": 6,
+        "armor": 0,
+        "fireIntervalReduction": 1,
+        "evolution": 1
+      },
+      {
+        "xp": 1000,
+        "speed": 7,
+        "armor": 1,
+        "fireIntervalReduction": 1,
+        "evolution": 1
+      },
+      {
+        "xp": 1350,
+        "speed": 8,
+        "armor": 1,
+        "fireIntervalReduction": 2,
+        "evolution": 1
+      },
+      {
+        "xp": 1750,
+        "speed": 9,
+        "armor": 1,
+        "fireIntervalReduction": 2,
+        "evolution": 1
+      },
+      {
+        "xp": 2200,
+        "speed": 10,
+        "armor": 1,
+        "fireIntervalReduction": 2,
+        "evolution": 1
+      },
+      {
+        "xp": 2700,
+        "speed": 12,
+        "armor": 1,
+        "fireIntervalReduction": 3,
+        "evolution": 2
+      }
+    ]
+  }
 }

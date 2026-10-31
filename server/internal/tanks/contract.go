@@ -40,6 +40,7 @@ type Catalog struct {
 	Maps            []Map               `json:"maps"`
 	Modes           []string            `json:"modes"`
 	Actions         []string            `json:"actions"`
+	Progression     ProgressionRules    `json:"progression"`
 	DraftSchema     json.RawMessage     `json:"draftSchema"`
 }
 
@@ -68,6 +69,7 @@ type Draft struct {
 	Appearance Appearance `json:"appearance"`
 }
 type Blueprint struct {
+	Evolution       int        `json:"evolution,omitempty"`
 	ID              string     `json:"id"`
 	Speed           int        `json:"speed"`
 	Armor           int        `json:"armor"`

@@ -93,6 +93,14 @@ beforeEach(() => {
 });
 
 describe("my creations", () => {
+  it("shows the tank's permanent level and grown deployment stats", async () => {
+    mocks.list.mockResolvedValue([{ ...character("Sky", "mcp"), progression: { xp: 700 } }]);
+    render(<MePage storage={storage().adapter} />);
+    const card = await screen.findByRole("group", { name: "Sky" });
+    expect(within(card).getByText("Lv.5")).toBeInTheDocument();
+    expect(within(card).getByText("Speed 104 · Armor 2 · Cooldown 14")).toBeInTheDocument();
+    expect(within(card).getByRole("progressbar")).toBeInTheDocument();
+  });
   it("launches the chosen creation into a frozen session and preserves retry after failure", async () => {
     const selected = character("MCP Tank", "mcp");
     const session = { id: ids.session, ownerId: ids.user, playPath: `/acme/tanks?session=${ids.session}` };

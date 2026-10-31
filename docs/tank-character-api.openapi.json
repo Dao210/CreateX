@@ -613,6 +613,170 @@
         }
       }
     },
+    "/api/tanks/v1/sessions/{id}/runs": {
+      "parameters": [
+        {
+          "name": "X-Workspace-ID",
+          "in": "header",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "post": {
+        "operationId": "startTankTraining",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "requestId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "levelId": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 6
+                  }
+                },
+                "required": [
+                  "requestId",
+                  "levelId"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TankTrainingRun"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tanks/v1/sessions/{id}/runs/{run}/settle": {
+      "parameters": [
+        {
+          "name": "X-Workspace-ID",
+          "in": "header",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "name": "run",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "post": {
+        "operationId": "settleTankTraining",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "ticks": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 5184000
+                  },
+                  "kills": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 10000
+                  },
+                  "outcome": {
+                    "enum": [
+                      "cleared",
+                      "victory",
+                      "defeat",
+                      "abandoned"
+                    ]
+                  }
+                },
+                "required": [
+                  "ticks",
+                  "kills",
+                  "outcome"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TankTrainingResult"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/tanks/v1/sessions/{id}": {
       "parameters": [
         {
@@ -669,6 +833,138 @@
       }
     },
     "schemas": {
+      "TankGrowth": {
+        "type": "object",
+        "properties": {
+          "xp": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2700
+          }
+        },
+        "required": [
+          "xp"
+        ]
+      },
+      "TankGrownBlueprint": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "speed": {
+            "type": "integer"
+          },
+          "armor": {
+            "type": "integer"
+          },
+          "projectileSpeed": {
+            "type": "integer"
+          },
+          "fireInterval": {
+            "type": "integer"
+          },
+          "score": {
+            "const": 0
+          },
+          "appearance": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "body",
+              "accent",
+              "pattern"
+            ],
+            "properties": {
+              "body": {
+                "type": "string",
+                "pattern": "^#[0-9a-fA-F]{6}$"
+              },
+              "accent": {
+                "type": "string",
+                "pattern": "^#[0-9a-fA-F]{6}$"
+              },
+              "pattern": {
+                "type": "string",
+                "enum": [
+                  "solid",
+                  "stripe",
+                  "cross"
+                ]
+              }
+            }
+          },
+          "evolution": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2
+          }
+        },
+        "required": [
+          "id",
+          "speed",
+          "armor",
+          "projectileSpeed",
+          "fireInterval",
+          "score",
+          "appearance"
+        ]
+      },
+      "TankTrainingRun": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sessionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "characterId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "levelId": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 6
+          }
+        },
+        "required": [
+          "id",
+          "sessionId",
+          "characterId",
+          "levelId"
+        ]
+      },
+      "TankTrainingResult": {
+        "type": "object",
+        "properties": {
+          "runId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "characterId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "awardedXp": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 300
+          },
+          "progression": {
+            "$ref": "#/components/schemas/TankGrowth"
+          }
+        },
+        "required": [
+          "runId",
+          "characterId",
+          "awardedXp",
+          "progression"
+        ]
+      },
       "TankCatalog": {
         "type": "object",
         "properties": {
@@ -913,6 +1209,88 @@
           "draftSchema": {
             "type": "object",
             "description": "JSON Schema for an agent-created draft; part cost and trimmed-name constraints are also checked by the compiler."
+          },
+          "progression": {
+            "type": "object",
+            "description": "Versioned permanent growth thresholds, stat bonuses and personal-training reward limits.",
+            "example": {
+              "version": 1,
+              "xpPerKill": 10,
+              "completionXp": 40,
+              "maxRunXp": 300,
+              "levels": [
+                {
+                  "xp": 0,
+                  "speed": 0,
+                  "armor": 0,
+                  "fireIntervalReduction": 0,
+                  "evolution": 0
+                },
+                {
+                  "xp": 100,
+                  "speed": 2,
+                  "armor": 0,
+                  "fireIntervalReduction": 0,
+                  "evolution": 0
+                },
+                {
+                  "xp": 250,
+                  "speed": 3,
+                  "armor": 0,
+                  "fireIntervalReduction": 0,
+                  "evolution": 0
+                },
+                {
+                  "xp": 450,
+                  "speed": 4,
+                  "armor": 0,
+                  "fireIntervalReduction": 1,
+                  "evolution": 0
+                },
+                {
+                  "xp": 700,
+                  "speed": 6,
+                  "armor": 0,
+                  "fireIntervalReduction": 1,
+                  "evolution": 1
+                },
+                {
+                  "xp": 1000,
+                  "speed": 7,
+                  "armor": 1,
+                  "fireIntervalReduction": 1,
+                  "evolution": 1
+                },
+                {
+                  "xp": 1350,
+                  "speed": 8,
+                  "armor": 1,
+                  "fireIntervalReduction": 2,
+                  "evolution": 1
+                },
+                {
+                  "xp": 1750,
+                  "speed": 9,
+                  "armor": 1,
+                  "fireIntervalReduction": 2,
+                  "evolution": 1
+                },
+                {
+                  "xp": 2200,
+                  "speed": 10,
+                  "armor": 1,
+                  "fireIntervalReduction": 2,
+                  "evolution": 1
+                },
+                {
+                  "xp": 2700,
+                  "speed": 12,
+                  "armor": 1,
+                  "fireIntervalReduction": 3,
+                  "evolution": 2
+                }
+              ]
+            }
           }
         },
         "required": [
@@ -1107,7 +1485,85 @@
           "actions": [
             "four_direction_move",
             "fire"
-          ]
+          ],
+          "progression": {
+            "version": 1,
+            "xpPerKill": 10,
+            "completionXp": 40,
+            "maxRunXp": 300,
+            "levels": [
+              {
+                "xp": 0,
+                "speed": 0,
+                "armor": 0,
+                "fireIntervalReduction": 0,
+                "evolution": 0
+              },
+              {
+                "xp": 100,
+                "speed": 2,
+                "armor": 0,
+                "fireIntervalReduction": 0,
+                "evolution": 0
+              },
+              {
+                "xp": 250,
+                "speed": 3,
+                "armor": 0,
+                "fireIntervalReduction": 0,
+                "evolution": 0
+              },
+              {
+                "xp": 450,
+                "speed": 4,
+                "armor": 0,
+                "fireIntervalReduction": 1,
+                "evolution": 0
+              },
+              {
+                "xp": 700,
+                "speed": 6,
+                "armor": 0,
+                "fireIntervalReduction": 1,
+                "evolution": 1
+              },
+              {
+                "xp": 1000,
+                "speed": 7,
+                "armor": 1,
+                "fireIntervalReduction": 1,
+                "evolution": 1
+              },
+              {
+                "xp": 1350,
+                "speed": 8,
+                "armor": 1,
+                "fireIntervalReduction": 2,
+                "evolution": 1
+              },
+              {
+                "xp": 1750,
+                "speed": 9,
+                "armor": 1,
+                "fireIntervalReduction": 2,
+                "evolution": 1
+              },
+              {
+                "xp": 2200,
+                "speed": 10,
+                "armor": 1,
+                "fireIntervalReduction": 2,
+                "evolution": 1
+              },
+              {
+                "xp": 2700,
+                "speed": 12,
+                "armor": 1,
+                "fireIntervalReduction": 3,
+                "evolution": 2
+              }
+            ]
+          }
         }
       },
       "TankMap": {
@@ -1480,16 +1936,11 @@
               "appearance"
             ]
           },
+          "progression": {
+            "$ref": "#/components/schemas/TankGrowth"
+          },
           "cost": {
             "type": "integer"
-          },
-          "origin": {
-            "type": "string",
-            "enum": [
-              "manual",
-              "mcp"
-            ],
-            "default": "manual"
           },
           "createdAt": {
             "type": "string",
@@ -1507,7 +1958,6 @@
           "draft",
           "blueprint",
           "cost",
-          "origin",
           "createdAt"
         ]
       },
@@ -1556,6 +2006,12 @@
           },
           "character": {
             "$ref": "#/components/schemas/TankCharacter"
+          },
+          "progression": {
+            "$ref": "#/components/schemas/TankGrowth"
+          },
+          "loadout": {
+            "$ref": "#/components/schemas/TankGrownBlueprint"
           },
           "createdAt": {
             "type": "string",

@@ -11,6 +11,7 @@ import { useT } from "../i18n";
 import { PageHeader } from "../layout/page-header";
 import { paintTankBattle } from "./painter";
 import { useTankFullscreen } from "./use-tank-fullscreen";
+import type { useTankTraining } from "./use-tank-training";
 import { TankPreview } from "./tank-preview";
 
 const keyDirections: Record<string, TankDirection> = { ArrowUp: "up", KeyW: "up", ArrowRight: "right", KeyD: "right", ArrowDown: "down", KeyS: "down", ArrowLeft: "left", KeyA: "left" };
@@ -43,9 +44,10 @@ interface TankBattleProps {
   autoStart?: boolean;
   readyLoadout?: { name: string; blueprint: TankBlueprint };
   launchError?: string;
+  training?: ReturnType<typeof useTankTraining>;
 }
 
-export function TankBattle({ storage, storageKey, workspaceId, blueprint, levelIndex = 0, initialMode = "campaign", frozen = false, garage, headerActions, notice, onStart, startPending = false, startDisabled = false, autoStart = false, readyLoadout, launchError }: TankBattleProps) {
+export function TankBattle({ storage, storageKey, workspaceId, blueprint, levelIndex = 0, initialMode = "campaign", frozen = false, garage, headerActions, notice, onStart, startPending = false, startDisabled = false, autoStart = false, readyLoadout, launchError, training }: TankBattleProps) {
   const { t } = useT("tanks");
   const [preferences, setPreferences] = useState(() => {
     try { return parseTankPreferences(storage.getItem(storageKey)); }
@@ -53,13 +55,17 @@ export function TankBattle({ storage, storageKey, workspaceId, blueprint, levelI
   });
   const [game, setGame] = useState(() => {
     const initial = new TankDefenseGame(TANK_LEVELS[levelIndex]!, { playerBlueprint: blueprint, mode: initialMode, difficulty: preferences.difficulty });
-    if (autoStart) initial.start();
+    if (autoStart && !training?.prepare) initial.start();
     return initial;
   });
   const [snapshot, setSnapshot] = useState<TankSnapshot>(() => game.snapshot());
   const root = useRef<HTMLElement>(null), canvas = useRef<HTMLCanvasElement>(null);
   const audio = useRef<GameSound | null>(null);
   const held = useRef<string[]>([]), touchDirection = useRef<TankDirection | null>(null), touchFire = useRef(false);
+  const trainingRef = useRef(training); trainingRef.current = training;
+  const starting = useRef(false);
+  const autoStarted = useRef(false);
+  const liveGame = useRef(game); liveGame.current = game;
   const announced = useRef<TankDefenseGame | null>(null);
   const finished = ["cleared", "victory", "defeat"].includes(snapshot.phase);
   const active = snapshot.phase === "running" && !snapshot.paused;
@@ -72,12 +78,29 @@ export function TankBattle({ storage, storageKey, workspaceId, blueprint, levelI
   const { fullscreen, supported: fullscreenSupported, failed: fullscreenFailed, toggle: toggleFullscreen } = useTankFullscreen(root, () => {
     clearControls(); game.setPaused(true); setSnapshot(game.snapshot()); focusBattlefield();
   });
-  const start = () => { void audio.current?.activate(); audio.current?.reset(); game.start(); focusBattlefield(); setSnapshot(game.snapshot()); };
-  const replaceGame = (levelIndex: number, carry = false, begin = false, mode: TankMode = game.mode, difficulty: TankDifficulty = game.difficulty) => {
+  const start = async () => {
+    if (starting.current) return;
+    starting.current = true;
+    void audio.current?.activate(); audio.current?.reset();
+    try {
+      if (trainingRef.current?.prepare) await trainingRef.current.prepare(game);
+      if (liveGame.current !== game) return;
+      game.start(); focusBattlefield(); setSnapshot(game.snapshot());
+    } catch { /* Training exposes a retryable error without starting an unregistered run. */ }
+    finally { starting.current = false; }
+  };
+  const replaceGame = async (levelIndex: number, carry = false, begin = false, mode: TankMode = game.mode, difficulty: TankDifficulty = game.difficulty) => {
+    try {
+      if (game.phase !== "ready" && trainingRef.current?.finish) await trainingRef.current.finish(game, game.phase === "cleared" || game.phase === "victory" || game.phase === "defeat" ? game.phase : "abandoned");
+    } catch { return; }
     clearControls(); audio.current?.reset(); void audio.current?.activate();
     const next = new TankDefenseGame(TANK_LEVELS[levelIndex]!, carry ? { score: game.score, lives: game.lives, power: game.power, mode, difficulty, playerBlueprint: blueprint } : { mode, difficulty, playerBlueprint: blueprint });
-    if (begin) next.start();
-    setGame(next); setSnapshot(next.snapshot()); focusBattlefield();
+    if (begin && !trainingRef.current?.prepare) next.start();
+    liveGame.current = next; setGame(next); setSnapshot(next.snapshot()); focusBattlefield();
+    if (begin && trainingRef.current?.prepare) {
+      try { await trainingRef.current.prepare(next); if (liveGame.current !== next) return; next.start(); setSnapshot(next.snapshot()); }
+      catch { /* The ready state retains the same training identity for retry. */ }
+    }
   };
 
   useEffect(() => {
@@ -89,6 +112,11 @@ export function TankBattle({ storage, storageKey, workspaceId, blueprint, levelI
     if (autoStart) { void sound.activate(); focusBattlefield(); }
     return () => { sound.dispose(); audio.current = null; };
   }, [autoStart]);
+  useEffect(() => {
+    if (!autoStart || autoStarted.current || !trainingRef.current?.prepare) return;
+    autoStarted.current = true;
+    void start();
+  });
   useEffect(() => {
     if (audio.current) audio.current.enabled = preferences.sound;
     try { storage.setItem(storageKey, JSON.stringify({ version: 1, ...preferences })); }
@@ -138,6 +166,7 @@ export function TankBattle({ storage, storageKey, workspaceId, blueprint, levelI
       paintTankBattle(ctx, game, motion.matches);
       if (["cleared", "victory", "defeat"].includes(game.phase) && announced.current !== game) {
         announced.current = game;
+        if (game.phase === "cleared" || game.phase === "victory" || game.phase === "defeat") void trainingRef.current?.finish?.(game, game.phase).catch(() => {});
         setPreferences(previous => ({ ...previous, best: Math.max(previous.best, game.score), unlocked: game.mode === "campaign" && game.phase !== "defeat" ? Math.max(previous.unlocked, Math.min(TANK_LEVELS.length, game.level.id + 1)) : previous.unlocked }));
       }
       if (now - hudAt >= 80) { setSnapshot(game.snapshot()); hudAt = now; }
@@ -231,10 +260,10 @@ export function TankBattle({ storage, storageKey, workspaceId, blueprint, levelI
                 <h2>{overlayTitle}</h2>
                 <p>{overlayHelp}</p>
                 <div className="tank-overlay-actions">
-                  {snapshot.phase === "ready" ? <Button size="lg" onClick={onStart ?? start} disabled={startDisabled || startPending} aria-busy={startPending}><Play />{startPending ? t($ => $.garage.deploying) : t($ => $.start)}<ArrowRight /></Button>
+                  {snapshot.phase === "ready" ? <Button size="lg" onClick={onStart ?? start} disabled={startDisabled || startPending || training?.busy} aria-busy={startPending}><Play />{startPending ? t($ => $.garage.deploying) : t($ => $.start)}<ArrowRight /></Button>
                     : snapshot.paused ? <><Button size="lg" onClick={pause}><Play />{t($ => $.resume)}</Button><Button variant="outline" size="lg" onClick={() => { setPreferences(value => ({ ...value, best: Math.max(value.best, game.score) })); replaceGame(game.level.id - 1); }}><Flag />{t($ => $.end_run)}</Button></>
-                      : snapshot.phase === "cleared" ? <Button size="lg" onClick={() => replaceGame(game.level.id, true, true)}>{t($ => $.next)}<ArrowRight /></Button>
-                        : <Button size="lg" onClick={() => replaceGame(snapshot.phase === "victory" && game.mode === "campaign" ? 0 : game.level.id - 1, false, true)}><RotateCcw />{snapshot.phase === "victory" ? t($ => $.again) : t($ => $.retry)}</Button>}
+                      : snapshot.phase === "cleared" ? <Button size="lg" disabled={training?.busy || training?.settleError} onClick={() => void replaceGame(game.level.id, true, true)}>{t($ => $.next)}<ArrowRight /></Button>
+                        : <Button size="lg" disabled={training?.busy || training?.settleError} onClick={() => void replaceGame(snapshot.phase === "victory" && game.mode === "campaign" ? 0 : game.level.id - 1, false, true)}><RotateCcw />{snapshot.phase === "victory" ? t($ => $.again) : t($ => $.retry)}</Button>}
                 </div>
               </div>
             </div>}

@@ -28,7 +28,7 @@ func tankDB(t *testing.T) (*Service, *testutil.Fixture, Actor) {
 	fx.UserID = fx.User(t, "Tank test", "tank-"+suffix+"@example.invalid")
 	fx.WorkspaceID = fx.Workspace(t, "Tank test", "tank-"+suffix)
 	fx.Member(t, fx.WorkspaceID, fx.UserID, "owner")
-	for _, table := range []string{"tank_request", "tank_play_session", "tank_character_revision", "tank_character"} {
+	for _, table := range []string{"tank_training_run", "tank_request", "tank_play_session", "tank_character_revision", "tank_character"} {
 		fx.Cleanup(t, "DELETE FROM "+table+" WHERE workspace_id=$1::uuid", fx.WorkspaceID)
 	}
 	return &Service{Pool: pool, AppURL: "http://localhost:13440"}, fx, Actor{WorkspaceID: fx.WorkspaceID, UserID: fx.UserID}
