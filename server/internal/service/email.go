@@ -335,19 +335,41 @@ func (s *EmailService) sendSMTP(to, subject, htmlBody string) error {
 }
 
 // SendVerificationCode sends a one-time login code. The code is server-generated
-// (6-digit numeric) so no user-controlled text reaches the email body here.
+// (6-digit numeric) so no end-user-controlled text reaches the email body here.
 // Delivery priority: SMTP relay → Resend API → DEV stdout.
-func (s *EmailService) SendVerificationCode(to, code string) error {
-	body := fmt.Sprintf(
+const defaultEmailBrandName = "Weave a World"
+
+// emailBrandName is the product name shown in account emails. Self-hosted
+// deployments that still present themselves as Auro can override it.
+func emailBrandName() string {
+	name := strings.TrimSpace(os.Getenv("EMAIL_BRAND_NAME"))
+	if name == "" {
+		return defaultEmailBrandName
+	}
+	return name
+}
+
+func verificationEmailContent(brand, code string) (subject, body string) {
+	brand = sanitizeSubjectField(brand)
+	if brand == "" {
+		brand = defaultEmailBrandName
+	}
+	subject = "Your " + brand + " verification code"
+	body = fmt.Sprintf(
 		`<div style="font-family: sans-serif; max-width: 400px; margin: 0 auto;">
-			<h2>Your verification code</h2>
+			<h2>Your %s verification code</h2>
 			<p style="font-size: 32px; font-weight: bold; letter-spacing: 8px; margin: 24px 0;">%s</p>
 			<p>This code expires in 10 minutes.</p>
 			<p style="color: #666; font-size: 14px;">If you didn't request this code, you can safely ignore this email.</p>
-		</div>`, code)
+		</div>`, html.EscapeString(brand), code)
+	return subject, body
+}
+
+func (s *EmailService) SendVerificationCode(to, code string) error {
+	subject, body := verificationEmailContent(emailBrandName(), code)
 
 	if s.smtpHost != "" {
-		return s.sendSMTP(to, "Your Auro verification code", body)
+		return s.sendSMTP(to, subject, body)
 	}
 	if s.client == nil {
 		fmt.Printf("[DEV] Verification code for %s: %s\n", to, code)
@@ -356,7 +378,7 @@ func (s *EmailService) SendVerificationCode(to, code string) error {
 	params := &resend.SendEmailRequest{
 		From:    s.fromEmail,
 		To:      []string{to},
-		Subject: "Your Auro verification code",
+		Subject: subject,
 		Html:    body,
 	}
 	_, err := s.client.Emails.Send(params)

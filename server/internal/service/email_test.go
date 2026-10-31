@@ -129,6 +129,44 @@ func TestSanitizeSubjectField(t *testing.T) {
 	}
 }
 
+func TestVerificationEmailContentBranding(t *testing.T) {
+	t.Setenv("EMAIL_BRAND_NAME", "Weave a World")
+
+	subject, body := verificationEmailContent(emailBrandName(), "123456")
+	if subject != "Your Weave a World verification code" {
+		t.Errorf("unexpected subject: %q", subject)
+	}
+	if !strings.Contains(body, "Your Weave a World verification code") {
+		t.Errorf("body is missing the branded heading: %q", body)
+	}
+	if !strings.Contains(body, "123456") {
+		t.Errorf("body is missing the code: %q", body)
+	}
+}
+
+func TestVerificationEmailContentDefaultsToWeaveAWorld(t *testing.T) {
+	t.Setenv("EMAIL_BRAND_NAME", "")
+
+	if got := emailBrandName(); got != "Weave a World" {
+		t.Errorf("emailBrandName() = %q, want %q", got, "Weave a World")
+	}
+}
+
+func TestVerificationEmailContentEscapesBrandAndStripsControls(t *testing.T) {
+	subject, _ := verificationEmailContent("Auro\r\nBcc: evil@example.com", "654321")
+	if strings.ContainsAny(subject, "\r\n") {
+		t.Errorf("subject still contains control characters: %q", subject)
+	}
+
+	_, body := verificationEmailContent("<b>World</b>", "654321")
+	if !strings.Contains(body, "&lt;b&gt;World&lt;/b&gt;") {
+		t.Errorf("body does not escape the brand: %q", body)
+	}
+	if strings.Contains(body, "<b>World</b>") {
+		t.Errorf("body contains unescaped brand HTML: %q", body)
+	}
+}
+
 func TestNewEmailService_TLSMode(t *testing.T) {
 	tests := []struct {
 		name         string

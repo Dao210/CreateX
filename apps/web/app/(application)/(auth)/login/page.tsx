@@ -133,7 +133,7 @@ function LoginPageContent() {
       .catch(() => [] as Workspace[])
       .then((list) => resolveLoggedInDestination(qc, hasOnboarded, list))
       .then((dest) => router.replace(dest));
-  }, [isLoading, user, router, nextUrl, cliCallbackRaw, isDesktopHandoff, hasOnboarded, qc]);
+  }, [isLoading, user, router, nextUrl, cliCallbackRaw, isDesktopHandoff, hasOnboarded, qc, t]);
 
   const handleSuccess = async () => {
     // Read the latest user snapshot directly — the closure's `hasOnboarded`
@@ -170,7 +170,7 @@ function LoginPageContent() {
   if (isDesktopHandoff && user) {
     if (desktopError) {
       return (
-        <div className="flex min-h-screen items-center justify-center">
+        <div className="w-full">
           <Card className="w-full max-w-sm">
             <CardHeader className="text-center">
               <CardTitle className="text-display-sm">
@@ -183,7 +183,7 @@ function LoginPageContent() {
       );
     }
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="w-full">
         <Card className="w-full max-w-sm">
           <CardHeader className="text-center">
             <CardTitle className="text-display-sm">
@@ -216,6 +216,8 @@ function LoginPageContent() {
 
   return (
     <LoginPage
+      embedded
+      heading={t(($) => $.login_shell.form_title)}
       onSuccess={handleSuccess}
       google={
         googleClientId
@@ -236,9 +238,24 @@ function LoginPageContent() {
   );
 }
 
+function LoginPageFallback() {
+  return (
+    <Card className="w-full max-w-sm" aria-hidden="true">
+      <CardHeader className="items-center justify-items-center gap-2">
+        <div className="h-7 w-32 animate-pulse rounded-md bg-surface-hover" />
+        <div className="h-4 w-56 animate-pulse rounded-md bg-surface-hover" />
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="h-11 w-full animate-pulse rounded-lg bg-surface-hover" />
+        <div className="h-12 w-full animate-pulse rounded-lg bg-surface-hover" />
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function Page() {
   return (
-    <Suspense fallback={null}>
+    <Suspense fallback={<LoginPageFallback />}>
       <LoginPageContent />
     </Suspense>
   );

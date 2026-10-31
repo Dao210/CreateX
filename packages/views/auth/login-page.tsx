@@ -58,8 +58,12 @@ interface LoginPageProps {
   onTokenObtained?: () => void;
   /** Override Google login handler (e.g. desktop opens browser externally). When provided, renders the Google button even if `google` config is omitted. */
   onGoogleLogin?: () => void;
-  /** Optional content below the Google button in the sign-in card. */
+  /** Optional content below the mode links in the sign-in card. */
   extra?: ReactNode;
+  /** Host owns the page layout; skip the full-screen centering wrapper. */
+  embedded?: boolean;
+  /** Host-specific framing for the initial email step (e.g. "Start creating"). */
+  heading?: ReactNode;
 }
 
 // ---------------------------------------------------------------------------
@@ -92,6 +96,44 @@ export function validateCliCallback(cliCallback: string): boolean {
   }
 }
 
+function LoginFrame({
+  embedded,
+  children,
+}: {
+  embedded?: boolean;
+  children: ReactNode;
+}) {
+  if (embedded) return <div className="w-full">{children}</div>;
+  return (
+    <div className="flex min-h-svh items-center justify-center p-4">
+      {children}
+    </div>
+  );
+}
+
+function GoogleMark() {
+  return (
+    <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"
+        fill="#4285F4"
+      />
+      <path
+        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+        fill="#34A853"
+      />
+      <path
+        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+        fill="#FBBC05"
+      />
+      <path
+        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+        fill="#EA4335"
+      />
+    </svg>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -104,18 +146,18 @@ export function LoginPage({
   onTokenObtained,
   onGoogleLogin,
   extra,
+  embedded,
+  heading,
 }: LoginPageProps) {
   const { t } = useT("auth");
   const qc = useQueryClient();
   const [step, setStep] = useState<"email" | "code" | "cli_confirm">("email");
-  const [mode, setMode] = useState<"password" | "code" | "signup" | "reset">(
-    "password",
-  );
+  const [mode, setMode] = useState<"password" | "code" | "reset">("code");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const submittingRef = useRef(false);
-  const settingPassword = mode === "signup" || mode === "reset";
+  const settingPassword = mode === "reset";
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
@@ -179,13 +221,30 @@ export function LoginPage({
     return () => clearTimeout(timer);
   }, [cooldown]);
 
-  const errorMessage = useCallback((err: unknown, fallback: string) => {
-    if (!(err instanceof Error)) return fallback;
-    if (err.message.includes("invalid email or password")) return t(($) => $.errors.credentials_invalid);
-    if (err.message.includes("password must contain")) return t(($) => $.errors.password_length);
-    if (/too many|wait before/i.test(err.message)) return t(($) => $.errors.rate_limited);
-    return err.message;
-  }, [t]);
+  const errorMessage = useCallback(
+    (err: unknown, fallback: string) => {
+      if (!(err instanceof Error)) return fallback;
+      const message = err.message;
+      if (/invalid email or password/i.test(message))
+        return t(($) => $.errors.credentials_invalid);
+      if (/password must contain/i.test(message))
+        return t(($) => $.errors.password_length);
+      if (/too many|wait before/i.test(message))
+        return t(($) => $.errors.rate_limited);
+      if (/invalid or expired code/i.test(message))
+        return t(($) => $.errors.code_invalid);
+      if (/failed to send verification code/i.test(message))
+        return t(($) => $.errors.send_failed);
+      if (/failed to (create user|verify code|generate token)/i.test(message))
+        return t(($) => $.errors.login_failed);
+      if (/user registration is disabled/i.test(message))
+        return t(($) => $.errors.signup_prohibited);
+      if (/email address or domain not allowed/i.test(message))
+        return t(($) => $.errors.email_not_allowed);
+      return message;
+    },
+    [t],
+  );
 
   const changeMode = (next: typeof mode) => {
     setMode(next);
@@ -230,47 +289,56 @@ export function LoginPage({
     }
   };
 
-  const handleSendCode = useCallback(
-    async (e?: React.FormEvent) => {
-      e?.preventDefault();
+  const requestCode = useCallback(
+    async (fromPassword = false) => {
       if (submittingRef.current) return;
-      if (!email.trim()) {
+      const trimmed = email.trim();
+      if (!trimmed) {
         setError(t(($) => $.common.email_required));
         return;
       }
-      if (
-        settingPassword &&
-        ([...password].length < 8 || new TextEncoder().encode(password).length > 72)
-      ) {
-        setError(t(($) => $.errors.password_length));
-        return;
-      }
-      if (settingPassword && password !== confirmPassword) {
-        setError(t(($) => $.errors.password_mismatch));
-        return;
+      if (settingPassword) {
+        if (
+          [...password].length < 8 ||
+          new TextEncoder().encode(password).length > 72
+        ) {
+          setError(t(($) => $.errors.password_length));
+          return;
+        }
+        if (password !== confirmPassword) {
+          setError(t(($) => $.errors.password_mismatch));
+          return;
+        }
       }
       submittingRef.current = true;
       setLoading(true);
       setError("");
       try {
-        await useAuthStore.getState().sendCode(email.trim());
-        setEmail(email.trim());
+        await useAuthStore.getState().sendCode(trimmed);
+        if (fromPassword) setMode("code");
+        setEmail(trimmed);
         setStep("code");
         setCode("");
         setCooldown(60);
       } catch (err) {
         setError(
-          err instanceof Error
-            ? err.message
-            : `${t(($) => $.errors.send_failed)} ${t(($) => $.errors.server_unreachable)}`,
+          errorMessage(
+            err,
+            `${t(($) => $.errors.send_failed)} ${t(($) => $.errors.server_unreachable)}`,
+          ),
         );
       } finally {
         submittingRef.current = false;
         setLoading(false);
       }
     },
-    [email, t, settingPassword, password, confirmPassword],
+    [email, settingPassword, password, confirmPassword, t, errorMessage],
   );
+
+  const handleSendCode = (e: React.FormEvent) => {
+    e.preventDefault();
+    void requestCode();
+  };
 
   const handleVerify = useCallback(
     async (value: string) => {
@@ -302,18 +370,23 @@ export function LoginPage({
         setConfirmPassword("");
         await finishLogin();
       } catch (err) {
-        setError(
-          err instanceof Error
-            ? err.message
-            : t(($) => $.errors.code_invalid),
-        );
+        setError(errorMessage(err, t(($) => $.errors.code_invalid)));
         setCode("");
       } finally {
         submittingRef.current = false;
         setLoading(false);
       }
     },
-    [email, cliCallback, onTokenObtained, t, settingPassword, password, finishLogin],
+    [
+      email,
+      cliCallback,
+      onTokenObtained,
+      t,
+      settingPassword,
+      password,
+      finishLogin,
+      errorMessage,
+    ],
   );
 
   const handleResend = async () => {
@@ -324,9 +397,7 @@ export function LoginPage({
       await useAuthStore.getState().sendCode(email);
       setCooldown(60);
     } catch (err) {
-      setError(
-        errorMessage(err, t(($) => $.errors.resend_failed)),
-      );
+      setError(errorMessage(err, t(($) => $.errors.resend_failed)));
     } finally {
       setLoading(false);
     }
@@ -378,17 +449,27 @@ export function LoginPage({
     window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params}`;
   };
 
+  const backToEmail = () => {
+    setStep("email");
+    setCode("");
+    setError("");
+  };
+
   // -------------------------------------------------------------------------
   // CLI confirm step
   // -------------------------------------------------------------------------
 
   if (step === "cli_confirm" && existingUser) {
     return (
-      <div className="flex min-h-svh items-center justify-center p-4">
+      <LoginFrame embedded={embedded}>
         <Card className="w-full max-w-sm">
           <CardHeader className="text-center">
             {logo && <div className="mx-auto mb-4">{logo}</div>}
-            <CardTitle className="text-display-sm">
+            <CardTitle
+              className="text-display-sm"
+              role="heading"
+              aria-level={1}
+            >
               {t(($) => $.cli.title)}
             </CardTitle>
             <CardDescription>
@@ -418,7 +499,7 @@ export function LoginPage({
             </Button>
           </CardContent>
         </Card>
-      </div>
+      </LoginFrame>
     );
   }
 
@@ -428,11 +509,15 @@ export function LoginPage({
 
   if (step === "code") {
     return (
-      <div className="flex min-h-svh items-center justify-center p-4">
+      <LoginFrame embedded={embedded}>
         <Card className="w-full max-w-sm">
           <CardHeader className="text-center">
             {logo && <div className="mx-auto mb-4">{logo}</div>}
-            <CardTitle className="text-display-sm">
+            <CardTitle
+              className="text-display-sm"
+              role="heading"
+              aria-level={1}
+            >
               {t(($) => $.verify.title)}
             </CardTitle>
             <CardDescription>
@@ -444,56 +529,71 @@ export function LoginPage({
               autoFocus
               maxLength={6}
               aria-label={t(($) => $.verify.title)}
+              aria-invalid={Boolean(error)}
+              aria-describedby={error ? "login-code-error" : undefined}
               autoComplete="one-time-code"
               value={code}
               onChange={(value) => {
+                if (error) setError("");
                 setCode(value);
                 if (value.length === 6) handleVerify(value);
               }}
               disabled={loading}
             >
               <InputOTPGroup>
-                <InputOTPSlot index={0} />
-                <InputOTPSlot index={1} />
-                <InputOTPSlot index={2} />
-                <InputOTPSlot index={3} />
-                <InputOTPSlot index={4} />
-                <InputOTPSlot index={5} />
+                <InputOTPSlot index={0} className="h-12 w-10 text-title-sm" />
+                <InputOTPSlot index={1} className="h-12 w-10 text-title-sm" />
+                <InputOTPSlot index={2} className="h-12 w-10 text-title-sm" />
+                <InputOTPSlot index={3} className="h-12 w-10 text-title-sm" />
+                <InputOTPSlot index={4} className="h-12 w-10 text-title-sm" />
+                <InputOTPSlot index={5} className="h-12 w-10 text-title-sm" />
               </InputOTPGroup>
             </InputOTP>
             {error && (
-              <p role="alert" className="text-body text-destructive">{error}</p>
+              <p
+                id="login-code-error"
+                role="alert"
+                className="text-body text-destructive"
+              >
+                {error}
+              </p>
             )}
-            <div className="flex items-center gap-2 text-body text-muted-foreground">
+            <div className="flex flex-col items-center gap-2 text-body text-muted-foreground">
               <button
                 type="button"
                 onClick={handleResend}
                 disabled={cooldown > 0 || loading}
-                className="text-primary underline-offset-4 hover:underline disabled:text-muted-foreground disabled:no-underline disabled:cursor-not-allowed"
+                className="text-primary underline-offset-4 hover:underline disabled:cursor-not-allowed disabled:text-muted-foreground disabled:no-underline"
               >
                 {cooldown > 0
                   ? t(($) => $.verify.resend_cooldown, { seconds: cooldown })
                   : t(($) => $.verify.resend)}
               </button>
+              <p className="text-center text-body-sm text-muted-foreground">
+                {t(($) => $.verify.help)}
+              </p>
             </div>
           </CardContent>
-          <CardFooter>
+          <CardFooter className="flex flex-wrap justify-center gap-x-4 gap-y-1">
             <Button
               type="button"
-              variant="ghost"
-              className="w-full"
+              variant="link"
               disabled={loading}
-              onClick={() => {
-                setStep("email");
-                setCode("");
-                setError("");
-              }}
+              onClick={backToEmail}
             >
-              {t(($) => $.common.back)}
+              {t(($) => $.verify.change_email)}
+            </Button>
+            <Button
+              type="button"
+              variant="link"
+              disabled={loading}
+              onClick={() => changeMode("password")}
+            >
+              {t(($) => $.password.use_password)}
             </Button>
           </CardFooter>
         </Card>
-      </div>
+      </LoginFrame>
     );
   }
 
@@ -501,19 +601,49 @@ export function LoginPage({
   // Email step
   // -------------------------------------------------------------------------
 
+  const description =
+    mode === "reset"
+      ? t(($) => $.password.setup_description)
+      : mode === "code"
+        ? t(($) => $.signin.description)
+        : null;
+  const title =
+    mode === "reset"
+      ? t(($) => $.password.reset_title)
+      : mode === "password"
+        ? t(($) => $.password.signin_title)
+        : (heading ?? t(($) => $.signin.title));
+  const passwordDescribedBy =
+    [
+      settingPassword ? "password-hint" : "",
+      error ? "login-error" : "",
+    ]
+      .filter(Boolean)
+      .join(" ") || undefined;
+  const canRecoverWithCode =
+    mode === "password" && Boolean(error) && Boolean(email.trim());
+  const submitLabel =
+    mode === "password"
+      ? loading
+        ? t(($) => $.password.signing_in)
+        : t(($) => $.password.sign_in)
+      : loading
+        ? t(($) => $.signin.sending)
+        : t(($) => $.signin.continue);
+
   return (
-    <div className="flex min-h-svh items-center justify-center p-4">
+    <LoginFrame embedded={embedded}>
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
           {logo && <div className="mx-auto mb-4">{logo}</div>}
-          <CardTitle className="text-display-sm">
-            {mode === "signup" ? t(($) => $.password.signup_title) : mode === "reset" ? t(($) => $.password.reset_title) : t(($) => $.signin.title)}
+          <CardTitle
+            className="text-display-sm"
+            role="heading"
+            aria-level={1}
+          >
+            {title}
           </CardTitle>
-          {mode !== "password" && (
-            <CardDescription>
-              {settingPassword ? t(($) => $.password.setup_description) : t(($) => $.signin.description)}
-            </CardDescription>
-          )}
+          {description && <CardDescription>{description}</CardDescription>}
         </CardHeader>
         <CardContent className="space-y-4">
           {sessionExpired && (
@@ -523,7 +653,11 @@ export function LoginPage({
               </AlertDescription>
             </Alert>
           )}
-          <form id="login-form" onSubmit={mode === "password" ? handlePasswordLogin : handleSendCode} className="space-y-4">
+          <form
+            id="login-form"
+            onSubmit={mode === "password" ? handlePasswordLogin : handleSendCode}
+            className="space-y-4"
+          >
             <div className="space-y-2">
               <Label htmlFor="login-email">{t(($) => $.common.email)}</Label>
               <Input
@@ -534,9 +668,15 @@ export function LoginPage({
                 onChange={(e) => setEmail(e.target.value)}
                 autoFocus
                 autoComplete="username"
+                autoCapitalize="none"
+                spellCheck={false}
+                inputMode="email"
                 name="email"
                 disabled={loading}
                 required
+                className="h-11"
+                aria-invalid={Boolean(error)}
+                aria-describedby={error ? "login-error" : undefined}
               />
             </div>
             {mode !== "code" && (
@@ -551,29 +691,44 @@ export function LoginPage({
                     id="login-password"
                     name="password"
                     type={showPassword ? "text" : "password"}
-                    autoComplete={settingPassword ? "new-password" : "current-password"}
+                    autoComplete={
+                      settingPassword ? "new-password" : "current-password"
+                    }
+                    autoFocus={mode === "password" && Boolean(email.trim())}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     disabled={loading}
                     required
-                    className="pr-10"
-                    aria-describedby={settingPassword ? "password-hint" : undefined}
+                    className="h-11 pr-10"
+                    aria-invalid={Boolean(error)}
+                    aria-describedby={passwordDescribedBy}
                   />
                   <Button
                     type="button"
                     variant="ghost"
                     size="icon-sm"
-                    className="absolute right-0.5 top-0.5"
-                    aria-label={showPassword ? t(($) => $.password.hide) : t(($) => $.password.show)}
+                    className="absolute right-1 top-1/2 -translate-y-1/2"
+                    aria-label={
+                      showPassword
+                        ? t(($) => $.password.hide)
+                        : t(($) => $.password.show)
+                    }
                     aria-pressed={showPassword}
                     onClick={() => setShowPassword((v) => !v)}
                     disabled={loading}
                   >
-                    {showPassword ? <EyeOff aria-hidden="true" /> : <Eye aria-hidden="true" />}
+                    {showPassword ? (
+                      <EyeOff aria-hidden="true" />
+                    ) : (
+                      <Eye aria-hidden="true" />
+                    )}
                   </Button>
                 </div>
                 {settingPassword && (
-                  <p id="password-hint" className="text-body-sm text-muted-foreground">
+                  <p
+                    id="password-hint"
+                    className="text-body-sm text-muted-foreground"
+                  >
                     {t(($) => $.password.hint)}
                   </p>
                 )}
@@ -581,7 +736,9 @@ export function LoginPage({
             )}
             {settingPassword && (
               <div className="space-y-2">
-                <Label htmlFor="confirm-password">{t(($) => $.password.confirm)}</Label>
+                <Label htmlFor="confirm-password">
+                  {t(($) => $.password.confirm)}
+                </Label>
                 <Input
                   id="confirm-password"
                   name="confirm-password"
@@ -591,75 +748,112 @@ export function LoginPage({
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   disabled={loading}
                   required
+                  className="h-11"
+                  aria-invalid={Boolean(error)}
+                  aria-describedby={error ? "login-error" : undefined}
                 />
               </div>
             )}
-            {mode === "password" && (
-              <Button type="button" variant="link" className="p-0" disabled={loading} onClick={() => changeMode("reset")}>
-                {t(($) => $.password.forgot)}
+            {error && (
+              <p
+                id="login-error"
+                role="alert"
+                className="text-body text-destructive"
+              >
+                {error}
+              </p>
+            )}
+            <Button
+              type="submit"
+              className="h-12 w-full"
+              size="lg"
+              disabled={
+                !email.trim() ||
+                (mode === "password" && !password) ||
+                (settingPassword && (!password || !confirmPassword)) ||
+                loading
+              }
+              aria-busy={loading}
+            >
+              {submitLabel}
+            </Button>
+            {canRecoverWithCode && (
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                disabled={loading}
+                onClick={() => void requestCode(true)}
+              >
+                {t(($) => $.password.use_code)}
               </Button>
             )}
-            {error && (
-              <p role="alert" className="text-body text-destructive">{error}</p>
+            {(google || onGoogleLogin) && mode !== "reset" && (
+              <>
+                <div
+                  className="relative flex items-center gap-3 py-1"
+                  aria-hidden="true"
+                >
+                  <span className="h-px flex-1 bg-border" />
+                  <span className="text-body-sm text-muted-foreground">
+                    {t(($) => $.signin.or)}
+                  </span>
+                  <span className="h-px flex-1 bg-border" />
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-12 w-full"
+                  size="lg"
+                  onClick={handleGoogleLogin}
+                  disabled={loading}
+                >
+                  <GoogleMark />
+                  {t(($) => $.signin.google)}
+                </Button>
+              </>
             )}
           </form>
         </CardContent>
         <CardFooter className="flex flex-col gap-3">
-          <Button
-            type="submit"
-            form="login-form"
-            className="w-full"
-            size="lg"
-            disabled={!email.trim() || (mode !== "code" && !password) || (settingPassword && !confirmPassword) || loading}
-            aria-busy={loading}
-          >
-            {mode === "password"
-              ? (loading ? t(($) => $.password.signing_in) : t(($) => $.password.sign_in))
-              : (loading ? t(($) => $.signin.sending) : t(($) => $.signin.continue))}
-          </Button>
           <div className="flex w-full flex-wrap justify-center gap-x-4 gap-y-1">
-            <Button type="button" variant="link" disabled={loading} onClick={() => changeMode(mode === "password" ? "code" : "password")}>
-              {mode === "password" ? t(($) => $.password.use_code) : t(($) => $.password.use_password)}
-            </Button>
-            {(mode === "password" || mode === "code") && (
-              <Button type="button" variant="link" disabled={loading} onClick={() => changeMode("signup")}>
-                {t(($) => $.password.signup)}
+            {mode === "password" ? (
+              <>
+                {!error && (
+                  <Button
+                    type="button"
+                    variant="link"
+                    disabled={loading}
+                    onClick={() => changeMode("code")}
+                  >
+                    {t(($) => $.password.use_code)}
+                  </Button>
+                )}
+                <Button
+                  type="button"
+                  variant="link"
+                  disabled={loading}
+                  onClick={() => changeMode("reset")}
+                >
+                  {t(($) => $.password.forgot)}
+                </Button>
+              </>
+            ) : (
+              <Button
+                type="button"
+                variant="link"
+                disabled={loading}
+                onClick={() => changeMode("password")}
+              >
+                {t(($) => $.password.use_password)}
               </Button>
             )}
           </div>
-          {(google || onGoogleLogin) && (
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full"
-              size="lg"
-              onClick={handleGoogleLogin}
-              disabled={loading}
-            >
-              <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
-                <path
-                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"
-                  fill="#4285F4"
-                />
-                <path
-                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                  fill="#34A853"
-                />
-                <path
-                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                  fill="#FBBC05"
-                />
-                <path
-                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                  fill="#EA4335"
-                />
-              </svg>
-              {t(($) => $.signin.google)}
-            </Button>
+          {extra && (
+            <div className="w-full pt-1 text-center">{extra}</div>
           )}
-          {extra && <div className="w-full pt-1 text-center">{extra}</div>}
         </CardFooter>
       </Card>
-    </div>
+    </LoginFrame>
   );
 }

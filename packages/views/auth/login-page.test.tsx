@@ -97,6 +97,12 @@ function getOTPInput() {
   return screen.getByRole("textbox", { hidden: true });
 }
 
+async function switchToPassword(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(
+    screen.getByRole("button", { name: /use a password instead/i }),
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -140,17 +146,32 @@ describe("LoginPage", () => {
     expect(screen.queryByText(/your session expired/i)).not.toBeInTheDocument();
   });
 
-  it("renders email form with 'Sign in to Weave a World' title", () => {
+  it("renders the code-first email form", () => {
     renderWithI18n(<LoginPage onSuccess={onSuccess} />);
     expect(
       screen.getByText(/sign in to weave a world/i),
     ).toBeInTheDocument();
     expect(
-      screen.getByLabelText(/^password$/i),
+      screen.getByText(/verifying creates your account/i),
     ).toBeInTheDocument();
     expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: /^sign in$/i }),
+      screen.queryByLabelText(/^password$/i),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /^send code$/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /create an account/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("uses a host heading for the initial code step", () => {
+    renderWithI18n(
+      <LoginPage onSuccess={onSuccess} heading="Start creating" />,
+    );
+    expect(
+      screen.getByRole("heading", { name: "Start creating" }),
     ).toBeInTheDocument();
   });
 
@@ -163,6 +184,7 @@ describe("LoginPage", () => {
     mockApiListWorkspaces.mockResolvedValueOnce([{ id: "ws-1" }]);
     renderWithI18n(<LoginPage onSuccess={onSuccess} />);
     const user = userEvent.setup();
+    await switchToPassword(user);
     await user.type(screen.getByLabelText(/^email$/i), "alice@example.com");
     await user.type(screen.getByLabelText(/^password$/i), " secret password ");
     await user.click(screen.getByRole("button", { name: /^sign in$/i }));
@@ -176,30 +198,59 @@ describe("LoginPage", () => {
     mockPasswordLogin.mockRejectedValueOnce(new Error("invalid email or password"));
     renderWithI18n(<LoginPage onSuccess={onSuccess} />);
     const user = userEvent.setup();
+    await switchToPassword(user);
     await user.type(screen.getByLabelText(/^email$/i), "alice@example.com");
     await user.type(screen.getByLabelText(/^password$/i), "wrong-password");
     await user.click(screen.getByRole("button", { name: /^sign in$/i }));
     expect(await screen.findByRole("alert")).toHaveTextContent(/incorrect email or password/i);
     expect(screen.getByRole("button", { name: /^sign in$/i })).toBeEnabled();
+    expect(
+      screen.getByRole("button", { name: /email me a code instead/i }),
+    ).toBeInTheDocument();
     expect(onSuccess).not.toHaveBeenCalled();
   });
 
-  it.each(["Create an account", "Forgot or need to set a password?"])("verifies email before setting a password via %s", async (entry) => {
+  it("sends a code from the password error state in one click", async () => {
+    mockPasswordLogin.mockRejectedValueOnce(new Error("invalid email or password"));
+    mockSendCode.mockResolvedValueOnce(undefined);
+    renderWithI18n(<LoginPage onSuccess={onSuccess} />);
+    const user = userEvent.setup();
+    await switchToPassword(user);
+    await user.type(screen.getByLabelText(/^email$/i), "alice@example.com");
+    await user.type(screen.getByLabelText(/^password$/i), "wrong-password");
+    await user.click(screen.getByRole("button", { name: /^sign in$/i }));
+    const recovery = await screen.findByRole("button", {
+      name: /email me a code instead/i,
+    });
+    await user.click(recovery);
+    expect(mockSendCode).toHaveBeenCalledWith("alice@example.com");
+    await waitFor(() => {
+      expect(screen.getByText(/check your email/i)).toBeInTheDocument();
+    });
+    expect(onSuccess).not.toHaveBeenCalled();
+  });
+
+  it("verifies email before setting a password via Forgot or need to set a password?", async () => {
     mockSendCode.mockResolvedValueOnce(undefined);
     mockVerifyCode.mockResolvedValueOnce({ id: "u-1" });
     mockApiListWorkspaces.mockResolvedValueOnce([]);
     renderWithI18n(<LoginPage onSuccess={onSuccess} />);
     const user = userEvent.setup();
+    await switchToPassword(user);
     await user.type(screen.getByLabelText(/^email$/i), "alice@example.com");
-    await user.click(screen.getByRole("button", { name: entry }));
+    await user.click(
+      screen.getByRole("button", {
+        name: /forgot or need to set a password/i,
+      }),
+    );
     await user.type(screen.getByLabelText(/^new password$/i), "new-password");
     await user.type(screen.getByLabelText(/^confirm password$/i), "other-password");
-    await user.click(screen.getByRole("button", { name: /^continue$/i }));
+    await user.click(screen.getByRole("button", { name: /^send code$/i }));
     expect(screen.getByRole("alert")).toHaveTextContent(/passwords do not match/i);
     expect(mockSendCode).not.toHaveBeenCalled();
     await user.clear(screen.getByLabelText(/^confirm password$/i));
     await user.type(screen.getByLabelText(/^confirm password$/i), "new-password");
-    await user.click(screen.getByRole("button", { name: /^continue$/i }));
+    await user.click(screen.getByRole("button", { name: /^send code$/i }));
     expect(mockVerifyCode).not.toHaveBeenCalled();
     await user.type(getOTPInput(), "123456");
     await waitFor(() => expect(onSuccess).toHaveBeenCalledOnce());
@@ -210,6 +261,7 @@ describe("LoginPage", () => {
     mockApiPasswordLogin.mockResolvedValueOnce({ token: "cli-password-token" });
     renderWithI18n(<LoginPage onSuccess={onSuccess} cliCallback={{ url: "http://localhost:9876/callback", state: "state-1" }} />);
     const user = userEvent.setup();
+    await switchToPassword(user);
     await user.type(screen.getByLabelText(/^email$/i), "alice@example.com");
     await user.type(screen.getByLabelText(/^password$/i), "password-123");
     await user.click(screen.getByRole("button", { name: /^sign in$/i }));
@@ -217,29 +269,25 @@ describe("LoginPage", () => {
     expect(mockApiListWorkspaces).not.toHaveBeenCalled();
   });
 
-  it("shows error when submitting with empty email", async () => {
+  it("keeps submit disabled until the required fields are filled", async () => {
     renderWithI18n(<LoginPage onSuccess={onSuccess} />);
-
-    // The Continue button is disabled when email is empty, so we submit the
-    // form programmatically the same way the component does — via form submit.
-    // Since the button is disabled, we directly call handleSendCode's logic
-    // by removing the required attr and submitting.
-    const emailInput = screen.getByLabelText(/email/i);
-    // The input has required + the button is disabled, so we need to type
-    // a space then clear to trigger the empty-email error path.
-    // Actually, the component guards `if (!email)` in handleSendCode.
-    // But the button is disabled when `!email`. Let's verify:
-    const button = screen.getByRole("button", { name: /^sign in$/i });
-    expect(button).toBeDisabled();
-
-    // Type an email to enable button, then clear it — button becomes disabled again
     const user = userEvent.setup();
-    await user.type(emailInput, "a");
-    expect(button).toBeDisabled();
-    await user.type(screen.getByLabelText(/^password$/i), "correct-password");
-    expect(button).not.toBeDisabled();
+    const emailInput = screen.getByLabelText(/email/i);
+    const sendCode = screen.getByRole("button", { name: /^send code$/i });
+    expect(sendCode).toBeDisabled();
+
+    await user.type(emailInput, "test@example.com");
+    expect(sendCode).toBeEnabled();
     await user.clear(emailInput);
-    expect(button).toBeDisabled();
+    expect(sendCode).toBeDisabled();
+
+    await switchToPassword(user);
+    const signIn = screen.getByRole("button", { name: /^sign in$/i });
+    expect(signIn).toBeDisabled();
+    await user.type(screen.getByLabelText(/^password$/i), "correct-password");
+    expect(signIn).toBeDisabled();
+    await user.type(emailInput, "test@example.com");
+    expect(signIn).toBeEnabled();
   });
 
   // -------------------------------------------------------------------------
@@ -251,9 +299,8 @@ describe("LoginPage", () => {
     renderWithI18n(<LoginPage onSuccess={onSuccess} />);
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole("button", { name: /use a verification code/i }));
     await user.type(screen.getByLabelText(/email/i), "test@example.com");
-    await user.click(screen.getByRole("button", { name: /continue/i }));
+    await user.click(screen.getByRole("button", { name: /^send code$/i }));
 
     expect(mockSendCode).toHaveBeenCalledWith("test@example.com");
   });
@@ -264,9 +311,8 @@ describe("LoginPage", () => {
     renderWithI18n(<LoginPage onSuccess={onSuccess} />);
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole("button", { name: /use a verification code/i }));
     await user.type(screen.getByLabelText(/email/i), "test@example.com");
-    await user.click(screen.getByRole("button", { name: /continue/i }));
+    await user.click(screen.getByRole("button", { name: /^send code$/i }));
 
     expect(screen.getByText(/sending code/i)).toBeInTheDocument();
   });
@@ -276,9 +322,8 @@ describe("LoginPage", () => {
     renderWithI18n(<LoginPage onSuccess={onSuccess} />);
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole("button", { name: /use a verification code/i }));
     await user.type(screen.getByLabelText(/email/i), "test@example.com");
-    await user.click(screen.getByRole("button", { name: /continue/i }));
+    await user.click(screen.getByRole("button", { name: /^send code$/i }));
 
     await waitFor(() => {
       expect(
@@ -288,14 +333,50 @@ describe("LoginPage", () => {
     expect(screen.getByText(/test@example.com/)).toBeInTheDocument();
   });
 
+  it("can switch from the code step to password sign-in", async () => {
+    mockSendCode.mockResolvedValueOnce(undefined);
+    renderWithI18n(<LoginPage onSuccess={onSuccess} />);
+
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText(/email/i), "test@example.com");
+    await user.click(screen.getByRole("button", { name: /^send code$/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/check your email/i)).toBeInTheDocument();
+    });
+
+    await user.click(
+      screen.getByRole("button", { name: /use a password instead/i }),
+    );
+
+    expect(
+      screen.getByText(/sign in with a password/i),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText(/^password$/i)).toBeInTheDocument();
+  });
+
+  it("localizes a server send failure", async () => {
+    mockSendCode.mockRejectedValueOnce(
+      new Error("failed to send verification code"),
+    );
+    renderWithI18n(<LoginPage onSuccess={onSuccess} />);
+
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText(/email/i), "test@example.com");
+    await user.click(screen.getByRole("button", { name: /^send code$/i }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      /failed to send code/i,
+    );
+  });
+
   it("autofocuses the OTP input when the code step opens", async () => {
     mockSendCode.mockResolvedValueOnce(undefined);
     renderWithI18n(<LoginPage onSuccess={onSuccess} />);
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole("button", { name: /use a verification code/i }));
     await user.type(screen.getByLabelText(/email/i), "test@example.com");
-    await user.click(screen.getByRole("button", { name: /continue/i }));
+    await user.click(screen.getByRole("button", { name: /^send code$/i }));
 
     await waitFor(() => {
       expect(screen.getByText(/check your email/i)).toBeInTheDocument();
@@ -307,16 +388,17 @@ describe("LoginPage", () => {
   });
 
   it("shows error when sendCode fails", async () => {
-    mockSendCode.mockRejectedValueOnce(new Error("Rate limited"));
+    mockSendCode.mockRejectedValueOnce(new Error("please wait before requesting another code"));
     renderWithI18n(<LoginPage onSuccess={onSuccess} />);
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole("button", { name: /use a verification code/i }));
     await user.type(screen.getByLabelText(/email/i), "test@example.com");
-    await user.click(screen.getByRole("button", { name: /continue/i }));
+    await user.click(screen.getByRole("button", { name: /^send code$/i }));
 
     await waitFor(() => {
-      expect(screen.getByText("Rate limited")).toBeInTheDocument();
+      expect(
+        screen.getByText(/too many attempts/i),
+      ).toBeInTheDocument();
     });
   });
 
@@ -325,9 +407,8 @@ describe("LoginPage", () => {
     renderWithI18n(<LoginPage onSuccess={onSuccess} />);
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole("button", { name: /use a verification code/i }));
     await user.type(screen.getByLabelText(/email/i), "test@example.com");
-    await user.click(screen.getByRole("button", { name: /continue/i }));
+    await user.click(screen.getByRole("button", { name: /^send code$/i }));
 
     await waitFor(() => {
       expect(
@@ -349,9 +430,8 @@ describe("LoginPage", () => {
 
     const user = userEvent.setup();
     // Step 1: email
-    await user.click(screen.getByRole("button", { name: /use a verification code/i }));
     await user.type(screen.getByLabelText(/email/i), "test@example.com");
-    await user.click(screen.getByRole("button", { name: /continue/i }));
+    await user.click(screen.getByRole("button", { name: /^send code$/i }));
 
     // Step 2: code
     await waitFor(() => {
@@ -381,14 +461,13 @@ describe("LoginPage", () => {
 
   it("shows error on invalid code", async () => {
     mockSendCode.mockResolvedValueOnce(undefined);
-    mockVerifyCode.mockRejectedValueOnce(new Error("Invalid code"));
+    mockVerifyCode.mockRejectedValueOnce(new Error("invalid or expired code"));
 
     renderWithI18n(<LoginPage onSuccess={onSuccess} />);
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole("button", { name: /use a verification code/i }));
     await user.type(screen.getByLabelText(/email/i), "test@example.com");
-    await user.click(screen.getByRole("button", { name: /continue/i }));
+    await user.click(screen.getByRole("button", { name: /^send code$/i }));
 
     await waitFor(() => {
       expect(
@@ -400,7 +479,9 @@ describe("LoginPage", () => {
     await user.type(otpInput, "000000");
 
     await waitFor(() => {
-      expect(screen.getByText("Invalid code")).toBeInTheDocument();
+      expect(
+        screen.getByText(/invalid or expired code/i),
+      ).toBeInTheDocument();
     });
     expect(onSuccess).not.toHaveBeenCalled();
   });
@@ -414,9 +495,8 @@ describe("LoginPage", () => {
     renderWithI18n(<LoginPage onSuccess={onSuccess} />);
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole("button", { name: /use a verification code/i }));
     await user.type(screen.getByLabelText(/email/i), "test@example.com");
-    await user.click(screen.getByRole("button", { name: /continue/i }));
+    await user.click(screen.getByRole("button", { name: /^send code$/i }));
 
     await waitFor(() => {
       expect(
@@ -434,9 +514,8 @@ describe("LoginPage", () => {
     renderWithI18n(<LoginPage onSuccess={onSuccess} />);
 
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    await user.click(screen.getByRole("button", { name: /use a verification code/i }));
     await user.type(screen.getByLabelText(/email/i), "test@example.com");
-    await user.click(screen.getByRole("button", { name: /continue/i }));
+    await user.click(screen.getByRole("button", { name: /^send code$/i }));
 
     await waitFor(() => {
       expect(screen.getByText(/check your email/i)).toBeInTheDocument();
@@ -700,9 +779,8 @@ describe("LoginPage", () => {
     );
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole("button", { name: /use a verification code/i }));
     await user.type(screen.getByLabelText(/email/i), "cli@example.com");
-    await user.click(screen.getByRole("button", { name: /continue/i }));
+    await user.click(screen.getByRole("button", { name: /^send code$/i }));
 
     await waitFor(() => {
       expect(
@@ -763,9 +841,8 @@ describe("LoginPage", () => {
     );
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole("button", { name: /use a verification code/i }));
     await user.type(screen.getByLabelText(/email/i), "test@example.com");
-    await user.click(screen.getByRole("button", { name: /continue/i }));
+    await user.click(screen.getByRole("button", { name: /^send code$/i }));
 
     await waitFor(() => {
       expect(
@@ -786,14 +863,13 @@ describe("LoginPage", () => {
   // Back button on code step
   // -------------------------------------------------------------------------
 
-  it("back button returns to email step", async () => {
+  it("change email returns to the email step", async () => {
     mockSendCode.mockResolvedValueOnce(undefined);
     renderWithI18n(<LoginPage onSuccess={onSuccess} />);
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole("button", { name: /use a verification code/i }));
     await user.type(screen.getByLabelText(/email/i), "test@example.com");
-    await user.click(screen.getByRole("button", { name: /continue/i }));
+    await user.click(screen.getByRole("button", { name: /^send code$/i }));
 
     await waitFor(() => {
       expect(
@@ -801,7 +877,7 @@ describe("LoginPage", () => {
       ).toBeInTheDocument();
     });
 
-    await user.click(screen.getByRole("button", { name: /back/i }));
+    await user.click(screen.getByRole("button", { name: /change email/i }));
 
     expect(
       screen.getByText(/sign in to weave a world/i),
