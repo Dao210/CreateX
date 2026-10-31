@@ -12,6 +12,10 @@
 
 Agent 读取当前 Web 站点的 `/.well-known/tanks-mcp/setup.md`，下载同目录的 `connect.mjs`。这是随 Web 一起分发、使用 Node.js 22+ 内置模块的独立 stdio 连接器，不依赖上游 Auro 发布包、Go 编译或 daemon。首次使用通过现有 `/login?cli_callback=…&cli_state=…` 浏览器流程登录游戏页面的同一账号，并沿用现有 PAT API。连接器验证账号、世界访问权限及 `tank_get_catalog` 后，输出当前客户端所需的配置，不修改其他 MCP 连接。
 
+本机回调在凭据验证并私有保存后，通过成员权限接口按世界 UUID 取得真实 slug，以 303 跳回绑定 Web origin 的 `/{slug}/tanks?from=tank-connect`。跳转地址不包含凭据、callback 或 state；网页引导仅说明下一步，不作为 Agent 已连接的证明。Agent 同时继续注册配置并实际调用目录工具；浏览器无需等待接入完成即可选择已有坦克游玩。无法解析游戏地址时保留有效凭据，提示返回 Agent 完成接入，不重新签发令牌。
+
+安装结果可附带非敏感 `gameUrl`，用于有效凭据复用时返回游戏；普通 stdio 启动和工具调用不会打开浏览器。后续用户要求创造并游玩时，须由保存结果创建冻结对局并返回其 `playUrl`，不能把世界入口或选角入口当作某辆新坦克的专属对局。通用 Web/Google/Desktop 登录回调保持原有职责。
+
 凭据保存在用户目录 `~/.createx/tanks-mcp/`，按 API 地址、世界和账号隔离，Unix 文件权限为 `0600`。MCP 配置只包含 Node 与连接器的绝对路径及连接参数，不包含令牌。默认安装只做只读验收，不创建角色或对局；客户端工具尚未重载时，Agent 应明确给出下一步，不得仅凭配置保存成功宣称当前对话已连接。
 
 安装说明及连接器必须随 Web 的 `public/` 目录部署。默认 Web 测试会在原生 Node 子进程中验证公开下载的连接器，只使用临时本地 HTTP 服务和虚构凭据，不查找或执行真实 Agent CLI。

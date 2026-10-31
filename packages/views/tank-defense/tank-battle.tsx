@@ -36,6 +36,7 @@ interface TankBattleProps {
   frozen?: boolean;
   garage?: ReactNode;
   headerActions?: ReactNode;
+  notice?: ReactNode;
   onStart?: () => void;
   startPending?: boolean;
   startDisabled?: boolean;
@@ -44,7 +45,7 @@ interface TankBattleProps {
   launchError?: string;
 }
 
-export function TankBattle({ storage, storageKey, workspaceId, blueprint, levelIndex = 0, initialMode = "campaign", frozen = false, garage, headerActions, onStart, startPending = false, startDisabled = false, autoStart = false, readyLoadout, launchError }: TankBattleProps) {
+export function TankBattle({ storage, storageKey, workspaceId, blueprint, levelIndex = 0, initialMode = "campaign", frozen = false, garage, headerActions, notice, onStart, startPending = false, startDisabled = false, autoStart = false, readyLoadout, launchError }: TankBattleProps) {
   const { t } = useT("tanks");
   const [preferences, setPreferences] = useState(() => {
     try { return parseTankPreferences(storage.getItem(storageKey)); }
@@ -196,6 +197,7 @@ export function TankBattle({ storage, storageKey, workspaceId, blueprint, levelI
     {fullscreenFailed && <p className="tank-fullscreen-error" role="alert">{t($ => $.fullscreen_error)}</p>}
     {launchError && <p className="tank-garage-error" role="alert">{launchError}</p>}
     <div className="tank-defense-app">
+      {!fullscreen && notice}
       <div className="tank-layout">
         <section className="tank-operation" aria-label={t($ => $.mode)}>
           <div className="tank-operation-controls"><div className="tank-mode-select" role="group" aria-label={t($ => $.mode)}>

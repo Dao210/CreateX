@@ -173,6 +173,8 @@
     "manual_config": "Configuration manuelle",
     "setup_guide": "Installation et dépannage",
     "connect_signin": "Une connexion au compte utilisé dans le jeu peut être nécessaire la première fois.",
+    "return_hint": "Une fois votre agent connecté, vous pourrez créer des chars dans la conversation. Vous pouvez aussi choisir un char existant et jouer dès maintenant.",
+    "dismiss_return_hint": "Fermer les indications de connexion",
     "paste_instructions": "Collez les instructions dans la conversation avec votre Agent et envoyez-les pour commencer.",
     "connect_prompt": "Connecte-moi au MCP de chars de Weave a World avec les données JSON ci-dessous. Lis les instructions à setup_url, installe le connecteur fourni par ce site et configure-le pour ta plateforme en conservant les connexions MCP existantes. Si nécessaire, guide-moi pour me connecter dans le navigateur avec le même compte que dans le jeu. Vérifie la connexion avec tank_get_catalog ; enregistrer la configuration ne suffit pas à confirmer la connexion du client. Recharge les outils MCP si le client le permet, sinon indique la prochaine étape précise. Configure uniquement la connexion : ne crée ni personnage ni partie. Ne place jamais de jeton de connexion dans la conversation, la configuration MCP ou un dépôt."
   },

@@ -66,6 +66,8 @@
 .tank-footer { max-width: 1200px; margin: 22px auto 0; color: var(--muted-foreground); font-size: var(--text-micro); line-height: 1.7; }
 .tank-touch-controls { display: none; }
 .tank-garage { min-width: 0; padding-top: 18px; border-top: 1px solid var(--border); }
+.tank-connection-return { display: flex; align-items: center; gap: 12px; max-width: 1200px; margin: 0 auto 18px; padding: 12px; border: 1px solid var(--border); border-radius: var(--radius-md); color: var(--muted-foreground); background: var(--muted); font-size: var(--text-caption); }
+.tank-connection-return p { flex: 1; min-width: 0; margin: 0; line-height: 1.7; overflow-wrap: anywhere; }
 .tank-garage-heading { display: flex; align-items: center; gap: 4px; margin-bottom: 12px; }
 .tank-garage-heading h2 { flex: 1; margin: 0; font-size: var(--text-label); font-weight: 600; }
 .tank-form-field { display: flex; flex-direction: column; gap: 6px; margin-block: 10px; min-width: 0; font-size: var(--text-caption); color: var(--foreground); }

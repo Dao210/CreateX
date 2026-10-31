@@ -173,6 +173,8 @@
     "manual_config": "Manual configuration",
     "setup_guide": "Installation and troubleshooting",
     "connect_signin": "You may be asked to sign in with your game account the first time.",
+    "return_hint": "Once your agent finishes connecting, you can create tanks in the conversation. You can also choose an existing tank and play now.",
+    "dismiss_return_hint": "Dismiss connection guidance",
     "paste_instructions": "Paste the instructions into your Agent’s chat and send them to begin setup.",
     "connect_prompt": "Connect me to the Weave a World tank MCP using the JSON connection data below. Read setup_url, install the connector supplied by that site, and configure it for your platform while preserving existing MCP connections. If sign-in is required, guide me through browser sign-in with the same account as the game. Verify tank_get_catalog; saving configuration alone does not prove the client is connected. Reload the client’s MCP tools when supported, or tell me the exact next step. Only set up the connection: do not create characters or game sessions. Never put login tokens in chat, MCP configuration, or a repository."
   },

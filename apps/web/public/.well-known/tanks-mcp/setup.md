@@ -60,6 +60,14 @@ minutes. Keep the command running while the user signs in. If you cannot open th
 browser, present the sign-in URL printed on stderr. It contains a callback and
 random state, not a login credential. Never copy callback tokens into chat.
 
+After the credential is verified and saved, the browser returns to the bound
+world's tank page. The destination is resolved from the membership-gated workspace
+API and contains no credential. This means account authorization has completed;
+the Agent must still finish client registration and tool verification below.
+Continue automatically while the user is on the game page; do not wait for them
+to close that page or start a game. If the world address cannot be resolved, the
+callback explains that authorization succeeded and the Agent can continue setup.
+
 For a remote execution environment, the user's browser must be able to reach
 that loopback callback through an explicitly configured local tunnel. Otherwise
 run setup on the user's machine. Do not expose the callback on a public interface
@@ -69,6 +77,9 @@ or assume that a localhost API can be reached from another machine.
 
 On success, stdout is a JSON object with `state: "ready-to-register"`, a
 connection `name`, absolute `command` and `args`, `mcpServers`, and `codex`.
+It can also include a non-sensitive `gameUrl` for the verified world's tank page.
+If `gameUrl` is absent, continue registration; a game-navigation failure does not
+invalidate the saved connection credential.
 **Installation alone has not registered the server in the client.**
 
 ### Codex
@@ -115,8 +126,25 @@ If tools cannot be refreshed in the current chat, report that setup and the
 server check succeeded, and give the precise reload/new-chat step still required.
 Do not imply that the current conversation already has the new tools.
 
-This request authorizes connection setup only. Do not call `tank_save_character`
+After verification, provide the returned `gameUrl` if available. It is a world
+entry, not a session for a particular character. Reusing an existing credential
+does not open a sign-in browser; normal stdio/tool calls never open a browser.
+
+The copied connection request authorizes connection setup only. Do not call `tank_save_character`
 or `tank_create_session`, create sample characters, or start a game as a test.
+
+## 5. Later character and play requests
+
+Only act on a subsequent explicit user request to create or play a tank. Read the
+catalog, validate the draft, and save it. For a save-only request, return its
+`/{workspace_slug}/tanks?character=<saved-character-UUID>` selection link and
+describe it as a selection page.
+
+When the user asks to enter the game with that character, check compatibility,
+create a frozen session using the saved `id`, `revision` and `contentHash`, and
+use the server-returned `playUrl`. Verify the session refers to that exact saved
+character. Do not substitute `gameUrl` or a bare `/tanks` URL for this play link.
+The player starts the battle and drives with keyboard or touch.
 
 ## Recovery
 

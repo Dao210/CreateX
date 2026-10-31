@@ -7,7 +7,7 @@ import { Buffer } from "node:buffer";
 import { createHash, randomBytes } from "node:crypto";
 import { execFile } from "node:child_process";
 import { createServer } from "node:http";
-import { chmod, mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { chmod, mkdir, readFile, realpath, rename, writeFile } from "node:fs/promises";
 import { homedir, hostname } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { createInterface } from "node:readline";
@@ -147,6 +147,23 @@ function openBrowser(url) {
   execFile(command, args, error => { if (error) process.stderr.write("Open the sign-in link above in your browser.\n"); });
 }
 
+async function gameUrlFor(options, token) {
+  try {
+    const timeout = AbortSignal.timeout(5000);
+    const workspace = await request({ ...options, signal: options.signal ? AbortSignal.any([options.signal, timeout]) : timeout }, token, `/api/workspaces/${options.workspaceId}`);
+    if (typeof workspace?.id !== "string" || workspace.id.toLowerCase() !== options.workspaceId || typeof workspace.slug !== "string" || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(workspace.slug)) {
+      throw new Error("Invalid workspace destination.");
+    }
+    const url = new URL(`/${encodeURIComponent(workspace.slug)}/tanks`, options.appUrl);
+    url.searchParams.set("from", "tank-connect");
+    return url.href;
+  } catch {
+    // Returning to the browser must not undo a completed account authorization.
+    process.stderr.write("Account authorization is complete, but the game page could not be resolved. Continue setup with your Agent.\n");
+    return undefined;
+  }
+}
+
 export async function login(options, root, { browser = openBrowser, timeout = 300_000 } = {}) {
   const cancellation = new AbortController();
   const connection = { ...options, signal: cancellation.signal };
@@ -174,9 +191,16 @@ export async function login(options, root, { browser = openBrowser, timeout = 30
       await checkConnection(connection, pat.token);
       cancellation.signal.throwIfAborted();
       await saveCredential(options, pat.token, root);
+      clearTimeout(timer);
+      const gameUrl = await gameUrlFor(connection, pat.token);
       res.setHeader("Content-Type", "text/plain; charset=utf-8");
-      res.end("Tank MCP sign-in complete. You can close this tab and return to your Agent.");
-      finish(pat.token);
+      if (gameUrl) {
+        res.writeHead(303, { Location: gameUrl });
+        res.end("Account authorization is complete. Returning to your game. Your Agent will finish the MCP setup.");
+      } else {
+        res.end("Account authorization is complete, but the game page could not be resolved. Return to your Agent to finish setup.");
+      }
+      finish({ token: pat.token, gameUrl });
     } catch (error) {
       res.writeHead(400).end("Sign-in did not complete. Return to your Agent for the next step.");
       fail(error);
@@ -220,12 +244,14 @@ export async function install(options, root, loginOptions) {
   const target = join(root, `connect-${hash}.mjs`);
   await writeFile(target, source, { mode: 0o700 });
   let token = await loadCredential(options, root);
+  let gameUrl;
   if (token) {
     try { await checkConnection(options, token); }
     catch (error) { if (error.status !== 401) throw error; token = null; }
   }
-  if (!token) token = await login(options, root, loginOptions);
-  return { state: "ready-to-register", verification: { tool: "tank_get_catalog", profile: "tank-defense@1" }, ...registration(options, target) };
+  if (!token) ({ token, gameUrl } = await login(options, root, loginOptions));
+  else gameUrl = await gameUrlFor(options, token);
+  return { state: "ready-to-register", verification: { tool: "tank_get_catalog", profile: "tank-defense@1" }, ...(gameUrl ? { gameUrl } : {}), ...registration(options, target) };
 }
 
 export async function serve(options, token, input = process.stdin, output = process.stdout) {
@@ -264,6 +290,8 @@ async function main() {
   await serve(options, token);
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+// Temporary directories can use filesystem aliases, including /var on macOS.
+const entryPath = process.argv[1] ? await realpath(resolve(process.argv[1])).catch(() => undefined) : undefined;
+if (entryPath === fileURLToPath(import.meta.url)) {
   main().catch(error => { process.stderr.write(`${error.message}\n`); process.exitCode = 1; });
 }

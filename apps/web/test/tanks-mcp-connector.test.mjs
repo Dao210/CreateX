@@ -4,7 +4,8 @@ import process from "node:process";
 import { afterEach, test } from "node:test";
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
-import { mkdir, mkdtemp, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
+import { spawnSync } from "node:child_process";
+import { mkdir, mkdtemp, readFile, readdir, rm, stat, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Readable, Writable } from "node:stream";
@@ -34,6 +35,11 @@ async function mockApi(settings = {}) {
     if (settings.redirect) { res.writeHead(302, { Location: settings.redirect }).end(); return; }
     if (req.url === "/api/me") { send({ id: settings.userId ?? userId }); return; }
     if (req.url === "/api/tokens") { send({ token: "fixture-personal-token" }); return; }
+    if (req.url === `/api/workspaces/${workspaceId}`) {
+      if (settings.workspaceStatus) { res.writeHead(settings.workspaceStatus).end(); return; }
+      await settings.onWorkspace?.();
+      send(settings.workspace ?? { id: workspaceId, slug: "verified-world" }); return;
+    }
     if (body.method === "notifications/initialized") { res.writeHead(202).end(); return; }
     const result = body.method === "initialize"
       ? { serverInfo: { name: "auro-tanks" }, protocolVersion: body.params.protocolVersion }
@@ -46,8 +52,10 @@ async function mockApi(settings = {}) {
   return { calls, options: { action: "install", serverUrl: url, appUrl: url, workspaceId, userId } };
 }
 
-function browserCallback(assertWrongState = false) {
-  return async link => {
+function browserCallback(assertWrongState = false, inspect = () => {}) {
+  const completion = Promise.withResolvers();
+  completion.promise.catch(() => {});
+  const visit = async link => {
     const loginUrl = new URL(link);
     assert.equal(loginUrl.pathname, "/login");
     const callback = new URL(loginUrl.searchParams.get("cli_callback"));
@@ -58,9 +66,16 @@ function browserCallback(assertWrongState = false) {
       assert.equal((await fetch(callback)).status, 400);
     }
     callback.searchParams.set("state", loginUrl.searchParams.get("cli_state"));
-    const response = await fetch(callback);
+    const response = await fetch(callback, { redirect: "manual" });
+    await inspect(response.clone(), callback);
     await response.text();
   };
+  const browser = link => {
+    const result = visit(link);
+    result.then(completion.resolve, completion.reject);
+    return result;
+  };
+  return Object.assign(browser, { completed: completion.promise });
 }
 
 test("validates complete connection data and separates API/workspace/account credentials", () => {
@@ -101,7 +116,17 @@ test("does not follow HTTP redirects carrying a credential", async () => {
 test("browser login requires matching state and account, then stores a verified private credential", async () => {
   const root = await directory();
   const { options, calls } = await mockApi();
-  await login(options, root, { browser: browserCallback(true), timeout: 5000 });
+  const browser = browserCallback(true, async response => {
+    assert.equal(response.status, 303);
+    assert.equal(response.headers.get("location"), `${options.appUrl}/verified-world/tanks?from=tank-connect`);
+    assert.equal(response.headers.get("referrer-policy"), "no-referrer");
+    assert.equal(response.headers.get("cache-control"), "no-store");
+    assert.match(response.headers.get("content-security-policy"), /default-src 'none'/);
+    assert.equal(await loadCredential(options, root), "fixture-personal-token");
+  });
+  const completed = await login(options, root, { browser, timeout: 5000 });
+  await browser.completed;
+  assert.equal(completed.gameUrl, `${options.appUrl}/verified-world/tanks?from=tank-connect`);
   assert.equal(await loadCredential(options, root), "fixture-personal-token");
   const file = join(root, connectionKey(options), "credentials.json");
   if (process.platform !== "win32") assert.equal((await stat(file)).mode & 0o777, 0o600);
@@ -124,6 +149,21 @@ test("a failed catalog check during login issues no personal token", async () =>
   assert.ok(!calls.some(call => call.path === "/api/tokens"));
 });
 
+test("a failed private credential save never redirects to the game", async () => {
+  const root = await directory();
+  const blocked = join(root, "not-a-directory");
+  await writeFile(blocked, "fixture");
+  const { options, calls } = await mockApi();
+  const browser = browserCallback(false, async response => {
+    assert.equal(response.status, 400);
+    assert.equal(response.headers.get("location"), null);
+    assert.match(await response.text(), /Sign-in did not complete/);
+  });
+  await assert.rejects(login(options, blocked, { browser, timeout: 5000 }));
+  await browser.completed;
+  assert.ok(!calls.some(call => call.path === `/api/workspaces/${workspaceId}`));
+});
+
 test("sign-in timeout closes the callback and leaves credentials absent", async () => {
   const root = await directory();
   const { options } = await mockApi();
@@ -139,6 +179,8 @@ test("install is repeatable, keeps an immutable executable and never returns a t
   const first = await install(options, root, { browser: browserCallback(), timeout: 5000 });
   const second = await install(options, root, { browser: () => assert.fail("valid credential should be reused") });
   assert.equal(first.state, "ready-to-register");
+  assert.equal(first.gameUrl, `${options.appUrl}/verified-world/tanks?from=tank-connect`);
+  assert.equal(second.gameUrl, first.gameUrl);
   assert.equal(first.name, second.name);
   assert.equal(first.args[0], second.args[0]);
   assert.match(await readFile(first.args[0], "utf8"), /export async function serve/);
@@ -148,6 +190,102 @@ test("install is repeatable, keeps an immutable executable and never returns a t
   assert.equal((await readdir(root)).filter(name => name.endsWith(".mjs")).length, 1);
   assert.deepEqual(first.codex.slice(0, 4), ["mcp", "add", first.name, "--"]);
   assert.equal(first.mcpServers[first.name].command, process.execPath);
+});
+
+test("returns to the bound Web origin and only forwards the verified workspace path", async () => {
+  const root = await directory();
+  const { options, calls } = await mockApi({ onWorkspace: () => loadCredential(options, root).then(token => assert.equal(token, "fixture-personal-token")) });
+  options.appUrl = "https://play.example.test";
+  const browser = browserCallback(false, response => {
+    const location = response.headers.get("location");
+    assert.equal(location, "https://play.example.test/verified-world/tanks?from=tank-connect");
+    assert.ok(!location.includes("token"));
+    assert.ok(!location.includes("state"));
+    assert.ok(!location.includes("callback"));
+  });
+  await login(options, root, { browser, timeout: 5000 });
+  await browser.completed;
+  assert.ok(calls.every(call => call.headers["x-workspace-id"] === workspaceId));
+  assert.ok(calls.every(call => !["tank_save_character", "tank_create_session"].includes(call.body?.params?.name)));
+});
+
+test("workspace navigation failures preserve authorization and client registration readiness", async () => {
+  for (const settings of [
+    { workspaceStatus: 503 },
+    { workspaceStatus: 403 },
+    { workspace: { id: userId, slug: "wrong-world" } },
+    { workspace: { id: workspaceId, slug: "../../evil" } },
+    { workspace: { id: workspaceId, slug: "//evil.test" } },
+    { workspace: { id: workspaceId, slug: "world?token=fixture" } },
+    { workspace: { id: workspaceId, slug: "world-" } },
+    { workspace: { id: workspaceId } },
+  ]) {
+    const root = await directory();
+    const { options, calls } = await mockApi(settings);
+    const browser = browserCallback(false, async response => {
+      assert.equal(response.status, 200);
+      assert.equal(response.headers.get("location"), null);
+      const body = await response.text();
+      assert.match(body, /authorization.*complete/i);
+      assert.match(body, /return to.*Agent/i);
+      assert.ok(!body.includes("fixture-personal-token"));
+      assert.ok(!body.includes("fixture-session-token"));
+    });
+    const result = await install(options, root, { browser, timeout: 5000 });
+    await browser.completed;
+    assert.equal(result.state, "ready-to-register");
+    assert.equal(result.gameUrl, undefined);
+    assert.equal(await loadCredential(options, root), "fixture-personal-token");
+    const reused = await install(options, root, { browser: () => assert.fail("navigation failure must not require another login") });
+    assert.equal(reused.state, "ready-to-register");
+    assert.equal(calls.filter(call => call.path === "/api/tokens").length, 1);
+  }
+});
+
+test("a stalled game destination cannot time out a completed account authorization", async () => {
+  const root = await directory();
+  const { options } = await mockApi({ onWorkspace: () => new Promise(() => {}) });
+  const browser = browserCallback(false, response => { assert.equal(response.status, 200); assert.equal(response.headers.get("location"), null); });
+  const result = await install(options, root, { browser, timeout: 1000 });
+  await browser.completed;
+  assert.equal(result.state, "ready-to-register");
+  assert.equal(result.gameUrl, undefined);
+  assert.equal(await loadCredential(options, root), "fixture-personal-token");
+});
+
+test("downloaded entry points execute through an aliased temporary directory without accessing credentials", async () => {
+  const root = await directory();
+  const source = join(root, "source");
+  const alias = join(root, "alias");
+  await mkdir(source);
+  await writeFile(join(source, "connect.mjs"), await readFile(new URL("../public/.well-known/tanks-mcp/connect.mjs", import.meta.url)));
+  await symlink(source, alias, process.platform === "win32" ? "junction" : "dir");
+  const result = spawnSync(process.execPath, [join(alias, "connect.mjs"), "invalid-action"], { encoding: "utf8", timeout: 5000 });
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /Usage: node connect.mjs/);
+});
+
+test("replaying a callback while its return URL resolves cannot issue another credential", async () => {
+  const root = await directory();
+  const { options, calls } = await mockApi();
+  const probe = Promise.withResolvers();
+  probe.promise.catch(() => {});
+  const visit = async link => {
+    const loginUrl = new URL(link);
+    const callback = new URL(loginUrl.searchParams.get("cli_callback"));
+    callback.searchParams.set("state", loginUrl.searchParams.get("cli_state"));
+    callback.searchParams.set("token", "fixture-session-token");
+    const responses = await Promise.all([fetch(callback, { redirect: "manual" }), fetch(callback, { redirect: "manual" })]);
+    for (const response of responses) await response.text();
+    return responses.map(response => response.status).sort();
+  };
+  await login(options, root, { browser: link => {
+    const result = visit(link);
+    result.then(probe.resolve, probe.reject);
+    return result;
+  }, timeout: 5000 });
+  assert.deepEqual(await probe.promise, [303, 409]);
+  assert.equal(calls.filter(call => call.path === "/api/tokens").length, 1);
 });
 
 test("registration uses absolute runtime/file paths without embedding credentials", () => {

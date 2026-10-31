@@ -13,6 +13,7 @@ import { PageHeader } from "../layout/page-header";
 import { TankBattle } from "./tank-battle";
 import { TankCharacterEditor } from "./tank-character-editor";
 import { TankMCPConnection } from "./tank-mcp-connection";
+import { TankConnectionReturn } from "./tank-connection-return";
 
 export function TankGarage({ storage, storageKey, workspace, userId }: { storage: StorageAdapter; storageKey: string; workspace: { id: string; slug: string; name?: string }; userId: string }) {
   const { t } = useT("tanks");
@@ -101,6 +102,7 @@ export function TankGarage({ storage, storageKey, workspace, userId }: { storage
       key={sessionId || "classic"} storage={storage} storageKey={storageKey} workspaceId={workspace.id}
       blueprint={frozen?.character.blueprint} levelIndex={frozen ? frozen.levelId - 1 : initialLevelIndex} initialMode={frozen?.mode}
       frozen={Boolean(frozen)} garage={garage} headerActions={connections}
+      notice={<TankConnectionReturn />}
       onStart={selectionChanged ? () => void deploy(true) : undefined}
       startDisabled={selectionChanged && Boolean(currentId && !selected)} startPending={create.isPending}
       autoStart={autoStartId === (sessionId || "classic")}

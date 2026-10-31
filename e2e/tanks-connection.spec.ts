@@ -48,3 +48,26 @@ test("connection instructions and installation files work in the production Web 
   await page.screenshot({ path: testInfo.outputPath("connection-manual-mobile.png") });
   expect(diagnostics.unknownRequests).toEqual([]);
 });
+
+test("return guidance is dismissible on phones without changing the current game", async ({ page, context, baseURL }, testInfo) => {
+  const origin = new URL(baseURL!).origin;
+  const diagnostics = { unknownRequests: [] as string[], external: [] as string[] };
+  await context.addCookies([{ name: "auro_logged_in", value: "1", url: origin }]);
+  await mockWorkspaceRequests(context, origin, diagnostics);
+  await context.route("**/api/game-progress", route => route.request().method() === "OPTIONS" ? route.fallback() : route.fulfill({ ...json({ workspaceId: WORKSPACE_ID, siege: null, tanks: null }), headers: { "access-control-allow-origin": origin, "access-control-allow-credentials": "true" } }));
+  await context.routeWebSocket(url => url.pathname === "/ws", socket => { socket.onMessage(() => {}); });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(`/${WORKSPACE_SLUG}/tanks?lang=zh-Hans&from=tank-connect&stage=2#loadout`);
+  const hint = page.getByRole("status", { name: "连接 Agent", exact: true });
+  await expect(hint).toContainText("Agent 完成连接后");
+  const board = page.getByTestId("tank-battlefield");
+  await expect(board).toHaveAttribute("data-phase", "ready");
+  await page.screenshot({ path: testInfo.outputPath("connection-return-mobile.png") });
+  await page.getByRole("button", { name: "开始守卫", exact: true }).click();
+  await hint.getByRole("button", { name: "关闭接入提示" }).click();
+  await expect(hint).toHaveCount(0);
+  await expect(page).toHaveURL(`${origin}/${WORKSPACE_SLUG}/tanks?lang=zh-Hans&stage=2#loadout`);
+  await expect(board).toHaveAttribute("data-phase", "running");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  expect(diagnostics.unknownRequests).toEqual([]);
+});

@@ -2,18 +2,23 @@ import { test, expect, type APIRequestContext } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { resolve } from "node:path";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { pathToFileURL } from "node:url";
 import { TestApiClient } from "./fixtures";
 
 let api: TestApiClient;
 let workspace: Awaited<ReturnType<TestApiClient["createWorkspace"]>>;
 let token: string;
+let userId: string;
+let authUser: Awaited<ReturnType<TestApiClient["login"]>>["user"];
 const run = `${Date.now().toString(36)}-${process.pid}`;
 const draft = { profile: "tank-defense@1", name: "MCP 森林侦察者", parts: { chassis: "light", armor: "light", cannon: "rapid" }, appearance: { body: "#26b36a", accent: "#e5f79b", pattern: "stripe" } };
 
 test.use({ viewport: { width: 1440, height: 980 } });
 test.beforeAll(async () => {
   api = new TestApiClient();
-  await api.login(`tank-mcp-${run}@auro.ai`, "Tank MCP QA"); token = api.getToken()!;
+  const loggedIn = await api.login(`tank-mcp-${run}@auro.ai`, "Tank MCP QA"); token = api.getToken()!; userId = loggedIn.user.id; authUser = loggedIn.user;
   workspace = await api.createWorkspace("Tank MCP QA", `tank-mcp-${run}`);
   await api.markUserOnboarded();
 });
@@ -48,6 +53,63 @@ test("authenticated MCP handshake, schemas and tenant boundary", async ({ reques
   const origin = await request.post("/api/tanks/mcp", { headers: { ...headers(), Origin: "https://evil.invalid" }, data: { jsonrpc: "2.0", id: 3, method: "tools/list" } }); expect(origin.status()).toBe(403);
   const invalid = await tool(request, "tank_validate_character", { draft: { ...draft, parts: { chassis: "light", armor: "heavy", cannon: "rapid" } } }); expect(invalid.valid).toBe(false); expect(invalid.errors[0].code).toBe("character_budget_exceeded");
 });
+
+for (const method of ["an existing session", "a Google callback"] as const) {
+test(`connector authorization redirects the browser after ${method} without leaking credentials or starting a battle`, async ({ page, baseURL, request }) => {
+  const connector = await import(pathToFileURL(resolve("apps/web/public/.well-known/tanks-mcp/connect.mjs")).href);
+  const root = await mkdtemp(resolve(tmpdir(), "tank-connection-return-"));
+  let showLogin!: (url: string) => void;
+  const loginUrl = new Promise<string>(ready => { showLogin = ready; });
+  const before = await tool(request, "tank_list_characters");
+  const errors: string[] = [];
+  page.on("pageerror", error => errors.push(error.message));
+  const navigationHeaders: Promise<Record<string, string>>[] = [];
+  page.on("request", req => {
+    const url = new URL(req.url());
+    if (req.isNavigationRequest() && url.pathname === `/${workspace.slug}/tanks` && url.searchParams.get("from") === "tank-connect") navigationHeaders.push(req.allHeaders());
+  });
+  const authorization = connector.login({ appUrl: baseURL!, serverUrl: baseURL!, workspaceId: workspace.id, userId }, root, { browser: showLogin, timeout: 25000 });
+  void authorization.catch(() => {});
+  try {
+    const signIn = new URL(await loginUrl);
+    if (method === "a Google callback") {
+      // Exercise the real OAuth callback page with a fixture exchange, never a Google account.
+      await page.route("**/auth/google", route => route.fulfill({
+        status: route.request().method() === "OPTIONS" ? 204 : 200,
+        contentType: "application/json", body: JSON.stringify({ token, user: authUser }),
+        headers: { "access-control-allow-origin": new URL(baseURL!).origin, "access-control-allow-credentials": "true", "access-control-allow-headers": route.request().headers()["access-control-request-headers"] ?? "content-type", "access-control-allow-methods": "POST, OPTIONS" },
+      }));
+      const callback = new URL("/auth/callback", baseURL!);
+      callback.searchParams.set("code", "fixture-google-code");
+      callback.searchParams.set("state", `cli_callback:${encodeURIComponent(signIn.searchParams.get("cli_callback")!)},cli_state:${encodeURIComponent(signIn.searchParams.get("cli_state")!)}`);
+      await page.goto(callback.href);
+    } else {
+      await page.goto(signIn.href);
+      await page.getByRole("button", { name: "授权", exact: true }).click();
+    }
+    const completed = await authorization;
+    const destination = `${baseURL}/${workspace.slug}/tanks?from=tank-connect`;
+    expect(completed.gameUrl).toBe(destination);
+    await expect(page).toHaveURL(destination);
+    await expect(page.getByTestId("tank-battlefield")).toHaveAttribute("data-phase", "ready", { timeout: 45000 });
+    await expect(page.getByRole("status", { name: "连接 Agent", exact: true })).toContainText("Agent 完成连接后");
+    expect(new URL(page.url()).searchParams.has("token")).toBe(false);
+    expect(new URL(page.url()).searchParams.has("state")).toBe(false);
+    expect(navigationHeaders.length).toBeGreaterThan(0);
+    for (const headers of await Promise.all(navigationHeaders)) {
+      expect(headers.authorization).toBeUndefined();
+      expect(headers.referer).toBeUndefined();
+    }
+    const after = await tool(request, "tank_list_characters");
+    expect(after.characters.map((item: { id: string }) => item.id)).toEqual(before.characters.map((item: { id: string }) => item.id));
+    expect(errors).toEqual([]);
+    await page.screenshot({ path: "test-results/tanks/connection-return.png", fullPage: true });
+  } finally {
+    await authorization.catch(() => {});
+    await rm(root, { recursive: true, force: true });
+  }
+});
+}
 
 test("MCP creates a real playable tank and later edits cannot alter its frozen session", async ({ request, page, baseURL }) => {
   const validation = await tool(request, "tank_validate_character", { draft }); expect(validation.valid).toBe(true); expect(validation.blueprint.speed).toBe(106);

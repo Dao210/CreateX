@@ -6,13 +6,13 @@ import { TankGarage } from "./tank-garage";
 import { TankCharacterEditor } from "./tank-character-editor";
 import { compileTankCharacter, type TankCharacterDraft } from "@auro/core/tank-defense";
 
-const mocks = vi.hoisted(() => ({ list: vi.fn(), session: vi.fn(), save: vi.fn(), create: vi.fn(), replace: vi.fn(), search: "", listeners: new Set<() => void>() }));
+const mocks = vi.hoisted(() => ({ list: vi.fn(), session: vi.fn(), save: vi.fn(), create: vi.fn(), replace: vi.fn(), search: "", hash: "", listeners: new Set<() => void>() }));
 vi.mock("@auro/core/api", async importOriginal => ({ ...await importOriginal<typeof import("@auro/core/api")>(), api: { listTankCharacters: mocks.list, getTankSession: mocks.session, saveTankCharacter: mocks.save, createTankSession: mocks.create, getBaseUrl: () => "https://api.example.invalid" } }));
 vi.mock("../navigation", async () => {
   const { useSyncExternalStore } = await import("react");
   return { useNavigation: () => {
     const search = useSyncExternalStore(listener => { mocks.listeners.add(listener); return () => { mocks.listeners.delete(listener); }; }, () => mocks.search);
-    return { searchParams: new URLSearchParams(search), replace: mocks.replace, getShareableUrl: (path: string) => `https://auro.example.invalid${path}` };
+    return { pathname: "/acme/tanks", hash: mocks.hash, searchParams: new URLSearchParams(search), replace: mocks.replace, getShareableUrl: (path: string) => `https://auro.example.invalid${path}` };
   } };
 });
 function render(ui: React.ReactElement) { const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } }); return renderWithI18n(<QueryClientProvider client={client}>{ui}</QueryClientProvider>); }
@@ -21,9 +21,33 @@ const draft: TankCharacterDraft = { profile: "tank-defense@1", name: "Black Over
 const character = { id: "22222222-2222-4222-8222-222222222222", revision: 1, workspaceId: "workspace", ownerId: "user", draft, ...compileTankCharacter(draft, "22222222-2222-4222-8222-222222222222@1"), contentHash: `sha256:${"a".repeat(64)}` };
 const session = { id: "11111111-1111-4111-8111-111111111111", ownerId: "user", character, mapId: "frontline", levelId: 1, mode: "campaign", playPath: "/acme/tanks?session=11111111-1111-4111-8111-111111111111" };
 beforeEach(() => {
-  vi.clearAllMocks(); mocks.search = ""; mocks.list.mockResolvedValue([]);
+  vi.clearAllMocks(); mocks.search = ""; mocks.hash = ""; mocks.list.mockResolvedValue([]);
   vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(null);
-  mocks.replace.mockImplementation((path: string) => { mocks.search = path.split("?")[1] ?? ""; mocks.listeners.forEach(listener => listener()); });
+  mocks.replace.mockImplementation((path: string) => { const url = new URL(path, "https://auro.example.invalid"); mocks.search = url.search.slice(1); mocks.hash = url.hash; mocks.listeners.forEach(listener => listener()); });
+});
+
+it("dismisses the return guidance without changing the frozen battle or other URL state", async () => {
+  mocks.search = `session=${session.id}&from=tank-connect&source=shared`; mocks.hash = "#loadout";
+  mocks.session.mockResolvedValue(session); mocks.list.mockResolvedValue([character]);
+  render(<TankGarage workspace={{ id: "workspace", slug: "acme" }} userId="user" storageKey="test" storage={storage} />);
+  expect(await screen.findByRole("status", { name: "Connect Agent" })).toHaveTextContent("Once your agent finishes connecting");
+  const board = screen.getByTestId("tank-battlefield");
+  expect(board).toHaveAttribute("data-phase", "ready");
+  expect(mocks.create).not.toHaveBeenCalled();
+  expect(mocks.save).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole("button", { name: "Start defense" }));
+  fireEvent.click(screen.getByRole("button", { name: "Dismiss connection guidance" }));
+  expect(mocks.replace).toHaveBeenLastCalledWith(`/acme/tanks?session=${session.id}&source=shared#loadout`);
+  expect(screen.queryByRole("status", { name: "Connect Agent" })).not.toBeInTheDocument();
+  expect(screen.getByTestId("tank-battlefield")).toBe(board);
+  expect(board).toHaveAttribute("data-phase", "running");
+  expect(board).toHaveAttribute("data-character-id", character.blueprint.id);
+});
+
+it("does not treat other navigation parameters as proof of an agent connection", async () => {
+  mocks.search = "from=connected&mcp=connected";
+  render(<TankGarage workspace={{ id: "workspace", slug: "acme" }} userId="user" storageKey="test" storage={storage} />);
+  expect(screen.queryByRole("status", { name: "Connect Agent" })).not.toBeInTheDocument();
 });
 
 it("shows a failed session without silently substituting a classic battle", async () => {
