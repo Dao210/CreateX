@@ -54,6 +54,13 @@ export type ContactSalesOption = { value: string; label: string };
 // namespace so the old feature sections can be retired without leaving orphaned
 // strings in the product-facing dictionary.
 export type WorldDict = {
+  hero: {
+    prefix: string;
+    words: [string, string, string, string];
+    suffix: string;
+    separator: string;
+    world: string;
+  };
   map: { title: string; label: string; previewData: string };
   explorer: {
     title: string; following: string; overview: string; meetNext: string;

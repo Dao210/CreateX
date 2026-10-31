@@ -2,6 +2,13 @@ import type { WorldDict } from "@/features/landing/i18n/types";
 import { previewNames } from "../preview-names";
 
 export const worldCopy: WorldDict = {
+  hero: {
+    prefix: "創ろう、",
+    words: ["武器を。", "キャラクターを。", "ルールを。", "生命を。"],
+    suffix: "",
+    separator: "",
+    world: "世界を織りなそう。",
+  },
   map: {"title": "ワールドプレビュー", "label": "キャラクター、武器、物資、亀裂を示す世界地図。最近の出来事は世界の記録で確認できます。", "previewData": "プレビューデータ"},
   explorer: {
     "title": "すべての創造が、世界に足跡を残す。",

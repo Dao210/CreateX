@@ -4,6 +4,7 @@ import { MarketingFooter, MarketingHeader } from "./marketing-chrome";
 import { heroButtonClassName } from "@/features/landing/components/shared";
 import { WorldPreview } from "./world-preview";
 import { WorldPoster } from "./world-poster";
+import { HeroHeadline } from "./hero-headline";
 import { worldCopyForLocale } from "../i18n";
 import type { SupportedLocale } from "@auro/core/i18n";
 import { SITE_URL, brandForLocale } from "@/lib/brand";
@@ -23,9 +24,7 @@ export function ReachLanding({ locale }: { locale: SupportedLocale }) {
           {/* The claim sits above the world, so a visitor reads what this is
               before deciding whether the map is worth their attention. */}
           <div className="pt-7 sm:pt-9 lg:pt-11">
-            <h1 className="max-w-[22ch] text-[2.3rem] font-semibold leading-[1.03] tracking-[-0.035em] text-[#E8E1D5] sm:text-[3rem] lg:text-[3.5rem]">
-              {brand.slogan}
-            </h1>
+            <HeroHeadline copy={copy.hero} slogan={brand.slogan} />
             <p className="mt-4 text-title-sm font-medium text-[#dc895e]">{brand.genre}</p>
             <p className="mt-4 max-w-[600px] text-balance text-[15.5px] leading-[1.65] text-white/58 sm:text-[16px]">
               {brand.intro}

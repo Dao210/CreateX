@@ -175,10 +175,17 @@ test("difficulty persists and native fullscreen keeps the current run", async ({
   await page.keyboard.press("Space");
   await expect.poll(async () => Number(await board.getAttribute("data-shots"))).toBeGreaterThan(0);
   const shots = Number(await board.getAttribute("data-shots")), before = await board.boundingBox();
-  await page.getByRole("button", { name: "游戏全屏", exact: true }).click();
+  const originalCanvas = await board.elementHandle();
+  const enterFullscreen = page.getByRole("button", { name: "进入全屏", exact: true });
+  await expect(enterFullscreen).toHaveText(/进入全屏/);
+  await expect(enterFullscreen.locator("kbd")).toHaveText("F");
+  await enterFullscreen.click();
   await expect(game).toHaveAttribute("data-fullscreen", "true");
   expect(await page.evaluate(() => document.fullscreenElement?.getAttribute("data-testid"))).toBe("tank-defense-page");
   await expect(page.locator(".tank-sidebar")).toBeHidden();
+  await expect(page.getByRole("button", { name: "退出全屏", exact: true })).toHaveText(/退出全屏/);
+  await expect(page.getByRole("button", { name: "退出全屏", exact: true }).locator("kbd")).toHaveText("Esc");
+  await expect(page.getByRole("button", { name: "暂停", exact: true })).toBeInViewport();
   await expect(board).toBeFocused();
   const x = Number(await board.getAttribute("data-player-x"));
   await page.keyboard.down("ArrowLeft");
@@ -190,13 +197,44 @@ test("difficulty persists and native fullscreen keeps the current run", async ({
   await page.keyboard.press("Escape");
   await expect(game).toHaveAttribute("data-fullscreen", "false");
   await expect(board).toHaveAttribute("data-phase", "running"); await expect(board).toHaveAttribute("data-paused", "true");
+  await expect(page.getByText("退出全屏后已暂停。", { exact: true })).toBeVisible();
+  expect(await board.evaluate((node, original) => node === original, originalCanvas)).toBe(true);
   expect(Number(await board.getAttribute("data-shots"))).toBeGreaterThanOrEqual(shots);
   await expect(board).toHaveAttribute("data-lives", "5");
   await page.getByRole("button", { name: "继续战斗", exact: true }).first().click();
+  await expect(page.getByText("退出全屏后已暂停。", { exact: true })).toBeHidden();
   await page.keyboard.press("f"); await expect(game).toHaveAttribute("data-fullscreen", "true");
   await page.getByRole("button", { name: "退出全屏", exact: true }).click();
   await expect(game).toHaveAttribute("data-fullscreen", "false"); await expect(board).toHaveAttribute("data-paused", "true");
   expect(errors).toEqual([]);
+});
+
+test("fullscreen preserves ready and paused battles without starting or resuming them", async ({ page }) => {
+  await openGame(page);
+  const game = page.getByTestId("tank-defense-page"), board = page.getByTestId("tank-battlefield");
+  await page.getByRole("button", { name: "进入全屏", exact: true }).click();
+  await expect(game).toHaveAttribute("data-fullscreen", "true");
+  await expect(board).toHaveAttribute("data-phase", "ready");
+  await expect(page.getByRole("button", { name: "开始守卫", exact: true })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(game).toHaveAttribute("data-fullscreen", "false");
+  await expect(board).toHaveAttribute("data-phase", "ready");
+  await expect(page.getByText("退出全屏后已暂停。", { exact: true })).toBeHidden();
+
+  await page.getByRole("button", { name: "开始守卫", exact: true }).click();
+  await page.keyboard.press("p");
+  await expect(board).toHaveAttribute("data-paused", "true");
+  const before = await board.evaluate(node => ["data-player-x", "data-player-y", "data-shots", "data-lives", "data-player-hp"].map(key => node.getAttribute(key)));
+  await page.keyboard.press("f");
+  await expect(game).toHaveAttribute("data-fullscreen", "true");
+  await expect(board).toHaveAttribute("data-paused", "true");
+  await page.keyboard.press("f");
+  await expect(game).toHaveAttribute("data-fullscreen", "false");
+  await expect(board).toHaveAttribute("data-paused", "true");
+  expect(await board.evaluate(node => ["data-player-x", "data-player-y", "data-shots", "data-lives", "data-player-hp"].map(key => node.getAttribute(key)))).toEqual(before);
+  await page.getByRole("button", { name: "继续战斗", exact: true }).first().click();
+  await page.keyboard.press("p");
+  await expect(page.getByText("继续后，重新按下移动或开火键。", { exact: true })).toBeVisible();
 });
 
 test.describe("phone controls inside the workspace", () => {
@@ -228,20 +266,20 @@ test.describe("phone controls inside the workspace", () => {
   test("fullscreen keeps touch controls visible in portrait and landscape", async ({ page }) => {
     await openGame(page);
     const game = page.getByTestId("tank-defense-page"), board = page.getByTestId("tank-battlefield");
-    for (const viewport of [{ width: 390, height: 844 }, { width: 844, height: 390 }]) {
+    for (const viewport of [{ width: 320, height: 568 }, { width: 568, height: 320 }, { width: 390, height: 844 }, { width: 844, height: 390 }]) {
       // Chromium's window protocol requires leaving native fullscreen before resizing.
       if (await game.getAttribute("data-fullscreen") === "true") {
         await page.getByRole("button", { name: "退出全屏", exact: true }).tap();
         await expect(game).toHaveAttribute("data-fullscreen", "false");
       }
       await page.setViewportSize(viewport);
-      await page.getByRole("button", { name: "游戏全屏", exact: true }).tap();
+      await page.getByRole("button", { name: "进入全屏", exact: true }).tap();
       await expect(game).toHaveAttribute("data-fullscreen", "true");
       if (await board.getAttribute("data-phase") === "ready") await page.getByRole("button", { name: "开始守卫", exact: true }).tap();
       else await page.getByRole("button", { name: "继续战斗", exact: true }).first().tap();
       await page.getByRole("button", { name: "开火", exact: true }).tap();
       await expect.poll(async () => Number(await board.getAttribute("data-shots"))).toBeGreaterThan(0);
-      for (const target of [page.getByTestId("tank-battlefield"), page.getByRole("button", { name: "向上移动", exact: true }), page.getByRole("button", { name: "开火", exact: true })]) {
+      for (const target of [board, ...["向上移动", "向下移动", "向左移动", "向右移动", "开火", "退出全屏", "暂停", "关闭音效"].map(name => page.getByRole("button", { name, exact: true }))]) {
         await expect(target).toBeInViewport();
         const box = await target.boundingBox();
         expect(box!.x).toBeGreaterThanOrEqual(0); expect(box!.y).toBeGreaterThanOrEqual(0);

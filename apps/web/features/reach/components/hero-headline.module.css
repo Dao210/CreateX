@@ -1,0 +1,102 @@
+.headline {
+  max-width: 100%;
+  color: #e8e1d5;
+  font-size: 2.3rem;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.035em;
+}
+
+.visual {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  row-gap: 0.04em;
+}
+
+.creation {
+  display: inline-flex;
+  align-items: center;
+  white-space: pre;
+}
+
+.wordWindow {
+  display: inline-block;
+  height: 1.2em;
+  overflow: hidden;
+  color: #c8622d;
+  mask-image: linear-gradient(transparent, #000 8%, #000 92%, transparent);
+}
+
+.track {
+  display: grid;
+  grid-auto-rows: 1.2em;
+  animation: rotate-words 10.8s cubic-bezier(0.22, 0.61, 0.36, 1) infinite;
+}
+
+.separator {
+  display: none;
+}
+
+.world {
+  white-space: nowrap;
+}
+
+.headline:lang(en),
+.headline:lang(ja),
+.headline:lang(ko) {
+  font-size: clamp(1.5rem, 6.6vw, 2.3rem);
+}
+
+/* Five equal rows include the first word twice. Each move takes 450ms;
+   weapons, characters and rules hold for 2s, then life holds for 3s. */
+@keyframes rotate-words {
+  0%, 18.518519% { transform: translateY(0); }
+  22.685185%, 41.203704% { transform: translateY(-20%); }
+  45.370370%, 63.888889% { transform: translateY(-40%); }
+  68.055556%, 95.833333% { transform: translateY(-60%); }
+  100% { transform: translateY(-80%); }
+}
+
+@media (min-width: 640px) {
+  .headline,
+  .headline:lang(en),
+  .headline:lang(ja),
+  .headline:lang(ko) {
+    font-size: 3rem;
+  }
+
+  .visual {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .visual:lang(en),
+  .visual:lang(ko) {
+    column-gap: 0.25em;
+  }
+
+  .separator {
+    display: inline;
+  }
+}
+
+@media (min-width: 1024px) {
+  .headline,
+  .headline:lang(en),
+  .headline:lang(ja),
+  .headline:lang(ko) {
+    font-size: 3.5rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .track {
+    animation: none;
+    transform: translateY(-60%);
+  }
+
+  .wordWindow {
+    mask-image: none;
+  }
+}

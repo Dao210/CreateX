@@ -2,6 +2,13 @@ import type { WorldDict } from "@/features/landing/i18n/types";
 import { previewNames } from "../preview-names";
 
 export const worldCopy: WorldDict = {
+  hero: {
+    prefix: "Create ",
+    words: ["a weapon.", "a character.", "the rules.", "a life."],
+    suffix: "",
+    separator: "",
+    world: "Weave a World.",
+  },
   map: {"title": "World preview", "label": "World map showing characters, weapons, supplies and rifts. The chronicle lists recent events.", "previewData": "Preview data"},
   explorer: {
     "title": "Every creation leaves a trace.",

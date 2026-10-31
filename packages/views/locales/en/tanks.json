@@ -191,10 +191,12 @@
       "note": "3 lives, a 1-hit base and full enemy speed. Your shells can destroy the base."
     }
   },
-  "fullscreen": "Full screen",
+  "fullscreen": "Enter full screen",
   "exit_fullscreen": "Exit full screen",
   "fullscreen_unavailable": "Full screen is unavailable in this browser",
   "fullscreen_error": "Could not enter full screen. Try again or allow full screen in your browser.",
+  "fullscreen_exit_error": "Could not exit full screen. Try again or press Esc.",
+  "fullscreen_exit_paused": "The battle paused when you left full screen.",
   "friendly_fire_safe": "Your shells cannot damage the base.",
   "forms": {
     "basic": "Basic",

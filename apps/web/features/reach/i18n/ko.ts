@@ -2,6 +2,13 @@ import type { WorldDict } from "@/features/landing/i18n/types";
 import { previewNames } from "../preview-names";
 
 export const worldCopy: WorldDict = {
+  hero: {
+    prefix: "",
+    words: ["무기를", "캐릭터를", "규칙을", "생명을"],
+    suffix: " 만들고",
+    separator: ",",
+    world: "세계를 엮으세요.",
+  },
   map: {"title": "세계 미리보기", "label": "캐릭터, 무기, 보급품과 균열을 보여 주는 세계 지도입니다. 최근 사건은 세계 기록에서 확인할 수 있습니다.", "previewData": "미리보기 데이터"},
   explorer: {
     "title": "모든 창작은 세계에 흔적을 남깁니다.",

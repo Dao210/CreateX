@@ -4,18 +4,24 @@ import { useCallback, useEffect, useRef, useState, type RefObject } from "react"
 export function useTankFullscreen(target: RefObject<HTMLElement | null>, onExit: () => void) {
   const [fullscreen, setFullscreen] = useState(false);
   const [supported, setSupported] = useState(false);
-  const [failed, setFailed] = useState(false);
+  const [failed, setFailed] = useState<"enter" | "exit" | null>(null);
+  const [pending, setPending] = useState(false);
+  const transitioning = useRef(false);
   const exiting = useRef(onExit);
   useEffect(() => { exiting.current = onExit; }, [onExit]);
 
   const toggle = useCallback(async () => {
     const element = target.current;
-    if (!element) return;
-    setFailed(false);
+    if (!element || transitioning.current) return;
+    const leaving = document.fullscreenElement === element;
+    setFailed(null);
+    transitioning.current = true;
+    setPending(true);
     try {
-      if (document.fullscreenElement === element) await document.exitFullscreen();
+      if (leaving) await document.exitFullscreen();
       else await element.requestFullscreen();
-    } catch { setFailed(true); }
+    } catch { setFailed(leaving ? "exit" : "enter"); }
+    finally { transitioning.current = false; setPending(false); }
   }, [target]);
 
   useEffect(() => {
@@ -48,5 +54,5 @@ export function useTankFullscreen(target: RefObject<HTMLElement | null>, onExit:
     };
   }, [target, toggle]);
 
-  return { fullscreen, supported, failed, toggle };
+  return { fullscreen, supported, pending, failed, toggle };
 }

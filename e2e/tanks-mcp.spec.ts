@@ -159,6 +159,9 @@ test("phone character editor saves a version and deploys through the same API", 
   await dialog.getByRole("combobox", { name: "底盘", exact: true }).selectOption("heavy");
   await dialog.getByRole("button", { name: "保存角色", exact: true }).click();
   await expect(dialog).not.toBeVisible();
+  const savedCharacter = page.getByRole("option", { name: "手机守卫 · v1", exact: true });
+  await expect(savedCharacter).toBeAttached();
+  await expect(page.getByRole("combobox", { name: "出战角色", exact: true })).toHaveValue((await savedCharacter.getAttribute("value"))!);
   await page.getByRole("button", { name: "开始新对局", exact: true }).click();
   await expect(page.getByTestId("tank-frozen-character")).toHaveText("本局：手机守卫 · v1");
   await expect(page.getByTestId("tank-battlefield")).toHaveAttribute("data-player-speed", "66");
@@ -171,11 +174,14 @@ test("a preselected tank starts from the battlefield button with its saved ident
   await page.goto(`/${workspace.slug}/tanks?character=${character.id}`);
   await expect(page.getByRole("combobox", { name: "出战角色", exact: true })).toHaveValue(character.id, { timeout: 45000 });
   await expect(page.getByRole("img", { name: "黑曜出战回归", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "进入全屏", exact: true }).click();
+  await expect(page.getByTestId("tank-defense-page")).toHaveAttribute("data-fullscreen", "true");
   await page.getByRole("button", { name: "开始守卫", exact: true }).click();
   const board = page.getByTestId("tank-battlefield");
   await expect(page).toHaveURL(/\?session=/);
   await expect(board).toHaveAttribute("data-character-id", `${character.id}@1`);
   await expect(board).toHaveAttribute("data-phase", "running");
+  await expect(page.getByTestId("tank-defense-page")).toHaveAttribute("data-fullscreen", "true");
   await expect(board).toHaveAttribute("data-player-speed", "50");
   await expect.poll(() => board.evaluate(canvas => {
     const data = (canvas as HTMLCanvasElement).getContext("2d")!.getImageData(0, 0, 1040, 1040).data;

@@ -4,6 +4,10 @@
   color: var(--foreground); background: var(--page-canvas);
 }
 .tank-defense-page h1 { margin: 0; font-family: inherit; font-size: var(--text-body); line-height: 20px; letter-spacing: normal; }
+.tank-toolbar { height: auto; min-height: 48px; flex-wrap: wrap; padding-block: 4px; }
+.tank-toolbar-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 4px; max-width: 100%; margin-left: auto; }
+.tank-fullscreen-shortcut { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0 4px; color: var(--muted-foreground); font: var(--text-micro) var(--tank-font-mono); }
+.tank-fullscreen-help { margin: 0; padding: 8px 16px; color: var(--muted-foreground); font-size: var(--text-caption); }
 .tank-defense-app { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 16px 16px 24px; container: tank-defense / inline-size; }
 .tank-layout {
   max-width: 1200px; margin-inline: auto; display: grid; justify-content: center; align-items: start; gap: 22px 26px;
@@ -149,27 +153,29 @@
 .tank-defense-page[data-fullscreen="true"] .tank-sidebar,
 .tank-defense-page[data-fullscreen="true"] .tank-footer,
 .tank-defense-page[data-fullscreen="true"] .tank-keyboard-hint { display: none; }
-.tank-defense-page[data-fullscreen="true"] .tank-defense-app { --tank-fullscreen-reserve: 170px; display: flex; justify-content: center; align-items: center; padding: 8px 12px; overflow: hidden; }
-.tank-defense-page[data-fullscreen="true"] .tank-layout { display: flex; align-items: center; justify-content: center; width: 100%; max-width: none; height: 100%; gap: 0; }
-.tank-defense-page[data-fullscreen="true"] .tank-machine { width: min(100%, calc(100dvh - var(--tank-fullscreen-reserve))); max-width: none; flex-shrink: 0; }
+.tank-defense-page[data-fullscreen="true"] .tank-defense-app { display: flex; justify-content: center; align-items: center; padding: 8px max(12px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)); overflow: hidden; }
+.tank-defense-page[data-fullscreen="true"] .tank-layout { display: flex; align-items: center; justify-content: center; width: 100%; max-width: none; height: 100%; gap: 0; container-type: size; }
+.tank-defense-page[data-fullscreen="true"] .tank-machine { display: grid; grid-template-rows: auto auto minmax(0, 1fr) auto auto; width: 100%; height: 100%; max-width: none; flex-shrink: 0; }
+.tank-defense-page[data-fullscreen="true"] .tank-screen-shell { display: grid; place-items: center; min-height: 0; container-type: size; }
+.tank-defense-page[data-fullscreen="true"] .tank-screen { width: min(100cqw, 100cqh); }
+.tank-defense-page[data-fullscreen="true"] .tank-touch-controls { grid-row: 5; }
 @container tank-defense (max-width: 700px) {
   .tank-operation-controls { flex-direction: column; gap: 8px; }
   .tank-difficulty-select { align-self: flex-start; }.tank-difficulty-select > button { min-height: 32px; }
   .tank-combat-status { padding-inline: 12px; gap: 6px; }
-  .tank-defense-page[data-fullscreen="true"] .tank-machine { width: min(100%, calc(100dvh - 330px)); }
 }
 @media (hover: none) {
-  .tank-defense-page[data-fullscreen="true"] .tank-defense-app { --tank-fullscreen-reserve: 330px; }
+  .tank-fullscreen-shortcut { display: none; }
 }
 @media (hover: none) and (orientation: landscape) and (max-height: 600px) {
-  .tank-defense-page[data-fullscreen="true"] .tank-machine { display: grid; grid-template-columns: minmax(144px, 1fr) minmax(0, calc(100dvh - 90px)) minmax(130px, 1fr); grid-template-rows: auto auto 1fr; width: 100%; height: 100%; }
+  .tank-defense-page[data-fullscreen="true"] .tank-machine { grid-template-columns: minmax(144px, 1fr) minmax(0, 100cqh) minmax(130px, 1fr); grid-template-rows: auto auto minmax(0, 1fr); }
   .tank-defense-page[data-fullscreen="true"] .tank-scoreboard { grid-column: 1; grid-row: 1; justify-self: center; width: 144px; flex-direction: column; gap: 3px; padding: 8px 4px 4px; }
   .tank-defense-page[data-fullscreen="true"] .tank-scoreboard > div { flex-direction: row; align-items: baseline; justify-content: space-between; gap: 6px; }
   .tank-defense-page[data-fullscreen="true"] .tank-scoreboard strong { font-size: var(--text-label); }
-  .tank-defense-page[data-fullscreen="true"] .tank-combat-status { grid-column: 1; grid-row: 2; justify-self: center; width: 144px; flex-direction: column; gap: 3px; padding: 0 4px 4px; }
-  .tank-defense-page[data-fullscreen="true"] .tank-screen-shell { grid-column: 2; grid-row: 1 / -1; align-self: center; padding-inline: 0; }
+  .tank-defense-page[data-fullscreen="true"] .tank-combat-status { grid-column: 3; grid-row: 1; justify-self: center; width: 100%; max-width: 144px; flex-direction: column; gap: 3px; padding: 8px 4px 4px; }
+  .tank-defense-page[data-fullscreen="true"] .tank-screen-shell { grid-column: 2; grid-row: 1 / -1; padding-inline: 0; }
   .tank-defense-page[data-fullscreen="true"] .tank-touch-controls { display: contents; }
-  .tank-defense-page[data-fullscreen="true"] .tank-dpad { grid-column: 1; grid-row: 3; align-self: center; justify-self: center; display: grid; grid-template-columns: repeat(3, 44px); grid-template-rows: repeat(3, 44px); gap: 3px; }
+  .tank-defense-page[data-fullscreen="true"] .tank-dpad { grid-column: 1; grid-row: 2 / -1; align-self: center; justify-self: center; display: grid; grid-template-columns: repeat(3, 44px); grid-template-rows: repeat(3, 44px); gap: 3px; }
   .tank-defense-page[data-fullscreen="true"] .tank-dpad-up { grid-column: 2; grid-row: 1; }
   .tank-defense-page[data-fullscreen="true"] .tank-dpad-left { grid-column: 1; grid-row: 2; }
   .tank-defense-page[data-fullscreen="true"] .tank-dpad-center { grid-column: 2; grid-row: 2; margin: 8px; border-radius: 50%; background: #2c3829; }

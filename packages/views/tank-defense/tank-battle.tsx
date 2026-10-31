@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type PointerEvent, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type PointerEvent, type ReactNode } from "react";
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Check, ChevronRight, Flag, Gamepad2, Heart, LockKeyhole, Maximize2, Minimize2, Pause, Play, RotateCcw, Shield, Sparkles, Volume2, VolumeX } from "lucide-react";
 import { Button } from "@auro/ui/components/ui/button";
 import type { StorageAdapter } from "@auro/core/types";
@@ -30,6 +30,7 @@ function MapPreview({ level }: { level: TankLevel }) {
 interface TankBattleProps {
   storage: StorageAdapter;
   storageKey: string;
+  battleId?: string;
   workspaceId?: string;
   blueprint?: TankBlueprint;
   levelIndex?: number;
@@ -47,24 +48,36 @@ interface TankBattleProps {
   training?: ReturnType<typeof useTankTraining>;
 }
 
-export function TankBattle({ storage, storageKey, workspaceId, blueprint, levelIndex = 0, initialMode = "campaign", frozen = false, garage, headerActions, notice, onStart, startPending = false, startDisabled = false, autoStart = false, readyLoadout, launchError, training }: TankBattleProps) {
+export function TankBattle({ storage, storageKey, battleId = "classic", workspaceId, blueprint, levelIndex = 0, initialMode = "campaign", frozen = false, garage, headerActions, notice, onStart, startPending = false, startDisabled = false, autoStart = false, readyLoadout, launchError, training }: TankBattleProps) {
   const { t } = useT("tanks");
   const [preferences, setPreferences] = useState(() => {
     try { return parseTankPreferences(storage.getItem(storageKey)); }
     catch { return parseTankPreferences(null); }
   });
-  const [game, setGame] = useState(() => {
+  const initializeGame = () => {
     const initial = new TankDefenseGame(TANK_LEVELS[levelIndex]!, { playerBlueprint: blueprint, mode: initialMode, difficulty: preferences.difficulty });
     if (autoStart && !training?.prepare) initial.start();
     return initial;
-  });
+  };
+  const [game, setGame] = useState(initializeGame);
+  const [currentBattleId, setCurrentBattleId] = useState(battleId);
   const [snapshot, setSnapshot] = useState<TankSnapshot>(() => game.snapshot());
+  const [pausedAfterFullscreen, setPausedAfterFullscreen] = useState(false);
+  // Reset a newly deployed session without removing the native fullscreen owner or Canvas.
+  if (currentBattleId !== battleId) {
+    const next = initializeGame();
+    setCurrentBattleId(battleId);
+    setGame(next);
+    setSnapshot(next.snapshot());
+    setPausedAfterFullscreen(false);
+  }
+  const fullscreenHelpId = useId();
   const root = useRef<HTMLElement>(null), canvas = useRef<HTMLCanvasElement>(null);
   const audio = useRef<GameSound | null>(null);
   const held = useRef<string[]>([]), touchDirection = useRef<TankDirection | null>(null), touchFire = useRef(false);
   const trainingRef = useRef(training); trainingRef.current = training;
   const starting = useRef(false);
-  const autoStarted = useRef(false);
+  const autoStarted = useRef<string | null>(null);
   const liveGame = useRef(game); liveGame.current = game;
   const announced = useRef<TankDefenseGame | null>(null);
   const finished = ["cleared", "victory", "defeat"].includes(snapshot.phase);
@@ -72,10 +85,12 @@ export function TankBattle({ storage, storageKey, workspaceId, blueprint, levelI
   const clearControls = () => { held.current = []; touchDirection.current = null; touchFire.current = false; game.clearInput(); };
   const focusBattlefield = () => canvas.current?.focus({ preventScroll: true });
   const pause = () => {
+    setPausedAfterFullscreen(false);
     clearControls(); game.setPaused(!game.paused); setSnapshot(game.snapshot());
     if (!game.paused) focusBattlefield();
   };
-  const { fullscreen, supported: fullscreenSupported, failed: fullscreenFailed, toggle: toggleFullscreen } = useTankFullscreen(root, () => {
+  const { fullscreen, supported: fullscreenSupported, pending: fullscreenPending, failed: fullscreenFailed, toggle: toggleFullscreen } = useTankFullscreen(root, () => {
+    if (game.phase === "running") setPausedAfterFullscreen(true);
     clearControls(); game.setPaused(true); setSnapshot(game.snapshot()); focusBattlefield();
   });
   const start = async () => {
@@ -93,6 +108,7 @@ export function TankBattle({ storage, storageKey, workspaceId, blueprint, levelI
     try {
       if (game.phase !== "ready" && trainingRef.current?.finish) await trainingRef.current.finish(game, game.phase === "cleared" || game.phase === "victory" || game.phase === "defeat" ? game.phase : "abandoned");
     } catch { return; }
+    setPausedAfterFullscreen(false);
     clearControls(); audio.current?.reset(); void audio.current?.activate();
     const next = new TankDefenseGame(TANK_LEVELS[levelIndex]!, carry ? { score: game.score, lives: game.lives, power: game.power, mode, difficulty, playerBlueprint: blueprint } : { mode, difficulty, playerBlueprint: blueprint });
     if (begin && !trainingRef.current?.prepare) next.start();
@@ -109,12 +125,15 @@ export function TankBattle({ storage, storageKey, workspaceId, blueprint, levelI
 
   useEffect(() => {
     const sound = new GameSound(); audio.current = sound;
-    if (autoStart) { void sound.activate(); focusBattlefield(); }
     return () => { sound.dispose(); audio.current = null; };
-  }, [autoStart]);
+  }, []);
   useEffect(() => {
-    if (!autoStart || autoStarted.current || !trainingRef.current?.prepare) return;
-    autoStarted.current = true;
+    audio.current?.reset();
+    if (autoStart) { void audio.current?.activate(); focusBattlefield(); }
+  }, [autoStart, battleId]);
+  useEffect(() => {
+    if (!autoStart || autoStarted.current === battleId || !trainingRef.current?.prepare) return;
+    autoStarted.current = battleId;
     void start();
   });
   useEffect(() => {
@@ -137,6 +156,7 @@ export function TankBattle({ storage, storageKey, workspaceId, blueprint, levelI
       if (event.code === "Escape" && document.fullscreenElement === root.current) return;
       if (event.code === "KeyP" || event.code === "Escape") {
         if (!event.repeat && game.phase === "running") {
+          setPausedAfterFullscreen(false);
           event.preventDefault(); event.stopPropagation(); held.current = []; touchDirection.current = null; touchFire.current = false;
           game.setPaused(!game.paused); setSnapshot(game.snapshot());
         }
@@ -206,7 +226,7 @@ export function TankBattle({ storage, storageKey, workspaceId, blueprint, levelI
     { kind: "repair", name: t($ => $.repair), help: t($ => $.repair_help) },
   ].filter(item => game.level.mechanisms.some(device => device.kind === item.kind));
   const overlayTitle = snapshot.phase === "ready" ? t($ => $.ready_title) : snapshot.paused ? t($ => $.paused_title) : snapshot.phase === "defeat" ? t($ => $.defeat_title) : snapshot.phase === "victory" ? t($ => $.victory_title) : t($ => $.cleared_title);
-  const overlayHelp = snapshot.phase === "ready" ? t($ => $.ready_help, { lives: snapshot.maxLives }) : snapshot.paused ? t($ => $.paused_help) : snapshot.phase === "defeat" ? snapshot.defeatReason === "base" ? t($ => $.base_defeat) : snapshot.defeatReason === "time" ? t($ => $.time_defeat) : t($ => $.lives_defeat) : t($ => $.cleared_help, { kills: snapshot.kills, score: snapshot.score });
+  const overlayHelp = snapshot.phase === "ready" ? t($ => $.ready_help, { lives: snapshot.maxLives }) : snapshot.paused ? pausedAfterFullscreen ? t($ => $.fullscreen_exit_paused) : t($ => $.paused_help) : snapshot.phase === "defeat" ? snapshot.defeatReason === "base" ? t($ => $.base_defeat) : snapshot.defeatReason === "time" ? t($ => $.time_defeat) : t($ => $.lives_defeat) : t($ => $.cleared_help, { kills: snapshot.kills, score: snapshot.score });
 
   return <main className="tank-defense-page" ref={root} data-fullscreen={fullscreen} data-testid="tank-defense-page" onBlur={event => {
     if (!(event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget)) && game.phase === "running") {
@@ -214,16 +234,24 @@ export function TankBattle({ storage, storageKey, workspaceId, blueprint, levelI
     }
   }}>
     {workspaceId && <TankProgressSync workspaceId={workspaceId} preferences={preferences} onMerge={merged => setPreferences(previous => ({ ...previous, ...merged }))} />}
-    <PageHeader>
+    <PageHeader className="tank-toolbar" leading={fullscreen ? <></> : undefined}>
       <Gamepad2 className="size-4 text-muted-foreground" aria-hidden />
       <h1 className="min-w-0 flex-1 truncate text-body font-medium">{t($ => $.title)}</h1>
       {!fullscreen && headerActions}
-      <Button variant="ghost" size="icon" disabled={!fullscreenSupported} aria-label={fullscreen ? t($ => $.exit_fullscreen) : t($ => $.fullscreen)} aria-pressed={fullscreen} title={!fullscreenSupported ? t($ => $.fullscreen_unavailable) : fullscreen ? t($ => $.exit_fullscreen) : t($ => $.fullscreen)} onClick={() => void toggleFullscreen()}>{fullscreen ? <Minimize2 /> : <Maximize2 />}</Button>
-      <Button variant="ghost" size="icon" aria-label={preferences.sound ? t($ => $.mute) : t($ => $.unmute)} aria-pressed={preferences.sound} onClick={() => {
-        void audio.current?.activate(); setPreferences(value => ({ ...value, sound: !value.sound }));
-      }}>{preferences.sound ? <Volume2 /> : <VolumeX />}</Button>
+      <div className="tank-toolbar-actions">
+        <Button variant="ghost" size="sm" disabled={snapshot.phase !== "running"} onClick={pause} aria-keyshortcuts="P">{snapshot.paused ? <Play /> : <Pause />}{snapshot.paused ? t($ => $.resume) : t($ => $.pause)}</Button>
+        <Button variant="ghost" size="icon" aria-label={preferences.sound ? t($ => $.mute) : t($ => $.unmute)} title={preferences.sound ? t($ => $.mute) : t($ => $.unmute)} aria-pressed={preferences.sound} onClick={() => {
+          void audio.current?.activate(); setPreferences(value => ({ ...value, sound: !value.sound }));
+        }}>{preferences.sound ? <Volume2 /> : <VolumeX />}</Button>
+        <Button variant="outline" size="sm" disabled={!fullscreenSupported || fullscreenPending} aria-label={fullscreen ? t($ => $.exit_fullscreen) : t($ => $.fullscreen)} aria-pressed={fullscreen} aria-busy={fullscreenPending} aria-keyshortcuts={fullscreen ? "Escape F" : "F"} aria-describedby={!fullscreenSupported ? fullscreenHelpId : undefined} onClick={() => void toggleFullscreen()}>
+          {fullscreen ? <Minimize2 /> : <Maximize2 />}
+          {fullscreen ? t($ => $.exit_fullscreen) : t($ => $.fullscreen)}
+          <kbd className="tank-fullscreen-shortcut" aria-hidden>{fullscreen ? "Esc" : "F"}</kbd>
+        </Button>
+      </div>
     </PageHeader>
-    {fullscreenFailed && <p className="tank-fullscreen-error" role="alert">{t($ => $.fullscreen_error)}</p>}
+    {!fullscreenSupported && <p id={fullscreenHelpId} className="tank-fullscreen-help">{t($ => $.fullscreen_unavailable)}</p>}
+    {fullscreenFailed && <p className="tank-fullscreen-error" role="alert">{fullscreenFailed === "exit" ? t($ => $.fullscreen_exit_error) : t($ => $.fullscreen_error)}</p>}
     {launchError && <p className="tank-garage-error" role="alert">{launchError}</p>}
     <div className="tank-defense-app">
       {!fullscreen && notice}
@@ -276,7 +304,6 @@ export function TankBattle({ storage, storageKey, workspaceId, blueprint, levelI
             <span className={snapshot.baseAlive ? "tank-base-safe" : "tank-base-lost"}><Shield size={14} />{!snapshot.baseAlive ? t($ => $.base_lost) : snapshot.baseHP < snapshot.maxBaseHP ? t($ => $.base_damaged) : t($ => $.base_safe)} {snapshot.baseHP}/{snapshot.maxBaseHP}</span>
             {snapshot.baseAlive && fortifySeconds > 0 && <strong role="timer" aria-label={t($ => $.fortify_timer)} className={fortifySeconds <= 3 ? "tank-fortify-timer tank-time-critical" : "tank-fortify-timer"}>{t($ => $.fortify_time, { seconds: fortifySeconds })}</strong>}
             <span>{snapshot.respawning ? t($ => $.respawn) : snapshot.stunned ? t($ => $.stunned) : snapshot.shield ? t($ => $.shielded) : t($ => $.protect_base)}</span>
-            <Button variant="ghost" size="sm" disabled={snapshot.phase !== "running"} onClick={pause}>{snapshot.paused ? <Play /> : <Pause />}{snapshot.paused ? t($ => $.resume) : t($ => $.pause)}</Button>
           </div>
           <div className="tank-touch-controls">
             <div className="tank-dpad" role="group" aria-label={t($ => $.move_keys)}>

@@ -15,6 +15,15 @@ beforeEach(() => { vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockRetur
 
 describe("tank battle operations", () => {
 
+  it("shows a visible fullscreen action and explains when the browser cannot use it", () => {
+    const { storage } = records(); renderWithI18n(<TankBattle storage={storage} storageKey="fixture" />);
+    const fullscreen = screen.getByRole("button", { name: "Enter full screen" });
+    expect(fullscreen).toHaveTextContent("Enter full screen");
+    expect(fullscreen).toBeDisabled();
+    expect(fullscreen).toHaveAccessibleDescription("Full screen is unavailable in this browser");
+    expect(screen.getByText("Full screen is unavailable in this browser")).toBeVisible();
+  });
+
   it("offers all six maps in arcade modes and returns to an unlocked campaign map", () => {
     const { storage } = records(); renderWithI18n(<TankBattle storage={storage} storageKey="fixture" />);
     expect(screen.getByRole("button", { name: /Last Citadel/ })).toBeDisabled();
@@ -84,7 +93,7 @@ describe("tank battle operations", () => {
     try {
       const { storage } = records(); renderWithI18n(<TankBattle storage={storage} storageKey="fixture" />);
       fireEvent.click(screen.getByRole("button", { name: "Start defense" }));
-      fireEvent.click(screen.getByRole("button", { name: "Full screen" }));
+      fireEvent.click(screen.getByRole("button", { name: "Enter full screen" }));
       expect(await screen.findByRole("alert")).toHaveTextContent("Could not enter full screen");
       expect(screen.getByTestId("tank-battlefield")).toHaveAttribute("data-phase", "running");
       expect(screen.getByTestId("tank-defense-page")).toHaveAttribute("data-fullscreen", "false");

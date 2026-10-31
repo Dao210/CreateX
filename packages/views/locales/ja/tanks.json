@@ -191,10 +191,12 @@
       "note": "残機3、基地は1発で陥落。敵は通常速度で、自分の弾も基地を破壊します。"
     }
   },
-  "fullscreen": "全画面",
+  "fullscreen": "全画面にする",
   "exit_fullscreen": "全画面を終了",
   "fullscreen_unavailable": "このブラウザーは全画面に対応していません",
   "fullscreen_error": "全画面にできませんでした。再試行するか、ブラウザーで許可してください。",
+  "fullscreen_exit_error": "全画面を終了できませんでした。再試行するか、Esc キーを押してください。",
+  "fullscreen_exit_paused": "全画面を終了したため、戦闘を一時停止しました。",
   "friendly_fire_safe": "自分の弾は基地を傷つけません。",
   "forms": {
     "basic": "基本型",

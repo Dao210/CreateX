@@ -64,11 +64,13 @@ it("starts the selected character from the battlefield button through a frozen s
   mocks.list.mockResolvedValue([character]); mocks.create.mockResolvedValue(session); mocks.session.mockResolvedValue(session);
   render(<TankGarage workspace={{ id: "workspace", slug: "acme" }} userId="user" storageKey="test" storage={storage} />);
   await screen.findByRole("option", { name: "Black Overlord · v1" });
+  const originalCanvas = screen.getByTestId("tank-battlefield");
   fireEvent.click(screen.getByRole("button", { name: "Start defense" }));
   await waitFor(() => expect(mocks.create).toHaveBeenCalledWith("workspace", expect.objectContaining({ characterId: character.id, revision: 1, contentHash: character.contentHash, mapId: "frontline", mode: "campaign" })));
   await waitFor(() => expect(screen.getByTestId("tank-battlefield")).toHaveAttribute("data-character-id", character.blueprint.id));
   expect(screen.getByTestId("tank-battlefield")).toHaveAttribute("data-phase", "running");
   expect(screen.getByTestId("tank-battlefield")).toHaveAttribute("data-player-speed", "50");
+  expect(screen.getByTestId("tank-battlefield")).toBe(originalCanvas);
   expect(screen.getByTestId("tank-frozen-character")).toHaveTextContent("Black Overlord · v1");
 });
 

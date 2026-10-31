@@ -191,10 +191,12 @@
       "note": "생명 3개, 기지는 한 번 맞으면 파괴됩니다. 적은 원래 속도이며 아군 포탄도 기지를 파괴합니다."
     }
   },
-  "fullscreen": "전체 화면",
+  "fullscreen": "전체 화면으로 전환",
   "exit_fullscreen": "전체 화면 종료",
   "fullscreen_unavailable": "이 브라우저는 전체 화면을 지원하지 않습니다",
   "fullscreen_error": "전체 화면으로 전환할 수 없습니다. 다시 시도하거나 브라우저에서 허용하세요.",
+  "fullscreen_exit_error": "전체 화면을 종료할 수 없습니다. 다시 시도하거나 Esc를 누르세요.",
+  "fullscreen_exit_paused": "전체 화면을 종료하여 전투가 일시 정지되었습니다.",
   "friendly_fire_safe": "아군 포탄은 기지를 손상시키지 않습니다.",
   "forms": {
     "basic": "기본형",

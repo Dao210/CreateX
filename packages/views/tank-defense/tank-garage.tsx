@@ -112,7 +112,7 @@ export function TankGarage({ storage, storageKey, workspace, userId }: { storage
 
   return <>
     <TankBattle
-      key={sessionId || "classic"} storage={storage} storageKey={storageKey} workspaceId={workspace.id}
+      battleId={sessionId || "classic"} storage={storage} storageKey={storageKey} workspaceId={workspace.id}
       training={training} blueprint={deployedBlueprint} levelIndex={frozen ? frozen.levelId - 1 : initialLevelIndex} initialMode={frozen?.mode}
       frozen={Boolean(frozen)} garage={garage} headerActions={connections}
       notice={<TankConnectionReturn />}
