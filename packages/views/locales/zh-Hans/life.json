@@ -1,0 +1,43 @@
+{
+  "title": "居民生活",
+  "loading": "正在读取世界…",
+  "error": "暂时无法更新世界。",
+  "retry": "重试",
+  "empty": "当前世界尚未启动生命模拟。",
+  "paused": "世界模拟已停止更新",
+  "live": "世界运行中",
+  "day": "第 {{day}} 天 · {{time}}",
+  "tick": "Tick {{tick}}",
+  "residents": "居民",
+  "events": "世界事件",
+  "map": "世界地图",
+  "energy": "精力",
+  "fullness": "饱腹",
+  "social": "社交",
+  "inventory": "食物 {{food}} · 木材 {{wood}} · 金币 {{coins}}",
+  "idle": "选择行动中",
+  "unknown": "未知行动",
+  "replenished": "森林和农场补充了资源。",
+  "created": "{{count}} 位居民来到世界。",
+  "completed": "{{name}} · {{action}}",
+  "failed": "{{name}} · {{action}}未能完成",
+  "select": "关注 {{name}}",
+  "position": "{{name}} 位于 {{x}}, {{y}}",
+  "goals": "目标：{{resource}} {{amount}} / {{target}}",
+  "wood": "木材",
+  "coins": "金币",
+  "actions": {
+    "MOVE": "移动",
+    "REST": "休息",
+    "EAT": "进食",
+    "GATHER_WOOD": "采集木材",
+    "WORK": "工作",
+    "TALK": "交谈"
+  },
+  "places": {
+    "home": "住宅",
+    "farm": "农场",
+    "forest": "森林",
+    "square": "广场"
+  }
+}

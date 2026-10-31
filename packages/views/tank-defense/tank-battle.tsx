@@ -11,6 +11,7 @@ import { useT } from "../i18n";
 import { PageHeader } from "../layout/page-header";
 import { paintTankBattle } from "./painter";
 import { useTankFullscreen } from "./use-tank-fullscreen";
+import { TankPreview } from "./tank-preview";
 
 const keyDirections: Record<string, TankDirection> = { ArrowUp: "up", KeyW: "up", ArrowRight: "right", KeyD: "right", ArrowDown: "down", KeyS: "down", ArrowLeft: "left", KeyA: "left" };
 const movementKeys = ["W", "A", "S", "D"];
@@ -25,13 +26,35 @@ function MapPreview({ level }: { level: TankLevel }) {
   </svg>;
 }
 
-export function TankBattle({ storage, storageKey, workspaceId, blueprint, levelIndex = 0, initialMode = "campaign", frozen = false, garage, headerActions }: { storage: StorageAdapter; storageKey: string; workspaceId?: string; blueprint?: TankBlueprint; levelIndex?: number; initialMode?: TankMode; frozen?: boolean; garage?: ReactNode; headerActions?: ReactNode }) {
+interface TankBattleProps {
+  storage: StorageAdapter;
+  storageKey: string;
+  workspaceId?: string;
+  blueprint?: TankBlueprint;
+  levelIndex?: number;
+  initialMode?: TankMode;
+  frozen?: boolean;
+  garage?: ReactNode;
+  headerActions?: ReactNode;
+  onStart?: () => void;
+  startPending?: boolean;
+  startDisabled?: boolean;
+  autoStart?: boolean;
+  readyLoadout?: { name: string; blueprint: TankBlueprint };
+  launchError?: string;
+}
+
+export function TankBattle({ storage, storageKey, workspaceId, blueprint, levelIndex = 0, initialMode = "campaign", frozen = false, garage, headerActions, onStart, startPending = false, startDisabled = false, autoStart = false, readyLoadout, launchError }: TankBattleProps) {
   const { t } = useT("tanks");
   const [preferences, setPreferences] = useState(() => {
     try { return parseTankPreferences(storage.getItem(storageKey)); }
     catch { return parseTankPreferences(null); }
   });
-  const [game, setGame] = useState(() => new TankDefenseGame(TANK_LEVELS[levelIndex]!, { playerBlueprint: blueprint, mode: initialMode, difficulty: preferences.difficulty }));
+  const [game, setGame] = useState(() => {
+    const initial = new TankDefenseGame(TANK_LEVELS[levelIndex]!, { playerBlueprint: blueprint, mode: initialMode, difficulty: preferences.difficulty });
+    if (autoStart) initial.start();
+    return initial;
+  });
   const [snapshot, setSnapshot] = useState<TankSnapshot>(() => game.snapshot());
   const root = useRef<HTMLElement>(null), canvas = useRef<HTMLCanvasElement>(null);
   const audio = useRef<GameSound | null>(null);
@@ -62,8 +85,9 @@ export function TankBattle({ storage, storageKey, workspaceId, blueprint, levelI
 
   useEffect(() => {
     const sound = new GameSound(); audio.current = sound;
+    if (autoStart) { void sound.activate(); focusBattlefield(); }
     return () => { sound.dispose(); audio.current = null; };
-  }, []);
+  }, [autoStart]);
   useEffect(() => {
     if (audio.current) audio.current.enabled = preferences.sound;
     try { storage.setItem(storageKey, JSON.stringify({ version: 1, ...preferences })); }
@@ -170,6 +194,7 @@ export function TankBattle({ storage, storageKey, workspaceId, blueprint, levelI
       }}>{preferences.sound ? <Volume2 /> : <VolumeX />}</Button>
     </PageHeader>
     {fullscreenFailed && <p className="tank-fullscreen-error" role="alert">{t($ => $.fullscreen_error)}</p>}
+    {launchError && <p className="tank-garage-error" role="alert">{launchError}</p>}
     <div className="tank-defense-app">
       <div className="tank-layout">
         <section className="tank-operation" aria-label={t($ => $.mode)}>
@@ -200,10 +225,11 @@ export function TankBattle({ storage, storageKey, workspaceId, blueprint, levelI
             {(snapshot.phase === "ready" || snapshot.paused || finished) && <div className={"tank-overlay " + (snapshot.phase === "defeat" ? "tank-overlay-defeat" : "")}>
               <div className="tank-overlay-card">
                 <div className="tank-overlay-emblem" aria-hidden>{snapshot.phase === "defeat" ? <Flag /> : snapshot.paused ? <Pause /> : <Shield />}</div>
+                {snapshot.phase === "ready" && readyLoadout && <><TankPreview blueprint={readyLoadout.blueprint} name={readyLoadout.name} power={snapshot.power} className="mx-auto mb-2 size-24" /><strong>{readyLoadout.name}</strong></>}
                 <h2>{overlayTitle}</h2>
                 <p>{overlayHelp}</p>
                 <div className="tank-overlay-actions">
-                  {snapshot.phase === "ready" ? <Button size="lg" onClick={start}><Play />{t($ => $.start)}<ArrowRight /></Button>
+                  {snapshot.phase === "ready" ? <Button size="lg" onClick={onStart ?? start} disabled={startDisabled || startPending} aria-busy={startPending}><Play />{startPending ? t($ => $.garage.deploying) : t($ => $.start)}<ArrowRight /></Button>
                     : snapshot.paused ? <><Button size="lg" onClick={pause}><Play />{t($ => $.resume)}</Button><Button variant="outline" size="lg" onClick={() => { setPreferences(value => ({ ...value, best: Math.max(value.best, game.score) })); replaceGame(game.level.id - 1); }}><Flag />{t($ => $.end_run)}</Button></>
                       : snapshot.phase === "cleared" ? <Button size="lg" onClick={() => replaceGame(game.level.id, true, true)}>{t($ => $.next)}<ArrowRight /></Button>
                         : <Button size="lg" onClick={() => replaceGame(snapshot.phase === "victory" && game.mode === "campaign" ? 0 : game.level.id - 1, false, true)}><RotateCcw />{snapshot.phase === "victory" ? t($ => $.again) : t($ => $.retry)}</Button>}

@@ -1,0 +1,19 @@
+{
+  "name": "@auro/agent-life-worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "pnpm build && pnpm start",
+    "start": "node dist/main.mjs",
+    "build": "tsc --noEmit && esbuild src/main.ts --bundle --platform=node --format=esm --packages=external --outfile=dist/main.mjs",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src",
+    "test": "vitest run"
+  },
+  "dependencies": { "pg": "^8.20.0", "zod": "catalog:" },
+  "devDependencies": {
+    "@auro/eslint-config": "workspace:*", "@types/node": "catalog:", "@types/pg": "^8.20.0",
+    "eslint": "^9.0.0", "esbuild": "^0.28.2", "typescript": "catalog:", "vitest": "catalog:"
+  }
+}

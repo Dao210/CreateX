@@ -1146,6 +1146,59 @@ type LarkUserBinding struct {
 	BoundAt        pgtype.Timestamptz `json:"bound_at"`
 }
 
+type LifeAction struct {
+	WorldID       pgtype.UUID `json:"world_id"`
+	ID            pgtype.UUID `json:"id"`
+	AgentID       pgtype.UUID `json:"agent_id"`
+	Intent        []byte      `json:"intent"`
+	Reason        string      `json:"reason"`
+	StartedTick   int64       `json:"started_tick"`
+	DueTick       int64       `json:"due_tick"`
+	Status        string      `json:"status"`
+	CompletedTick pgtype.Int8 `json:"completed_tick"`
+}
+
+type LifeAgent struct {
+	WorldID     pgtype.UUID `json:"world_id"`
+	ID          pgtype.UUID `json:"id"`
+	Name        string      `json:"name"`
+	X           int32       `json:"x"`
+	Y           int32       `json:"y"`
+	Energy      int32       `json:"energy"`
+	Fullness    int32       `json:"fullness"`
+	Social      int32       `json:"social"`
+	Personality []byte      `json:"personality"`
+	Goal        []byte      `json:"goal"`
+}
+
+type LifeEvent struct {
+	WorldID    pgtype.UUID        `json:"world_id"`
+	ID         pgtype.UUID        `json:"id"`
+	Tick       int64              `json:"tick"`
+	ActionID   pgtype.UUID        `json:"action_id"`
+	AgentID    pgtype.UUID        `json:"agent_id"`
+	Kind       string             `json:"kind"`
+	Payload    []byte             `json:"payload"`
+	OccurredAt pgtype.Timestamptz `json:"occurred_at"`
+}
+
+type LifeResource struct {
+	WorldID pgtype.UUID `json:"world_id"`
+	Owner   string      `json:"owner"`
+	Kind    string      `json:"kind"`
+	Amount  int32       `json:"amount"`
+}
+
+type LifeWorld struct {
+	ID          pgtype.UUID        `json:"id"`
+	Singleton   bool               `json:"singleton"`
+	WorkspaceID pgtype.UUID        `json:"workspace_id"`
+	Tick        int64              `json:"tick"`
+	TickMs      int32              `json:"tick_ms"`
+	NextTickAt  pgtype.Timestamptz `json:"next_tick_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+}
+
 type MaintenanceJob struct {
 	ID             pgtype.UUID        `json:"id"`
 	JobType        string             `json:"job_type"`

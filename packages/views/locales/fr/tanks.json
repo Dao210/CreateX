@@ -134,6 +134,7 @@
     "loading_session": "Chargement du personnage figé…",
     "return_classic": "Revenir au char classique",
     "library_error": "Le garage est indisponible. Actualisez pour réessayer.",
+    "character_unavailable": "Ce personnage est indisponible dans ce monde. Actualisez la collection ou choisissez un autre personnage.",
     "save_error": "Échec de la demande. Votre sélection est conservée.",
     "conflict": "Le personnage a changé ou la demande est en conflit. Actualisez le garage.",
     "default_name": "Gardien de la forêt",

@@ -1,0 +1,43 @@
+{
+  "title": "주민의 삶",
+  "loading": "세계를 불러오는 중…",
+  "error": "세계를 새로 고치지 못했습니다.",
+  "retry": "다시 시도",
+  "empty": "이 세계의 시뮬레이션이 아직 시작되지 않았습니다.",
+  "paused": "시뮬레이션 업데이트가 중지되었습니다",
+  "live": "세계 운영 중",
+  "day": "{{day}}일 · {{time}}",
+  "tick": "Tick {{tick}}",
+  "residents": "주민",
+  "events": "세계의 사건",
+  "map": "세계 지도",
+  "energy": "기력",
+  "fullness": "포만감",
+  "social": "사교",
+  "inventory": "식량 {{food}} · 목재 {{wood}} · 동전 {{coins}}",
+  "idle": "행동 선택 중",
+  "unknown": "알 수 없는 행동",
+  "replenished": "숲과 농장의 자원이 보충되었습니다.",
+  "created": "주민 {{count}}명이 도착했습니다.",
+  "completed": "{{name}} · {{action}}",
+  "failed": "{{name}} · {{action}} 완료 실패",
+  "select": "{{name}} 따라가기",
+  "position": "{{name}} 위치 {{x}}, {{y}}",
+  "goals": "목표: {{resource}} {{amount}} / {{target}}",
+  "wood": "목재",
+  "coins": "동전",
+  "actions": {
+    "MOVE": "이동",
+    "REST": "휴식",
+    "EAT": "식사",
+    "GATHER_WOOD": "목재 채집",
+    "WORK": "작업",
+    "TALK": "대화"
+  },
+  "places": {
+    "home": "주택",
+    "farm": "농장",
+    "forest": "숲",
+    "square": "광장"
+  }
+}

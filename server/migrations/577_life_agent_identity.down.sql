@@ -1,0 +1,1 @@
+DROP INDEX CONCURRENTLY IF EXISTS life_agent_id_idx;

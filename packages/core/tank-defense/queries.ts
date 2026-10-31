@@ -25,5 +25,6 @@ export function useSaveTankCharacter(wsId: string) {
   return useMutation({ mutationFn: (input: SaveTankCharacterInput) => api.saveTankCharacter(wsId, input), onSuccess: () => client.invalidateQueries({ queryKey: tankKeys.characters(wsId) }) });
 }
 export function useCreateTankSession(wsId: string) {
-  return useMutation({ mutationFn: (input: CreateTankSessionInput) => api.createTankSession(wsId, input) });
+  const client = useQueryClient();
+  return useMutation({ mutationFn: (input: CreateTankSessionInput) => api.createTankSession(wsId, input), onSuccess: session => client.setQueryData(tankKeys.session(wsId, session.ownerId, session.id), session) });
 }

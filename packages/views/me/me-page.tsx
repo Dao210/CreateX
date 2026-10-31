@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, type ReactNode } from "react";
+import { useMemo, useRef, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowRight, Bot, Globe2, RefreshCw, Shapes, Shield, Star, Trophy, Wrench } from "lucide-react";
+import { ArrowRight, Bot, Globe2, Play, RefreshCw, Shapes, Shield, Star, Trophy, Wrench } from "lucide-react";
 import { useAuthStore } from "@auro/core/auth";
 import { useCurrentWorkspace, useWorkspacePaths } from "@auro/core/paths";
 import type { StorageAdapter } from "@auro/core/types";
@@ -21,9 +21,11 @@ import {
 import { createSiegeClient, siegeLibraryOptions } from "@auro/core/siege/queries";
 import {
   TANK_LEVELS,
+  TANK_DIFFICULTIES,
   myTankCharactersOptions,
   parseTankPreferences,
   tankPreferencesKey,
+  useCreateTankSession,
   type TankCharacter,
 } from "@auro/core/tank-defense";
 import { gameProgressOptions, mergeSiegeStars, mergeTankAchievements } from "@auro/core/game-progress";
@@ -36,6 +38,7 @@ import { AppLink, useNavigation } from "../navigation";
 import { PageHeader } from "../layout/page-header";
 import { useLocale, useT } from "../i18n";
 import { BlueprintPreview } from "./blueprint-preview";
+import { TankPreview } from "../tank-defense/tank-preview";
 
 type Filter = "all" | "siege" | "tanks" | "mcp";
 
@@ -121,7 +124,7 @@ function MeContent({ storage, workspace, userId }: {
             {bothFailed ? <ErrorCard message={t(($) => $.error)} retry={() => { void library.refetch(); void tanks.refetch(); }} retryLabel={t(($) => $.retry)} /> : <>
               {(visibleSiege.length > 0 || visibleTanks.length > 0) && <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                 {visibleSiege.map((blueprint) => <SiegeCard key={blueprint.id} blueprint={blueprint} locale={locale} workshopHref={`${paths.siege()}?blueprint=${encodeURIComponent(blueprint.id)}`} />)}
-                {visibleTanks.map((character) => <TankCard key={character.id} character={character} locale={locale} garageHref={`${paths.tanks()}?character=${encodeURIComponent(character.id)}`} />)}
+                {visibleTanks.map((character) => <TankCard key={character.id} character={character} locale={locale} workspaceId={workspace.id} power={TANK_DIFFICULTIES[local.tanks.difficulty].initialPower} garageHref={`${paths.tanks()}?character=${encodeURIComponent(character.id)}`} />)}
               </div>}
               {(siegeFailed || tanksFailed) && <div className={`space-y-2 ${visibleSiege.length > 0 || visibleTanks.length > 0 ? "mt-3" : ""}`}>
                 {siegeFailed && <p role="alert" className="text-caption text-destructive">{t(($) => $.weapons.siege_error)} <Button size="xs" variant="link" onClick={() => void library.refetch()}>{t(($) => $.retry)}</Button></p>}
@@ -196,31 +199,34 @@ function SiegeCard({ blueprint, locale, workshopHref }: { blueprint: LibraryBlue
   </Card>;
 }
 
-function TankCard({ character, locale, garageHref }: { character: TankCharacter; locale: string; garageHref: string }) {
+function TankCard({ character, locale, garageHref, workspaceId, power }: { character: TankCharacter; locale: string; garageHref: string; workspaceId: string; power: number }) {
   const { t } = useT("me");
-  const appearance = character.draft.appearance;
-  return <Card size="sm" className="h-full overflow-hidden">
-    <div className="flex aspect-[4/3] items-center justify-center bg-muted/25 p-4"><TankPreview body={appearance.body} accent={appearance.accent} pattern={appearance.pattern} /></div>
+  const { t: tankT } = useT("tanks");
+  const navigation = useNavigation();
+  const create = useCreateTankSession(workspaceId);
+  const request = useRef<{ input: string; id: string } | null>(null);
+  const play = async () => {
+    const input = { characterId: character.id, revision: character.revision, contentHash: character.contentHash, mapId: "frontline" as const, mode: "campaign" as const };
+    const serialized = JSON.stringify(input);
+    if (request.current?.input !== serialized) request.current = { input: serialized, id: crypto.randomUUID() };
+    try {
+      const session = await create.mutateAsync({ ...input, requestId: request.current.id });
+      request.current = null;
+      navigation.push(session.playPath);
+    } catch { /* The mutation exposes retry without losing the character. */ }
+  };
+  return <Card size="sm" className="h-full overflow-hidden" role="group" aria-label={character.draft.name}>
+    <div className="flex aspect-[4/3] items-center justify-center bg-muted/25 p-4"><TankPreview blueprint={character.blueprint} name={character.draft.name} power={power} className="h-full max-h-40 w-auto" /></div>
     <CardHeader className="gap-1">
       <div className="flex min-w-0 items-center gap-2"><CardTitle className="truncate">{character.draft.name}</CardTitle><Badge variant={character.origin === "mcp" ? "default" : "secondary"}>{character.origin === "mcp" ? t(($) => $.weapons.mcp) : t(($) => $.weapons.manual)}</Badge></div>
       <CardDescription>{t(($) => $.weapons.revision, { revision: character.revision })} · {t(($) => $.weapons.created, { date: formatDate(character.createdAt, locale) })}</CardDescription>
     </CardHeader>
     <CardContent className="space-y-3">
       <p className="text-caption text-muted-foreground">{t(($) => $.weapons.stats, { speed: character.blueprint.speed, armor: character.blueprint.armor, cooldown: character.blueprint.fireInterval })}</p>
-      <div className="flex flex-wrap gap-2"><AppLink href={garageHref} className={buttonVariants({ size: "xs", variant: "outline" })}>{t(($) => $.weapons.open_garage)}</AppLink><Badge variant="outline">{t(($) => $.weapons.cost, { cost: character.cost })}</Badge></div>
+      <div className="flex flex-wrap items-center gap-2"><Button size="xs" disabled={create.isPending} aria-busy={create.isPending} onClick={() => void play()}><Play />{create.isPending ? tankT(($) => $.garage.deploying) : t(($) => $.weapons.play)}</Button><AppLink href={garageHref} className={buttonVariants({ size: "xs", variant: "outline" })}>{t(($) => $.weapons.open_garage)}</AppLink><Badge variant="outline">{t(($) => $.weapons.cost, { cost: character.cost })}</Badge></div>
+      {create.isError && <p role="alert" className="text-caption text-destructive">{tankT(($) => $.garage.save_error)}</p>}
     </CardContent>
   </Card>;
-}
-
-function TankPreview({ body, accent, pattern }: { body: string; accent: string; pattern: string }) {
-  return <svg viewBox="0 0 120 80" className="h-full w-full" role="img" aria-hidden>
-    <rect x="18" y="54" width="84" height="12" rx="6" fill={body} opacity="0.55" />
-    <rect x="26" y="36" width="68" height="22" rx="6" fill={body} />
-    <rect x="42" y="28" width="28" height="16" rx="6" fill={accent} />
-    <rect x="68" y="32" width="30" height="6" rx="3" fill={accent} />
-    {pattern === "stripe" && <rect x="34" y="44" width="52" height="4" rx="2" fill={accent} opacity="0.75" />}
-    {pattern === "cross" && <><rect x="56" y="36" width="8" height="22" fill={accent} opacity="0.7" /><rect x="26" y="44" width="68" height="6" fill={accent} opacity="0.7" /></>}
-  </svg>;
 }
 
 function ErrorCard({ message, retry, retryLabel }: { message: string; retry: () => void; retryLabel: string }) {
@@ -240,9 +246,9 @@ function EmptyCollection({ filter, workshopHref, garageHref }: { filter: Filter;
   </CardContent></Card>;
 }
 
-function readLocalProgress(storage: StorageAdapter, userId: string, workspaceId: string): { stars: number[]; tanks: { best: number; unlocked: number } } {
+function readLocalProgress(storage: StorageAdapter, userId: string, workspaceId: string): { stars: number[]; tanks: ReturnType<typeof parseTankPreferences> } {
   let stars: number[] = Array(CAMPAIGN_LEVELS.length).fill(0);
-  let tanks = { best: 0, unlocked: 1 };
+  let tanks = parseTankPreferences(null);
   try {
     const raw = scopedSiegeStorage(storage, siegePreferencesKey(userId, workspaceId)).getItem(SIEGE_CAMPAIGN_PROGRESS_KEY);
     if (raw) {

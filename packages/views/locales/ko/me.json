@@ -21,6 +21,7 @@
     "empty_help": "워크숍이나 차고에서 만들거나 MCP로 에이전트를 연결하세요.",
     "open_workshop": "워크숍 열기",
     "open_garage": "차고 열기",
+    "play": "게임 입장",
     "mcp": "MCP",
     "manual": "직접 생성",
     "revision": "v{{revision}}",

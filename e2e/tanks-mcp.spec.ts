@@ -82,6 +82,7 @@ test("MCP creates a real playable tank and later edits cannot alter its frozen s
   await page.getByRole("button", { name: "开始守卫", exact: true }).click();
   await page.screenshot({ path: "test-results/tanks/tank-mcp-character.png", fullPage: true });
   await page.getByRole("button", { name: "连接 Agent", exact: true }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "手动配置", exact: true }).click();
   await expect(page.getByRole("dialog")).toContainText("[mcp_servers.auro_tanks]");
   await expect(page.getByRole("dialog")).toContainText(workspace.id);
   expect(await page.getByRole("dialog").innerText()).not.toContain(token);
@@ -101,6 +102,53 @@ test("phone character editor saves a version and deploys through the same API", 
   await expect(page.getByTestId("tank-battlefield")).toHaveAttribute("data-player-speed", "66");
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await page.screenshot({ path: "test-results/tanks/tank-mcp-phone.png", fullPage: true });
+});
+
+test("a preselected tank starts from the battlefield button with its saved identity and paint", async ({ request, page }) => {
+  const character = await tool(request, "tank_save_character", { requestId: randomUUID(), draft: { ...draft, name: "黑曜出战回归", parts: { chassis: "heavy", armor: "heavy", cannon: "heavy" }, appearance: { body: "#000000", accent: "#000000", pattern: "solid" } } });
+  await page.goto(`/${workspace.slug}/tanks?character=${character.id}`);
+  await expect(page.getByRole("combobox", { name: "出战角色", exact: true })).toHaveValue(character.id, { timeout: 45000 });
+  await expect(page.getByRole("img", { name: "黑曜出战回归", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "开始守卫", exact: true }).click();
+  const board = page.getByTestId("tank-battlefield");
+  await expect(page).toHaveURL(/\?session=/);
+  await expect(board).toHaveAttribute("data-character-id", `${character.id}@1`);
+  await expect(board).toHaveAttribute("data-phase", "running");
+  await expect(board).toHaveAttribute("data-player-speed", "50");
+  await expect.poll(() => board.evaluate(canvas => {
+    const data = (canvas as HTMLCanvasElement).getContext("2d")!.getImageData(0, 0, 1040, 1040).data;
+    let black = 0;
+    for (let i = 0; i < data.length; i += 4) if (data[i] === 0 && data[i + 1] === 0 && data[i + 2] === 0 && data[i + 3] === 255) black++;
+    return black;
+  })).toBeGreaterThan(100);
+  await board.screenshot({ path: "test-results/tanks/black-tank-battlefield.png" });
+  await page.getByRole("button", { name: "暂停", exact: true }).click();
+  await page.screenshot({ path: "test-results/tanks/selected-black-tank.png", fullPage: true });
+});
+
+test("my creations offers a battle-rendered preview and a direct playable entry", async ({ request, page }) => {
+  const character = await tool(request, "tank_save_character", { requestId: randomUUID(), draft: { ...draft, name: "收藏出战回归", parts: { chassis: "heavy", armor: "heavy", cannon: "heavy" }, appearance: { body: "#000000", accent: "#000000", pattern: "solid" } } });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(`/${workspace.slug}/me?filter=mcp`);
+  const card = page.getByRole("group", { name: "收藏出战回归", exact: true });
+  const preview = card.getByRole("img", { name: "收藏出战回归", exact: true });
+  await expect(preview).toHaveAttribute("data-character-id", `${character.id}@1`, { timeout: 45000 });
+  await expect.poll(() => preview.evaluate(canvas => {
+    const data = (canvas as HTMLCanvasElement).getContext("2d")!.getImageData(0, 0, 160, 160).data;
+    let painted = 0;
+    for (let i = 0; i < data.length; i += 4) if (data[i] === 0 && data[i + 1] === 0 && data[i + 2] === 0 && data[i + 3] === 255) painted++;
+    return painted;
+  })).toBeGreaterThan(100);
+  await card.scrollIntoViewIfNeeded();
+  await page.screenshot({ path: "test-results/tanks/creation-play-entry.png", fullPage: true });
+  await card.getByRole("button", { name: "进入游戏", exact: true }).click();
+  const board = page.getByTestId("tank-battlefield");
+  await expect(page).toHaveURL(/\?session=/);
+  await expect(board).toHaveAttribute("data-character-id", `${character.id}@1`);
+  await expect(board).toHaveAttribute("data-phase", "ready");
+  await page.getByRole("button", { name: "开始守卫", exact: true }).click();
+  await expect(board).toHaveAttribute("data-phase", "running");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
 
 test("the built CLI exposes the same writable MCP tools over stdio", async ({ baseURL }) => {

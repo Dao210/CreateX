@@ -21,6 +21,7 @@
     "empty_help": "去工坊画一把武器、去车库造一辆坦克，或通过 MCP 连接 Agent 创作。",
     "open_workshop": "去工坊",
     "open_garage": "去车库",
+    "play": "进入游戏",
     "mcp": "MCP",
     "manual": "手动创建",
     "revision": "v{{revision}}",

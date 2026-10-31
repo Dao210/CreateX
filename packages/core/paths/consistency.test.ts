@@ -29,6 +29,7 @@ describe("paths.workspace() shape", () => {
       ["skills", "skills"],
       ["siege", "siege"],
       ["tanks", "tanks"],
+      ["life", "life"],
       ["me", "me"],
       ["settings", "settings"],
     ];

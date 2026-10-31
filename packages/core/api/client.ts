@@ -1,4 +1,5 @@
 import type { ZodType } from "zod";
+import { LifeSnapshotSchema, type LifeSnapshot } from "../agent-life/schema";
 import { AdminAccessSchema, MCPAdminServicesSchema, MCPPolicySchema, MCPActivityPageSchema, type AdminAccess, type MCPAdminService, type MCPPolicy, type MCPActivityPage, type MCPActivityFilter, type UpdateMCPPolicyInput } from "../admin/schema";
 import { TankCharacterSchema, TankCharacterListSchema, TankPlaySessionSchema, type TankCharacter, type TankPlaySession, type SaveTankCharacterInput, type CreateTankSessionInput } from "../tank-defense/characters";
 import { GameProgressSchema, SiegeProgressResponseSchema, TankProgressResponseSchema, type GameProgress, type SiegeProgress, type TankProgress } from "../game-progress/schema";
@@ -848,6 +849,14 @@ export class ApiClient {
     const raw = await this.fetch<unknown>(endpoint, { headers: { "X-Workspace-ID": wsId, "X-Workspace-Slug": "" } });
     const parsed = parseWithFallback<GameProgress | null>(raw, GameProgressSchema, null, { endpoint });
     if (!parsed || parsed.workspaceId !== wsId) throw new Error("invalid_game_progress_response");
+    return parsed;
+  }
+
+  async getLifeSnapshot(wsId: string): Promise<LifeSnapshot> {
+    const endpoint = "/api/life";
+    const raw = await this.fetch<unknown>(endpoint, { headers: { "X-Workspace-ID": wsId, "X-Workspace-Slug": "" } });
+    const parsed = parseWithFallback<LifeSnapshot | null>(raw, LifeSnapshotSchema, null, { endpoint });
+    if (!parsed || (parsed.world && parsed.world.workspaceId !== wsId)) throw new Error("invalid_life_response");
     return parsed;
   }
 

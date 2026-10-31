@@ -39,7 +39,7 @@ DEV_CODE_DEFAULT=888888
 WORKSPACE_NAME="${AURO_DEV_WORKSPACE_NAME:-Dev}"
 WORKSPACE_SLUG="${AURO_DEV_WORKSPACE_SLUG:-dev}"
 
-ALL_COMPONENTS="api web daemon desktop"
+ALL_COMPONENTS="api web daemon desktop life"
 DEFAULT_COMPONENTS="api web"
 
 # An agent runs with TMPDIR=/tmp/auro-task-<id>, deleted when the run ends.
@@ -527,6 +527,27 @@ api_identity_matches() {
   [ "$launched_at" = 0 ] || api_started_after "$health" "$launched_at"
 }
 
+start_life() {
+  [ -n "${AGENT_LIFE_WORKSPACE_ID:-}" ] || die "Set AGENT_LIFE_WORKSPACE_ID to an existing world UUID before starting life."
+  if component_pid life >/dev/null; then
+    ok "life already running (pid $(component_pid life))"
+    return 0
+  fi
+  launch_detached life make -C "$REPO_ROOT" -s life-dev ENV_FILE="$ENV_FILE"
+  local waited=0
+  while [ "$waited" -lt 30 ]; do
+    component_pid life >/dev/null || { tail -10 "$(log_file life)" >&2; die "life exited during startup"; }
+    if grep -q '"event":"life_ready"' "$(log_file life)"; then
+      ok "life ready (pid $(component_pid life)); log: $(log_file life)"
+      return 0
+    fi
+    sleep 1
+    waited=$((waited + 1))
+  done
+  stop_component life
+  die "life did not become ready; inspect $(log_file life)"
+}
+
 start_api() {
   local launched_at health waited=0 expected_commit
   expected_commit="$(checkout_commit)"
@@ -918,6 +939,13 @@ stop_component() {
 
 component_state() {
   case "$1" in
+    life)
+      if component_pid life >/dev/null; then
+        printf 'running|PostgreSQL|pid %s' "$(component_pid life)"
+      else
+        printf 'stopped|PostgreSQL|'
+      fi
+      ;;
     api)
       local health
       health="$(health_json || true)"
@@ -1134,7 +1162,7 @@ cmd_up() {
   local missing=() tool needed="node go curl"
   # pnpm is only required by the components that actually build JavaScript, so
   # `up C=api` works on a checkout that has never run an install.
-  if component_selected web || component_selected desktop; then needed="$needed pnpm"; fi
+  if component_selected web || component_selected desktop || component_selected life; then needed="$needed pnpm"; fi
   for tool in $needed; do
     command -v "$tool" >/dev/null 2>&1 || missing+=("$tool")
   done
@@ -1241,7 +1269,7 @@ Start the rest with 'make up C=api,web', or run 'make up C=daemon' from your own
   # sees the same values the registry recorded.
   export PORT="$BACKEND_PORT" FRONTEND_PORT DATABASE_URL POSTGRES_DB="$DB_NAME"
 
-  if [ ! -d "$REPO_ROOT/node_modules" ] && { component_selected web || component_selected desktop; }; then
+  if [ ! -d "$REPO_ROOT/node_modules" ] && { component_selected web || component_selected desktop || component_selected life; }; then
     step "Dependencies"
     (cd "$REPO_ROOT" && pnpm install) || die "pnpm install failed."
   fi
@@ -1253,6 +1281,7 @@ Start the rest with 'make up C=api,web', or run 'make up C=daemon' from your own
 
   step "Components: $COMPONENTS"
   component_selected api && start_api
+  component_selected life && start_life
   component_selected web && start_web
   component_selected daemon && start_daemon
   component_selected desktop && start_desktop
@@ -1502,7 +1531,8 @@ Local development environments: named, listable, deletable.
   dev-env.sh exec    [name] -- <command> [args...]
 
 Components: api (Go backend), web (Next.js), daemon (agent daemon),
-desktop (Electron). Anything selected implies api.
+desktop (Electron), life (TypeScript simulation Worker, requires
+AGENT_LIFE_WORKSPACE_ID). Anything selected implies api.
 
 down keeps the database, the CLI profile and the allocated slot.
 destroy consumes them.

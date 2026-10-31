@@ -1,0 +1,1 @@
+DROP INDEX CONCURRENTLY IF EXISTS life_action_world_idx;

@@ -26,7 +26,7 @@ describe("tank API response boundary", () => {
     const fetcher = response({ characters: [character] });
     const items = await new ApiClient("https://api.example.invalid").listTankCharacters(wsId, true);
     expect(items[0]?.origin).toBe("manual");
-    expect(fetcher.mock.calls[0]![0]).toBe("/api/tanks/v1/characters?mine=1");
+    expect(fetcher.mock.calls[0]![0]).toBe("https://api.example.invalid/api/tanks/v1/characters?mine=1");
   });
   it.each([{}, { characters: [{}] }, { characters: [{ ...character, workspaceId: "33333333-3333-4333-8333-333333333333" }] }, { characters: [{ ...character, blueprint: { ...character.blueprint, speed: 9999 } }] }])("rejects a malformed or mismatched character library", async raw => {
     response(raw);

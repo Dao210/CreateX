@@ -81,6 +81,7 @@ type NavKey =
   | "usage"
   | "siege"
   | "tanks"
+  | "life"
   | "me"
   | "settings";
 
@@ -91,6 +92,7 @@ type NavLabelKey =
   | "usage"
   | "siege"
   | "tanks"
+  | "life"
   | "me"
   | "settings";
 
@@ -101,6 +103,7 @@ type NavLabelKey =
 const personalNav: { key: NavKey; labelKey: NavLabelKey }[] = [
   { key: "me", labelKey: "me" },
   { key: "tanks", labelKey: "tanks" },
+  { key: "life", labelKey: "life" },
   { key: "siege", labelKey: "siege" },
   { key: "inbox", labelKey: "inbox" },
 ];

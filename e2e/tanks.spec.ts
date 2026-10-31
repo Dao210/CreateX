@@ -220,7 +220,7 @@ test.describe("phone controls inside the workspace", () => {
       expect(box!.width).toBeGreaterThanOrEqual(44); expect(box!.height).toBeGreaterThanOrEqual(44);
     }
     await page.screenshot({ path: "test-results/tanks/tank-defense-phone.png", fullPage: true });
-    const records = page.getByText("进度和纪录保存在此设备，按账号和创作区隔离。", { exact: true });
+    const records = page.getByText("进度和纪录保存在此设备，按账号和世界隔离。", { exact: true });
     await records.scrollIntoViewIfNeeded();
     await expect(records).toBeInViewport();
     await expect(page.getByRole("heading", { name: "坦克守城", exact: true })).toBeInViewport();

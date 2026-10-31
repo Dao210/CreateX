@@ -55,6 +55,7 @@ export type NavLabelKey =
   | "skills"
   | "siege"
   | "tanks"
+  | "life"
   | "me"
   | "settings";
 
@@ -69,6 +70,7 @@ export type WorkspacePageKey =
   | "skills"
   | "siege"
   | "tanks"
+  | "life"
   | "me"
   | "settings";
 
@@ -97,6 +99,7 @@ export const WORKSPACE_PAGES: Record<WorkspacePageKey, WorkspacePage> = {
   // activity (blueprints are workspace-scoped), not a team-management tool.
   siege: { segment: "siege", icon: "Gamepad2", navKey: "siege" },
   tanks: { segment: "tanks", icon: "Gamepad2", navKey: "tanks" },
+  life: { segment: "life", icon: "Users", navKey: "life" },
   me: { segment: "me", icon: "Shapes", navKey: "me" },
   settings: { segment: "settings", icon: "Settings", navKey: "settings" },
 };

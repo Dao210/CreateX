@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, screen } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ComponentProps, ReactElement } from "react";
 import { renderWithI18n } from "../test/i18n";
@@ -16,7 +16,7 @@ const ids = {
   session: "55555555-5555-4555-8555-555555555555",
 };
 const workspace = { id: ids.workspace, name: "Acme", slug: "acme" };
-const mocks = vi.hoisted(() => ({ list: vi.fn(), progress: vi.fn(), library: vi.fn(), replace: vi.fn(), search: "", hash: "" }));
+const mocks = vi.hoisted(() => ({ list: vi.fn(), progress: vi.fn(), library: vi.fn(), create: vi.fn(), push: vi.fn(), replace: vi.fn(), search: "", hash: "" }));
 
 vi.mock("@auro/core/auth", () => ({
   useAuthStore: (selector: (state: { user: { id: string; name: string; avatar_url: string | null } }) => unknown) => selector({ user: { id: "11111111-1111-4111-8111-111111111111", name: "Ada", avatar_url: null } }),
@@ -28,7 +28,7 @@ vi.mock("@auro/core/paths", async (importOriginal) => ({
 }));
 vi.mock("@auro/core/api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@auro/core/api")>()),
-  api: { listTankCharacters: mocks.list, getGameProgress: mocks.progress },
+  api: { listTankCharacters: mocks.list, getGameProgress: mocks.progress, createTankSession: mocks.create },
 }));
 vi.mock("@auro/core/siege/queries", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@auro/core/siege/queries")>()),
@@ -42,6 +42,7 @@ vi.mock("../navigation", async () => {
       const [search, setSearch] = useState(mocks.search);
       return {
         pathname: "/acme/me", searchParams: new URLSearchParams(search), hash: mocks.hash,
+        push: mocks.push,
         replace: (path: string) => {
           mocks.replace(path);
           setSearch(path.split("?")[1]?.split("#")[0] ?? "");
@@ -83,6 +84,7 @@ function render(ui: ReactElement) {
 }
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(null);
   mocks.search = "";
   mocks.hash = "";
   mocks.list.mockResolvedValue([character("MCP Tank", "mcp"), character("Manual Tank", "manual", ids.manualCharacter)]);
@@ -91,6 +93,22 @@ beforeEach(() => {
 });
 
 describe("my creations", () => {
+  it("launches the chosen creation into a frozen session and preserves retry after failure", async () => {
+    const selected = character("MCP Tank", "mcp");
+    const session = { id: ids.session, ownerId: ids.user, playPath: `/acme/tanks?session=${ids.session}` };
+    mocks.create.mockRejectedValueOnce(new Error("temporary failure")).mockResolvedValueOnce(session);
+    render(<MePage storage={storage().adapter} />);
+    const card = within(await screen.findByRole("group", { name: "MCP Tank" }));
+    expect(card.getByRole("img", { name: "MCP Tank" }).tagName).toBe("CANVAS");
+    fireEvent.click(card.getByRole("button", { name: "Play" }));
+    expect(await card.findByRole("alert")).toHaveTextContent("Your selection is preserved");
+    expect(mocks.push).not.toHaveBeenCalled();
+    fireEvent.click(card.getByRole("button", { name: "Play" }));
+    await waitFor(() => expect(mocks.push).toHaveBeenCalledWith(session.playPath));
+    expect(mocks.create).toHaveBeenCalledWith(ids.workspace, expect.objectContaining({ characterId: selected.id, revision: selected.revision, contentHash: selected.contentHash, mapId: "frontline", mode: "campaign" }));
+    expect(mocks.create.mock.calls[1]![1].requestId).toBe(mocks.create.mock.calls[0]![1].requestId);
+  });
+
   it("shows MCP-created tanks, saved blueprints and the merged progress", async () => {
     render(<MePage storage={storage().adapter} />);
     expect(await screen.findByText("MCP Tank")).toBeInTheDocument();

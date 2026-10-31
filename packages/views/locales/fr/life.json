@@ -1,0 +1,43 @@
+{
+  "title": "Vie des habitants",
+  "loading": "Chargement du monde…",
+  "error": "Impossible d’actualiser le monde.",
+  "retry": "Réessayer",
+  "empty": "La simulation de ce monde n’a pas encore démarré.",
+  "paused": "La simulation ne se met plus à jour",
+  "live": "Monde en activité",
+  "day": "Jour {{day}} · {{time}}",
+  "tick": "Tick {{tick}}",
+  "residents": "Habitants",
+  "events": "Événements du monde",
+  "map": "Carte du monde",
+  "energy": "Énergie",
+  "fullness": "Satiété",
+  "social": "Sociabilité",
+  "inventory": "Nourriture {{food}} · Bois {{wood}} · Pièces {{coins}}",
+  "idle": "Choix d’une action",
+  "unknown": "Action inconnue",
+  "replenished": "La forêt et la ferme ont renouvelé leurs ressources.",
+  "created": "{{count}} habitants sont arrivés.",
+  "completed": "{{name}} · {{action}}",
+  "failed": "{{name}} · {{action}} n’a pas abouti",
+  "select": "Suivre {{name}}",
+  "position": "{{name}} en {{x}}, {{y}}",
+  "goals": "Objectif : {{resource}} {{amount}} / {{target}}",
+  "wood": "Bois",
+  "coins": "Pièces",
+  "actions": {
+    "MOVE": "Déplacement",
+    "REST": "Repos",
+    "EAT": "Repas",
+    "GATHER_WOOD": "Récolte de bois",
+    "WORK": "Travail",
+    "TALK": "Conversation"
+  },
+  "places": {
+    "home": "Maisons",
+    "farm": "Ferme",
+    "forest": "Forêt",
+    "square": "Place"
+  }
+}

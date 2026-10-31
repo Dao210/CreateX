@@ -21,6 +21,7 @@
     "empty_help": "Create one in the workshop or garage, or connect an agent through MCP.",
     "open_workshop": "Open workshop",
     "open_garage": "Open garage",
+    "play": "Play",
     "mcp": "MCP",
     "manual": "Manual",
     "revision": "v{{revision}}",

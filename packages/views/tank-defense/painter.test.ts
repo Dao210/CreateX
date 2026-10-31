@@ -16,6 +16,16 @@ function draw(tank: Parameters<typeof paintTank>[1], options: Parameters<typeof 
 }
 
 describe("tank transformation rendering", () => {
+  it("keeps a pure black custom tank free of classic gold tracks and green hardware", () => {
+    const black = { ...player, blueprint: { ...player.blueprint, appearance: { body: "#000000", accent: "#000000", pattern: "solid" as const } } };
+    for (const power of [0, 1, 2]) {
+      const colors = draw(black, { power }).filter(command => command[0] === "fillStyle").map(command => command[1]);
+      expect(colors).toContain("#000000");
+      expect(colors).not.toContain("#8d713b");
+      expect(colors).not.toContain("#344131");
+    }
+  });
+
   it("gives each firepower tier a distinct shape while keeping both custom paint colors", () => {
     const tiers = [0, 1, 2].map(power => draw(player, { power }));
     const shapes = tiers.map(commands => JSON.stringify(commands.filter(command => command[0] === "fillRect")));

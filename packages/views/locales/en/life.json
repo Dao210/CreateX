@@ -1,0 +1,43 @@
+{
+  "title": "Agent Life",
+  "loading": "Loading the world…",
+  "error": "The world could not be refreshed.",
+  "retry": "Retry",
+  "empty": "This world has no life simulation yet.",
+  "paused": "Simulation has stopped updating",
+  "live": "World running",
+  "day": "Day {{day}} · {{time}}",
+  "tick": "Tick {{tick}}",
+  "residents": "Residents",
+  "events": "World events",
+  "map": "World map",
+  "energy": "Energy",
+  "fullness": "Fullness",
+  "social": "Social",
+  "inventory": "Food {{food}} · Wood {{wood}} · Coins {{coins}}",
+  "idle": "Choosing an action",
+  "unknown": "Unknown action",
+  "replenished": "The forest and farm replenished their resources.",
+  "created": "{{count}} residents arrived.",
+  "completed": "{{name}} · {{action}}",
+  "failed": "{{name}} · {{action}} could not finish",
+  "select": "Follow {{name}}",
+  "position": "{{name}} at {{x}}, {{y}}",
+  "goals": "Goal: {{resource}} {{amount}} / {{target}}",
+  "wood": "Wood",
+  "coins": "Coins",
+  "actions": {
+    "MOVE": "Moving",
+    "REST": "Resting",
+    "EAT": "Eating",
+    "GATHER_WOOD": "Gathering wood",
+    "WORK": "Working",
+    "TALK": "Talking"
+  },
+  "places": {
+    "home": "Homes",
+    "farm": "Farm",
+    "forest": "Forest",
+    "square": "Square"
+  }
+}

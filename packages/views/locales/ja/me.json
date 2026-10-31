@@ -21,6 +21,7 @@
     "empty_help": "ワークショップやガレージで作成するか、MCP でエージェントを接続してください。",
     "open_workshop": "ワークショップへ",
     "open_garage": "ガレージへ",
+    "play": "ゲームに入る",
     "mcp": "MCP",
     "manual": "手動作成",
     "revision": "v{{revision}}",

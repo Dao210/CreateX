@@ -134,6 +134,7 @@
     "loading_session": "Loading the frozen character…",
     "return_classic": "Return to classic tank",
     "library_error": "The character library is unavailable. Refresh to retry.",
+    "character_unavailable": "This character is unavailable in this world. Refresh the library or choose another character.",
     "save_error": "The request failed. Your selection is preserved; try again.",
     "conflict": "The character changed or the request conflicts. Refresh the library before modifying it again.",
     "default_name": "Forest guardian",

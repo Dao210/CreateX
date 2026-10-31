@@ -11,16 +11,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-chi/chi/v5"
-	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgconn"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/auro-ai/auro/server/internal/analytics"
 	"github.com/auro-ai/auro/server/internal/issuestatus"
 	"github.com/auro-ai/auro/server/internal/logger"
 	obsmetrics "github.com/auro-ai/auro/server/internal/metrics"
 	db "github.com/auro-ai/auro/server/pkg/db/generated"
 	"github.com/auro-ai/auro/server/pkg/protocol"
+	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 var nonAlpha = regexp.MustCompile(`[^a-zA-Z]`)
@@ -1136,6 +1136,10 @@ func (h *Handler) DeleteWorkspace(w http.ResponseWriter, r *http.Request) {
 		failWorkspaceDelete(w, r, workspaceID, "lock workspace", err)
 		return
 	}
+	if err := qtx.LockLifeWorldForDeletion(r.Context(), requester.WorkspaceID); err != nil {
+		failWorkspaceDelete(w, r, workspaceID, "lock life world", err)
+		return
+	}
 	// Take a best-effort snapshot for post-commit daemon invalidation. Runtime
 	// registration does not participate in the workspace delete lock protocol,
 	// so PR1 retains the heartbeat lookup as the correctness fallback for a
@@ -1226,6 +1230,10 @@ func (h *Handler) DeleteWorkspace(w http.ResponseWriter, r *http.Request) {
 		{
 			name: "delete leaf data",
 			run:  func() error { return qtx.DeleteWorkspaceLeafData(ctx, requester.WorkspaceID) },
+		},
+		{
+			name: "delete life simulation",
+			run:  func() error { return qtx.DeleteLifeWorldState(ctx, requester.WorkspaceID) },
 		},
 		{
 			name: "delete autopilot runs",

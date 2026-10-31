@@ -35,6 +35,7 @@ import (
 	"github.com/auro-ai/auro/server/internal/integrations/slack"
 	"github.com/auro-ai/auro/server/internal/integrations/telegram"
 	"github.com/auro-ai/auro/server/internal/integrations/wecom"
+	"github.com/auro-ai/auro/server/internal/life"
 	"github.com/auro-ai/auro/server/internal/mcpadmin"
 	obsmetrics "github.com/auro-ai/auro/server/internal/metrics"
 	"github.com/auro-ai/auro/server/internal/middleware"
@@ -2034,6 +2035,7 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 			progress := gameProgressActor((&gameprogress.HTTP{Store: gameprogress.New(pool)}).Handler())
 			r.Handle("/api/game-progress", progress)
 			r.Handle("/api/game-progress/*", progress)
+			r.Get("/api/life", life.Handler(queries))
 
 			// Assignee frequency
 			r.Get("/api/assignee-frequency", h.GetAssigneeFrequency)

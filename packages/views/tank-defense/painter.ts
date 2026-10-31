@@ -9,25 +9,26 @@ export function paintTank(ctx: CanvasRenderingContext2D, tank: Pick<TankActor, "
   const appearance = player ? tank.blueprint.appearance : undefined;
   const tier = player ? Math.min(2, Math.max(0, power)) : 0;
   const accent = appearance?.accent ?? (player ? "#ffdf91" : "#e0e8d6");
+  const metal = appearance ? "#303030" : "#344131";
   const deployment = player && !reducedMotion ? Math.round(Math.max(0, 1 - upgradeAge / 18) * 4) : 0;
   const color = appearance?.body ?? (player ? "#e7bd59" : armor ? tank.hp > 1 ? "#9cac97" : "#d28d75" : tank.blueprint.id === "runner" ? "#c38e7d" : "#b7c2ae");
-  ctx.fillStyle = "#080e0a"; ctx.fillRect(-15, -13, 30, 29);
-  ctx.fillStyle = player ? "#8d713b" : "#536356"; ctx.fillRect(-14, -12, 6, 26); ctx.fillRect(8, -12, 6, 26);
+  ctx.fillStyle = appearance ? "#090909" : "#080e0a"; ctx.fillRect(-15, -13, 30, 29);
+  ctx.fillStyle = appearance ? "#181818" : player ? "#8d713b" : "#536356"; ctx.fillRect(-14, -12, 6, 26); ctx.fillRect(8, -12, 6, 26);
   const tread = tank.moving ? Math.floor(tick / 4) % 2 * 3 : 0;
   ctx.fillStyle = color;
   for (let y = -11 + tread; y < 13; y += 6) { ctx.fillRect(-14, y, 5, 3); ctx.fillRect(9, y, 5, 3); }
   ctx.fillRect(-8, -11, 16, 24); ctx.fillStyle = appearance?.accent ?? (player ? "#b58b42" : "#768773"); ctx.fillRect(-6, -8, 12, 19);
   const turret = tier === 2 ? 9 : tier === 1 ? 7 : 6;
   const barrel = tier === 2 ? 4 : 3, muzzle = -18 - tier * 2 - deployment;
-  ctx.fillStyle = "#080e0a"; ctx.fillRect(-turret - 1, -6, turret * 2 + 2, 15);
+  ctx.fillStyle = appearance ? "#090909" : "#080e0a"; ctx.fillRect(-turret - 1, -6, turret * 2 + 2, 15);
   ctx.fillStyle = color; ctx.fillRect(-turret, -5, turret * 2, 13); ctx.fillRect(-barrel, muzzle, barrel * 2, -muzzle);
   ctx.fillStyle = accent; ctx.fillRect(-turret + 1, -4, 2, 9); ctx.fillRect(-barrel + 1, muzzle, 2, 10);
   if (tier >= 1) {
     ctx.fillStyle = accent; ctx.fillRect(-5, 9, 10, 2);
-    ctx.fillStyle = "#344131"; ctx.fillRect(turret - 3, -3, 2, 8);
+    ctx.fillStyle = metal; ctx.fillRect(turret - 3, -3, 2, 8);
   }
   if (tier === 2) {
-    ctx.fillStyle = "#344131"; ctx.fillRect(-7, muzzle - 1, 14, 5);
+    ctx.fillStyle = metal; ctx.fillRect(-7, muzzle - 1, 14, 5);
     ctx.fillStyle = accent; ctx.fillRect(-6, muzzle - 1, 12, 2);
     ctx.fillStyle = color; ctx.fillRect(-12 - deployment, -7, 3, 15); ctx.fillRect(9 + deployment, -7, 3, 15);
     ctx.fillStyle = accent; ctx.fillRect(-12 - deployment, -7, 2, 4); ctx.fillRect(10 + deployment, -7, 2, 4);
@@ -35,7 +36,7 @@ export function paintTank(ctx: CanvasRenderingContext2D, tank: Pick<TankActor, "
   ctx.fillStyle = accent;
   if (appearance?.pattern === "stripe") { ctx.fillRect(-6, 8, 12, 2); ctx.fillRect(-6, -9, 12, 2); }
   if (appearance?.pattern === "cross") { ctx.fillRect(-5, 0, 10, 2); ctx.fillRect(-1, -4, 2, 10); }
-  ctx.fillStyle = "#344131"; ctx.fillRect(-2, -1, 5, 5);
+  ctx.fillStyle = metal; ctx.fillRect(-2, -1, 5, 5);
   if (tier < 2) ctx.fillRect(-barrel, muzzle - 1, barrel * 2, 2);
   if (player) {
     ctx.fillStyle = accent;

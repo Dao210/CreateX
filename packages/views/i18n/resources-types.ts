@@ -1,3 +1,4 @@
+import type life from "../locales/en/life.json";
 import "i18next";
 // Pulls in the `ui` namespace augmentation owned by packages/ui — see
 // packages/ui/types/i18next.ts. Side-effect import is required for views'
@@ -69,6 +70,7 @@ declare global {
     billing: typeof billing;
     tanks: typeof tanks;
     me: typeof me;
+    life: typeof life;
     admin: typeof admin;
   }
 }

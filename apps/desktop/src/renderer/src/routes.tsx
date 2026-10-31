@@ -33,6 +33,7 @@ import { DesktopRouteErrorPage } from "./components/route-error-page";
 const SiegePage = lazy(() => import("./pages/siege-page").then(module => ({ default: module.SiegePage })));
 const SiegeCampaignPage = lazy(() => import("./pages/siege-page").then(module => ({ default: module.SiegeCampaignPage })));
 import { TanksPage } from "./pages/tank-defense-page";
+const LifePage = lazy(() => import("@auro/views/agent-life").then(module => ({ default: module.LifePage })));
 import { MePageRoute } from "./pages/me-page";
 
 /**
@@ -155,6 +156,7 @@ export const appRoutes: RouteObject[] = [
           // each game owns the content header, controls and scrolling.
           { path: "siege", element: <Suspense><SiegePage /></Suspense>, handle: { title: "Siege" } },
           { path: "tanks", element: <TanksPage />, handle: { title: "Tank Defense" } },
+          { path: "life", element: <Suspense><LifePage /></Suspense>, handle: { title: "Agent Life" } },
           { path: "me", element: <MePageRoute />, handle: { title: "My Creations" } },
           {
             path: "siege/campaign",

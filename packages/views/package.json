@@ -9,6 +9,7 @@
     "test": "vitest run"
   },
   "exports": {
+    "./agent-life": "./agent-life/index.ts",
     "./navigation": "./navigation/index.ts",
     "./common/actor-avatar": "./common/actor-avatar.tsx",
     "./common/cli-install-command": "./common/cli-install-command.tsx",

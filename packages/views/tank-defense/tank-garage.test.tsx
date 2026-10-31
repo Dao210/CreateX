@@ -4,19 +4,96 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderWithI18n } from "../test/i18n";
 import { TankGarage } from "./tank-garage";
 import { TankCharacterEditor } from "./tank-character-editor";
+import { compileTankCharacter, type TankCharacterDraft } from "@auro/core/tank-defense";
 
-const mocks = vi.hoisted(() => ({ list: vi.fn(), session: vi.fn(), save: vi.fn(), replace: vi.fn() }));
-vi.mock("@auro/core/api", async importOriginal => ({ ...await importOriginal<typeof import("@auro/core/api")>(), api: { listTankCharacters: mocks.list, getTankSession: mocks.session, saveTankCharacter: mocks.save, getBaseUrl: () => "https://api.example.invalid" } }));
-vi.mock("../navigation", () => ({ useNavigation: () => ({ searchParams: new URLSearchParams("session=11111111-1111-4111-8111-111111111111"), replace: mocks.replace, getShareableUrl: (path: string) => `https://auro.example.invalid${path}` }) }));
+const mocks = vi.hoisted(() => ({ list: vi.fn(), session: vi.fn(), save: vi.fn(), create: vi.fn(), replace: vi.fn(), search: "", listeners: new Set<() => void>() }));
+vi.mock("@auro/core/api", async importOriginal => ({ ...await importOriginal<typeof import("@auro/core/api")>(), api: { listTankCharacters: mocks.list, getTankSession: mocks.session, saveTankCharacter: mocks.save, createTankSession: mocks.create, getBaseUrl: () => "https://api.example.invalid" } }));
+vi.mock("../navigation", async () => {
+  const { useSyncExternalStore } = await import("react");
+  return { useNavigation: () => {
+    const search = useSyncExternalStore(listener => { mocks.listeners.add(listener); return () => { mocks.listeners.delete(listener); }; }, () => mocks.search);
+    return { searchParams: new URLSearchParams(search), replace: mocks.replace, getShareableUrl: (path: string) => `https://auro.example.invalid${path}` };
+  } };
+});
 function render(ui: React.ReactElement) { const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } }); return renderWithI18n(<QueryClientProvider client={client}>{ui}</QueryClientProvider>); }
-beforeEach(() => { vi.clearAllMocks(); mocks.list.mockResolvedValue([]); });
+const storage = { getItem: () => null, setItem: vi.fn(), removeItem: vi.fn() };
+const draft: TankCharacterDraft = { profile: "tank-defense@1", name: "Black Overlord", parts: { chassis: "heavy", armor: "heavy", cannon: "heavy" }, appearance: { body: "#000000", accent: "#000000", pattern: "solid" } };
+const character = { id: "22222222-2222-4222-8222-222222222222", revision: 1, workspaceId: "workspace", ownerId: "user", draft, ...compileTankCharacter(draft, "22222222-2222-4222-8222-222222222222@1"), contentHash: `sha256:${"a".repeat(64)}` };
+const session = { id: "11111111-1111-4111-8111-111111111111", ownerId: "user", character, mapId: "frontline", levelId: 1, mode: "campaign", playPath: "/acme/tanks?session=11111111-1111-4111-8111-111111111111" };
+beforeEach(() => {
+  vi.clearAllMocks(); mocks.search = ""; mocks.list.mockResolvedValue([]);
+  vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(null);
+  mocks.replace.mockImplementation((path: string) => { mocks.search = path.split("?")[1] ?? ""; mocks.listeners.forEach(listener => listener()); });
+});
 
 it("shows a failed session without silently substituting a classic battle", async () => {
+  mocks.search = `session=${session.id}`;
   mocks.session.mockRejectedValue(new Error("not_found"));
   render(<TankGarage workspace={{ id: "workspace", slug: "acme" }} userId="user" storageKey="test" storage={{ getItem: () => null, setItem: vi.fn(), removeItem: vi.fn() }} />);
   expect(await screen.findByRole("alert")).toHaveTextContent("This session could not be loaded");
   expect(screen.queryByTestId("tank-battlefield")).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "Return to classic tank" })); expect(mocks.replace).toHaveBeenCalledWith("/acme/tanks");
+});
+
+it("starts the selected character from the battlefield button through a frozen session", async () => {
+  mocks.search = `character=${character.id}`;
+  mocks.list.mockResolvedValue([character]); mocks.create.mockResolvedValue(session); mocks.session.mockResolvedValue(session);
+  render(<TankGarage workspace={{ id: "workspace", slug: "acme" }} userId="user" storageKey="test" storage={storage} />);
+  await screen.findByRole("option", { name: "Black Overlord · v1" });
+  fireEvent.click(screen.getByRole("button", { name: "Start defense" }));
+  await waitFor(() => expect(mocks.create).toHaveBeenCalledWith("workspace", expect.objectContaining({ characterId: character.id, revision: 1, contentHash: character.contentHash, mapId: "frontline", mode: "campaign" })));
+  await waitFor(() => expect(screen.getByTestId("tank-battlefield")).toHaveAttribute("data-character-id", character.blueprint.id));
+  expect(screen.getByTestId("tank-battlefield")).toHaveAttribute("data-phase", "running");
+  expect(screen.getByTestId("tank-battlefield")).toHaveAttribute("data-player-speed", "50");
+  expect(screen.getByTestId("tank-frozen-character")).toHaveTextContent("Black Overlord · v1");
+});
+
+it("keeps a selected character after a failed launch and reuses the request on retry", async () => {
+  mocks.search = `character=${character.id}`; mocks.list.mockResolvedValue([character]);
+  mocks.create.mockRejectedValueOnce(new Error("temporary failure")).mockResolvedValueOnce(session); mocks.session.mockResolvedValue(session);
+  render(<TankGarage workspace={{ id: "workspace", slug: "acme" }} userId="user" storageKey="test" storage={storage} />);
+  await screen.findByRole("option", { name: "Black Overlord · v1" });
+  fireEvent.click(screen.getByRole("button", { name: "Start defense" }));
+  await screen.findAllByRole("alert");
+  expect(screen.getByTestId("tank-battlefield")).toHaveAttribute("data-phase", "ready");
+  expect(screen.getByRole("combobox", { name: "Character" })).toHaveValue(character.id);
+  fireEvent.click(screen.getByRole("button", { name: "Start defense" }));
+  await waitFor(() => expect(mocks.create).toHaveBeenCalledTimes(2));
+  expect(mocks.create.mock.calls[1]![1].requestId).toBe(mocks.create.mock.calls[0]![1].requestId);
+  await waitFor(() => expect(screen.getByTestId("tank-battlefield")).toHaveAttribute("data-phase", "running"));
+});
+
+it("does not start a classic tank when a requested character cannot be loaded", async () => {
+  mocks.search = `character=${character.id}`;
+  render(<TankGarage workspace={{ id: "workspace", slug: "acme" }} userId="user" storageKey="test" storage={storage} />);
+  await screen.findByRole("alert");
+  expect(screen.getByRole("button", { name: "Start defense" })).toBeDisabled();
+  expect(mocks.create).not.toHaveBeenCalled();
+  expect(screen.getByTestId("tank-battlefield")).toHaveAttribute("data-phase", "ready");
+});
+
+it("keeps a valid frozen character playable independently of the current library", async () => {
+  mocks.search = `session=${session.id}`; mocks.session.mockResolvedValue(session);
+  render(<TankGarage workspace={{ id: "workspace", slug: "acme" }} userId="user" storageKey="test" storage={storage} />);
+  await screen.findByTestId("tank-frozen-character");
+  expect(screen.getByRole("combobox", { name: "Character" })).toHaveValue(character.id);
+  fireEvent.click(screen.getByRole("button", { name: "Start defense" }));
+  expect(screen.getByTestId("tank-battlefield")).toHaveAttribute("data-character-id", character.blueprint.id);
+  expect(screen.getByTestId("tank-battlefield")).toHaveAttribute("data-phase", "running");
+  expect(mocks.create).not.toHaveBeenCalled();
+});
+
+it("uses the latest URL selection when changing characters in the same page", async () => {
+  const other = { ...character, id: "33333333-3333-4333-8333-333333333333", draft: { ...draft, name: "Second tank" } };
+  mocks.search = `character=${other.id}`; mocks.list.mockResolvedValue([other, character]);
+  mocks.create.mockResolvedValue(session); mocks.session.mockResolvedValue(session);
+  render(<TankGarage workspace={{ id: "workspace", slug: "acme" }} userId="user" storageKey="test" storage={storage} />);
+  await screen.findByRole("option", { name: "Second tank · v1" });
+  fireEvent.change(screen.getByRole("combobox", { name: "Character" }), { target: { value: character.id } });
+  expect(mocks.replace).toHaveBeenLastCalledWith(`/acme/tanks?character=${character.id}`);
+  fireEvent.click(screen.getByRole("button", { name: "Start defense" }));
+  await waitFor(() => expect(mocks.create).toHaveBeenCalledWith("workspace", expect.objectContaining({ characterId: character.id })));
+  await waitFor(() => expect(screen.getByTestId("tank-battlefield")).toHaveAttribute("data-character-id", character.blueprint.id));
 });
 
 it("preserves a failed editor draft and retries the same intended save", async () => {

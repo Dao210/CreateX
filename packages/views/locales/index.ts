@@ -1,3 +1,8 @@
+import frLife from "./fr/life.json";
+import koLife from "./ko/life.json";
+import jaLife from "./ja/life.json";
+import zhHansLife from "./zh-Hans/life.json";
+import enLife from "./en/life.json";
 import frAdmin from "./fr/admin.json";
 import koAdmin from "./ko/admin.json";
 import jaAdmin from "./ja/admin.json";
@@ -169,6 +174,7 @@ export const RESOURCES: Record<SupportedLocale, LocaleResources> = {
     billing: enBilling,
     tanks: enTanks,
     me: enMe,
+    life: enLife,
     admin: enAdmin,
   },
   "zh-Hans": {
@@ -197,6 +203,7 @@ export const RESOURCES: Record<SupportedLocale, LocaleResources> = {
     billing: zhHansBilling,
     tanks: zhHansTanks,
     me: zhHansMe,
+    life: zhHansLife,
     admin: zhHansAdmin,
   },
   ko: {
@@ -225,6 +232,7 @@ export const RESOURCES: Record<SupportedLocale, LocaleResources> = {
     billing: koBilling,
     tanks: koTanks,
     me: koMe,
+    life: koLife,
     admin: koAdmin,
   },
   ja: {
@@ -253,6 +261,7 @@ export const RESOURCES: Record<SupportedLocale, LocaleResources> = {
     billing: jaBilling,
     tanks: jaTanks,
     me: jaMe,
+    life: jaLife,
     admin: jaAdmin,
   },
   fr: {
@@ -281,6 +290,7 @@ export const RESOURCES: Record<SupportedLocale, LocaleResources> = {
     billing: frBilling,
     tanks: frTanks,
     me: frMe,
+    life: frLife,
     admin: frAdmin,
   },
 };

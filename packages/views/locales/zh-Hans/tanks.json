@@ -134,6 +134,7 @@
     "loading_session": "正在加载本局角色…",
     "return_classic": "返回经典坦克",
     "library_error": "角色库暂时不可用，请刷新重试。",
+    "character_unavailable": "此角色不在当前世界的角色库中，请刷新或重新选择。",
     "save_error": "请求失败，已保留当前选择，可以重试。",
     "conflict": "角色已更新或请求发生冲突，请刷新角色库后重新改装。",
     "default_name": "森林守卫",

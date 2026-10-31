@@ -1,0 +1,43 @@
+{
+  "title": "住民の暮らし",
+  "loading": "世界を読み込み中…",
+  "error": "世界を更新できませんでした。",
+  "retry": "再試行",
+  "empty": "この世界のシミュレーションはまだ開始されていません。",
+  "paused": "シミュレーションの更新が停止しています",
+  "live": "世界は稼働中",
+  "day": "{{day}} 日目 · {{time}}",
+  "tick": "Tick {{tick}}",
+  "residents": "住民",
+  "events": "世界の出来事",
+  "map": "世界地図",
+  "energy": "体力",
+  "fullness": "満腹度",
+  "social": "交流",
+  "inventory": "食料 {{food}} · 木材 {{wood}} · コイン {{coins}}",
+  "idle": "行動を選択中",
+  "unknown": "不明な行動",
+  "replenished": "森と農場の資源が補充されました。",
+  "created": "{{count}} 人の住民が到着しました。",
+  "completed": "{{name}} · {{action}}",
+  "failed": "{{name}} · {{action}}を完了できませんでした",
+  "select": "{{name}} を追跡",
+  "position": "{{name}} の位置 {{x}}, {{y}}",
+  "goals": "目標：{{resource}} {{amount}} / {{target}}",
+  "wood": "木材",
+  "coins": "コイン",
+  "actions": {
+    "MOVE": "移動",
+    "REST": "休憩",
+    "EAT": "食事",
+    "GATHER_WOOD": "木材採集",
+    "WORK": "仕事",
+    "TALK": "会話"
+  },
+  "places": {
+    "home": "住宅",
+    "farm": "農場",
+    "forest": "森",
+    "square": "広場"
+  }
+}

@@ -175,6 +175,13 @@ gc: ## Collect environments whose directory is gone or whose TTL expired
 env-exec: ## Run a command with this environment's variables (ARGS="-- pnpm dev:desktop")
 	@bash scripts/dev-env.sh exec $(ARGS)
 
+.PHONY: life-dev life-test-db
+life-dev: ## Run the TypeScript world Worker with this checkout's environment
+	@pnpm --filter @auro/agent-life-worker dev
+
+life-test-db: ## Verify world transactions in disposable schemas of this checkout's database
+	@LIFE_TEST_DATABASE_URL="$(DATABASE_URL)" pnpm --filter @auro/agent-life-worker test
+
 # Single-component entry points. No database preflight: `up` has already proven
 # the database is reachable before it launches anything, and repeating the
 # check here would make each component slower to restart on its own.
