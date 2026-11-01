@@ -18,8 +18,6 @@ WHERE package_version_id IN (
 )
 `
 
-// Whether any workspace still runs a version of this package. Publishing is
-// workspace-private, so this is scoped to the same workspace by construction.
 func (q *Queries) CountInstallationsOfPackageVersions(ctx context.Context, packageID pgtype.UUID) (int64, error) {
 	row := q.db.QueryRow(ctx, countInstallationsOfPackageVersions, packageID)
 	var count int64
@@ -38,8 +36,6 @@ type CountRecentPluginFailuresParams struct {
 	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 }
 
-// Consecutive-failure signal for the event circuit breaker. Bounded by time so
-// a breaker that tripped hours ago does not keep a hook shut forever.
 func (q *Queries) CountRecentPluginFailures(ctx context.Context, arg CountRecentPluginFailuresParams) (int64, error) {
 	row := q.db.QueryRow(ctx, countRecentPluginFailures, arg.InstallationID, arg.HookKey, arg.CreatedAt)
 	var count int64
@@ -58,8 +54,6 @@ type CountRecentPluginInvocationsParams struct {
 	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 }
 
-// Feeds the per-hook rate limit. Counts attempts, not distinct calls: a hook
-// retrying into a dead endpoint is exactly the traffic the limit exists to cap.
 func (q *Queries) CountRecentPluginInvocations(ctx context.Context, arg CountRecentPluginInvocationsParams) (int64, error) {
 	row := q.db.QueryRow(ctx, countRecentPluginInvocations, arg.InstallationID, arg.HookKey, arg.CreatedAt)
 	var count int64
@@ -296,9 +290,6 @@ type CreatePluginPackageVersionParams struct {
 	PublishedBy pgtype.UUID `json:"published_by"`
 }
 
-// Published versions are only ever inserted. Nothing updates one, and the
-// (package_id, version) unique index is what makes a second publish of the same
-// version a conflict instead of a silent overwrite.
 func (q *Queries) CreatePluginPackageVersion(ctx context.Context, arg CreatePluginPackageVersionParams) (PluginPackageVersion, error) {
 	row := q.db.QueryRow(ctx, createPluginPackageVersion,
 		arg.PackageID,
@@ -328,7 +319,6 @@ const deleteExpiredPluginInvocations = `-- name: DeleteExpiredPluginInvocations 
 DELETE FROM plugin_invocation WHERE created_at < $1
 `
 
-// TTL sweep. This table is operational telemetry, not history to keep.
 func (q *Queries) DeleteExpiredPluginInvocations(ctx context.Context, createdAt pgtype.Timestamptz) (int64, error) {
 	result, err := q.db.Exec(ctx, deleteExpiredPluginInvocations, createdAt)
 	if err != nil {
@@ -446,8 +436,6 @@ type DeletePluginSkillsNotInParams struct {
 	KeepNames            []string    `json:"keep_names"`
 }
 
-// Upgrade pruning: a skill this installation used to contribute but no longer
-// declares must go, or a renamed skill leaves its predecessor behind forever.
 func (q *Queries) DeletePluginSkillsNotIn(ctx context.Context, arg DeletePluginSkillsNotInParams) error {
 	_, err := q.db.Exec(ctx, deletePluginSkillsNotIn, arg.PluginInstallationID, arg.KeepNames)
 	return err
@@ -553,7 +541,6 @@ const getPluginInstallationByTokenHash = `-- name: GetPluginInstallationByTokenH
 SELECT id, workspace_id, plugin_key, version, manifest, granted_scopes, config, enabled, installed_by, created_at, updated_at, token_hash, token_rotated_at, mcp_approvals, package_version_id FROM plugin_installation WHERE token_hash = $1
 `
 
-// Looked up by hash, so the plaintext token exists only in the caller's request.
 func (q *Queries) GetPluginInstallationByTokenHash(ctx context.Context, tokenHash pgtype.Text) (PluginInstallation, error) {
 	row := q.db.QueryRow(ctx, getPluginInstallationByTokenHash, tokenHash)
 	var i PluginInstallation
@@ -645,10 +632,6 @@ type GetPluginStorageUsageRow struct {
 	TotalBytes int64 `json:"total_bytes"`
 }
 
-// Quota accounting for one (installation, scope) pair. The candidate key is
-// excluded so overwriting an existing key is measured as a replacement rather
-// than an addition. octet_length, not char_length: the service compares these
-// against byte budgets, and a UTF-8 character is up to 4 bytes.
 func (q *Queries) GetPluginStorageUsage(ctx context.Context, arg GetPluginStorageUsageParams) (GetPluginStorageUsageRow, error) {
 	row := q.db.QueryRow(ctx, getPluginStorageUsage,
 		arg.InstallationID,
@@ -843,8 +826,6 @@ WHERE enabled
 ORDER BY id ASC
 `
 
-// Do not filter by next_run_at: it is display-only, while retries and recovery
-// derive eligibility from cron + activated_at + sys_cron_executions.
 func (q *Queries) ListEnabledPluginHookSchedules(ctx context.Context) ([]PluginHookSchedule, error) {
 	rows, err := q.db.Query(ctx, listEnabledPluginHookSchedules)
 	if err != nil {
@@ -975,7 +956,6 @@ type ListPluginPackageFilePathsRow struct {
 	Sha256    string `json:"sha256"`
 }
 
-// Paths and sizes only: the publisher's file list never needs the bytes.
 func (q *Queries) ListPluginPackageFilePaths(ctx context.Context, versionID pgtype.UUID) ([]ListPluginPackageFilePathsRow, error) {
 	rows, err := q.db.Query(ctx, listPluginPackageFilePaths, versionID)
 	if err != nil {
@@ -1043,8 +1023,6 @@ type ListPluginSecretKeysRow struct {
 	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 }
 
-// Deliberately never selects ciphertext: the presence of a secret is readable,
-// its value is not.
 func (q *Queries) ListPluginSecretKeys(ctx context.Context, installationID pgtype.UUID) ([]ListPluginSecretKeysRow, error) {
 	rows, err := q.db.Query(ctx, listPluginSecretKeys, installationID)
 	if err != nil {
@@ -1219,17 +1197,6 @@ const lockPluginPackageKey = `-- name: LockPluginPackageKey :exec
 SELECT pg_advisory_xact_lock(hashtextextended($1::text, 0))
 `
 
-// Serializes publish, install and delete for one (workspace, plugin key).
-//
-// Relationships are application-owned by repository policy, so there are no
-// foreign keys to make "this version still exists" true across statements.
-// Without this lock the interleaving `delete counts 0 installs` → `install
-// reads the version` → `delete commits` → `install commits` leaves an
-// installation pointing at a version that no longer exists, and its panel 404s
-// forever with nothing in the product able to explain why.
-//
-// Keyed on the plugin key rather than the package id because publish has no
-// package id yet — the row it would lock is the one it may be about to create.
 func (q *Queries) LockPluginPackageKey(ctx context.Context, dollar_1 string) error {
 	_, err := q.db.Exec(ctx, lockPluginPackageKey, dollar_1)
 	return err
@@ -1251,9 +1218,6 @@ type ReactivatePluginHookScheduleParams struct {
 	NextRunAt pgtype.Timestamptz `json:"next_run_at"`
 }
 
-// Re-enable starts a new epoch so occurrences while the installation was off
-// are never caught up. An already-sent request from the old generation may
-// finish, but no unstarted old plan survives the generation check.
 func (q *Queries) ReactivatePluginHookSchedule(ctx context.Context, arg ReactivatePluginHookScheduleParams) (PluginHookSchedule, error) {
 	row := q.db.QueryRow(ctx, reactivatePluginHookSchedule, arg.ID, arg.NextRunAt)
 	var i PluginHookSchedule
@@ -1382,8 +1346,6 @@ type UpdatePluginHookScheduleDefinitionParams struct {
 	NextRunAt      pgtype.Timestamptz `json:"next_run_at"`
 }
 
-// A cron/timezone change creates a new scheduler generation. The old
-// sys_cron_executions rows remain immutable history under the prior scope id.
 func (q *Queries) UpdatePluginHookScheduleDefinition(ctx context.Context, arg UpdatePluginHookScheduleDefinitionParams) (PluginHookSchedule, error) {
 	row := q.db.QueryRow(ctx, updatePluginHookScheduleDefinition,
 		arg.ID,
@@ -1487,10 +1449,6 @@ type UpdatePluginInstallationManifestParams struct {
 	Config           []byte      `json:"config"`
 }
 
-// Upgrade path: the installation is re-pointed at another published version and
-// takes that version's consented manifest snapshot. Config values survive on
-// purpose; fields the new manifest dropped are pruned by the service before this
-// runs.
 func (q *Queries) UpdatePluginInstallationManifest(ctx context.Context, arg UpdatePluginInstallationManifestParams) (PluginInstallation, error) {
 	row := q.db.QueryRow(ctx, updatePluginInstallationManifest,
 		arg.ID,
@@ -1534,8 +1492,6 @@ type UpdatePluginPackageNameParams struct {
 	Name string      `json:"name"`
 }
 
-// The display name follows the newest published version. The key never moves:
-// it is the identity an installation was consented under.
 func (q *Queries) UpdatePluginPackageName(ctx context.Context, arg UpdatePluginPackageNameParams) (PluginPackage, error) {
 	row := q.db.QueryRow(ctx, updatePluginPackageName, arg.ID, arg.Name)
 	var i PluginPackage
@@ -1589,13 +1545,6 @@ type UpsertPluginSkillParams struct {
 	CreatedBy            pgtype.UUID `json:"created_by"`
 }
 
-// A plugin's skill resource, as an ordinary workspace skill.
-//
-// Upsert on (workspace_id, name) because that is the table's own uniqueness
-// rule and an upgrade re-installs the same skill. The WHERE clause is the
-// important half: it refuses to overwrite a skill a PERSON created, or one
-// another installation owns. A plugin claiming a name someone already used must
-// fail the install loudly, not silently replace their work.
 func (q *Queries) UpsertPluginSkill(ctx context.Context, arg UpsertPluginSkillParams) (Skill, error) {
 	row := q.db.QueryRow(ctx, upsertPluginSkill,
 		arg.WorkspaceID,

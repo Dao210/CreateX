@@ -2,11 +2,8 @@ package main
 
 import (
 	"context"
-	"log/slog"
 
 	"github.com/auro-ai/auro/server/internal/events"
-	"github.com/auro-ai/auro/server/internal/handler"
-	"github.com/auro-ai/auro/server/internal/issuestatus"
 	"github.com/auro-ai/auro/server/internal/service"
 	"github.com/auro-ai/auro/server/pkg/protocol"
 )
@@ -15,41 +12,6 @@ import (
 // autopilot runs in sync with their linked issues and tasks.
 func registerAutopilotListeners(bus *events.Bus, svc *service.AutopilotService) {
 	ctx := context.Background()
-
-	// When an issue with origin_type='autopilot' reaches a terminal status,
-	// update the corresponding autopilot run.
-	bus.Subscribe(protocol.EventIssueUpdated, func(e events.Event) {
-		payload, ok := e.Payload.(map[string]any)
-		if !ok {
-			return
-		}
-		statusChanged, _ := payload["status_changed"].(bool)
-		if !statusChanged {
-			return
-		}
-		issue, ok := payload["issue"].(handler.IssueResponse)
-		if !ok {
-			return
-		}
-		// Only handle statuses that finalize an autopilot run. This gate exists
-		// to skip the issue load for routine forward progress, so it stays a
-		// literal comparison for built-in keys. A custom status carries the
-		// behavior of the canonical status it inherits, but resolving that
-		// needs a catalog read — so let non-built-in keys through and let
-		// SyncRunFromIssue normalize once it has the issue. (MUL-6243)
-		if issuestatus.IsBuiltIn(issue.Status) &&
-			issue.Status != "done" && issue.Status != "in_review" &&
-			issue.Status != "cancelled" && issue.Status != "blocked" {
-			return
-		}
-		// Load the full issue from DB to check origin_type.
-		dbIssue, err := svc.Queries.GetIssue(ctx, parseUUID(issue.ID))
-		if err != nil {
-			slog.Debug("autopilot listener: failed to load issue", "issue_id", issue.ID, "error", err)
-			return
-		}
-		svc.SyncRunFromIssue(ctx, dbIssue)
-	})
 
 	// When a task completes or fails, check if it's an autopilot run_only task.
 	bus.Subscribe(protocol.EventTaskCompleted, func(e events.Event) {
@@ -79,8 +41,5 @@ func syncRunFromTaskEvent(ctx context.Context, svc *service.AutopilotService, e 
 	if task.AutopilotRunID.Valid {
 		svc.SyncRunFromTask(ctx, task)
 		return
-	}
-	if e.Type == protocol.EventTaskFailed {
-		svc.SyncRunFromLinkedIssueTask(ctx, task)
 	}
 }

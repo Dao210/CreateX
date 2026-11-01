@@ -224,14 +224,3 @@ export function useArchiveAllReadInbox() {
     },
   });
 }
-
-export function useArchiveCompletedInbox() {
-  const qc = useQueryClient();
-  const wsId = useWorkspaceId();
-  return useMutation({
-    mutationFn: () => api.archiveCompletedInbox(),
-    onSettled: () => {
-      refreshInboxAfterWrite(qc, wsId);
-    },
-  });
-}

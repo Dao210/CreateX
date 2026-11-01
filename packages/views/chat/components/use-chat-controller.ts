@@ -663,7 +663,7 @@ export function useChatController(opts?: { isActive?: boolean }) {
   );
 
   const handleSelectSession = useCallback(
-    (session: { id: string; agent_id: string; project_id?: string | null }) => {
+    (session: { id: string; agent_id: string; }) => {
       // Sessions are bound 1:1 to an agent — picking a session from a
       // different agent implicitly switches the agent too.
       if (activeAgent && session.agent_id !== activeAgent.id) {

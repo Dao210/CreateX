@@ -12,59 +12,20 @@ import (
 )
 
 const archivedInboxFacets = `-- name: ArchivedInboxFacets :many
-WITH newest AS MATERIALIZED (
-    SELECT DISTINCT ON (COALESCE(i.issue_id, i.id))
-           i.id, i.issue_id, i.created_at, i.read,
-           CASE WHEN i.actor_type = 'system' THEN 'system'
-                ELSE i.actor_type || ':' || i.actor_id::text END AS actor
-    FROM inbox_item i
-    WHERE i.issue_id IS NULL AND i.type IN ('autopilot_paused', 'autopilot_quota_exceeded') AND i.workspace_id = $1::uuid
-      AND i.recipient_type = 'member'
-      AND i.recipient_id = $2::uuid
-      AND i.archived = true
-      AND (i.issue_id IS NULL OR NOT EXISTS (
-          SELECT 1 FROM inbox_item active
-          WHERE active.workspace_id = i.workspace_id
-            AND active.recipient_type = i.recipient_type
-            AND active.recipient_id = i.recipient_id
-            AND active.issue_id = i.issue_id AND active.archived = false
-      ))
-    ORDER BY COALESCE(i.issue_id, i.id), i.created_at DESC, i.id DESC
-), projected AS (
-    SELECT newest.id, newest.issue_id, newest.created_at, newest.read, newest.actor, NULL::text AS issue_status, NULL::text AS issue_priority
-    FROM newest
-    ), matched AS (
-    SELECT projected.id, projected.issue_id, projected.created_at, projected.read, projected.actor, projected.issue_status, projected.issue_priority,
-           (cardinality($3::text[]) = 0 OR issue_status = ANY($3::text[])) AS status_match,
-           (cardinality($4::text[]) = 0 OR issue_priority = ANY($4::text[])) AS priority_match,
-           (cardinality($5::text[]) = 0 OR actor = ANY($5::text[])) AS actor_match,
-           (NOT $6::boolean OR NOT read) AS read_match
-    FROM projected
-)
-SELECT 'statuses'::text AS dimension, issue_status::text AS key,
-       count(*) FILTER (WHERE priority_match AND actor_match AND read_match)::bigint AS count
-FROM matched WHERE issue_status IS NOT NULL GROUP BY issue_status
-UNION ALL
-SELECT 'priorities'::text, issue_priority::text,
-       count(*) FILTER (WHERE status_match AND actor_match AND read_match)::bigint
-FROM matched WHERE issue_priority IS NOT NULL GROUP BY issue_priority
-UNION ALL
-SELECT 'actors'::text, actor::text,
-       count(*) FILTER (WHERE status_match AND priority_match AND read_match)::bigint
-FROM matched WHERE actor IS NOT NULL GROUP BY actor
-UNION ALL
-SELECT 'unread'::text, 'unread'::text,
-       count(*) FILTER (WHERE status_match AND priority_match AND actor_match AND NOT read)::bigint
-FROM matched
+WITH matched AS(SELECT i.id, i.workspace_id, i.recipient_type, i.recipient_id, i.type, i.severity, i.title, i.body, i.read, i.archived, i.created_at, i.actor_type, i.actor_id, i.details, i.content,
+CASE WHEN i.actor_type='system' THEN 'system' ELSE i.actor_type||':'||i.actor_id::text END AS actor,
+(cardinality($1::text[])=0 OR CASE WHEN i.actor_type='system' THEN 'system' ELSE i.actor_type||':'||i.actor_id::text END=ANY($1::text[])) AS actor_match,
+(NOT $2::boolean OR NOT i.read) AS read_match
+FROM inbox_item i WHERE i.workspace_id=$3::uuid AND i.recipient_type='member' AND i.recipient_id=$4::uuid AND i.archived)
+SELECT 'actors'::text AS dimension,actor::text AS key,count(*) FILTER(WHERE read_match)::bigint AS count FROM matched WHERE actor IS NOT NULL GROUP BY actor
+UNION ALL SELECT 'unread'::text,'unread'::text,count(*) FILTER(WHERE actor_match AND NOT read)::bigint FROM matched
 `
 
 type ArchivedInboxFacetsParams struct {
-	WorkspaceID pgtype.UUID `json:"workspace_id"`
-	RecipientID pgtype.UUID `json:"recipient_id"`
-	Statuses    []string    `json:"statuses"`
-	Priorities  []string    `json:"priorities"`
 	Actors      []string    `json:"actors"`
 	UnreadOnly  bool        `json:"unread_only"`
+	WorkspaceID pgtype.UUID `json:"workspace_id"`
+	RecipientID pgtype.UUID `json:"recipient_id"`
 }
 
 type ArchivedInboxFacetsRow struct {
@@ -73,15 +34,12 @@ type ArchivedInboxFacetsRow struct {
 	Count     int64  `json:"count"`
 }
 
-// Select narrow group representatives before loading bodies or comment anchors.
 func (q *Queries) ArchivedInboxFacets(ctx context.Context, arg ArchivedInboxFacetsParams) ([]ArchivedInboxFacetsRow, error) {
 	rows, err := q.db.Query(ctx, archivedInboxFacets,
-		arg.WorkspaceID,
-		arg.RecipientID,
-		arg.Statuses,
-		arg.Priorities,
 		arg.Actors,
 		arg.UnreadOnly,
+		arg.WorkspaceID,
+		arg.RecipientID,
 	)
 	if err != nil {
 		return nil, err
@@ -102,67 +60,18 @@ func (q *Queries) ArchivedInboxFacets(ctx context.Context, arg ArchivedInboxFace
 }
 
 const listArchivedInboxPage = `-- name: ListArchivedInboxPage :many
-WITH newest AS MATERIALIZED (
-    SELECT DISTINCT ON (COALESCE(i.issue_id, i.id))
-           i.id, i.issue_id, i.created_at, i.read,
-           CASE WHEN i.actor_type = 'system' THEN 'system'
-                ELSE i.actor_type || ':' || i.actor_id::text END AS actor
-    FROM inbox_item i
-    WHERE i.issue_id IS NULL AND i.type IN ('autopilot_paused', 'autopilot_quota_exceeded') AND i.workspace_id = $1::uuid
-      AND i.recipient_type = 'member'
-      AND i.recipient_id = $2::uuid
-      AND i.archived = true
-      AND ($3::uuid IS NULL OR i.issue_id = $3::uuid
-           OR (i.issue_id IS NULL AND i.id = $3::uuid))
-      AND (i.issue_id IS NULL OR NOT EXISTS (
-          SELECT 1 FROM inbox_item active
-          WHERE active.workspace_id = i.workspace_id
-            AND active.recipient_type = i.recipient_type
-            AND active.recipient_id = i.recipient_id
-            AND active.issue_id = i.issue_id AND active.archived = false
-      ))
-    ORDER BY COALESCE(i.issue_id, i.id), i.created_at DESC, i.id DESC
-), projected AS (
-    SELECT newest.id, newest.issue_id, newest.created_at, newest.read, newest.actor, NULL::text AS issue_status, NULL::text AS issue_priority
-    FROM newest
-    ), matched AS (
-    SELECT projected.id, projected.issue_id, projected.created_at, projected.read, projected.actor, projected.issue_status, projected.issue_priority,
-           (cardinality($4::text[]) = 0 OR issue_status = ANY($4::text[])) AS status_match,
-           (cardinality($5::text[]) = 0 OR issue_priority = ANY($5::text[])) AS priority_match,
-           (cardinality($6::text[]) = 0 OR actor = ANY($6::text[])) AS actor_match,
-           (NOT $7::boolean OR NOT read) AS read_match
-    FROM projected
-)
-, selected AS (
-    SELECT id, issue_id, created_at, read, actor, issue_status, issue_priority, status_match, priority_match, actor_match, read_match FROM matched
-    WHERE status_match AND priority_match AND actor_match AND read_match
-      AND ($8::timestamptz IS NULL OR
-           (created_at, id) < ($8::timestamptz, $9::uuid))
-    ORDER BY created_at DESC, id DESC
-    LIMIT $10::int
-)
-SELECT i.id, i.workspace_id, i.recipient_type, i.recipient_id, i.type, i.severity, i.issue_id, i.title, i.body, i.read, i.archived, i.created_at, i.actor_type, i.actor_id, i.details, selected.issue_status, selected.issue_priority,
-       COALESCE(anchor.comment_id, '')::text AS comment_id
-FROM selected
-JOIN inbox_item i ON i.id = selected.id
-LEFT JOIN LATERAL (
-    SELECT a.details->>'comment_id' AS comment_id
-    FROM inbox_item a
-    WHERE i.issue_id IS NOT NULL AND a.issue_id = i.issue_id
-      AND a.workspace_id = i.workspace_id AND a.recipient_type = i.recipient_type
-      AND a.recipient_id = i.recipient_id AND a.archived = true
-      AND NULLIF(a.details->>'comment_id', '') IS NOT NULL
-    ORDER BY a.created_at DESC, a.id DESC LIMIT 1
-) anchor ON true
-ORDER BY i.created_at DESC, i.id DESC
+SELECT i.id, i.workspace_id, i.recipient_type, i.recipient_id, i.type, i.severity, i.title, i.body, i.read, i.archived, i.created_at, i.actor_type, i.actor_id, i.details, i.content FROM inbox_item i WHERE i.workspace_id=$1::uuid AND i.recipient_type='member' AND i.recipient_id=$2::uuid AND i.archived
+AND ($3::uuid IS NULL OR i.id=$3::uuid)
+AND (cardinality($4::text[])=0 OR CASE WHEN i.actor_type='system' THEN 'system' ELSE i.actor_type||':'||i.actor_id::text END=ANY($4::text[]))
+AND (NOT $5::boolean OR NOT i.read)
+AND ($6::timestamptz IS NULL OR (i.created_at,i.id)<($6::timestamptz,$7::uuid))
+ORDER BY i.created_at DESC,i.id DESC LIMIT $8::int
 `
 
 type ListArchivedInboxPageParams struct {
 	WorkspaceID pgtype.UUID        `json:"workspace_id"`
 	RecipientID pgtype.UUID        `json:"recipient_id"`
 	GroupID     pgtype.UUID        `json:"group_id"`
-	Statuses    []string           `json:"statuses"`
-	Priorities  []string           `json:"priorities"`
 	Actors      []string           `json:"actors"`
 	UnreadOnly  bool               `json:"unread_only"`
 	BeforeTime  pgtype.Timestamptz `json:"before_time"`
@@ -170,21 +79,11 @@ type ListArchivedInboxPageParams struct {
 	PageLimit   int32              `json:"page_limit"`
 }
 
-type ListArchivedInboxPageRow struct {
-	InboxItem     InboxItem   `json:"inbox_item"`
-	IssueStatus   pgtype.Text `json:"issue_status"`
-	IssuePriority pgtype.Text `json:"issue_priority"`
-	CommentID     string      `json:"comment_id"`
-}
-
-// Select narrow group representatives before loading bodies or comment anchors.
-func (q *Queries) ListArchivedInboxPage(ctx context.Context, arg ListArchivedInboxPageParams) ([]ListArchivedInboxPageRow, error) {
+func (q *Queries) ListArchivedInboxPage(ctx context.Context, arg ListArchivedInboxPageParams) ([]InboxItem, error) {
 	rows, err := q.db.Query(ctx, listArchivedInboxPage,
 		arg.WorkspaceID,
 		arg.RecipientID,
 		arg.GroupID,
-		arg.Statuses,
-		arg.Priorities,
 		arg.Actors,
 		arg.UnreadOnly,
 		arg.BeforeTime,
@@ -195,28 +94,25 @@ func (q *Queries) ListArchivedInboxPage(ctx context.Context, arg ListArchivedInb
 		return nil, err
 	}
 	defer rows.Close()
-	items := []ListArchivedInboxPageRow{}
+	items := []InboxItem{}
 	for rows.Next() {
-		var i ListArchivedInboxPageRow
+		var i InboxItem
 		if err := rows.Scan(
-			&i.InboxItem.ID,
-			&i.InboxItem.WorkspaceID,
-			&i.InboxItem.RecipientType,
-			&i.InboxItem.RecipientID,
-			&i.InboxItem.Type,
-			&i.InboxItem.Severity,
-			&i.InboxItem.IssueID,
-			&i.InboxItem.Title,
-			&i.InboxItem.Body,
-			&i.InboxItem.Read,
-			&i.InboxItem.Archived,
-			&i.InboxItem.CreatedAt,
-			&i.InboxItem.ActorType,
-			&i.InboxItem.ActorID,
-			&i.InboxItem.Details,
-			&i.IssueStatus,
-			&i.IssuePriority,
-			&i.CommentID,
+			&i.ID,
+			&i.WorkspaceID,
+			&i.RecipientType,
+			&i.RecipientID,
+			&i.Type,
+			&i.Severity,
+			&i.Title,
+			&i.Body,
+			&i.Read,
+			&i.Archived,
+			&i.CreatedAt,
+			&i.ActorType,
+			&i.ActorID,
+			&i.Details,
+			&i.Content,
 		); err != nil {
 			return nil, err
 		}

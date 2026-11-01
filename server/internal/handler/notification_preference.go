@@ -25,6 +25,8 @@ var validNotifGroups = map[string]bool{
 	"updates":              true,
 	"agent_activity":       true,
 	"system_notifications": true,
+	"creation_updates":     true,
+	"world_digests":        true,
 }
 
 // validNotifValues is the set of allowed preference values per group.

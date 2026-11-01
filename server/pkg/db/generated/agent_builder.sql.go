@@ -15,8 +15,6 @@ const deleteAgentBuilderDraft = `-- name: DeleteAgentBuilderDraft :exec
 DELETE FROM agent_builder_draft WHERE chat_session_id = $1
 `
 
-// agent_builder_draft has no chat_session FK (repo rule), so every path that
-// removes a conversation has to say so explicitly.
 func (q *Queries) DeleteAgentBuilderDraft(ctx context.Context, chatSessionID pgtype.UUID) error {
 	_, err := q.db.Exec(ctx, deleteAgentBuilderDraft, chatSessionID)
 	return err
@@ -31,13 +29,6 @@ WHERE chat_session_id IN (
 )
 `
 
-// chat_session cascades from agent, so a runtime teardown hard-deleting its
-// system carriers (DeleteSystemAgentsByRuntime) silently drops their sessions.
-// Prune the drafts in the same tx and BEFORE the agent rows go — the join below
-// needs them. Mirrors DeleteChatDraftRestoresBySystemRuntimeAgents.
-//
-// Only the system variant exists: a builder draft can only ever hang off a
-// `kind = 'system'` carrier, so the archived-agent prune has nothing to find.
 func (q *Queries) DeleteAgentBuilderDraftsBySystemRuntimeAgents(ctx context.Context, runtimeID pgtype.UUID) error {
 	_, err := q.db.Exec(ctx, deleteAgentBuilderDraftsBySystemRuntimeAgents, runtimeID)
 	return err
@@ -58,10 +49,6 @@ type UpsertAgentBuilderDraftParams struct {
 	Draft         []byte      `json:"draft"`
 }
 
-// The current configuration of one creation conversation. Last write wins:
-// there is a single editor (the session's creator, on one screen at a time) and
-// the client autosaves the whole object, so a partial merge would only be able
-// to reconstruct a state the user never saw.
 func (q *Queries) UpsertAgentBuilderDraft(ctx context.Context, arg UpsertAgentBuilderDraftParams) (AgentBuilderDraft, error) {
 	row := q.db.QueryRow(ctx, upsertAgentBuilderDraft, arg.ChatSessionID, arg.WorkspaceID, arg.Draft)
 	var i AgentBuilderDraft

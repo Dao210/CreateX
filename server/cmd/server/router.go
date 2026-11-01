@@ -102,8 +102,6 @@ var corsAllowedHeaders = []string{
 var corsExposedHeaders = []string{
 	"ETag",
 	"X-Request-ID",
-	handler.HeaderCommentsTruncated,
-	handler.HeaderTimelineTruncated,
 	handler.HeaderActiveRunsTruncated,
 	handler.HeaderAgentTasksNextCursor,
 }
@@ -500,7 +498,6 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 		opts.BusinessMetrics.RecordEntitlementConfigError()
 	} else if entitlementClient.Enabled() {
 		h.Entitlements = entitlementClient
-		h.TaskService.Entitlements = entitlementClient
 		h.AutopilotService.Entitlements = entitlementClient
 		h.AutopilotService.QuotaMetrics = opts.BusinessMetrics
 	}
@@ -874,7 +871,6 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 			// services. Every outcome receives a private ephemeral acknowledgement.
 			slackSlash := slack.NewSlashCommandProcessor(slack.SlashCommandConfig{
 				Queries: queries,
-				Tasks:   h.TaskService,
 				Control: slack.NewSlackDMControlStarter(queries, pool, h.TaskService, h),
 				Binding: slackBindingSvc,
 				AppURL:  appURLFromEnv(),
@@ -1623,8 +1619,6 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 
 		r.Get("/tasks/{taskId}/status", h.GetTaskStatus)
 		r.Post("/tasks/{taskId}/start", h.StartTask)
-		r.Post("/tasks/{taskId}/supplements/claim", h.ClaimTaskSupplement)
-		r.Post("/tasks/{taskId}/supplements/{commentId}/ack", h.AckTaskSupplement)
 		r.Post("/tasks/{taskId}/wait-local-directory", h.MarkTaskWaitingLocalDirectory)
 		r.Post("/tasks/{taskId}/progress", h.ReportTaskProgress)
 		r.Post("/tasks/{taskId}/complete", h.CompleteTask)
@@ -1701,8 +1695,6 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 		// here. Remove once X-Client-Version telemetry confirms zero
 		// pre-v3 desktops are still calling these. Handlers live in
 		// server/internal/handler/onboarding_shim.go.
-		r.Post("/api/me/onboarding/runtime-bootstrap", h.BootstrapOnboardingRuntime)
-		r.Post("/api/me/onboarding/no-runtime-bootstrap", h.BootstrapOnboardingNoRuntime)
 		r.Post("/api/cli-token", h.IssueCliToken)
 		// Sliding session renewal for clients that hold the session as a
 		// string (Desktop, mobile). Browsers get theirs re-issued inline by
@@ -2050,7 +2042,6 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 			r.Method("GET", "/api/life", gameGuard("life", life.Handler(queries)))
 
 			// Assignee frequency
-			r.Get("/api/assignee-frequency", h.GetAssigneeFrequency)
 
 			// Local search index sync for Web/Desktop (MUL-7754). Human clients
 			// only: agents search through /api/issues/search.
@@ -2116,15 +2107,9 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 
 			// Pins
 			r.Route("/api/pins", func(r chi.Router) {
-				r.Get("/", h.ListPins)
-				r.Post("/", h.CreatePin)
-				r.Put("/reorder", h.ReorderPins)
-				r.Delete("/{itemType}/{itemId}", h.DeletePin)
 			})
 
 			// Saved issue views (MUL-4796).
-			r.Get("/api/issue-view-preferences", h.GetIssueViewPreference)
-			r.Put("/api/issue-view-preferences", h.PutIssueViewPreference)
 
 			// Attachments
 			r.Get("/api/attachments/{id}", h.GetAttachmentByID)
@@ -2282,8 +2267,6 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 			// every active task + each agent's most recent terminal task.
 			r.Get("/api/agent-task-snapshot", h.ListWorkspaceAgentTaskSnapshot)
 
-			r.Get("/api/issue-wakeups", h.ListWorkspaceWakeups)
-
 			// Independent workspace-level list backing the issues-header
 			// "agents working" chip and its assignee-id Table filter.
 			r.Get("/api/working-agents", h.ListWorkspaceWorkingAgents)
@@ -2354,7 +2337,6 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 				r.Post("/mark-all-read", h.MarkAllInboxRead)
 				r.Post("/archive-all", h.ArchiveAllInbox)
 				r.Post("/archive-all-read", h.ArchiveAllReadInbox)
-				r.Post("/archive-completed", h.ArchiveCompletedInbox)
 				r.Post("/{id}/read", h.MarkInboxRead)
 				r.Post("/{id}/unread", h.MarkInboxUnread)
 				r.Post("/{id}/archive", h.ArchiveInboxItem)

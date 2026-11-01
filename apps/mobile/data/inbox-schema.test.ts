@@ -143,3 +143,9 @@ describe("inbox unread summary schema", () => {
     ).toBe(false);
   });
 });
+
+it("keeps malformed optional world content from breaking mobile inbox rows", () => {
+  const parsed = InboxListSchema.parse([{ id: "digest", type: "world_digest", content: { entries: "broken" } }]);
+  expect(parsed[0]?.type).toBe("world_digest");
+  expect(parsed[0]?.content).toBeNull();
+});

@@ -63,20 +63,16 @@ type Result struct {
 	ChannelRouteRevision int64
 	// Sender is the platform-native sender id (e.g. Lark open_id), so the
 	// replier can target a binding prompt back to the sender.
-	Sender             string
-	IssueID            pgtype.UUID
-	IssueNumber        int32
-	IssueIdentifier    string
-	IssueWorkspaceSlug string
-	IssueTitle         string
+	Sender string
+
 	// IssueDuplicate marks an /issue command that did not create a new issue
 	// because the shared duplicate guard found the active IssueID above.
 	// Repliers render this as a business conflict, never as an internal error.
-	IssueDuplicate bool
+
 	// IssueUsageHadMedia marks a title-less /issue whose current inbound
 	// message also carried downloadable media. Repliers use it to tell the
 	// sender to include that media again with the corrected command.
-	IssueUsageHadMedia bool
+
 	// runScheduled reports whether this ingest scheduled a normal chat run.
 	// It is Router-internal state: repliers must continue to use Outcome.
 	runScheduled bool
@@ -212,15 +208,13 @@ type ChannelChatStartedEvent struct {
 // placeholders iff nobody edited the description first. Media downloads must
 // never run inside this transaction.
 type BindMediaParams struct {
-	MessageID            pgtype.UUID
-	SessionID            pgtype.UUID
-	WorkspaceID          pgtype.UUID
-	Sender               pgtype.UUID
-	IssueID              pgtype.UUID
-	IssueDescriptionBase pgtype.Text
-	IssueCommandText     string
-	Body                 string
-	MediaRefs            []channel.MediaRef
+	MessageID   pgtype.UUID
+	SessionID   pgtype.UUID
+	WorkspaceID pgtype.UUID
+	Sender      pgtype.UUID
+
+	Body      string
+	MediaRefs []channel.MediaRef
 }
 
 // BindMediaResult reports a title initialized only after the first media

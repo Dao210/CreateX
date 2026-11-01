@@ -42,7 +42,7 @@ export function useUpdateAutopilot() {
       // Request shape (AutopilotSubscriberInput) lacks `created_at`, so it's
       // not assignable to the response shape. onSettled invalidates the
       // detail query and refetches the authoritative server payload.
-      const { subscribers: _omitSubs, ...optimistic } = data;
+      const optimistic = data;
       qc.setQueryData<ListAutopilotsResponse>(autopilotKeys.list(wsId), (old) =>
         old
           ? {

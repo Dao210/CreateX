@@ -128,7 +128,7 @@ func (s *BindingTokenService) RedeemAndBind(ctx context.Context, raw string, aur
 
 	if _, err := qtx.CreateChannelUserBinding(ctx, db.CreateChannelUserBindingParams{
 		WorkspaceID:    row.WorkspaceID,
-		AuroUserID:  auroUserID,
+		AuroUserID:     auroUserID,
 		InstallationID: row.InstallationID,
 		ChannelType:    string(TypeTelegram),
 		ChannelUserID:  row.ChannelUserID,

@@ -291,15 +291,13 @@ func (r *sessionBinder) AppendMessage(ctx context.Context, p engine.AppendParams
 // (lark/feishu_resolvers.go:223).
 func (r *sessionBinder) BindMedia(ctx context.Context, p engine.BindMediaParams) (engine.BindMediaResult, error) {
 	in := engine.BindMediaInput{
-		MessageID:            p.MessageID,
-		SessionID:            p.SessionID,
-		WorkspaceID:          p.WorkspaceID,
-		Sender:               p.Sender,
-		IssueID:              p.IssueID,
-		IssueDescriptionBase: p.IssueDescriptionBase,
-		IssueCommandText:     p.IssueCommandText,
-		Body:                 p.Body,
-		MediaRefs:            p.MediaRefs,
+		MessageID:   p.MessageID,
+		SessionID:   p.SessionID,
+		WorkspaceID: p.WorkspaceID,
+		Sender:      p.Sender,
+
+		Body:      p.Body,
+		MediaRefs: p.MediaRefs,
 	}
 	if richer, ok := r.session.(interface {
 		BindMediaRefsWithResult(context.Context, engine.BindMediaInput) (engine.BindMediaResult, error)

@@ -27,7 +27,7 @@ import {
   archivedInboxLookupOptions,
 } from "@auro/core/inbox/queries";
 import { EMPTY_INBOX_FILTERS } from "@auro/core/inbox/filter-store";
-import { isSystemInboxItem } from "@auro/core/inbox/system-notifications";
+import { isVisibleInboxItem } from "@auro/core/inbox/system-notifications";
 import { cn } from "@auro/ui/lib/utils";
 import { ActorAvatar } from "../common/actor-avatar";
 import { getInboxDisplayTitle } from "../inbox/components/inbox-display";
@@ -145,7 +145,7 @@ function useTabEntityData(subject: TabSubject, wsId: string): TabEntityData {
       }
       break;
     case "inbox":
-      if (inboxItem && isSystemInboxItem(inboxItem)) {
+      if (inboxItem && isVisibleInboxItem(inboxItem)) {
         data.inboxSelection = {
           kind: "item",
           title: getInboxDisplayTitle(inboxItem),

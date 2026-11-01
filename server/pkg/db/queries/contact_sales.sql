@@ -20,6 +20,10 @@ VALUES (
 )
 RETURNING *;
 
+
+
+
+
 -- name: CountRecentContactSalesByEmail :one
 SELECT count(*) FROM contact_sales_inquiry
 WHERE business_email = $1 AND created_at > now() - interval '1 hour';

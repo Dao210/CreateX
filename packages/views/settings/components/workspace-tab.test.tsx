@@ -16,7 +16,6 @@ const workspaceRef = vi.hoisted(() => ({
     slug: "test-workspace",
     description: "",
     context: "",
-    issue_prefix: "TES",
     repos: [] as { url: string }[],
   },
 }));
@@ -108,7 +107,6 @@ describe("WorkspaceTab — automatic updates", () => {
       slug: "test-workspace",
       description: "",
       context: "",
-      issue_prefix: "TES",
       repos: [],
     };
     membersRef.current = [{ user_id: "user-1", role: "owner", name: "Ada" }];

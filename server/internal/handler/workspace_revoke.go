@@ -4,7 +4,6 @@ import (
 	"context"
 	"log/slog"
 
-	"github.com/auro-ai/auro/server/internal/service"
 	db "github.com/auro-ai/auro/server/pkg/db/generated"
 	"github.com/auro-ai/auro/server/pkg/protocol"
 	"github.com/google/uuid"
@@ -58,12 +57,6 @@ func (h *Handler) revokeAndRemoveMember(ctx context.Context, workspaceID, userID
 	// between this tx's membership delete and its subscription cleanup below.
 	// First also means every holder acquires it in the same order, so these
 	// paths cannot deadlock against each other (MUL-5483 review round 7).
-	if err := qtx.LockSubscriberWrites(ctx, db.LockSubscriberWritesParams{
-		WorkspaceID: workspaceID,
-		UserID:      userID,
-	}); err != nil {
-		return empty, err
-	}
 
 	runtimes, err := qtx.ListAgentRuntimesByOwner(ctx, db.ListAgentRuntimesByOwnerParams{
 		WorkspaceID: workspaceID,
@@ -108,9 +101,6 @@ func (h *Handler) revokeAndRemoveMember(ctx context.Context, workspaceID, userID
 			AgentIds:   archivedAgentIDs,
 		})
 		if err != nil {
-			return empty, err
-		}
-		if err = service.SettleTerminalTaskState(ctx, qtx, result.CancelledTasks...); err != nil {
 			return empty, err
 		}
 
@@ -162,54 +152,24 @@ func (h *Handler) revokeAndRemoveMember(ctx context.Context, workspaceID, userID
 	// creator is gone the row is unreachable by every remaining member while
 	// still consuming the workspace's active-action limit, so drop those in
 	// the same tx. Public actions are workspace furniture and survive.
-	if err := qtx.DeletePrivateQuickActionsByCreator(ctx, db.DeletePrivateQuickActionsByCreatorParams{
-		WorkspaceID: workspaceID,
-		CreatedByID: userID,
-	}); err != nil {
-		return empty, err
-	}
 
 	// Saved views follow the private-quick-action rule above: a departed
 	// member's PRIVATE views are invisible to everyone left yet still count
 	// against quota, and a re-invite must not resurrect them. Shared views
 	// stay — they are workspace furniture other members may rely on. The
 	// per-user view-bar preferences are meaningless without the member.
-	if err := qtx.DeletePrivateIssueViewsByOwner(ctx, db.DeletePrivateIssueViewsByOwnerParams{
-		WorkspaceID: workspaceID,
-		OwnerID:     userID,
-	}); err != nil {
-		return empty, err
-	}
-	if err := qtx.DeleteIssueViewPreferencesByUser(ctx, db.DeleteIssueViewPreferencesByUserParams{
-		WorkspaceID: workspaceID,
-		UserID:      userID,
-	}); err != nil {
-		return empty, err
-	}
 
 	// issue_subscriber carries no FK either (same MUL-3515 rule as the two
 	// prunes above), and MUL-5483 gave agents a path that writes member
 	// subscriber rows on their own initiative. Dropping them in this tx is what
 	// stops a departed member from accruing inbox rows, and stops a re-invite
 	// from silently restoring visibility of everything they used to watch.
-	if err := qtx.DeleteSubscriptionsByMember(ctx, db.DeleteSubscriptionsByMemberParams{
-		WorkspaceID: workspaceID,
-		UserID:      userID,
-	}); err != nil {
-		return empty, err
-	}
 
 	// autopilot_subscriber is another FK-free subscription template. Leaving
 	// stale rows here made the detail API return a user the member picker could
 	// no longer render; the next full-replace PATCH then failed membership
 	// validation, blocking every edit to that autopilot. Prune only templates in
 	// this workspace so the same user's subscriptions elsewhere survive.
-	if err := qtx.DeleteAutopilotSubscribersByMember(ctx, db.DeleteAutopilotSubscribersByMemberParams{
-		WorkspaceID: workspaceID,
-		UserID:      userID,
-	}); err != nil {
-		return empty, err
-	}
 
 	// Member row deletion lives inside the same tx so a successful revoke is
 	// never followed by a failed member-delete (which would leave the user

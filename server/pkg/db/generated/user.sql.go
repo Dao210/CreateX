@@ -114,9 +114,6 @@ type GetUsersByIDsRow struct {
 	AvatarUrl pgtype.Text `json:"avatar_url"`
 }
 
-// Batch lookup from the GLOBAL user table (not gated on membership, so departed
-// members still render). Used to enrich attribution initiator / originator refs on
-// task responses without an N+1 (MUL-4302 §9). Returns only the display fields.
 func (q *Queries) GetUsersByIDs(ctx context.Context, ids []pgtype.UUID) ([]GetUsersByIDsRow, error) {
 	rows, err := q.db.Query(ctx, getUsersByIDs, ids)
 	if err != nil {
@@ -157,9 +154,6 @@ type JoinCloudWaitlistParams struct {
 	CloudWaitlistReason pgtype.Text `json:"cloud_waitlist_reason"`
 }
 
-// Records interest in cloud runtimes. Does NOT mark onboarding
-// complete — the user still has to pick a real path (CLI / Skip)
-// in Step 3. Repeating the call overwrites email + reason.
 func (q *Queries) JoinCloudWaitlist(ctx context.Context, arg JoinCloudWaitlistParams) (User, error) {
 	row := q.db.QueryRow(ctx, joinCloudWaitlist, arg.ID, arg.CloudWaitlistEmail, arg.CloudWaitlistReason)
 	var i User
@@ -227,10 +221,6 @@ type PatchUserOnboardingParams struct {
 	ID            pgtype.UUID `json:"id"`
 }
 
-// Partial update of the user's onboarding decision fields. Currently only the
-// questionnaire JSONB is patchable — the v2 attempt at persisting Step 3
-// runtime choice on the user row was reverted; that state now lives in a
-// frontend Zustand transient store.
 func (q *Queries) PatchUserOnboarding(ctx context.Context, arg PatchUserOnboardingParams) (User, error) {
 	row := q.db.QueryRow(ctx, patchUserOnboarding, arg.Questionnaire, arg.ID)
 	var i User
@@ -267,11 +257,6 @@ type SetStarterContentStateParams struct {
 	StarterContentState pgtype.Text `json:"starter_content_state"`
 }
 
-// Atomically transition starter_content_state. The handler is
-// responsible for checking the current value first (to decide between
-// "transition NULL -> imported and run the seeding" vs "already
-// decided, short-circuit"). Using COALESCE here would swallow the
-// transition, so this is a straight assignment.
 func (q *Queries) SetStarterContentState(ctx context.Context, arg SetStarterContentStateParams) (User, error) {
 	row := q.db.QueryRow(ctx, setStarterContentState, arg.ID, arg.StarterContentState)
 	var i User
@@ -354,18 +339,6 @@ type UpdateUserParams struct {
 	Timezone           pgtype.Text `json:"timezone"`
 }
 
-// Patches the user-controlled profile fields. Each parameter follows
-// COALESCE-on-NULL semantics so the handler can omit any field it
-// doesn't intend to write.
-//
-// `timezone` (Viewing-tz preference) participates in
-// the same shape but uses sqlc.narg + a sentinel-string convention:
-// the handler passes the empty string "" to mean "clear back to NULL"
-// (browser-detected fallback), an IANA name like "Asia/Shanghai" to
-// pin a value, and `sqlc.narg('timezone') IS NULL` (no value at all)
-// to leave the existing column untouched. Folding it into UpdateUser
-// rather than carrying a dedicated UpdateUserTimezone keeps the
-// profile-patch shape uniform between Preferences fields.
 func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error) {
 	row := q.db.QueryRow(ctx, updateUser,
 		arg.ID,

@@ -663,6 +663,12 @@
       "granted": "Ce navigateur peut afficher des bannières de notification.",
       "denied": "Bloqué par votre navigateur. Activez les notifications pour ce site dans ses réglages.",
       "enabled_badge": "Activé"
+    },
+    "inbox": {
+      "title": "Boîte de réception",
+      "creations": "Nouvelles de mes créations",
+      "world": "Résumés du monde",
+      "world_description": "Créations publiques et étapes des habitants de tous les membres de ce monde."
     }
   },
   "tokens": {

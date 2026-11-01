@@ -34,6 +34,10 @@ WHERE seat_capacity_outbox.action = EXCLUDED.action
    OR (seat_capacity_outbox.action = 'reserve_invitation' AND EXCLUDED.action = 'consume_invitation')
 RETURNING *;
 
+
+
+
+
 -- name: EnqueueSeatCapacityRelease :one
 INSERT INTO seat_capacity_outbox (
     workspace_id, operation_token, action, subject_id, next_attempt_at
@@ -61,14 +65,26 @@ WHERE seat_capacity_outbox.action IN (
 )
 RETURNING *;
 
+
+
+
+
 -- name: GetSeatCapacityIntent :one
 SELECT * FROM seat_capacity_outbox WHERE operation_token = $1;
+
+
+
+
 
 -- name: GetClaimedSeatCapacityIntent :one
 SELECT * FROM seat_capacity_outbox
 WHERE operation_token = sqlc.arg('operation_token')
   AND action = sqlc.arg('action')
   AND lease_token = sqlc.arg('lease_token');
+
+
+
+
 
 -- name: CreateOrReactivateShareJoinCapacityIntent :one
 INSERT INTO seat_capacity_outbox (
@@ -97,6 +113,10 @@ DO UPDATE SET
 WHERE seat_capacity_outbox.action IN ('claim_share_join', 'release')
 RETURNING *;
 
+
+
+
+
 -- name: GetMemberReleaseCapacityIntent :one
 SELECT * FROM seat_capacity_outbox
 WHERE workspace_id = $1
@@ -105,18 +125,20 @@ WHERE workspace_id = $1
 ORDER BY created_at DESC
 LIMIT 1;
 
+
+
+
+
 -- name: DeleteSeatCapacityConfirmIntentsForWorkspaceDeletion :exec
--- Confirmed seats are released only through the member-scoped operation below.
--- Never rewrite them to token release: Cloud may accept token release for a
--- used operation, which would let a stale confirm bypass member ownership.
 DELETE FROM seat_capacity_outbox
 WHERE workspace_id = sqlc.arg('workspace_id')
   AND action = 'confirm';
 
+
+
+
+
 -- name: PrepareSeatCapacityOperationReleasesForWorkspaceDeletion :exec
--- Workspace teardown commits these compensations atomically with removal of
--- the product rows. The FK-free outbox intentionally survives so Cloud can be
--- reconciled after the local workspace no longer exists.
 UPDATE seat_capacity_outbox
 SET action = 'release',
     member_id = NULL,
@@ -129,6 +151,10 @@ SET action = 'release',
     updated_at = now()
 WHERE workspace_id = sqlc.arg('workspace_id')
   AND action NOT IN ('confirm', 'release_member');
+
+
+
+
 
 -- name: PrepareSeatCapacityInvitationReleasesForWorkspaceDeletion :exec
 INSERT INTO seat_capacity_outbox (
@@ -153,6 +179,10 @@ WHERE seat_capacity_outbox.action IN (
     'reserve_invitation', 'consume_invitation', 'claim_share_join', 'release'
 );
 
+
+
+
+
 -- name: PrepareSeatCapacityMemberReleasesForWorkspaceDeletion :exec
 INSERT INTO seat_capacity_outbox (
     workspace_id, operation_token, action, member_id, next_attempt_at
@@ -167,6 +197,10 @@ WHERE m.workspace_id = sqlc.arg('workspace_id')
         AND existing.member_id = m.id
         AND existing.action = 'release_member'
   );
+
+
+
+
 
 -- name: ClaimNextDueSeatCapacityIntent :one
 WITH due AS (
@@ -186,6 +220,10 @@ FROM due
 WHERE outbox.operation_token = due.operation_token
 RETURNING outbox.*;
 
+
+
+
+
 -- name: MarkSeatCapacityIntentDelivered :exec
 UPDATE seat_capacity_outbox
 SET delivered_at = now(),
@@ -195,6 +233,10 @@ SET delivered_at = now(),
     updated_at = now()
 WHERE operation_token = $1 AND action = $2;
 
+
+
+
+
 -- name: MarkSeatCapacityIntentFailed :exec
 UPDATE seat_capacity_outbox
 SET attempt_count = attempt_count + 1,
@@ -203,6 +245,10 @@ SET attempt_count = attempt_count + 1,
     lease_token = NULL,
     updated_at = now()
 WHERE operation_token = sqlc.arg('operation_token') AND action = sqlc.arg('action');
+
+
+
+
 
 -- name: MarkClaimedSeatCapacityIntentDeadLettered :execrows
 UPDATE seat_capacity_outbox
@@ -215,6 +261,10 @@ WHERE operation_token = sqlc.arg('operation_token')
   AND action = sqlc.arg('action')
   AND lease_token = sqlc.arg('lease_token')
   AND dead_lettered_at IS NULL;
+
+
+
+
 
 -- name: TransitionSeatCapacityIntent :execrows
 UPDATE seat_capacity_outbox
@@ -229,6 +279,10 @@ SET action = sqlc.arg('next_action'),
     updated_at = now()
 WHERE operation_token = sqlc.arg('operation_token')
   AND action = sqlc.arg('current_action');
+
+
+
+
 
 -- name: TransitionClaimedSeatCapacityIntent :execrows
 UPDATE seat_capacity_outbox
@@ -245,6 +299,10 @@ WHERE operation_token = sqlc.arg('operation_token')
   AND action = sqlc.arg('current_action')
   AND lease_token = sqlc.arg('lease_token');
 
+
+
+
+
 -- name: MarkClaimedSeatCapacityIntentFailed :execrows
 UPDATE seat_capacity_outbox
 SET attempt_count = attempt_count + 1,
@@ -255,6 +313,10 @@ SET attempt_count = attempt_count + 1,
 WHERE operation_token = sqlc.arg('operation_token')
   AND action = sqlc.arg('action')
   AND lease_token = sqlc.arg('lease_token');
+
+
+
+
 
 -- name: DeferClaimedSeatCapacityIntent :execrows
 UPDATE seat_capacity_outbox
@@ -267,15 +329,27 @@ WHERE operation_token = sqlc.arg('operation_token')
   AND lease_token = sqlc.arg('lease_token')
   AND dead_lettered_at IS NULL;
 
+
+
+
+
 -- name: DeleteSeatCapacityIntentForAction :exec
 DELETE FROM seat_capacity_outbox
 WHERE operation_token = $1 AND action = $2;
+
+
+
+
 
 -- name: DeleteClaimedSeatCapacityIntent :execrows
 DELETE FROM seat_capacity_outbox
 WHERE operation_token = sqlc.arg('operation_token')
   AND action = sqlc.arg('action')
   AND lease_token = sqlc.arg('lease_token');
+
+
+
+
 
 -- name: ExpireInvitationForCapacityRecovery :exec
 UPDATE workspace_invitation

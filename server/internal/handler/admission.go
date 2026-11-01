@@ -25,25 +25,6 @@ import (
 //     its name, or its owner to a caller who cannot see the target. The precise
 //     cause goes to restricted server logs, not the wire.
 
-// DispatchStatus is the domain-level outcome of one admission/enqueue attempt.
-type DispatchStatus string
-
-const (
-	// DispatchQueued: a new run was enqueued.
-	DispatchQueued DispatchStatus = "queued"
-	// DispatchCoalesced: the trigger merged into an already-pending task for
-	// the same target instead of creating a duplicate run.
-	DispatchCoalesced DispatchStatus = "coalesced"
-	// DispatchDeferred: admitted but intentionally not started yet (e.g. a
-	// backlog issue parked until promotion, or suppress_run).
-	DispatchDeferred DispatchStatus = "deferred"
-	// DispatchSteered: the comment was bound to the target's running turn
-	// instead of starting a run. Only returned when the author asked to steer.
-
-	// DispatchBlocked: the run was refused. ReasonCode carries why.
-	DispatchBlocked DispatchStatus = "blocked"
-)
-
 // DispatchReasonCode is the wire-facing admission reason. It aliases the
 // canonical, cross-layer enum in the dispatch package so the service (which
 // decides the reason at its source) and the handler (which serializes it) can
@@ -53,10 +34,6 @@ const (
 type DispatchReasonCode = dispatch.ReasonCode
 
 const (
-	ReasonQueued    = dispatch.ReasonQueued
-	ReasonCoalesced = dispatch.ReasonCoalesced
-	ReasonDeferred  = dispatch.ReasonDeferred
-
 	ReasonInvocationNotAllowed  = dispatch.ReasonInvocationNotAllowed
 	ReasonTargetUnavailable     = dispatch.ReasonTargetUnavailable
 	ReasonRuntimeOffline        = dispatch.ReasonRuntimeOffline
@@ -66,9 +43,8 @@ const (
 	ReasonAgentRuntimeRequired  = dispatch.ReasonAgentRuntimeRequired
 	ReasonAttributionBlocked    = dispatch.ReasonAttributionBlocked
 	ReasonAlreadyActive         = dispatch.ReasonAlreadyActive
-	ReasonSelfTriggerSuppressed = dispatch.ReasonSelfTriggerSuppressed
-	ReasonIssueInTriage         = dispatch.ReasonIssueInTriage
-	ReasonInternalError         = dispatch.ReasonInternalError
+
+	ReasonIssueInTriage = dispatch.ReasonIssueInTriage
 )
 
 // dispatchBlockedResponse is the structured body of a blocked synchronous

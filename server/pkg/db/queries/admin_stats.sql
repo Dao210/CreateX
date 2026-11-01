@@ -17,6 +17,10 @@ SELECT
     (SELECT count(*) FROM workspace_invitation WHERE status = 'pending')::bigint AS pending_invitations
 FROM (SELECT 1) seed;
 
+
+
+
+
 -- name: AdminStatsUserTrend :many
 WITH days AS (
     SELECT generate_series(@since::date, (now() AT TIME ZONE @tz::text)::date, interval '1 day')::date AS day
@@ -27,6 +31,10 @@ LEFT JOIN "user" u ON (u.created_at AT TIME ZONE @tz::text)::date = d.day
 GROUP BY d.day
 ORDER BY d.day;
 
+
+
+
+
 -- name: AdminStatsWorkspaceTrend :many
 WITH days AS (
     SELECT generate_series(@since::date, (now() AT TIME ZONE @tz::text)::date, interval '1 day')::date AS day
@@ -36,6 +44,10 @@ FROM days d
 LEFT JOIN workspace w ON (w.created_at AT TIME ZONE @tz::text)::date = d.day
 GROUP BY d.day
 ORDER BY d.day;
+
+
+
+
 
 -- name: AdminStatsDauTrend :many
 WITH days AS (
@@ -50,15 +62,27 @@ LEFT JOIN client_usage_daily c ON (c.first_active_at AT TIME ZONE @tz::text)::da
 GROUP BY d.day
 ORDER BY d.day;
 
+
+
+
+
 -- name: AdminStatsInvitations :many
 SELECT status, count(*)::bigint AS value
 FROM workspace_invitation
 GROUP BY status;
 
+
+
+
+
 -- name: AdminStatsMemberRoles :many
 SELECT role, count(*)::bigint AS value
 FROM member
 GROUP BY role;
+
+
+
+
 
 -- name: AdminStatsWorkspaceSizes :many
 SELECT bucket, count(*)::bigint AS value

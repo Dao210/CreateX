@@ -40,8 +40,6 @@ WHERE p.workspace_id = changed.workspace_id
 RETURNING p.workspace_id, p.period_start, p.period_end, p.used_count, p.reserved_count, p.blocked_counts, p.created_at, p.updated_at, p.rejection_notified_at
 `
 
-// used_count is monotonic within a period: consuming a reserved slot is the
-// only write that changes it, and no release path decrements it.
 func (q *Queries) ConsumeAutopilotQuotaReservation(ctx context.Context, reservationID pgtype.UUID) (AutopilotQuotaPeriod, error) {
 	row := q.db.QueryRow(ctx, consumeAutopilotQuotaReservation, reservationID)
 	var i AutopilotQuotaPeriod
@@ -118,8 +116,6 @@ type EnsureAutopilotQuotaPeriodParams struct {
 	PeriodEnd   pgtype.Timestamptz `json:"period_end"`
 }
 
-// The no-op update is intentional: ON CONFLICT UPDATE locks the period row for
-// the caller's transaction, serialising admission for one workspace/period.
 func (q *Queries) EnsureAutopilotQuotaPeriod(ctx context.Context, arg EnsureAutopilotQuotaPeriodParams) (AutopilotQuotaPeriod, error) {
 	row := q.db.QueryRow(ctx, ensureAutopilotQuotaPeriod, arg.WorkspaceID, arg.PeriodStart, arg.PeriodEnd)
 	var i AutopilotQuotaPeriod
@@ -291,10 +287,6 @@ WHERE r.state = 'reserved'
           AND (ar.id IS NULL OR ar.status IN ('completed', 'failed', 'skipped'))
       )
       OR (
-          -- Manual/API requests have no durable retry owner. Reclaim only an
-          -- hours-old partial run with neither a linked side effect nor even
-          -- an unlinked task row; schedule and webhook retries repair their
-          -- own partial state and are deliberately excluded.
           r.created_at < $2
           AND ar.source IN ('manual', 'api')
           AND (
@@ -412,8 +404,6 @@ WHERE p.workspace_id = changed.workspace_id
 RETURNING p.workspace_id, p.period_start, p.period_end, p.used_count, p.reserved_count, p.blocked_counts, p.created_at, p.updated_at, p.rejection_notified_at
 `
 
-// Release is intentionally limited to still-reserved work. A consumed
-// create_issue slot remains counted after cancellation, blocking, or deletion.
 func (q *Queries) ReleaseAutopilotQuotaReservation(ctx context.Context, reservationID pgtype.UUID) (AutopilotQuotaPeriod, error) {
 	row := q.db.QueryRow(ctx, releaseAutopilotQuotaReservation, reservationID)
 	var i AutopilotQuotaPeriod

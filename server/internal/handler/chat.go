@@ -32,9 +32,8 @@ const chatSessionTitleMaxLen = 200
 // ---------------------------------------------------------------------------
 
 type CreateChatSessionRequest struct {
-	AgentID   string  `json:"agent_id"`
-	Title     string  `json:"title"`
-	ProjectID *string `json:"project_id"`
+	AgentID string `json:"agent_id"`
+	Title   string `json:"title"`
 }
 
 func (h *Handler) CreateChatSession(w http.ResponseWriter, r *http.Request) {
@@ -61,14 +60,6 @@ func (h *Handler) CreateChatSession(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	projectID := pgtype.UUID{Valid: false}
-	if req.ProjectID != nil && strings.TrimSpace(*req.ProjectID) != "" {
-		projectID, ok = parseUUIDOrBadRequest(w, strings.TrimSpace(*req.ProjectID), "project_id")
-		if !ok {
-			return
-		}
-	}
-
 	// Verify agent exists in workspace.
 	agent, err := h.Queries.GetAgentInWorkspace(r.Context(), db.GetAgentInWorkspaceParams{
 		ID:          agentID,
@@ -112,19 +103,6 @@ func (h *Handler) CreateChatSession(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "failed to lock workspace")
 		return
 	}
-	if projectID.Valid {
-		if _, err := qtx.LockProjectForChatSessionCreate(r.Context(), db.LockProjectForChatSessionCreateParams{
-			ID:          projectID,
-			WorkspaceID: workspaceUUID,
-		}); err != nil {
-			if errors.Is(err, pgx.ErrNoRows) {
-				writeError(w, http.StatusNotFound, "project not found")
-				return
-			}
-			writeError(w, http.StatusInternalServerError, "failed to lock project")
-			return
-		}
-	}
 
 	session, err := qtx.CreateChatSession(r.Context(), db.CreateChatSessionParams{
 		ID:          dbid.NewV7(),
@@ -132,7 +110,6 @@ func (h *Handler) CreateChatSession(w http.ResponseWriter, r *http.Request) {
 		AgentID:     agentID,
 		CreatorID:   parseUUID(userID),
 		Title:       req.Title,
-		ProjectID:   projectID,
 	})
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to create chat session")
@@ -200,7 +177,7 @@ func (h *Handler) ListChatSessions(w http.ResponseWriter, r *http.Request) {
 				WorkspaceID: uuidToString(s.WorkspaceID),
 				AgentID:     uuidToString(s.AgentID),
 				CreatorID:   uuidToString(s.CreatorID),
-				ProjectID:   uuidToPtr(s.ProjectID),
+
 				Title:       s.Title,
 				Status:      s.Status,
 				HasUnread:   s.UnreadCount > 0,
@@ -230,7 +207,7 @@ func (h *Handler) ListChatSessions(w http.ResponseWriter, r *http.Request) {
 				WorkspaceID: uuidToString(s.WorkspaceID),
 				AgentID:     uuidToString(s.AgentID),
 				CreatorID:   uuidToString(s.CreatorID),
-				ProjectID:   uuidToPtr(s.ProjectID),
+
 				Title:       s.Title,
 				Status:      s.Status,
 				HasUnread:   s.UnreadCount > 0,
@@ -343,8 +320,7 @@ func (h *Handler) GetChatSession(w http.ResponseWriter, r *http.Request) {
 }
 
 type UpdateChatSessionRequest struct {
-	Title     *string         `json:"title"`
-	ProjectID json.RawMessage `json:"project_id"`
+	Title *string `json:"title"`
 }
 
 // UpdateChatSession updates one user-editable field on a chat session. Title
@@ -366,9 +342,8 @@ func (h *Handler) UpdateChatSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	hasTitle := req.Title != nil
-	hasProjectID := req.ProjectID != nil
-	if hasTitle == hasProjectID {
-		writeError(w, http.StatusBadRequest, "exactly one of title or project_id is required")
+	if !hasTitle {
+		writeError(w, http.StatusBadRequest, "title is required")
 		return
 	}
 
@@ -381,7 +356,6 @@ func (h *Handler) UpdateChatSession(w http.ResponseWriter, r *http.Request) {
 		updated db.ChatSession
 		err     error
 	)
-	var projectIDChanged bool
 	if hasTitle {
 		title := strings.TrimSpace(*req.Title)
 		if title == "" {
@@ -396,57 +370,8 @@ func (h *Handler) UpdateChatSession(w http.ResponseWriter, r *http.Request) {
 			ID:    session.ID,
 			Title: title,
 		})
-	} else {
-		projectID := pgtype.UUID{Valid: false}
-		if string(req.ProjectID) != "null" {
-			var rawProjectID string
-			if err := json.Unmarshal(req.ProjectID, &rawProjectID); err != nil {
-				writeError(w, http.StatusBadRequest, "project_id must be a UUID or null")
-				return
-			}
-			rawProjectID = strings.TrimSpace(rawProjectID)
-			if rawProjectID == "" {
-				writeError(w, http.StatusBadRequest, "project_id must be a UUID or null")
-				return
-			}
-			projectID, ok = parseUUIDOrBadRequest(w, rawProjectID, "project_id")
-			if !ok {
-				return
-			}
-		}
-
-		tx, txErr := h.TxStarter.Begin(r.Context())
-		if txErr != nil {
-			writeError(w, http.StatusInternalServerError, "failed to start transaction")
-			return
-		}
-		defer tx.Rollback(r.Context())
-		qtx := h.Queries.WithTx(tx)
-
-		if projectID.Valid {
-			if _, lockErr := qtx.LockProjectForChatSessionCreate(r.Context(), db.LockProjectForChatSessionCreateParams{
-				ID:          projectID,
-				WorkspaceID: session.WorkspaceID,
-			}); lockErr != nil {
-				if errors.Is(lockErr, pgx.ErrNoRows) {
-					writeError(w, http.StatusNotFound, "project not found")
-					return
-				}
-				writeError(w, http.StatusInternalServerError, "failed to lock project")
-				return
-			}
-		}
-
-		updated, err = qtx.UpdateChatSessionProject(r.Context(), db.UpdateChatSessionProjectParams{
-			ID:          session.ID,
-			WorkspaceID: session.WorkspaceID,
-			ProjectID:   projectID,
-		})
-		if err == nil {
-			err = tx.Commit(r.Context())
-		}
-		projectIDChanged = true
 	}
+
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to update chat session")
 		return
@@ -458,10 +383,7 @@ func (h *Handler) UpdateChatSession(w http.ResponseWriter, r *http.Request) {
 		Title:         updated.Title,
 		UpdatedAt:     timestampToString(updated.UpdatedAt),
 	}
-	if projectIDChanged {
-		projectID := uuidToPtr(updated.ProjectID)
-		payload.ProjectID = &projectID
-	}
+
 	h.publishChat(protocol.EventChatSessionUpdated, workspaceID, "member", userID, resolvedSessionID, payload)
 
 	writeJSON(w, http.StatusOK, chatSessionToResponse(updated))
@@ -613,10 +535,7 @@ func (h *Handler) SetChatSessionArchived(w http.ResponseWriter, r *http.Request)
 				writeError(w, http.StatusInternalServerError, "failed to cancel queued tasks for the archived session")
 				return
 			}
-			if err = service.SettleTerminalTaskState(r.Context(), qtx, cancelled...); err != nil {
-				writeError(w, http.StatusInternalServerError, "failed to settle terminal task state")
-				return
-			}
+
 		case errors.Is(bindingErr, pgx.ErrNoRows):
 			// A web-only chat has no room, no adapter and nowhere for a late
 			// answer to land, so there is nothing here to protect anyone from
@@ -720,10 +639,6 @@ func (h *Handler) DeleteChatSession(w http.ResponseWriter, r *http.Request) {
 	cancelled, err := qtx.CancelAgentTasksByChatSession(r.Context(), session.ID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to cancel chat session tasks")
-		return
-	}
-	if err := service.SettleTerminalTaskState(r.Context(), qtx, cancelled...); err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to settle terminal task state")
 		return
 	}
 
@@ -1908,13 +1823,13 @@ func (h *Handler) CancelTaskByUser(w http.ResponseWriter, r *http.Request) {
 // ---------------------------------------------------------------------------
 
 type ChatSessionResponse struct {
-	ID          string  `json:"id"`
-	WorkspaceID string  `json:"workspace_id"`
-	AgentID     string  `json:"agent_id"`
-	CreatorID   string  `json:"creator_id"`
-	ProjectID   *string `json:"project_id"`
-	Title       string  `json:"title"`
-	Status      string  `json:"status"`
+	ID          string `json:"id"`
+	WorkspaceID string `json:"workspace_id"`
+	AgentID     string `json:"agent_id"`
+	CreatorID   string `json:"creator_id"`
+
+	Title  string `json:"title"`
+	Status string `json:"status"`
 	// Only populated by list endpoints — single-session fetches return 0/false/nil.
 	// HasUnread is kept as a convenience (== UnreadCount > 0) for existing consumers.
 	HasUnread   bool             `json:"has_unread"`
@@ -2029,12 +1944,12 @@ func chatSessionToResponse(s db.ChatSession) ChatSessionResponse {
 		WorkspaceID: uuidToString(s.WorkspaceID),
 		AgentID:     uuidToString(s.AgentID),
 		CreatorID:   uuidToString(s.CreatorID),
-		ProjectID:   uuidToPtr(s.ProjectID),
-		Title:       s.Title,
-		Status:      s.Status,
-		Pinned:      s.PinnedAt.Valid,
-		CreatedAt:   timestampToString(s.CreatedAt),
-		UpdatedAt:   timestampToString(s.UpdatedAt),
+
+		Title:     s.Title,
+		Status:    s.Status,
+		Pinned:    s.PinnedAt.Valid,
+		CreatedAt: timestampToString(s.CreatedAt),
+		UpdatedAt: timestampToString(s.UpdatedAt),
 	}
 }
 

@@ -1,5 +1,5 @@
 /** System inbox notifications refresh only their list and unread summary. */
-import { isSystemInboxItem } from "@auro/core/inbox/system-notifications";
+import { isVisibleInboxItem } from "@auro/core/inbox/system-notifications";
 import { useQueryClient } from "@tanstack/react-query";
 import { useWSSubscriptions } from "@/lib/use-ws-subscriptions";
 import {
@@ -22,7 +22,7 @@ export function useInboxRealtime() {
 
       return [
         // Inbox-domain events: refetch the inbox list and the badge count.
-        ws.on("inbox:new", ({ item }) => { if (isSystemInboxItem(item)) invalidate(); }),
+        ws.on("inbox:new", ({ item }) => { if (isVisibleInboxItem(item)) invalidate(); }),
         ws.on("inbox:read", invalidate),
         // Mobile has no mark-unread affordance yet (web/desktop right-click
         // only), but a mark-unread there must un-read the row here too —

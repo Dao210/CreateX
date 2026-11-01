@@ -169,7 +169,6 @@ export function DashboardPage() {
   useCustomPricingStore((s) => s.pricings);
   const agentsQuery = useQuery(agentListOptions(wsId));
   const agents = agentsQuery.data ?? EMPTY_AGENTS;
-  const projectId = null;
 
 
   // The weekly charts paint `ceil(days / 7)` trailing calendar weeks anchored
@@ -189,7 +188,7 @@ export function DashboardPage() {
   const chartFetchDays = weekCount * 7;
 
   const dailyQuery = useQuery(
-    dashboardUsageDailyOptions(wsId, chartFetchDays, projectId, viewTZ),
+    dashboardUsageDailyOptions(wsId, chartFetchDays, viewTZ),
   );
   // The three per-agent rollups carry no date, so `dailyCutoffIso` below
   // cannot trim them — their window is closed server-side at exactly `days`
@@ -199,19 +198,19 @@ export function DashboardPage() {
   // and the Run time / Tasks KPIs silently widen by one day while the chart
   // and the Cost / Tokens KPIs beside them do not (MUL-5551).
   const byAgentQuery = useQuery(
-    dashboardUsageByAgentOptions(wsId, days, projectId, viewTZ),
+    dashboardUsageByAgentOptions(wsId, days, viewTZ),
   );
   const runTimeQuery = useQuery(
-    dashboardAgentRunTimeOptions(wsId, days, projectId, viewTZ),
+    dashboardAgentRunTimeOptions(wsId, days, viewTZ),
   );
   const runTimeDailyQuery = useQuery(
-    dashboardRunTimeDailyOptions(wsId, chartFetchDays, projectId, viewTZ),
+    dashboardRunTimeDailyOptions(wsId, chartFetchDays, viewTZ),
   );
   const failuresDailyQuery = useQuery(
-    dashboardFailuresDailyOptions(wsId, chartFetchDays, projectId, viewTZ),
+    dashboardFailuresDailyOptions(wsId, chartFetchDays, viewTZ),
   );
   const failuresByAgentQuery = useQuery(
-    dashboardFailuresByAgentOptions(wsId, days, projectId, viewTZ),
+    dashboardFailuresByAgentOptions(wsId, days, viewTZ),
   );
 
   const dailyUsage = dailyQuery.data ?? EMPTY_DAILY;

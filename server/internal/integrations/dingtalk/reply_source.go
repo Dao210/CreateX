@@ -3,8 +3,8 @@ package dingtalk
 import (
 	"sync"
 
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/auro-ai/auro/server/internal/integrations/channel"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const maxReplySources = 1024

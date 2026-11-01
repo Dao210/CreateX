@@ -41,9 +41,6 @@ type CountWorkspaceMcpServerAgentsRow struct {
 	AgentCount int64       `json:"agent_count"`
 }
 
-// How many live agents each library entry is assigned to, for the workspace
-// settings list. Archived agents never receive the server, so they are not
-// counted; servers with no assignment are simply absent from the result.
 func (q *Queries) CountWorkspaceMcpServerAgents(ctx context.Context, workspaceID pgtype.UUID) ([]CountWorkspaceMcpServerAgentsRow, error) {
 	rows, err := q.db.Query(ctx, countWorkspaceMcpServerAgents, workspaceID)
 	if err != nil {
@@ -101,8 +98,6 @@ const deleteAgentMcpServersByServer = `-- name: DeleteAgentMcpServersByServer :e
 DELETE FROM agent_mcp_server WHERE server_id = $1
 `
 
-// Bindings carry no FK, so removing a library entry must sweep them explicitly
-// in the same transaction as the delete.
 func (q *Queries) DeleteAgentMcpServersByServer(ctx context.Context, serverID pgtype.UUID) error {
 	_, err := q.db.Exec(ctx, deleteAgentMcpServersByServer, serverID)
 	return err
@@ -169,8 +164,6 @@ type ListAgentMcpServersRow struct {
 	Enabled     bool               `json:"enabled"`
 }
 
-// Every workspace server bound to this agent, enabled or not, for the agent
-// settings list. `enabled` comes from the binding.
 func (q *Queries) ListAgentMcpServers(ctx context.Context, agentID pgtype.UUID) ([]ListAgentMcpServersRow, error) {
 	rows, err := q.db.Query(ctx, listAgentMcpServers, agentID)
 	if err != nil {
@@ -212,9 +205,6 @@ type ListEnabledAgentMcpServersRow struct {
 	Config []byte `json:"config"`
 }
 
-// Claim path: only bound AND enabled servers reach the runtime. An unbound
-// workspace server is invisible to this agent — creating one gives it to
-// nobody until someone adds it here.
 func (q *Queries) ListEnabledAgentMcpServers(ctx context.Context, agentID pgtype.UUID) ([]ListEnabledAgentMcpServersRow, error) {
 	rows, err := q.db.Query(ctx, listEnabledAgentMcpServers, agentID)
 	if err != nil {
@@ -241,9 +231,6 @@ WHERE workspace_id = $1
 ORDER BY name ASC
 `
 
-// The workspace's MCP library. Returns `config` because the callers that need
-// it (claim assembly, the write path's read-modify-write) run server-side; the
-// HTTP layer projects it down to the non-secret inventory.
 func (q *Queries) ListWorkspaceMcpServers(ctx context.Context, workspaceID pgtype.UUID) ([]WorkspaceMcpServer, error) {
 	rows, err := q.db.Query(ctx, listWorkspaceMcpServers, workspaceID)
 	if err != nil {
@@ -283,10 +270,6 @@ type LockWorkspaceMcpServerForShareParams struct {
 	WorkspaceID pgtype.UUID `json:"workspace_id"`
 }
 
-// Taken by the assignment writer before it inserts. A shared row lock
-// conflicts with the exclusive lock DeleteWorkspaceMcpServer takes, so an
-// assignment can never land in the window between that delete sweeping the
-// bindings and committing — the junction has no FK to catch the orphan.
 func (q *Queries) LockWorkspaceMcpServerForShare(ctx context.Context, arg LockWorkspaceMcpServerForShareParams) (pgtype.UUID, error) {
 	row := q.db.QueryRow(ctx, lockWorkspaceMcpServerForShare, arg.ID, arg.WorkspaceID)
 	var id pgtype.UUID
@@ -305,9 +288,6 @@ type LockWorkspaceMcpServerForUpdateParams struct {
 	WorkspaceID pgtype.UUID `json:"workspace_id"`
 }
 
-// The delete half of the same protocol: take the row exclusively first, so a
-// concurrent assignment either lands before this transaction (and is swept) or
-// waits and then finds the server gone.
 func (q *Queries) LockWorkspaceMcpServerForUpdate(ctx context.Context, arg LockWorkspaceMcpServerForUpdateParams) (pgtype.UUID, error) {
 	row := q.db.QueryRow(ctx, lockWorkspaceMcpServerForUpdate, arg.ID, arg.WorkspaceID)
 	var id pgtype.UUID
@@ -369,9 +349,6 @@ type UpdateWorkspaceMcpServerParams struct {
 	Config      []byte      `json:"config"`
 }
 
-// Full replace of one entry. The name can change here (unlike the previous
-// document model) because bindings key off the id, so a rename cannot orphan
-// the agents that use it.
 func (q *Queries) UpdateWorkspaceMcpServer(ctx context.Context, arg UpdateWorkspaceMcpServerParams) (WorkspaceMcpServer, error) {
 	row := q.db.QueryRow(ctx, updateWorkspaceMcpServer,
 		arg.ID,

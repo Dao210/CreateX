@@ -47,6 +47,16 @@ export function NotificationsTab() {
 
   return (
     <SettingsTab title={t(($) => $.page.tabs.notifications)} scope="workspace-only">
+      <SettingsSection title={t($ => $.notifications.inbox.title)}>
+        <SettingsCard>
+          <SettingsRow anchor="creation-updates" label={t($ => $.notifications.inbox.creations)}>
+            <Switch checked={preferences.creation_updates !== "muted"} aria-label={t($ => $.notifications.inbox.creations)} onCheckedChange={checked => handleToggle("creation_updates", checked)} />
+          </SettingsRow>
+          <SettingsRow anchor="world-digests" label={t($ => $.notifications.inbox.world)} description={t($ => $.notifications.inbox.world_description)}>
+            <Switch checked={preferences.world_digests !== "muted"} aria-label={t($ => $.notifications.inbox.world)} onCheckedChange={checked => handleToggle("world_digests", checked)} />
+          </SettingsRow>
+        </SettingsCard>
+      </SettingsSection>
       <SettingsSection
         title={t(($) => $.notifications.system.title)}
         description={t(($) => $.notifications.system.description)}

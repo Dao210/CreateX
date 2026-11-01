@@ -3,8 +3,8 @@ package lark
 import (
 	"context"
 
-	"github.com/jackc/pgx/v5/pgtype"
 	db "github.com/auro-ai/auro/server/pkg/db/generated"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // dbAuditLogger is the concrete AuditLogger implementation backed by

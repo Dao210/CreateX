@@ -82,7 +82,7 @@ type UpdateLabelRequest struct {
 	Color       *string `json:"color"`
 }
 
-const defaultLabelResourceType = "issue"
+const defaultLabelResourceType = "skill"
 
 func parseLabelResourceType(raw string) (string, error) {
 	value := strings.TrimSpace(raw)
@@ -90,10 +90,10 @@ func parseLabelResourceType(raw string) (string, error) {
 		return defaultLabelResourceType, nil
 	}
 	switch value {
-	case "issue", "agent", "skill":
+	case "agent", "skill":
 		return value, nil
 	default:
-		return "", errors.New("resource_type must be issue, agent, or skill")
+		return "", errors.New("resource_type must be agent or skill")
 	}
 }
 
@@ -307,7 +307,6 @@ func (h *Handler) UpdateLabel(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) DeleteLabel(w http.ResponseWriter, r *http.Request) {
-	r = h.withWakeupActor(r)
 	id := chi.URLParam(r, "id")
 	workspaceID := h.resolveWorkspaceID(r)
 	userID, ok := requireUserID(w, r)
@@ -322,7 +321,7 @@ func (h *Handler) DeleteLabel(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	tx, err := h.beginWakeupWrite(r.Context())
+	tx, err := h.TxStarter.Begin(r.Context())
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to start transaction")
 		return
@@ -372,14 +371,6 @@ func (h *Handler) DeleteLabel(w http.ResponseWriter, r *http.Request) {
 type AttachLabelRequest struct {
 	LabelID string `json:"label_id"`
 }
-
-
-
-
-
-
-
-
 
 // ---------------------------------------------------------------------------
 // Handlers — agent/skill↔label attach/detach

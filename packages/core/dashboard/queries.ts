@@ -6,40 +6,34 @@ export const dashboardKeys = {
   daily: (
     wsId: string,
     days: number,
-    projectId: string | null,
     tz: string,
-  ) => [...dashboardKeys.all(wsId), "daily", days, projectId, tz] as const,
+  ) => [...dashboardKeys.all(wsId), "daily", days, tz] as const,
   byAgent: (
     wsId: string,
     days: number,
-    projectId: string | null,
     tz: string,
-  ) => [...dashboardKeys.all(wsId), "by-agent", days, projectId, tz] as const,
+  ) => [...dashboardKeys.all(wsId), "by-agent", days, tz] as const,
   agentRuntime: (
     wsId: string,
     days: number,
-    projectId: string | null,
     tz: string,
-  ) => [...dashboardKeys.all(wsId), "agent-runtime", days, projectId, tz] as const,
+  ) => [...dashboardKeys.all(wsId), "agent-runtime", days, tz] as const,
   runTimeDaily: (
     wsId: string,
     days: number,
-    projectId: string | null,
     tz: string,
-  ) => [...dashboardKeys.all(wsId), "runtime-daily", days, projectId, tz] as const,
+  ) => [...dashboardKeys.all(wsId), "runtime-daily", days, tz] as const,
   failuresDaily: (
     wsId: string,
     days: number,
-    projectId: string | null,
     tz: string,
-  ) => [...dashboardKeys.all(wsId), "failures-daily", days, projectId, tz] as const,
+  ) => [...dashboardKeys.all(wsId), "failures-daily", days, tz] as const,
   failuresByAgent: (
     wsId: string,
     days: number,
-    projectId: string | null,
     tz: string,
   ) =>
-    [...dashboardKeys.all(wsId), "failures-by-agent", days, projectId, tz] as const,
+    [...dashboardKeys.all(wsId), "failures-by-agent", days, tz] as const,
 };
 
 // The server materializes these rollups on a 5-minute cadence, so a mounted
@@ -71,16 +65,14 @@ function isSameDashboardScope(
 export function dashboardUsageDailyOptions(
   wsId: string,
   days: number,
-  projectId: string | null,
   tz: string,
 ) {
-  const queryKey = dashboardKeys.daily(wsId, days, projectId, tz);
+  const queryKey = dashboardKeys.daily(wsId, days, tz);
   return queryOptions({
     queryKey,
     queryFn: () =>
       api.getDashboardUsageDaily({
         days,
-        project_id: projectId ?? undefined,
         tz,
       }),
     enabled: !!wsId,
@@ -96,16 +88,14 @@ export function dashboardUsageDailyOptions(
 export function dashboardUsageByAgentOptions(
   wsId: string,
   days: number,
-  projectId: string | null,
   tz: string,
 ) {
-  const queryKey = dashboardKeys.byAgent(wsId, days, projectId, tz);
+  const queryKey = dashboardKeys.byAgent(wsId, days, tz);
   return queryOptions({
     queryKey,
     queryFn: () =>
       api.getDashboardUsageByAgent({
         days,
-        project_id: projectId ?? undefined,
         tz,
       }),
     enabled: !!wsId,
@@ -121,16 +111,14 @@ export function dashboardUsageByAgentOptions(
 export function dashboardAgentRunTimeOptions(
   wsId: string,
   days: number,
-  projectId: string | null,
   tz: string,
 ) {
-  const queryKey = dashboardKeys.agentRuntime(wsId, days, projectId, tz);
+  const queryKey = dashboardKeys.agentRuntime(wsId, days, tz);
   return queryOptions({
     queryKey,
     queryFn: () =>
       api.getDashboardAgentRunTime({
         days,
-        project_id: projectId ?? undefined,
         tz,
       }),
     enabled: !!wsId,
@@ -146,16 +134,14 @@ export function dashboardAgentRunTimeOptions(
 export function dashboardRunTimeDailyOptions(
   wsId: string,
   days: number,
-  projectId: string | null,
   tz: string,
 ) {
-  const queryKey = dashboardKeys.runTimeDaily(wsId, days, projectId, tz);
+  const queryKey = dashboardKeys.runTimeDaily(wsId, days, tz);
   return queryOptions({
     queryKey,
     queryFn: () =>
       api.getDashboardRunTimeDaily({
         days,
-        project_id: projectId ?? undefined,
         tz,
       }),
     enabled: !!wsId,
@@ -171,16 +157,14 @@ export function dashboardRunTimeDailyOptions(
 export function dashboardFailuresDailyOptions(
   wsId: string,
   days: number,
-  projectId: string | null,
   tz: string,
 ) {
-  const queryKey = dashboardKeys.failuresDaily(wsId, days, projectId, tz);
+  const queryKey = dashboardKeys.failuresDaily(wsId, days, tz);
   return queryOptions({
     queryKey,
     queryFn: () =>
       api.getDashboardFailuresDaily({
         days,
-        project_id: projectId ?? undefined,
         tz,
       }),
     enabled: !!wsId,
@@ -196,16 +180,14 @@ export function dashboardFailuresDailyOptions(
 export function dashboardFailuresByAgentOptions(
   wsId: string,
   days: number,
-  projectId: string | null,
   tz: string,
 ) {
-  const queryKey = dashboardKeys.failuresByAgent(wsId, days, projectId, tz);
+  const queryKey = dashboardKeys.failuresByAgent(wsId, days, tz);
   return queryOptions({
     queryKey,
     queryFn: () =>
       api.getDashboardFailuresByAgent({
         days,
-        project_id: projectId ?? undefined,
         tz,
       }),
     enabled: !!wsId,

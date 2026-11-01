@@ -663,6 +663,12 @@
       "granted": "This browser can show notification banners.",
       "denied": "Blocked by your browser. Enable notifications for this site in your browser settings.",
       "enabled_badge": "Enabled"
+    },
+    "inbox": {
+      "title": "Inbox",
+      "creations": "Creation updates",
+      "world": "World digests",
+      "world_description": "Public creations and resident milestones from all members of this world."
     }
   },
   "tokens": {

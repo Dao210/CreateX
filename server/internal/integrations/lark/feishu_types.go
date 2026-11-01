@@ -97,19 +97,18 @@ type DispatchResult struct {
 	ChatSessionID  pgtype.UUID
 	SenderOpenID   OpenID
 	TaskID         pgtype.UUID
-	IssueID        pgtype.UUID
-	IssueNumber    int32
+
 	// IssueIdentifier is the workspace-qualified key ("MUL-42") for the
 	// created issue, used verbatim in the confirmation message.
-	IssueIdentifier string
+
 	// IssueWorkspaceSlug is the workspace route segment used in deep links.
-	IssueWorkspaceSlug string
+
 	// IssueTitle is the title supplied on /issue, echoed in the confirmation.
-	IssueTitle string
+
 	// IssueDuplicate distinguishes an active-issue conflict from a successful
 	// create while carrying the existing issue fields above.
-	IssueDuplicate bool
+
 	// IssueUsageHadMedia asks the usage reply to tell the sender to include the
 	// current message's media again with the corrected command.
-	IssueUsageHadMedia bool
+
 }

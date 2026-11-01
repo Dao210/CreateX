@@ -4,7 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"time"
+
+	"github.com/auro-ai/auro/server/internal/worldinbox"
 
 	db "github.com/auro-ai/auro/server/pkg/db/generated"
 	"github.com/jackc/pgx/v5"
@@ -237,6 +240,16 @@ func (s *Service) SettleTraining(ctx context.Context, a Actor, sessionID, runID 
 				return storedError(e)
 			}
 		}
+		levelBefore, levelAfter := growthLevel(int(character.Experience)), growthLevel(int(xp))
+		if levelAfter > levelBefore {
+			var c Character
+			if e = json.Unmarshal(character.Payload, &c); e != nil {
+				return e
+			}
+			if e = worldinbox.Record(ctx, q, w, u, run.CharacterID, "tank_level_up", fmt.Sprintf("tank/%s/level/%d", c.ID, levelAfter), worldinbox.Entry{Name: c.Draft.Name, Level: levelAfter}); e != nil {
+				return e
+			}
+		}
 		out = TrainingResult{RunID: runID, CharacterID: session.Character.ID, AwardedXP: award, Progression: Growth{XP: int(xp)}}
 		raw, e := json.Marshal(out)
 		if e != nil {
@@ -245,4 +258,14 @@ func (s *Service) SettleTraining(ctx context.Context, a Actor, sessionID, runID 
 		return q.SettleTankTrainingRun(ctx, db.SettleTankTrainingRunParams{WorkspaceID: w, UserID: u, ID: rid, BodyHash: pgtype.Text{String: fingerprint, Valid: true}, Result: raw})
 	})
 	return out, e
+}
+
+func growthLevel(xp int) int {
+	level := 1
+	for i, candidate := range Rules.Progression.Levels {
+		if xp >= candidate.XP {
+			level = i + 1
+		}
+	}
+	return level
 }

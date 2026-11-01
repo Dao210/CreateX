@@ -8,12 +8,8 @@ import type { ReactNode } from "react";
 import { setApiInstance } from "../api";
 import type { ApiClient } from "../api/client";
 import type { Workspace, WorkspaceMcpServer } from "../types";
-import { forgetLocalSearchIndex } from "../search-index/instance";
 import { useCreateWorkspace, useDeleteWorkspace, useUpdateWorkspaceMcpServer } from "./mutations";
 
-vi.mock("../search-index/instance", () => ({
-  forgetLocalSearchIndex: vi.fn(async () => undefined),
-}));
 import { agentMcpServersOptions, workspaceKeys } from "./queries";
 import {
   isWorkspaceDeletePending,
@@ -34,7 +30,6 @@ const makeWorkspace = (id: string, slug: string): Workspace => ({
   context: null,
   settings: {},
   repos: [],
-  issue_prefix: "MUL",
   avatar_url: null,
   created_at: "2026-01-01T00:00:00Z",
   updated_at: "2026-01-01T00:00:00Z",
@@ -132,7 +127,6 @@ describe("useDeleteWorkspace", () => {
     unmarkWorkspaceDeletePending("ws-2");
     localStorage.clear();
     vi.restoreAllMocks();
-    vi.mocked(forgetLocalSearchIndex).mockClear();
   });
 
   it("leaves the list cache untouched while the DELETE is pending (no optimistic removal)", async () => {
@@ -321,6 +315,5 @@ describe("useUpdateWorkspaceMcpServer", () => {
 
 describe("useLeaveWorkspace", () => {
   afterEach(() => {
-    vi.mocked(forgetLocalSearchIndex).mockClear();
   });
 });

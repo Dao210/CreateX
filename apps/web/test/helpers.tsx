@@ -1,6 +1,5 @@
-import React from "react";
+
 import { vi } from "vitest";
-import { render, type RenderOptions } from "@testing-library/react";
 import type { User, Workspace, MemberWithUser, Agent } from "@auro/core/types";
 
 // Mock user
@@ -30,7 +29,6 @@ export const mockWorkspace: Workspace = {
   context: null,
   settings: {},
   repos: [],
-  issue_prefix: "TES",
   avatar_url: null,
   created_at: "2026-01-01T00:00:00Z",
   updated_at: "2026-01-01T00:00:00Z",

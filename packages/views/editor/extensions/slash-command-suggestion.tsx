@@ -14,7 +14,7 @@ import { PluginKey } from "@tiptap/pm/state";
 import { useAuthStore } from "@auro/core/auth";
 import { useChatStore } from "@auro/core/chat";
 import { getCurrentWsId } from "@auro/core/platform";
-import { canAssignAgentToIssue } from "@auro/core/permissions";
+import { canInvokeAgent } from "@auro/core/permissions";
 import { isImeComposing } from "@auro/core/utils";
 import { workspaceKeys } from "@auro/core/workspace/queries";
 import type { Agent, MemberWithUser } from "@auro/core/types";
@@ -208,7 +208,7 @@ function buildItems(qc: QueryClient, query: string): SlashCommandItem[] {
   const availableAgents = agents.filter(
     (a) =>
       !a.archived_at &&
-      canAssignAgentToIssue(a, { userId, role: memberRole }).allowed,
+      canInvokeAgent(a, { userId, role: memberRole }).allowed,
   );
   const activeAgent =
     availableAgents.find((a) => a.id === selectedAgentId) ??

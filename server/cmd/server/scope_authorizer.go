@@ -4,11 +4,11 @@ import (
 	"context"
 	"errors"
 
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/auro-ai/auro/server/internal/realtime"
 	"github.com/auro-ai/auro/server/internal/util"
 	db "github.com/auro-ai/auro/server/pkg/db/generated"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // scopeAuthQuerier is the narrow subset of db.Queries used by the scope
@@ -63,13 +63,7 @@ func (a *dbScopeAuthorizer) AuthorizeScope(ctx context.Context, userID, workspac
 			return scopeLookupErr(err)
 		}
 		// Issue tasks: visible to any workspace member.
-		if task.IssueID.Valid {
-			issue, err := a.q.GetIssue(ctx, task.IssueID)
-			if err != nil {
-				return scopeLookupErr(err)
-			}
-			return issue.WorkspaceID == wsUUID, nil
-		}
+
 		// Chat tasks: only the chat session's creator may subscribe, mirroring
 		// the HTTP layer's creator-only access on chat resources.
 		if task.ChatSessionID.Valid {

@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"time"
 
 	"github.com/auro-ai/auro/server/internal/dispatch"
@@ -90,21 +89,6 @@ const runtimeOfflineCodeNotExecutable = "not_executable"
 // runtimeOfflineReason.Installing is the exception — a daemon that is installing
 // the profile right now resolves it by itself.
 const runtimeOfflineCodeDshProfile = "dsh_profile"
-
-// RuntimeBlockedNeedsNotice reports whether a blocked verdict's reason is one a
-// human has to repair on the runtime's machine, and therefore one that must
-// leave a durable explanation on the issue (MUL-6164).
-//
-// A predicate rather than an inline comparison because three admission paths
-// ask it — the refused @mention, the refused assignment, and the refused
-// assign-on-create — and a code added to one of them but not the others is a
-// trigger that vanishes with no trace on exactly the surfaces that have no
-// response for the user to read.
-func RuntimeBlockedNeedsNotice(code dispatch.ReasonCode) bool {
-	return code == dispatch.ReasonRuntimeUnusable ||
-		code == dispatch.ReasonRuntimeProfileMissing ||
-		code == dispatch.ReasonRuntimeAccessDenied
-}
 
 // AgentReadiness reports whether an agent can accept new work right now, and
 // what the caller should do when it cannot.
@@ -244,79 +228,4 @@ func parseRuntimeOfflineReason(metadata []byte) (runtimeOfflineReason, bool) {
 		return runtimeOfflineReason{}, false
 	}
 	return *envelope.OfflineReason, true
-}
-
-// RuntimeUnusableNotice is the durable explanation left on an issue when a
-// trigger is refused because the target's runtime cannot serve work and only a
-// human on that machine can change it.
-//
-// It lives here, next to the verdict, because two layers write it: the handler
-// for a refused @mention and the service for a refused assignment. One text,
-// one place to fix it. It names the repair command when the daemon reported
-// one and stays useful when it did not — a natively installed CLI has no
-// postinstall to re-run, and inventing a command would send the user somewhere
-// that does not exist.
-//
-// The text is chosen by the verdict's reason, not by whether a repair command
-// happened to be present. The two causes have opposite repairs: an unrunnable
-// CLI is reinstalled, while a CLI missing its runtime profile is working
-// perfectly and reinstalling it changes nothing. One text for both told DSH
-// users to reinstall a CLI that was never the problem.
-func RuntimeUnusableNotice(agentName string, verdict AgentVerdict) string {
-	name := agentName
-	if name == "" {
-		name = "The assigned agent"
-	}
-	if verdict.Reason == dispatch.ReasonRuntimeAccessDenied {
-		return fmt.Sprintf(
-			"%s cannot run on this private runtime, so this trigger was not queued. Make the runtime's machine public, or rebind/copy the agent to a runtime its owner can use.",
-			name,
-		)
-	}
-	if verdict.Reason == dispatch.ReasonRuntimeProfileMissing {
-		return runtimeProfileMissingNotice(name)
-	}
-	if verdict.Repair != nil && verdict.Repair.Command != "" {
-		return fmt.Sprintf(
-			"%s could not start: its CLI is installed but cannot be executed on that machine, so this trigger was not queued.\n\n"+
-				"Usually the package's postinstall was blocked (npm 12 allowScripts, pnpm 10 approve-builds, `--ignore-scripts`, `--omit=optional`) and the bin entry is still a placeholder. On that machine, run:\n\n"+
-				"```%s\n%s\n```\n\n"+
-				"The runtime comes back on its own within a couple of minutes; trigger the agent again after that.",
-			name, repairFenceLanguage(verdict.Repair.Shell), verdict.Repair.Command,
-		)
-	}
-	return fmt.Sprintf(
-		"%s could not start: its CLI is installed but cannot be executed on that machine, so this trigger was not queued. "+
-			"Reinstall the agent CLI on that machine with install scripts enabled; the runtime comes back on its own within a couple of minutes.",
-		name,
-	)
-}
-
-// runtimeProfileMissingNotice explains a runtime whose CLI runs but whose
-// Auro runtime profile is absent.
-//
-// No fenced command, deliberately. The install is `dsh plugin --profile auro
-// add <bundle>`, and <bundle> is the operator's own choice of package,
-// directory or tarball — Auro's bridge is not on a public registry yet
-// (auro#6936). Rendering that line in a code block presents a placeholder as
-// something to copy and run, which is the shape of instruction people paste
-// verbatim and then report as broken. Naming the two ways to supply a real
-// bundle, and pointing at the docs that list them, is the honest version.
-func runtimeProfileMissingNotice(name string) string {
-	return fmt.Sprintf(
-		"%s could not start: the DeepSeek Harness CLI is installed on that machine, but the `auro` runtime profile it needs is not, so this trigger was not queued.\n\n"+
-			"The profile supplies the protocol Auro drives — the CLI itself is fine, and reinstalling it changes nothing. On that machine, either add the Auro DSH runtime bundle to the profile with `dsh plugin --profile auro add`, or set `AURO_DSH_PROFILE_BUNDLE` for the daemon so it installs the bundle itself. See the agent runtime install docs for the bundle to use.\n\n"+
-			"The runtime registers on its own within a couple of minutes after that; trigger the agent again then.",
-		name,
-	)
-}
-
-// repairFenceLanguage labels the code block with the shell the command was
-// written for. A daemon too old to report one predates the Windows rendering
-// entirely, so its command is POSIX by construction.
-func repairFenceLanguage(shell string) string {
-	if shell == "powershell" {
-		return "powershell"
-	}
-	return "bash"
 }

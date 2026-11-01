@@ -24,8 +24,7 @@ vi.mock("../auth", () => ({
 
 const identity = { name: "Sirius", slug: "sirius-abc123" };
 const workspace: Workspace = {
-  id: "ws-1", ...identity, description: null, context: null, settings: {}, repos: [],
-  issue_prefix: "SIRI", avatar_url: null, created_at: "2026-10-24", updated_at: "2026-10-24",
+  id: "ws-1", ...identity, description: null, context: null, settings: {}, repos: [], avatar_url: null, created_at: "2026-10-24", updated_at: "2026-10-24",
 };
 const listWorkspaces = vi.fn();
 const createWorkspace = vi.fn();

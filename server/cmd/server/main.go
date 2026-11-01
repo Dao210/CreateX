@@ -33,6 +33,7 @@ import (
 	"github.com/auro-ai/auro/server/internal/selfhosttelemetry"
 	"github.com/auro-ai/auro/server/internal/service"
 	"github.com/auro-ai/auro/server/internal/tanks"
+	"github.com/auro-ai/auro/server/internal/worldinbox"
 	db "github.com/auro-ai/auro/server/pkg/db/generated"
 	"github.com/auro-ai/auro/server/pkg/featureflag"
 	"github.com/auro-ai/auro/server/pkg/llm"
@@ -619,9 +620,6 @@ func main() {
 	// Order matters: subscriber listeners must register BEFORE notification listeners.
 	// The notification listener queries the subscriber table to determine recipients,
 	// so subscribers must be written first within the same synchronous event dispatch.
-	registerSubscriberListeners(bus, pool)
-	registerActivityListeners(bus, queries)
-	registerNotificationListeners(bus, queries)
 
 	metricsConfig := obsmetrics.ConfigFromEnv()
 	var metricsServer *http.Server
@@ -717,7 +715,6 @@ func main() {
 	// Reuse the handler's primary Queries handle so replica routing does not
 	// create a second wrapper around the same primary pool.
 	h.ReadSelector = dbreader.New(h.Queries, replicaQueries, readRecorder)
-	h.PRRefresh.SetReadSelector(h.ReadSelector)
 
 	// Reconciled race recoveries in the batched scheduler reuse the same
 	// daemon:register refresh the sync transition path publishes. Wired before
@@ -775,9 +772,9 @@ func main() {
 	go runRuntimeGCSweeper(sweepCtx, pool, queries, taskSvc.Metrics, h)
 	// Source-context cleanup is object-store work, so it gets its own goroutine
 	// instead of a slot in the runtime sweep tick.
-	go runSourceContextSweeper(sweepCtx, taskSvc)
 	go heartbeatScheduler.Run(sweepCtx)
 	go runAutopilotFailureMonitor(autopilotCtx, queries, bus, envFailureMonitorConfig())
+	go (&worldinbox.Service{Pool: pool, Bus: bus}).Run(sweepCtx)
 	if autopilotSvc.QuotaEnabled() {
 		go runAutopilotQuotaReconciler(autopilotCtx, autopilotSvc)
 	}
@@ -796,7 +793,6 @@ func main() {
 	}
 	// GitHub PR-card API snapshot pipeline (MUL-5265): worker pool + TTL sweeper.
 	// No-op when unconfigured (no App private key).
-	h.PRRefresh.Start(sweepCtx)
 
 	// Channel inbound supervisor (MUL-3620): holds the §4.4 WS lease per
 	// installation and drives each channel.Channel. It is channel-agnostic,

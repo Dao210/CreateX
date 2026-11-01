@@ -11,7 +11,6 @@ import (
 	"net/http"
 	"net/netip"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/auro-ai/auro/server/internal/analytics"
@@ -24,12 +23,10 @@ import (
 	"github.com/auro-ai/auro/server/internal/integrations/channel/engine"
 	composio "github.com/auro-ai/auro/server/internal/integrations/composio"
 	"github.com/auro-ai/auro/server/internal/integrations/dingtalk"
-	"github.com/auro-ai/auro/server/internal/integrations/ghsnapshot"
 	"github.com/auro-ai/auro/server/internal/integrations/lark"
 	"github.com/auro-ai/auro/server/internal/integrations/slack"
 	"github.com/auro-ai/auro/server/internal/integrations/telegram"
 	"github.com/auro-ai/auro/server/internal/integrations/wecom"
-	"github.com/auro-ai/auro/server/internal/issuestatus"
 	obsmetrics "github.com/auro-ai/auro/server/internal/metrics"
 	"github.com/auro-ai/auro/server/internal/middleware"
 	"github.com/auro-ai/auro/server/internal/realtime"
@@ -235,7 +232,7 @@ type Handler struct {
 	// catalog reads a request performs, which is the only property that
 	// distinguishes the current one-read derivation from the N+1 it replaced.
 	// (MUL-6243)
-	IssueStatusCatalog issuestatus.Querier
+
 	LivenessStore      LivenessStore
 	HeartbeatScheduler HeartbeatScheduler
 	Storage            storage.Storage
@@ -414,8 +411,7 @@ type Handler struct {
 	// trigger is a no-op) when GITHUB_APP_ID / GITHUB_APP_PRIVATE_KEY are unset,
 	// so the feature degrades cleanly on deployments without a private key.
 	// Wired in cmd/server/router.go after New.
-	PRRefresh *ghsnapshot.Manager
-	cfg       Config
+	cfg Config
 }
 
 func New(queries *db.Queries, txStarter txStarter, hub *realtime.Hub, bus *events.Bus, emailService *service.EmailService, store storage.Storage, cfSigner *auth.CloudFrontSigner, analyticsClient analytics.Client, cfg Config, daemonHubs ...*daemonws.Hub) *Handler {
@@ -476,7 +472,6 @@ func New(queries *db.Queries, txStarter txStarter, hub *realtime.Hub, bus *event
 
 	taskSvc := service.NewTaskService(queries, txStarter, hub, bus, daemonHub)
 	taskSvc.Analytics = analyticsClient
-	taskSvc.SourceContextStorage = store
 	// Chat follow-up suggestions run through the same internal LLM layer that
 	// backs auto-titling. A deployment with no AURO_LLM_* configuration gets
 	// a disabled client, which turns the feature off rather than failing.
@@ -530,12 +525,6 @@ func New(queries *db.Queries, txStarter txStarter, hub *realtime.Hub, bus *event
 	// unconditionally but inert (every trigger no-ops) when the App private key
 	// is unconfigured, so the feature degrades cleanly. main.go calls
 	// h.PRRefresh.Start(ctx) to launch its worker pool + TTL sweeper.
-	ghClient, err := ghsnapshot.NewClientFromEnv()
-	if err != nil {
-		// Malformed key is operator-actionable; the pipeline stays disabled.
-		slog.Warn("github: PR snapshot pipeline disabled (invalid App private key)", "err", err)
-	}
-	h.PRRefresh = ghsnapshot.NewManager(ghClient, queries, txStarter, h.broadcastPRSnapshotApplied)
 
 	return h
 }
@@ -617,10 +606,7 @@ func ptrToText(s *string) pgtype.Text               { return util.PtrToText(s) }
 func strToText(s string) pgtype.Text                { return util.StrToText(s) }
 func timestampToString(t pgtype.Timestamptz) string { return util.TimestampToString(t) }
 func timestampToPtr(t pgtype.Timestamptz) *string   { return util.TimestampToPtr(t) }
-func timestampToNanoPtr(t pgtype.Timestamptz) *string {
-	return util.TimestampToNanoPtr(t)
-}
-func dateToPtr(d pgtype.Date) *string { return util.DateToPtr(d) }
+
 func uuidToPtr(u pgtype.UUID) *string { return util.UUIDToPtr(u) }
 
 // uuidsToStrings maps a UUID array column to string ids, skipping NULL/invalid
@@ -655,7 +641,6 @@ func uuidStringsOrEmpty(us []pgtype.UUID) []string {
 }
 
 func int8ToPtr(v pgtype.Int8) *int64 { return util.Int8ToPtr(v) }
-func int4ToPtr(v pgtype.Int4) *int32 { return util.Int4ToPtr(v) }
 
 // parseUUIDOrBadRequest validates a UUID string sourced from user input
 // (URL params, request body, headers). On invalid input it writes a 400
@@ -1016,40 +1001,6 @@ func (h *Handler) isWorkspaceEntity(ctx context.Context, userType, userID, works
 	}
 }
 
-// resolveIssueByIdentifier tries to look up an issue by "PREFIX-NUMBER" format.
-//
-// The prefix must match the workspace's own issue prefix, the same rule
-// `lookupIssueByIdentifier` applies to VCS webhooks. Without it every prefix
-// resolved to the same issue number, so `FOO-134` and `TRS-134` were
-// interchangeable — which makes the identifier URL `/{ws}/issues/{key}`
-// unusable as a canonical link.
-func (h *Handler) resolveIssueByIdentifier(ctx context.Context, id, workspaceID string) (db.Issue, bool) {
-	parts := splitIdentifier(id)
-	if parts == nil {
-		return db.Issue{}, false
-	}
-	if workspaceID == "" {
-		return db.Issue{}, false
-	}
-	wsUUID, err := util.ParseUUID(workspaceID)
-	if err != nil {
-		return db.Issue{}, false
-	}
-	// Case-insensitive: a hand-typed `trs-134` should open `TRS-134`.
-	prefix := h.getIssuePrefix(ctx, wsUUID)
-	if prefix == "" || !strings.EqualFold(parts.prefix, prefix) {
-		return db.Issue{}, false
-	}
-	issue, err := h.Queries.GetIssueByNumber(ctx, db.GetIssueByNumberParams{
-		WorkspaceID: wsUUID,
-		Number:      parts.number,
-	})
-	if err != nil {
-		return db.Issue{}, false
-	}
-	return issue, true
-}
-
 type identifierParts struct {
 	prefix string
 	number int32
@@ -1084,35 +1035,6 @@ func splitIdentifier(id string) *identifierParts {
 		return nil
 	}
 	return &identifierParts{prefix: id[:idx], number: int32(num)}
-}
-
-// issuePrefixForWorkspace resolves a workspace row's effective issue prefix:
-// the configured value, or one generated from the workspace name when the
-// stored prefix is empty (e.g. workspaces created before the prefix was
-// introduced). Split out from getIssuePrefix so callers that already hold the
-// row — such as the GitHub close-intent scan, which must not re-read it — can
-// reuse the rule.
-//
-// The empty-prefix fallback stays on the FROZEN name-based derivation, not the
-// slug-based one new workspaces get (MUL-6050): identifiers are computed at
-// read time, so switching this path would rewrite the identifier of every
-// issue in those legacy workspaces. New workspaces always persist a prefix at
-// creation, so they never reach this branch.
-func issuePrefixForWorkspace(ws db.Workspace) string {
-	if ws.IssuePrefix != "" {
-		return ws.IssuePrefix
-	}
-	return legacyIssuePrefixFromName(ws.Name)
-}
-
-// getIssuePrefix fetches the effective issue_prefix for a workspace, and
-// returns "" when the workspace row cannot be loaded.
-func (h *Handler) getIssuePrefix(ctx context.Context, workspaceID pgtype.UUID) string {
-	ws, err := h.Queries.GetWorkspace(ctx, workspaceID)
-	if err != nil {
-		return ""
-	}
-	return issuePrefixForWorkspace(ws)
 }
 
 func (h *Handler) loadAgentForUser(w http.ResponseWriter, r *http.Request, agentID string) (db.Agent, bool) {

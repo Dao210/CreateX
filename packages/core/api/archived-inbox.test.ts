@@ -49,3 +49,9 @@ describe("archived inbox API", () => {
     }
   });
 });
+
+it.each(["markInboxRead", "markInboxUnread", "archiveInbox", "unarchiveInbox"] as const)("rejects malformed %s responses instead of corrupting caches", async method => {
+  respond({ read: true, content: { entries: "bad" } });
+  const api = new ApiClient("https://api.example.test");
+  await expect(api[method]("n1")).rejects.toThrow("Invalid inbox item response");
+});

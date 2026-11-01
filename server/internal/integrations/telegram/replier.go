@@ -122,29 +122,11 @@ func (r *OutboundReplier) Reply(ctx context.Context, inst engine.ResolvedInstall
 			r.logger.WarnContext(ctx, "telegram replier: new-chat confirmation failed",
 				"installation_id", util.UUIDToString(inst.ID), "error", err)
 		}
-	case engine.OutcomeIssueUsage:
-		if err := r.post(ctx, inst, msg, msgIssueUsage); err != nil {
-			r.logger.WarnContext(ctx, "telegram replier: issue usage reply failed",
-				"installation_id", util.UUIDToString(inst.ID), "error", err)
-		}
+
 	case engine.OutcomeIngested:
-		if res.IssueID.Valid {
-			text := issueCreatedText(res)
-			if res.IssueDuplicate {
-				text = issueDuplicateText(res)
-			}
-			if err := r.post(ctx, inst, msg, text); err != nil {
-				r.logger.WarnContext(ctx, "telegram replier: issue outcome reply failed",
-					"installation_id", util.UUIDToString(inst.ID), "error", err)
-			}
-		}
+
 	case engine.OutcomeDropped:
-		if text := droppedReplyText(res, msg); text != "" {
-			if err := r.post(ctx, inst, msg, text); err != nil {
-				r.logger.WarnContext(ctx, "telegram replier: drop refusal failed",
-					"installation_id", util.UUIDToString(inst.ID), "error", err)
-			}
-		}
+
 	}
 }
 
@@ -210,58 +192,4 @@ func (r *OutboundReplier) post(ctx context.Context, inst engine.ResolvedInstalla
 		return fmt.Errorf("post telegram reply: %w", err)
 	}
 	return nil
-}
-
-func issueCreatedText(res engine.Result) string {
-	id := issueResultIdentifier(res)
-	title := strings.TrimSpace(res.IssueTitle)
-	if title == "" {
-		return "✅ Created " + id
-	}
-	return "✅ Created " + id + " — " + title
-}
-
-func issueDuplicateText(res engine.Result) string {
-	id := issueResultIdentifier(res)
-	title := strings.TrimSpace(res.IssueTitle)
-	if title == "" {
-		return "⚠️ Not created — active issue " + id + " already exists."
-	}
-	return "⚠️ Not created — active issue " + id + " already exists: " + title
-}
-
-func issueResultIdentifier(res engine.Result) string {
-	if res.IssueIdentifier != "" {
-		return res.IssueIdentifier
-	}
-	if res.IssueNumber > 0 {
-		return fmt.Sprintf("#%d", res.IssueNumber)
-	}
-	return util.UUIDToString(res.IssueID)
-}
-
-func isAddressedIssueCommand(msg channel.InboundMessage) bool {
-	if !msg.AddressedToBot {
-		return false
-	}
-	source := msg.CommandText
-	if source == "" {
-		source = msg.Text
-	}
-	_, ok := engine.ParseIssueCommand(source)
-	return ok
-}
-
-func droppedReplyText(res engine.Result, msg channel.InboundMessage) string {
-	if !isAddressedIssueCommand(msg) {
-		return ""
-	}
-	switch res.DropReason {
-	case engine.DropReasonNonWorkspaceMember:
-		return msgIssueNotMember
-	case engine.DropReasonRevokedInstallation:
-		return msgIssueDisabled
-	default:
-		return ""
-	}
 }

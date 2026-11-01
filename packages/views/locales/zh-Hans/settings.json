@@ -659,6 +659,12 @@
       "granted": "当前浏览器可以弹出通知横幅。",
       "denied": "已被浏览器拦截。请在浏览器设置中为本站点开启通知权限。",
       "enabled_badge": "已启用"
+    },
+    "inbox": {
+      "title": "收件箱",
+      "creations": "创作进展",
+      "world": "世界摘要",
+      "world_description": "包含当前世界所有成员的公开创作和居民里程碑。"
     }
   },
   "tokens": {

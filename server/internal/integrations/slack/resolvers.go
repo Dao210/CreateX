@@ -237,7 +237,7 @@ func (r *identityResolver) ResolveSender(ctx context.Context, inst engine.Resolv
 		// first message that already wrote it returns the same row.
 		if _, err := r.q.CreateChannelUserBinding(ctx, db.CreateChannelUserBindingParams{
 			WorkspaceID:    inst.WorkspaceID,
-			AuroUserID:  binding.AuroUserID,
+			AuroUserID:     binding.AuroUserID,
 			InstallationID: inst.ID,
 			ChannelType:    string(TypeSlack),
 			ChannelUserID:  senderID,
@@ -374,15 +374,13 @@ func (r *sessionBinder) AppendMessage(ctx context.Context, p engine.AppendParams
 
 func (r *sessionBinder) BindMedia(ctx context.Context, p engine.BindMediaParams) (engine.BindMediaResult, error) {
 	return r.session.BindMediaRefsWithResult(ctx, engine.BindMediaInput{
-		MessageID:            p.MessageID,
-		SessionID:            p.SessionID,
-		WorkspaceID:          p.WorkspaceID,
-		Sender:               p.Sender,
-		IssueID:              p.IssueID,
-		IssueDescriptionBase: p.IssueDescriptionBase,
-		IssueCommandText:     p.IssueCommandText,
-		Body:                 p.Body,
-		MediaRefs:            p.MediaRefs,
+		MessageID:   p.MessageID,
+		SessionID:   p.SessionID,
+		WorkspaceID: p.WorkspaceID,
+		Sender:      p.Sender,
+
+		Body:      p.Body,
+		MediaRefs: p.MediaRefs,
 	})
 }
 

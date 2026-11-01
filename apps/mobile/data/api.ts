@@ -13,13 +13,13 @@
  *   3. X-Request-ID per request + structured logger (debug + tracing)
  *   4. Bearer auth + X-Workspace-Slug — NOT cookie auth (no CSRF, no credentials)
  */
-import type { Agent, AgentTask, Attachment, ChatMessage, ChatPendingTask, ChatSession, CreateLabelRequest, InboxItem, InboxWorkspaceUnread, Label, ListLabelsResponse, MemberWithUser, PinnedItem, PinnedItemType, ReorderPinsRequest, RuntimeDevice, SendChatMessageResponse, NotificationPreferenceResponse, NotificationPreferences, TaskMessagePayload, UpdateMeRequest, User, Workspace, WorkspaceSubscriptionSummary } from "@auro/core/types";
+import type { Agent, AgentTask, Attachment, ChatMessage, ChatPendingTask, ChatSession, CreateLabelRequest, InboxItem, InboxWorkspaceUnread, Label, ListLabelsResponse, MemberWithUser, RuntimeDevice, SendChatMessageResponse, NotificationPreferenceResponse, NotificationPreferences, TaskMessagePayload, UpdateMeRequest, User, Workspace, WorkspaceSubscriptionSummary } from "@auro/core/types";
 import { AppConfigSchema, EMPTY_APP_CONFIG, EMPTY_REFRESH_SESSION_RESPONSE, RefreshSessionResponseSchema, WorkspaceSubscriptionSummarySchema } from "@auro/core/api/schemas";
 import type {
   AppConfigResponse,
   RefreshSessionResponse,
 } from "@auro/core/api/schemas";
-import { AgentListSchema, AgentTaskListSchema, AttachmentSchema, ChatMessageListSchema, ChatPendingTaskSchema, ChatSessionListSchema, ChatSessionSchema, EMPTY_AGENT_LIST, EMPTY_AGENT_TASK_LIST, EMPTY_CHAT_MESSAGE_LIST, EMPTY_CHAT_PENDING_TASK, EMPTY_CHAT_SESSION_LIST, EMPTY_INBOX_LIST, EMPTY_INBOX_UNREAD_SUMMARY, EMPTY_LIST_LABELS_RESPONSE, EMPTY_MEMBER_LIST, EMPTY_NOTIFICATION_PREFERENCES, EMPTY_PIN_LIST, EMPTY_RUNTIME_LIST, EMPTY_USER, EMPTY_WORKSPACE_LIST, InboxListSchema, InboxUnreadSummarySchema, NotificationPreferenceResponseSchema, ListLabelsResponseSchema, MemberListSchema, PinListSchema, PinnedItemSchema, RuntimeListSchema, SendChatMessageResponseSchema, TaskMessageListSchema, EMPTY_TASK_MESSAGE_LIST, UserSchema, LoginResponseSchema, WorkspaceListSchema } from "./schemas";
+import { AgentListSchema, AgentTaskListSchema, AttachmentSchema, ChatMessageListSchema, ChatPendingTaskSchema, ChatSessionListSchema, ChatSessionSchema, EMPTY_AGENT_LIST, EMPTY_AGENT_TASK_LIST, EMPTY_CHAT_MESSAGE_LIST, EMPTY_CHAT_PENDING_TASK, EMPTY_CHAT_SESSION_LIST, EMPTY_INBOX_LIST, EMPTY_INBOX_UNREAD_SUMMARY, EMPTY_LIST_LABELS_RESPONSE, EMPTY_MEMBER_LIST, EMPTY_NOTIFICATION_PREFERENCES, EMPTY_RUNTIME_LIST, EMPTY_USER, EMPTY_WORKSPACE_LIST, InboxItemSchema, InboxListSchema, InboxUnreadSummarySchema, NotificationPreferenceResponseSchema, ListLabelsResponseSchema, MemberListSchema, RuntimeListSchema, SendChatMessageResponseSchema, TaskMessageListSchema, EMPTY_TASK_MESSAGE_LIST, UserSchema, LoginResponseSchema, WorkspaceListSchema } from "./schemas";
 import type { ZodType } from "zod";
 import { getCurrentSlug } from "./workspace-store";
 import { parseWithFallback } from "@/lib/parse-response";
@@ -421,16 +421,12 @@ class ApiClient {
   }
 
   async markInboxRead(id: string): Promise<InboxItem> {
-    return this.fetch<InboxItem>(`/api/inbox/${id}/read`, { method: "POST" });
+    return this.fetchValidatedWith<InboxItem | null>(`/api/inbox/${encodeURIComponent(id)}/read`, InboxItemSchema, null, { method: "POST" }, { endpoint: "readInbox" }).then(item => { if (!item) throw new Error("Invalid inbox item response"); return item; });
   }
 
-  // Archive endpoints — write surface. Match web's surface in
-  // packages/core/api/client.ts:981-1003. No parseWithFallback (mirrors
-  // markInboxRead above and the project write endpoints): a malformed
-  // archive response should surface naturally so the optimistic patch
-  // rolls back.
+  // Validate consumed write responses so malformed payloads trigger rollback.
   async archiveInbox(id: string): Promise<InboxItem> {
-    return this.fetch<InboxItem>(`/api/inbox/${id}/archive`, { method: "POST" });
+    return this.fetchValidatedWith<InboxItem | null>(`/api/inbox/${encodeURIComponent(id)}/archive`, InboxItemSchema, null, { method: "POST" }, { endpoint: "archiveInbox" }).then(item => { if (!item) throw new Error("Invalid inbox item response"); return item; });
   }
 
   async markAllInboxRead(): Promise<{ count: number }> {
@@ -447,12 +443,6 @@ class ApiClient {
 
   async archiveAllReadInbox(): Promise<{ count: number }> {
     return this.fetch<{ count: number }>("/api/inbox/archive-all-read", {
-      method: "POST",
-    });
-  }
-
-  async archiveCompletedInbox(): Promise<{ count: number }> {
-    return this.fetch<{ count: number }>("/api/inbox/archive-completed", {
       method: "POST",
     });
   }
@@ -668,57 +658,6 @@ class ApiClient {
       EMPTY_TASK_MESSAGE_LIST,
       { ...opts, endpoint: "GET /api/tasks/:id/messages" },
     );
-  }
-
-  // --- Pins ---
-  //
-  // Pin metadata only — title / status / icon for each row come from
-  // `issueDetailOptions` / `projectDetailOptions` on the consumer side.
-  // Endpoints mirror packages/core/api/client.ts:1551-1572.
-
-  async listPins(opts?: { signal?: AbortSignal }): Promise<PinnedItem[]> {
-    return this.fetchValidated(
-      "/api/pins",
-      PinListSchema,
-      EMPTY_PIN_LIST,
-      { ...opts, endpoint: "listPins" },
-    );
-  }
-
-  async createPin(data: {
-    item_type: PinnedItemType;
-    item_id: string;
-  }): Promise<PinnedItem> {
-    return this.fetchValidatedWith(
-      "/api/pins",
-      PinnedItemSchema,
-      // Mirror EMPTY_PIN_LIST element shape — onSuccess uses the returned
-      // pin's id/position so a stub with empty id is detectable downstream.
-      {
-        id: "",
-        workspace_id: "",
-        user_id: "",
-        item_type: data.item_type,
-        item_id: data.item_id,
-        position: 0,
-        created_at: "",
-      },
-      { method: "POST", body: JSON.stringify(data) },
-      { endpoint: "createPin" },
-    );
-  }
-
-  async deletePin(itemType: PinnedItemType, itemId: string): Promise<void> {
-    await this.fetch<void>(`/api/pins/${itemType}/${itemId}`, {
-      method: "DELETE",
-    });
-  }
-
-  async reorderPins(data: ReorderPinsRequest): Promise<void> {
-    await this.fetch<void>("/api/pins/reorder", {
-      method: "PUT",
-      body: JSON.stringify(data),
-    });
   }
 
   // --- File Upload ---

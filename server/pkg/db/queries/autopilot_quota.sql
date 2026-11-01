@@ -1,15 +1,21 @@
 -- name: EnsureAutopilotQuotaPeriod :one
--- The no-op update is intentional: ON CONFLICT UPDATE locks the period row for
--- the caller's transaction, serialising admission for one workspace/period.
 INSERT INTO autopilot_quota_period (workspace_id, period_start, period_end)
 VALUES ($1, $2, $3)
 ON CONFLICT (workspace_id, period_start, period_end) DO UPDATE
 SET updated_at = autopilot_quota_period.updated_at
 RETURNING *;
 
+
+
+
+
 -- name: GetAutopilotQuotaPeriod :one
 SELECT * FROM autopilot_quota_period
 WHERE workspace_id = $1 AND period_start = $2 AND period_end = $3;
+
+
+
+
 
 -- name: GetAutopilotQuotaReservationByKey :one
 SELECT * FROM autopilot_quota_reservation
@@ -19,6 +25,10 @@ WHERE workspace_id = $1
   AND idempotency_key = $4
   AND state <> 'released';
 
+
+
+
+
 -- name: CreateAutopilotQuotaReservation :one
 INSERT INTO autopilot_quota_reservation (
     workspace_id, period_start, period_end, policy_revision,
@@ -26,12 +36,20 @@ INSERT INTO autopilot_quota_reservation (
 ) VALUES ($1, $2, $3, $4, $5, $6, $7)
 RETURNING *;
 
+
+
+
+
 -- name: IncrementAutopilotQuotaReserved :one
 UPDATE autopilot_quota_period
 SET reserved_count = reserved_count + 1,
     updated_at = now()
 WHERE workspace_id = $1 AND period_start = $2 AND period_end = $3
 RETURNING *;
+
+
+
+
 
 -- name: IncrementAutopilotQuotaBlocked :one
 UPDATE autopilot_quota_period
@@ -47,6 +65,10 @@ WHERE workspace_id = @workspace_id
   AND period_end = @period_end
 RETURNING *;
 
+
+
+
+
 -- name: MarkAutopilotQuotaRejectionNotified :one
 UPDATE autopilot_quota_period
 SET rejection_notified_at = COALESCE(rejection_notified_at, now()),
@@ -56,9 +78,11 @@ WHERE workspace_id = @workspace_id
 	AND period_end = @period_end
 RETURNING *;
 
+
+
+
+
 -- name: ConsumeAutopilotQuotaReservation :one
--- used_count is monotonic within a period: consuming a reserved slot is the
--- only write that changes it, and no release path decrements it.
 WITH locked AS (
     SELECT qr.* FROM autopilot_quota_reservation qr
     WHERE qr.id = @reservation_id AND qr.state = 'reserved'
@@ -86,9 +110,11 @@ WHERE p.workspace_id = changed.workspace_id
   AND p.period_end = changed.period_end
 RETURNING p.*;
 
+
+
+
+
 -- name: ReleaseAutopilotQuotaReservation :one
--- Release is intentionally limited to still-reserved work. A consumed
--- create_issue slot remains counted after cancellation, blocking, or deletion.
 WITH locked AS (
     SELECT qr.* FROM autopilot_quota_reservation qr
     WHERE qr.id = @reservation_id AND qr.state = 'reserved'
@@ -115,6 +141,10 @@ WHERE p.workspace_id = changed.workspace_id
   AND p.period_end = changed.period_end
 RETURNING p.*;
 
+
+
+
+
 -- name: ListRecoverableAutopilotQuotaReservations :many
 SELECT r.*
 FROM autopilot_quota_reservation r
@@ -126,10 +156,6 @@ WHERE r.state = 'reserved'
           AND (ar.id IS NULL OR ar.status IN ('completed', 'failed', 'skipped'))
       )
       OR (
-          -- Manual/API requests have no durable retry owner. Reclaim only an
-          -- hours-old partial run with neither a linked side effect nor even
-          -- an unlinked task row; schedule and webhook retries repair their
-          -- own partial state and are deliberately excluded.
           r.created_at < @partial_created_before
           AND ar.source IN ('manual', 'api')
           AND (

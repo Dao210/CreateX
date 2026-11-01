@@ -124,7 +124,7 @@ function fakeQc(data: {
 }): QueryClient {
   const map = new Map<string, unknown>();
   map.set(JSON.stringify(workspaceKeys.members("ws-1")), data.members ?? []);
-  // MUL-3963: the mention filter runs through canAssignAgentToIssue, which
+  // MUL-3963: the mention filter runs through canInvokeAgent, which
   // reads permission_mode + invocation_targets (not the legacy `visibility`).
   // Fixtures still express intent via `visibility`, so derive the permission
   // fields from it here (public_to + workspace target for "workspace";

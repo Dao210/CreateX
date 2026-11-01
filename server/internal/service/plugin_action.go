@@ -137,7 +137,7 @@ type PluginContextIssue struct {
 // BuildPluginContext assembles the context payload. Config carries only the
 // non-secret installation values — secrets live in their own table and have no
 // read path, so there is no way for one to reach the iframe.
-func (s *PluginService) BuildPluginContext(caller PluginActionCaller, workspace db.Workspace, user *db.User, issue *db.Issue) PluginContext {
+func (s *PluginService) BuildPluginContext(caller PluginActionCaller, workspace db.Workspace, user *db.User) PluginContext {
 	config := map[string]any{}
 	if len(caller.Installation.Config) > 0 {
 		_ = json.Unmarshal(caller.Installation.Config, &config)

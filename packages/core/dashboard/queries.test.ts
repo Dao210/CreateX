@@ -45,8 +45,8 @@ describe("dashboard range placeholders", () => {
     "keeps the previous %s result when only the day range changes",
     (buildOptions) => {
       const previous = [{ sentinel: "30d" }];
-      const previousOptions = buildOptions("ws-1", 30, null, "UTC");
-      const nextOptions = buildOptions("ws-1", 7, null, "UTC");
+      const previousOptions = buildOptions("ws-1", 30, "UTC");
+      const nextOptions = buildOptions("ws-1", 7, "UTC");
 
       expect(
         resolvePlaceholder(nextOptions, previous, previousOptions.queryKey),
@@ -54,23 +54,20 @@ describe("dashboard range placeholders", () => {
     },
   );
 
-  it("does not carry placeholder data across workspace, project, or timezone scopes", () => {
+  it("does not carry placeholder data across workspace or timezone scopes", () => {
     const previous = [{ sentinel: "previous-scope" }];
     const nextOptions = dashboardUsageDailyOptions(
       "ws-1",
       7,
-      "project-1",
       "Asia/Shanghai",
     );
     const previousScopes = [
       dashboardUsageDailyOptions(
         "ws-2",
         30,
-        "project-1",
-        "Asia/Shanghai",
+          "Asia/Shanghai",
       ),
-      dashboardUsageDailyOptions("ws-1", 30, "project-2", "Asia/Shanghai"),
-      dashboardUsageDailyOptions("ws-1", 30, "project-1", "UTC"),
+      dashboardUsageDailyOptions("ws-1", 30, "UTC"),
     ];
 
     for (const previousOptions of previousScopes) {
@@ -81,7 +78,7 @@ describe("dashboard range placeholders", () => {
   });
 
   it("keeps the initial loading state honest when there is no previous query", () => {
-    const options = dashboardUsageDailyOptions("ws-1", 30, null, "UTC");
+    const options = dashboardUsageDailyOptions("ws-1", 30, "UTC");
 
     expect(resolvePlaceholder(options, undefined, undefined)).toBeUndefined();
   });

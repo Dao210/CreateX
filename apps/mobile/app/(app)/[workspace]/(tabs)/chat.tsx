@@ -50,7 +50,7 @@ import {
   hideQueuedChatMessages,
   removePendingChatTask,
 } from "@auro/core/chat/pending";
-import { canAssignAgentToIssue } from "@auro/core/permissions";
+import { canInvokeAgent } from "@auro/core/permissions";
 import { api } from "@/data/api";
 import { useAuthStore } from "@/data/auth-store";
 import { useWorkspaceStore } from "@/data/workspace-store";
@@ -187,7 +187,7 @@ export default function ChatTab() {
       agents.filter(
         (a) =>
           !a.archived_at &&
-          canAssignAgentToIssue(a, { userId: userId ?? null, role: memberRole })
+          canInvokeAgent(a, { userId: userId ?? null, role: memberRole })
             .allowed,
       ),
     [agents, userId, memberRole],
@@ -219,7 +219,7 @@ export default function ChatTab() {
   // above cannot cover this case — judge the bound agent too (MUL-6380).
   const accessRevoked =
     currentAgent !== null &&
-    !canAssignAgentToIssue(currentAgent, {
+    !canInvokeAgent(currentAgent, {
       userId: userId ?? null,
       role: memberRole,
     }).allowed;

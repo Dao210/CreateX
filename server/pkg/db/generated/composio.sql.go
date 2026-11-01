@@ -21,8 +21,6 @@ type GetUserComposioConnectionParams struct {
 	UserID pgtype.UUID `json:"user_id"`
 }
 
-// Owner-scoped lookup: a connection can only be read by the user who owns it,
-// so one user cannot disconnect another's account by guessing the UUID.
 func (q *Queries) GetUserComposioConnection(ctx context.Context, arg GetUserComposioConnectionParams) (UserComposioConnection, error) {
 	row := q.db.QueryRow(ctx, getUserComposioConnection, arg.ID, arg.UserID)
 	var i UserComposioConnection
@@ -91,15 +89,12 @@ type MarkUserComposioConnectionRevokedParams struct {
 	UserID pgtype.UUID `json:"user_id"`
 }
 
-// Idempotent: re-running on an already-revoked row is a no-op write. Scoped to
-// the owner for defense-in-depth.
 func (q *Queries) MarkUserComposioConnectionRevoked(ctx context.Context, arg MarkUserComposioConnectionRevokedParams) error {
 	_, err := q.db.Exec(ctx, markUserComposioConnectionRevoked, arg.ID, arg.UserID)
 	return err
 }
 
 const upsertUserComposioConnection = `-- name: UpsertUserComposioConnection :one
-
 INSERT INTO user_composio_connection (
     user_id, toolkit_slug, auth_config_id, connected_account_id, composio_user_id, status
 ) VALUES (
@@ -122,13 +117,6 @@ type UpsertUserComposioConnectionParams struct {
 	ComposioUserID     string      `json:"composio_user_id"`
 }
 
-// =====================
-// User Composio Connection
-// =====================
-// Idempotent on (user_id, connected_account_id): a duplicate callback for the
-// same connected account re-activates the row instead of inserting a second
-// one. connected_at is preserved on conflict (first-connect time); updated_at
-// moves so the reactivation is observable.
 func (q *Queries) UpsertUserComposioConnection(ctx context.Context, arg UpsertUserComposioConnectionParams) (UserComposioConnection, error) {
 	row := q.db.QueryRow(ctx, upsertUserComposioConnection,
 		arg.UserID,

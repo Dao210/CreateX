@@ -21,9 +21,6 @@ WHERE id = $1
 RETURNING id, workspace_id, code, created_by, role, expires_at, max_uses, use_count, is_active, created_at
 `
 
-// The caller first resolves the opaque code and then atomically consumes the
-// non-secret row ID. The conditional UPDATE revalidates validity and the use
-// limit so a join cannot race past revocation or expiry.
 func (q *Queries) ClaimShareLinkByID(ctx context.Context, id pgtype.UUID) (WorkspaceShareLink, error) {
 	row := q.db.QueryRow(ctx, claimShareLinkByID, id)
 	var i WorkspaceShareLink

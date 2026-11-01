@@ -15,7 +15,6 @@ const hasTaskMessages = `-- name: HasTaskMessages :one
 SELECT EXISTS (SELECT 1 FROM task_message WHERE task_id = $1)
 `
 
-// Cancellation only needs to know whether a transcript exists.
 func (q *Queries) HasTaskMessages(ctx context.Context, taskID pgtype.UUID) (bool, error) {
 	row := q.db.QueryRow(ctx, hasTaskMessages, taskID)
 	var exists bool

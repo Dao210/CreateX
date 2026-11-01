@@ -213,21 +213,6 @@ describe("applyChatSessionUpdatedToCache", () => {
     };
   }
 
-  it("applies an explicit null project_id from another tab", () => {
-    const qc = createQueryClient();
-    qc.setQueryData<ChatSession[]>(chatKeys.sessions(WS_ID), [
-      makeSession({ project_id: "project-1" }),
-    ]);
-
-    applyChatSessionUpdatedToCache(qc, WS_ID, {
-      chat_session_id: "s1",
-      project_id: null,
-    });
-
-    const row = qc.getQueryData<ChatSession[]>(chatKeys.sessions(WS_ID))![0]!;
-    expect(row.project_id).toBeNull();
-  });
-
   // MUL-4360 cross-tab: chatSessionsOptions is staleTime: Infinity, so a stale
   // cache in another tab never self-heals. When an archive event lands there,
   // the row's unread must be forced to 0 to match the archive mutation and the
@@ -597,7 +582,6 @@ describe("resolveInboxSourceSlug", () => {
       context: null,
       settings: {},
       repos: [],
-      issue_prefix: "WSA",
       avatar_url: null,
       created_at: "2026-05-18T00:00:00Z",
       updated_at: "2026-05-18T00:00:00Z",
@@ -652,7 +636,6 @@ describe("handleInboxNew", () => {
       context: null,
       settings: {},
       repos: [],
-      issue_prefix: "WSA",
       avatar_url: null,
       created_at: "2026-05-18T00:00:00Z",
       updated_at: "2026-05-18T00:00:00Z",
@@ -690,6 +673,18 @@ describe("handleInboxNew", () => {
 
   afterEach(() => {
     delete (globalThis as Record<string, unknown>).desktopAPI;
+  });
+
+  it("refreshes a world digest without an operating-system banner", async () => {
+    const qc = createQueryClient();
+    const invalidate = vi.spyOn(qc, "invalidateQueries");
+    const showNotification = stubDesktopAPI();
+    await handleInboxNew(qc, inboxItem({ type: "world_digest" }));
+    expect(showNotification).not.toHaveBeenCalled();
+    await vi.waitFor(() => {
+      expect(invalidate).toHaveBeenCalledWith({ queryKey: inboxKeys.unreadSummary() });
+      expect(invalidate).toHaveBeenCalledWith({ queryKey: inboxKeys.all("ws-a") });
+    });
   });
 
   it("still shows the banner when the slug can't be resolved, with an empty slug so the click is a no-op", async () => {

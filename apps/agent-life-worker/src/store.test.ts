@@ -16,8 +16,9 @@ describe.skipIf(!databaseURL)("PostgreSQL world authority (isolated schema)", ()
     let pool = new pg.Pool(options);
     try {
       await pool.query("CREATE TABLE workspace (id uuid NOT NULL)");
+      await pool.query("CREATE TABLE inbox_item (id uuid)");
       const migrations = new URL("../../../server/migrations/", import.meta.url);
-      for (const file of (await readdir(migrations)).filter((f) => /^(57[4-9]|58[0-4])_.*\.up\.sql$/.test(f)).sort()) await pool.query(await readFile(new URL(file, migrations), "utf8"));
+      for (const file of (await readdir(migrations)).filter((f) => /^(57[4-9]|58[0-4]|59[4-8])_.*\.up\.sql$/.test(f)).sort()) await pool.query(await readFile(new URL(file, migrations), "utf8"));
       const workspaceId = randomUUID();
       await pool.query("INSERT INTO workspace VALUES($1)", [workspaceId]);
       const store = new LifeStore(pool);
@@ -58,6 +59,23 @@ describe.skipIf(!databaseURL)("PostgreSQL world authority (isolated schema)", ()
       const snapshot = LifeSnapshotSchema.parse((await pool.query(snapshotSQL, [workspaceId])).rows[0].snapshot);
       expect(snapshot.world?.tick).toBe(72); expect(snapshot.agents).toHaveLength(20); expect(snapshot.actions).toHaveLength(20);
       expect((await pool.query(snapshotSQL, [other])).rowCount).toBe(0);
+      const resident = snapshot.agents.find(agent => agent.goal.kind === "wood")!;
+      const goalTarget = resident.goal.target+100;
+      await pool.query("UPDATE life_agent SET x=9,y=6,energy=100,fullness=100,goal=jsonb_set(goal,'{target}',to_jsonb($2::int)) WHERE id=$1", [resident.id, goalTarget]);
+      await pool.query("UPDATE life_resource SET amount=$2 WHERE owner=$1 AND kind='wood'", [resident.id, goalTarget-1]);
+      await pool.query(`UPDATE life_action SET intent='{"kind":"GATHER_WOOD"}',due_tick=73 WHERE agent_id=$1 AND status='running'`, [resident.id]);
+      await pool.query("UPDATE life_world SET next_tick_at=clock_timestamp()-interval '1 second'");
+      const goalBefore = Number((await pool.query("SELECT count(*) AS n FROM world_inbox_event WHERE subject_id=$1", [resident.id])).rows[0].n);
+      await pool.query("CREATE FUNCTION reject_inbox_fact() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'injected_inbox_failure'; END $$");
+      await pool.query("CREATE TRIGGER fail_inbox_fact BEFORE INSERT ON world_inbox_event FOR EACH ROW EXECUTE FUNCTION reject_inbox_fact()");
+      await expect(restarted.tick(id)).rejects.toThrow("injected_inbox_failure");
+      expect((await pool.query("SELECT tick FROM life_world")).rows[0].tick).toBe("72");
+      await pool.query("DROP TRIGGER fail_inbox_fact ON world_inbox_event");
+      expect(await restarted.tick(id)).toBe(73);
+      const goals = await pool.query("SELECT content FROM world_inbox_event WHERE subject_id=$1", [resident.id]);
+      expect(goals.rowCount).toBe(goalBefore+1);
+      expect(goals.rows.at(-1).content).toMatchObject({ kind: "resident_goal_reached", name: resident.name, goalKind: "wood", target: goalTarget });
+      expect(await restarted.tick(id)).toBeNull();
       await expect(pool.query("UPDATE life_resource SET amount=-1")).rejects.toThrow();
       await expect(pool.query("INSERT INTO life_event SELECT * FROM life_event WHERE action_id IS NOT NULL LIMIT 1")).rejects.toThrow();
     } finally {

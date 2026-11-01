@@ -17,7 +17,6 @@ import (
 	"github.com/auro-ai/auro/server/internal/storage"
 	"github.com/auro-ai/auro/server/internal/util"
 	db "github.com/auro-ai/auro/server/pkg/db/generated"
-	"github.com/auro-ai/auro/server/pkg/protocol"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -325,29 +324,6 @@ func (h *Handler) attachmentDownloadURLTTL() time.Duration {
 	return defaultAttachmentDownloadURLTTL
 }
 
-// groupAttachments loads attachments for multiple comments and groups them by comment ID.
-func (h *Handler) groupAttachments(r *http.Request, commentIDs []pgtype.UUID) map[string][]AttachmentResponse {
-	if len(commentIDs) == 0 {
-		return nil
-	}
-	workspaceID := h.resolveWorkspaceID(r)
-	attachments, err := h.Queries.ListAttachmentsByCommentIDs(r.Context(), db.ListAttachmentsByCommentIDsParams{
-		Column1:     commentIDs,
-		WorkspaceID: parseUUID(workspaceID),
-	})
-	if err != nil {
-		slog.Error("failed to load attachments for comments", "error", err)
-		return nil
-	}
-	mode := attachmentURLModeFromRequest(r)
-	grouped := make(map[string][]AttachmentResponse, len(commentIDs))
-	for _, a := range attachments {
-		cid := uuidToString(a.CommentID)
-		grouped[cid] = append(grouped[cid], h.attachmentToResponse(a, mode))
-	}
-	return grouped
-}
-
 // groupChatMessageAttachments loads attachments for multiple chat messages
 // and groups them by chat_message_id. Mirrors groupAttachments — used so the
 // chat message list can surface attachment metadata to the UI bubble (file
@@ -377,7 +353,6 @@ func (h *Handler) groupChatMessageAttachments(ctx context.Context, workspaceID s
 // ---------------------------------------------------------------------------
 
 func (h *Handler) UploadFile(w http.ResponseWriter, r *http.Request) {
-	r = h.withWakeupActor(r)
 	if h.Storage == nil {
 		writeFeatureDisabled(w, "file_upload_not_configured", "file upload not configured")
 		return
@@ -463,34 +438,6 @@ func (h *Handler) UploadFile(w http.ResponseWriter, r *http.Request) {
 			SizeBytes:    int64(len(data)),
 		}
 
-		if issueID := r.FormValue("issue_id"); issueID != "" {
-			issueUUID, ok := parseUUIDOrBadRequest(w, issueID, "issue_id")
-			if !ok {
-				return
-			}
-			issue, err := h.Queries.GetIssueInWorkspace(r.Context(), db.GetIssueInWorkspaceParams{
-				ID:          issueUUID,
-				WorkspaceID: parseUUID(workspaceID),
-			})
-			if err != nil {
-				writeError(w, http.StatusForbidden, "invalid issue_id")
-				return
-			}
-			params.IssueID = issue.ID
-		}
-		if commentID := r.FormValue("comment_id"); commentID != "" {
-			commentUUID, ok := parseUUIDOrBadRequest(w, commentID, "comment_id")
-			if !ok {
-				return
-			}
-			comment, err := h.Queries.GetComment(r.Context(), commentUUID)
-			// A deleted comment's tombstone takes no attachments.
-			if err != nil || uuidToString(comment.WorkspaceID) != workspaceID || comment.DeletedAt.Valid {
-				writeError(w, http.StatusForbidden, "invalid comment_id")
-				return
-			}
-			params.CommentID = comment.ID
-		}
 		if chatSessionID := r.FormValue("chat_session_id"); chatSessionID != "" {
 			// Require the member-visible Chat projection as well as private-agent
 			// access. A cached command-only session id must not accept uploads that
@@ -566,49 +513,17 @@ func (h *Handler) UploadFile(w http.ResponseWriter, r *http.Request) {
 		params.Url = link
 
 		var att db.CreateAttachmentRow
-		if params.CommentID.Valid {
-			// A comment attachment is written under the comment's lock, so a
-			// delete that commits while the object uploaded cannot leave it on
-			// a tombstone. A refused upload takes its stored object with it.
-			err = h.withLiveCommentLock(r.Context(), params.CommentID, params.WorkspaceID, func(qtx *db.Queries) error {
-				var createErr error
-				att, createErr = qtx.CreateAttachment(r.Context(), params)
-				return createErr
-			})
-			if errors.Is(err, pgx.ErrNoRows) {
-				h.deleteS3Objects(r.Context(), []string{link})
-				writeError(w, http.StatusForbidden, "invalid comment_id")
-				return
-			}
-		} else {
-			att, err = wakeupWrite(h, r, func(q *db.Queries) (db.CreateAttachmentRow, error) {
-				return q.CreateAttachment(r.Context(), params)
-			})
-		}
+
+		att, err = writeTransaction(h, r.Context(), func(q *db.Queries) (db.CreateAttachmentRow, error) {
+			return q.CreateAttachment(r.Context(), params)
+		})
+
 		if err != nil {
 			slog.Error("failed to create attachment record", "error", err)
 			// S3 upload succeeded but DB record failed — still return the link
 			// so the file is usable. Log the error for investigation.
 		} else {
-			if att.IssueRevision > 0 && att.IssueID.Valid {
-				h.publish(protocol.EventIssueAttachmentsChanged, workspaceID, uploaderType, uploaderID, map[string]any{
-					"issue_id":       uuidToString(att.IssueID),
-					"issue_revision": att.IssueRevision,
-				})
-			}
-			if att.CommentRevision > 0 && att.CommentID.Valid {
-				if comment, loadErr := h.Queries.GetCommentInWorkspace(r.Context(), db.GetCommentInWorkspaceParams{
-					ID:          att.CommentID,
-					WorkspaceID: att.WorkspaceID,
-				}); loadErr == nil {
-					commentID := uuidToString(comment.ID)
-					reactions := h.groupReactions(r, []pgtype.UUID{comment.ID})
-					attachments := h.groupAttachments(r, []pgtype.UUID{comment.ID})
-					h.publish(protocol.EventCommentUpdated, workspaceID, uploaderType, uploaderID, map[string]any{
-						"comment": commentToResponse(comment, reactions[commentID], attachments[commentID]),
-					})
-				}
-			}
+
 			writeJSON(w, http.StatusOK, h.attachmentToResponse(att.Attachment(), attachmentURLModeFromRequest(r)))
 			return
 		}
@@ -638,8 +553,6 @@ func (h *Handler) UploadFile(w http.ResponseWriter, r *http.Request) {
 // ---------------------------------------------------------------------------
 // ListAttachments — GET /api/issues/{id}/attachments
 // ---------------------------------------------------------------------------
-
-
 
 // ---------------------------------------------------------------------------
 // GetAttachmentByID — GET /api/attachments/{id}
@@ -1389,7 +1302,6 @@ func isTextPreviewable(contentType, filename string) bool {
 // ---------------------------------------------------------------------------
 
 func (h *Handler) DeleteAttachment(w http.ResponseWriter, r *http.Request) {
-	r = h.withWakeupActor(r)
 	attachmentID := chi.URLParam(r, "id")
 	workspaceID := h.resolveWorkspaceID(r)
 	if workspaceID == "" {
@@ -1437,11 +1349,10 @@ func (h *Handler) DeleteAttachment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var deleted db.DeleteAttachmentRow
 	deleteParams := db.DeleteAttachmentParams{ID: att.ID, WorkspaceID: att.WorkspaceID}
 	err = h.withAttachmentOwnerLock(r.Context(), att, func(qtx *db.Queries) error {
 		var deleteErr error
-		deleted, deleteErr = qtx.DeleteAttachment(r.Context(), deleteParams)
+		_, deleteErr = qtx.DeleteAttachment(r.Context(), deleteParams)
 		return deleteErr
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -1455,25 +1366,6 @@ func (h *Handler) DeleteAttachment(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "failed to delete attachment")
 		return
 	}
-	if deleted.Changed && att.IssueID.Valid {
-		h.publish(protocol.EventIssueAttachmentsChanged, workspaceID, "member", userID, map[string]any{
-			"issue_id":       uuidToString(att.IssueID),
-			"issue_revision": deleted.IssueRevision,
-		})
-	}
-	if deleted.Changed && att.CommentID.Valid {
-		if comment, loadErr := h.Queries.GetCommentInWorkspace(r.Context(), db.GetCommentInWorkspaceParams{
-			ID:          att.CommentID,
-			WorkspaceID: att.WorkspaceID,
-		}); loadErr == nil {
-			commentID := uuidToString(comment.ID)
-			reactions := h.groupReactions(r, []pgtype.UUID{comment.ID})
-			attachments := h.groupAttachments(r, []pgtype.UUID{comment.ID})
-			h.publish(protocol.EventCommentUpdated, workspaceID, "member", userID, map[string]any{
-				"comment": commentToResponse(comment, reactions[commentID], attachments[commentID]),
-			})
-		}
-	}
 
 	h.deleteS3Object(r.Context(), att.Url)
 	w.WriteHeader(http.StatusNoContent)
@@ -1482,8 +1374,6 @@ func (h *Handler) DeleteAttachment(w http.ResponseWriter, r *http.Request) {
 // ---------------------------------------------------------------------------
 // Attachment linking
 // ---------------------------------------------------------------------------
-
-
 
 // attachmentOwnerLockAttempts bounds the re-read below. An attachment gains an
 // owner once, when the issue or comment it was uploaded for links it, so one
@@ -1522,44 +1412,18 @@ func (h *Handler) withAttachmentOwnerLock(ctx context.Context, att db.Attachment
 var errAttachmentOwnerChanged = errors.New("attachment owner changed")
 
 func (h *Handler) attachmentOwnerLockAttempt(ctx context.Context, att db.Attachment, write func(*db.Queries) error) (db.Attachment, error) {
-	tx, err := h.beginWakeupWrite(ctx)
+	tx, err := h.TxStarter.Begin(ctx)
 	if err != nil {
 		return db.Attachment{}, err
 	}
 	defer tx.Rollback(ctx)
 	qtx := h.Queries.WithTx(tx)
-	if att.IssueID.Valid {
-		// A missing issue is not an error here: its cascade took the attachment
-		// with it, which the re-read below reports as pgx.ErrNoRows.
-		if _, err := qtx.LockIssueForAttachmentWrite(ctx, db.LockIssueForAttachmentWriteParams{
-			ID:          att.IssueID,
-			WorkspaceID: att.WorkspaceID,
-		}); err != nil && !errors.Is(err, pgx.ErrNoRows) {
-			return db.Attachment{}, err
-		}
-	}
-	if att.CommentID.Valid {
-		if _, err := qtx.LockLiveComment(ctx, db.LockLiveCommentParams{
-			ID:          att.CommentID,
-			WorkspaceID: att.WorkspaceID,
-		}); err != nil {
-			return db.Attachment{}, err
-		}
-	}
-	var fresh db.Attachment
-	if att.IssueID.Valid || att.CommentID.Valid {
-		fresh, err = qtx.GetAttachment(ctx, db.GetAttachmentParams{ID: att.ID, WorkspaceID: att.WorkspaceID})
-	} else {
-		// Nothing to lock above: take the row itself so it cannot gain an owner
-		// between this read and the write.
-		fresh, err = qtx.LockAttachmentRow(ctx, db.LockAttachmentRowParams{ID: att.ID, WorkspaceID: att.WorkspaceID})
-	}
+
+	fresh, err := qtx.LockAttachmentRow(ctx, db.LockAttachmentRowParams{ID: att.ID, WorkspaceID: att.WorkspaceID})
 	if err != nil {
 		return db.Attachment{}, err
 	}
-	if fresh.IssueID != att.IssueID || fresh.CommentID != att.CommentID {
-		return fresh, errAttachmentOwnerChanged
-	}
+
 	if err := write(qtx); err != nil {
 		return db.Attachment{}, err
 	}

@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import type { Pool, PoolClient } from "pg";
 import { advanceTick, seedResidents, seedResources, type Simulation } from "../../../packages/core/agent-life/engine.ts";
 import { LIFE_TICK_MS, LIFE_CAPACITY } from "../../../packages/core/agent-life/rules.ts";
@@ -50,6 +50,11 @@ export class LifeStore {
     try {
       await client.query("BEGIN");
       await client.query("SET LOCAL statement_timeout='15s'");
+      const binding = await client.query("SELECT workspace_id FROM life_world WHERE id=$1", [worldId]);
+      if (!binding.rowCount) throw new Error("life_world_missing");
+      const workspaceId = binding.rows[0].workspace_id;
+      const workspace = await client.query("SELECT id FROM workspace WHERE id=$1 FOR KEY SHARE", [workspaceId]);
+      if (!workspace.rowCount) throw new Error("life_workspace_missing");
       const row = await client.query("SELECT tick::float8 AS tick FROM life_world WHERE id=$1 FOR UPDATE", [worldId]);
       if (!row.rowCount) throw new Error("life_world_missing");
       // clock_timestamp is evaluated in a separate statement after lock acquisition.
@@ -65,6 +70,20 @@ export class LifeStore {
       for (const r of result.state.resources) await client.query("UPDATE life_resource SET amount=$4 WHERE world_id=$1 AND owner=$2 AND kind=$3", [worldId, r.owner, r.kind, r.amount]);
       for (const a of result.started) await client.query("INSERT INTO life_action(world_id,id,agent_id,intent,reason,started_tick,due_tick,status) VALUES($1,$2,$3,$4,$5,$6,$7,'running')", [worldId, a.id, a.agentId, a.intent, a.reason, a.startedTick, a.dueTick]);
       for (const e of result.events) await client.query("INSERT INTO life_event(world_id,id,tick,action_id,agent_id,kind,payload) VALUES($1,$2,$3,$4,$5,$6,$7)", [worldId, randomUUID(), result.state.tick, e.actionId, e.agentId, e.kind, e.payload]);
+      const milestones = result.events.filter(event => event.kind === "goal_reached");
+      if (milestones.length) {
+        await client.query("SELECT pg_advisory_xact_lock_shared(19647,hashtext($1))", [workspaceId]);
+        for (const event of milestones) {
+          if (!event.agentId) throw new Error("goal_owner_missing");
+          const bytes = createHash("sha256").update(`${worldId}/${event.agentId}/${event.payload.goalKind}/${event.payload.target}`).digest();
+          bytes[6] = (bytes[6]! & 0x0f) | 0x50;
+          bytes[8] = (bytes[8]! & 0x3f) | 0x80;
+          const hex = bytes.subarray(0,16).toString("hex");
+          const id = `${hex.slice(0,8)}-${hex.slice(8,12)}-${hex.slice(12,16)}-${hex.slice(16,20)}-${hex.slice(20)}`;
+          const content = { id, kind: "resident_goal_reached", subjectId: event.agentId, ...event.payload };
+          await client.query("INSERT INTO world_inbox_event(id,workspace_id,subject_id,kind,content) VALUES($1,$2,$3,'resident_goal_reached',$4) ON CONFLICT(id) DO NOTHING", [id, workspaceId, event.agentId, content]);
+        }
+      }
       await client.query("UPDATE life_world SET tick=$2,updated_at=clock_timestamp(),next_tick_at=clock_timestamp()+tick_ms*interval '1 millisecond' WHERE id=$1", [worldId, result.state.tick]);
       await client.query("COMMIT");
       return result.state.tick;

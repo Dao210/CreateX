@@ -203,11 +203,6 @@ export function StepWorkspace({
       {
         name: name.trim(),
         slug: slug.trim(),
-        // Send what the user was shown. The server derives the same value
-        // from the slug when the field is omitted, so the preview and the
-        // created workspace agree either way — but submitting it explicitly
-        // is what makes an edited prefix stick.
-        issue_prefix: effectivePrefix,
       },
       {
         onSuccess: onCreated,

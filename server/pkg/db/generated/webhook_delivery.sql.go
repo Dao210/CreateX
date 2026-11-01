@@ -26,9 +26,6 @@ type AcknowledgeWebhookDeliveryParams struct {
 	ResponseBody   pgtype.Text `json:"response_body"`
 }
 
-// Best-effort operator metadata for the HTTP acknowledgement. The delivery and
-// run are already durable, so callers still return their response if this
-// metadata-only update fails.
 func (q *Queries) AcknowledgeWebhookDelivery(ctx context.Context, arg AcknowledgeWebhookDeliveryParams) (WebhookDelivery, error) {
 	row := q.db.QueryRow(ctx, acknowledgeWebhookDelivery, arg.ID, arg.ResponseStatus, arg.ResponseBody)
 	var i WebhookDelivery
@@ -73,9 +70,6 @@ WHERE id = $1
 RETURNING id, workspace_id, autopilot_id, trigger_id, provider, event, dedupe_key, dedupe_source, signature_status, status, attempt_count, selected_headers, content_type, raw_body, response_status, response_body, autopilot_run_id, replayed_from_delivery_id, error, received_at, last_attempt_at, created_at, available_at, lease_token, lease_expires_at, dispatch_attempts, reason_code, replay_idempotency_key
 `
 
-// On duplicate detection, bump attempt_count and refresh last_attempt_at on
-// the existing delivery so the UI / operator can see retry pressure without
-// creating a new row per attempt.
 func (q *Queries) BumpWebhookDeliveryAttempt(ctx context.Context, id pgtype.UUID) (WebhookDelivery, error) {
 	row := q.db.QueryRow(ctx, bumpWebhookDeliveryAttempt, id)
 	var i WebhookDelivery
@@ -131,11 +125,6 @@ WHERE d.id = candidate.id
 RETURNING d.id, d.workspace_id, d.autopilot_id, d.trigger_id, d.provider, d.event, d.dedupe_key, d.dedupe_source, d.signature_status, d.status, d.attempt_count, d.selected_headers, d.content_type, d.raw_body, d.response_status, d.response_body, d.autopilot_run_id, d.replayed_from_delivery_id, d.error, d.received_at, d.last_attempt_at, d.created_at, d.available_at, d.lease_token, d.lease_expires_at, d.dispatch_attempts, d.reason_code, d.replay_idempotency_key
 `
 
-// Claims one due delivery. SKIP LOCKED spreads work across replicas; the
-// expiring token makes a crashed claim visible to a later sweeper pass.
-// The lease is a scheduling optimization, not the exactly-once guard: if a
-// slow dispatch outlives it, uq_autopilot_run_webhook_delivery remains the
-// final protection against duplicate downstream runs.
 func (q *Queries) ClaimQueuedWebhookDelivery(ctx context.Context) (WebhookDelivery, error) {
 	row := q.db.QueryRow(ctx, claimQueuedWebhookDelivery)
 	var i WebhookDelivery
@@ -241,7 +230,6 @@ func (q *Queries) CompleteClaimedWebhookDelivery(ctx context.Context, arg Comple
 }
 
 const createWebhookDelivery = `-- name: CreateWebhookDelivery :one
-
 INSERT INTO webhook_delivery (
     workspace_id, autopilot_id, trigger_id, provider, event,
     dedupe_key, dedupe_source, signature_status, status,
@@ -275,12 +263,6 @@ type CreateWebhookDeliveryParams struct {
 	ID                     pgtype.UUID `json:"id"`
 }
 
-// =====================
-// Webhook Delivery
-// =====================
-// Inserts a delivery row. On dedupe-key collision the unique partial index
-// (trigger_id, dedupe_key) raises 23505 and the handler treats it as
-// "duplicate" rather than an error.
 func (q *Queries) CreateWebhookDelivery(ctx context.Context, arg CreateWebhookDeliveryParams) (WebhookDelivery, error) {
 	row := q.db.QueryRow(ctx, createWebhookDelivery,
 		arg.WorkspaceID,
@@ -351,8 +333,6 @@ type DeferClaimedWebhookDeliveryParams struct {
 	AvailableAt pgtype.Timestamptz `json:"available_at"`
 }
 
-// Releases a claim without counting a dispatch attempt. Used when the
-// per-trigger worker budget is exhausted before downstream dispatch begins.
 func (q *Queries) DeferClaimedWebhookDelivery(ctx context.Context, arg DeferClaimedWebhookDeliveryParams) (WebhookDelivery, error) {
 	row := q.db.QueryRow(ctx, deferClaimedWebhookDelivery, arg.ID, arg.LeaseToken, arg.AvailableAt)
 	var i WebhookDelivery
@@ -443,13 +423,6 @@ type GetWebhookDeliveryByTriggerAndDedupeParams struct {
 	DedupeKey pgtype.Text `json:"dedupe_key"`
 }
 
-// Looks up the existing delivery for a (trigger, dedupe_key) pair so that
-// duplicate requests return the original delivery_id / autopilot_run_id.
-// The partial unique index excludes terminal-but-not-successful statuses
-// (`rejected`, `failed`), so multiple such rows can coexist for the same
-// key. Prefer non-terminal rows in the lookup: without the ORDER BY we
-// could return a stale rejection / failure even after the operator fixed
-// the cause and a fresh dispatch succeeded.
 func (q *Queries) GetWebhookDeliveryByTriggerAndDedupe(ctx context.Context, arg GetWebhookDeliveryByTriggerAndDedupeParams) (WebhookDelivery, error) {
 	row := q.db.QueryRow(ctx, getWebhookDeliveryByTriggerAndDedupe, arg.TriggerID, arg.DedupeKey)
 	var i WebhookDelivery
@@ -496,7 +469,6 @@ type GetWebhookDeliveryInWorkspaceParams struct {
 	WorkspaceID pgtype.UUID `json:"workspace_id"`
 }
 
-// Workspace-scoped read for authenticated detail / replay endpoints.
 func (q *Queries) GetWebhookDeliveryInWorkspace(ctx context.Context, arg GetWebhookDeliveryInWorkspaceParams) (WebhookDelivery, error) {
 	row := q.db.QueryRow(ctx, getWebhookDeliveryInWorkspace, arg.ID, arg.WorkspaceID)
 	var i WebhookDelivery
@@ -629,14 +601,6 @@ type ListWebhookDeliveriesByAutopilotRow struct {
 	ReplayIdempotencyKey   pgtype.Text        `json:"replay_idempotency_key"`
 }
 
-// Workspace-scoped via the join so a runId from another workspace cannot
-// leak. Newest first, paged by limit/offset.
-//
-// Projection: large columns (`raw_body`, `selected_headers`, `response_body`)
-// are deliberately excluded. A 100-row page × 256 KiB raw_body would be
-// 25 MiB of bytes pulled from Postgres just to be dropped in the JSON
-// encoder — Deliveries tab would hit that on every reload. Detail views
-// fetch the full row via GetWebhookDelivery / GetWebhookDeliveryInWorkspace.
 func (q *Queries) ListWebhookDeliveriesByAutopilot(ctx context.Context, arg ListWebhookDeliveriesByAutopilotParams) ([]ListWebhookDeliveriesByAutopilotRow, error) {
 	rows, err := q.db.Query(ctx, listWebhookDeliveriesByAutopilot,
 		arg.AutopilotID,
@@ -707,9 +671,6 @@ type RetryClaimedWebhookDeliveryParams struct {
 	Error       pgtype.Text        `json:"error"`
 }
 
-// Records a transient worker failure and makes the delivery eligible after
-// its bounded backoff. HTTP response fields intentionally remain the 202
-// acknowledgement already returned to the provider.
 func (q *Queries) RetryClaimedWebhookDelivery(ctx context.Context, arg RetryClaimedWebhookDeliveryParams) (WebhookDelivery, error) {
 	row := q.db.QueryRow(ctx, retryClaimedWebhookDelivery,
 		arg.ID,
@@ -770,9 +731,6 @@ type UpdateWebhookDeliveryDispatchedParams struct {
 	ResponseBody   pgtype.Text `json:"response_body"`
 }
 
-// Finalises a delivery that successfully created (or skipped to) an
-// autopilot_run. response_status is the HTTP status we returned, recorded
-// alongside so the operator can correlate logs.
 func (q *Queries) UpdateWebhookDeliveryDispatched(ctx context.Context, arg UpdateWebhookDeliveryDispatchedParams) (WebhookDelivery, error) {
 	row := q.db.QueryRow(ctx, updateWebhookDeliveryDispatched,
 		arg.ID,
@@ -836,9 +794,6 @@ type UpdateWebhookDeliveryTerminalParams struct {
 	ResponseBody   pgtype.Text `json:"response_body"`
 }
 
-// Finalises a delivery without an autopilot_run link — rejected, ignored,
-// failed. Separate query so callers can't accidentally drop the run_id when
-// they only meant to set status/error.
 func (q *Queries) UpdateWebhookDeliveryTerminal(ctx context.Context, arg UpdateWebhookDeliveryTerminalParams) (WebhookDelivery, error) {
 	row := q.db.QueryRow(ctx, updateWebhookDeliveryTerminal,
 		arg.ID,

@@ -66,13 +66,13 @@ export function useMarkInboxRead() {
     mutationFn: (id: string) => api.markInboxRead(id),
     onMutate: async (id) => {
       const key = inboxKeys.list(wsId);
-      // Synchronous patch FIRST — see the file-level doc comment for why.
+      const prev = qc.getQueryData<InboxItem[]>(key);
+      // Snapshot before the synchronous patch so a failed write restores unread.
       qc.setQueryData<InboxItem[]>(key, (old) =>
         old?.map((item) => (item.id === id ? { ...item, read: true } : item)),
       );
-      // Then the standard cancel + snapshot dance for rollback.
+      // Cancel an older response after the synchronous navigation-time patch.
       await qc.cancelQueries({ queryKey: key });
-      const prev = qc.getQueryData<InboxItem[]>(key);
       return { prev, key };
     },
     onError: (_err, _id, ctx) => {
@@ -166,17 +166,6 @@ export function useArchiveAllReadInbox() {
   const wsId = useWorkspaceStore((s) => s.currentWorkspaceId);
   return useMutation({
     mutationFn: () => api.archiveAllReadInbox(),
-    onSettled: () => {
-      refreshInboxAfterWrite(qc, wsId);
-    },
-  });
-}
-
-export function useArchiveCompletedInbox() {
-  const qc = useQueryClient();
-  const wsId = useWorkspaceStore((s) => s.currentWorkspaceId);
-  return useMutation({
-    mutationFn: () => api.archiveCompletedInbox(),
     onSettled: () => {
       refreshInboxAfterWrite(qc, wsId);
     },

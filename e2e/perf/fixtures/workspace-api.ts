@@ -10,8 +10,7 @@ export const json = (body: unknown) => ({
 const workspace = {
   id: fx.WORKSPACE_ID, name: "Perf", slug: fx.WORKSPACE_SLUG,
   description: null, context: null,
-  settings: { github_enabled: false }, repos: [],
-  issue_prefix: "PERF", avatar_url: null,
+  settings: { github_enabled: false }, repos: [], avatar_url: null,
   created_at: "2026-09-01T00:00:00Z", updated_at: "2026-09-01T00:00:00Z",
 };
 

@@ -2,7 +2,7 @@
   "title": "Inbox",
   "empty": {
     "title": "You're all caught up",
-    "body": "Notifications and agent updates appear here."
+    "body": "Creation updates and digests from your whole world appear here."
   },
   "actions": {
     "mark_read": "Mark read",
@@ -20,7 +20,7 @@
   },
   "archive": {
     "confirm_title": "Archive all?",
-    "confirm_body": "This archives every inbox item, read or unread. You can still find them via the issue pages."
+    "confirm_body": "This archives every message, including unread messages."
   },
   "errors": {
     "load_failed": "Failed to load inbox: {{message}}"
@@ -80,5 +80,38 @@
   "body": {
     "autopilot_title_limit": "Autopilot \"{{title}}\" was not started because this world has reached its limit of {{limit}} runs for the current period. The allowance resets {{resetAt}}.",
     "autopilot_limit": "This world has reached its limit of {{limit}} autopilot runs for the current period. This execution was not started. The allowance resets {{resetAt}}."
+  },
+  "messages": {
+    "all": "All",
+    "creations": "My creations",
+    "world": "World digests",
+    "system": "System",
+    "creation_ready": "{{name}} is ready",
+    "creation_updated": "{{name}} has a new revision",
+    "character_milestone": "{{name}} reached level {{level}}",
+    "world_digest": "World digest",
+    "tank_created": "{{name}} · New creation",
+    "tank_updated": "{{name}} · Revision {{revision}}",
+    "tank_level_up": "{{name}} · Level {{level}}",
+    "created": "New creations: {{count}}",
+    "updated": "Updated creations: {{count}}",
+    "milestones": "Growth milestones: {{count}}",
+    "view_character": "View character",
+    "browse_world": "Explore world creations",
+    "more": "{{count}} more changes in this digest",
+    "personal_records": "Growth milestones reflect client-reported personal play.",
+    "unavailable": "This game is currently unavailable in this world.",
+    "checking": "Checking game access…",
+    "retry": "Retry",
+    "view_web": "View on the web",
+    "empty": "No messages in this category.",
+    "window": "{{start}} – {{end}}",
+    "category_label": "Message category",
+    "resident_wood": "{{name}} gathered {{target}} wood",
+    "resident_coins": "{{name}} earned {{target}} coins",
+    "residents": "Resident goals reached: {{count}}",
+    "view_resident": "View resident",
+    "view_world": "View world",
+    "author": "By {{name}}"
   }
 }

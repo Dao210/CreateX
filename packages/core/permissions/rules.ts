@@ -54,7 +54,7 @@ export function canEditAgent(agent: Agent, ctx: PermissionContext): Decision {
  *   - permission_mode "public_to" + member target: only the matching user
  *   - team target: reserved, INERT in v1 (never grants)
  */
-export function canAssignAgentToIssue(
+export function canInvokeAgent(
   agent: Agent,
   ctx: PermissionContext,
 ): Decision {

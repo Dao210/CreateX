@@ -5,7 +5,7 @@
  * sheet and goes straight to the blank state for that agent.
  *
  * Filtering is delegated to the caller (the screen passes a pre-filtered
- * `agents` list) so the same filter logic — archived + canAssignAgentToIssue
+ * `agents` list) so the same filter logic — archived + canInvokeAgent
  * + order — stays in one place.
  *
  * Layout mirrors `components/issue/my-issues-filter-sheet.tsx`: transparent

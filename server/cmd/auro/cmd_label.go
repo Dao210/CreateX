@@ -299,3 +299,20 @@ func runLabelDelete(cmd *cobra.Command, args []string) error {
 	fmt.Fprintf(os.Stdout, "Label %s deleted.\n", labelRef.Display)
 	return nil
 }
+
+func printLabelTable(labels []any, fullID bool) {
+	headers := []string{"ID", "NAME", "COLOR"}
+	rows := make([][]string, 0, len(labels))
+	for _, raw := range labels {
+		l, ok := raw.(map[string]any)
+		if !ok {
+			continue
+		}
+		rows = append(rows, []string{
+			displayID(strVal(l, "id"), fullID),
+			strVal(l, "name"),
+			strVal(l, "color"),
+		})
+	}
+	cli.PrintTable(os.Stdout, headers, rows)
+}

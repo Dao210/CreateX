@@ -1,3 +1,5 @@
+import { inboxContent } from "@auro/core/inbox/messages";
+import { isVisibleInboxItem } from "@auro/core/inbox/system-notifications";
 import { ActivityIndicator, Linking, ScrollView, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
@@ -19,6 +21,8 @@ import { useT } from "@/lib/i18n";
 import {
   getAutopilotQuotaBody,
   getInboxDisplayTitle,
+  getInboxEntryText,
+  getInboxSummary,
 } from "@/lib/inbox-display";
 
 function BillingRecovery({
@@ -101,6 +105,8 @@ export default function InboxNoticeDetail() {
   const webUrl = process.env.EXPO_PUBLIC_WEB_URL?.replace(/\/+$/, "");
   const billingUrl =
     webUrl && wsSlug ? `${webUrl}/${wsSlug}/settings?tab=billing` : null;
+  const content = item ? inboxContent(item) : null;
+  const time = (value: string) => new Date(value).toLocaleString();
   const body = item ? getAutopilotQuotaBody(item) : null;
 
   return (
@@ -123,8 +129,7 @@ export default function InboxNoticeDetail() {
           <ActivityIndicator />
         </View>
       ) : !item ||
-        (item.type !== "autopilot_quota_exceeded" &&
-          item.type !== "autopilot_paused") ? (
+        !isVisibleInboxItem(item) ? (
         <View className="px-4 py-8">
           <Text className="text-sm text-muted-foreground text-center">
             {t("detail.unavailable")}
@@ -136,6 +141,18 @@ export default function InboxNoticeDetail() {
           contentContainerClassName="gap-5 px-4 py-5"
           showsVerticalScrollIndicator={false}
         >
+          {content && <View className="gap-4">
+            {content.windowStart && content.windowEnd ? <Text className="text-xs text-muted-foreground">{t("messages.window", { start: time(content.windowStart), end: time(content.windowEnd) })}</Text> : null}
+            {item.type === "world_digest" ? <Text className="text-base font-medium text-foreground">{getInboxSummary(content)}</Text> : null}
+            {content.entries.map(entry => <View key={entry.id} className="gap-2 rounded-lg bg-secondary p-4">
+              <Text className="text-base font-medium text-foreground">{getInboxEntryText(entry)}</Text>
+              {item.type === "world_digest" && entry.authorName ? <Text className="text-xs text-muted-foreground">{t("messages.author", { name: entry.authorName })}</Text> : null}
+              <Text className="text-xs text-muted-foreground">{time(entry.occurredAt)}</Text>
+              {webUrl && wsSlug ? <Button variant="outline" onPress={() => void Linking.openURL(`${webUrl}/${encodeURIComponent(wsSlug)}/${entry.kind === "resident_goal_reached" ? "life?resident=" : "tanks?character="}${encodeURIComponent(entry.subjectId)}`)}><Text>{t("messages.view_web")}</Text></Button> : null}
+            </View>)}
+            {content.totalEntries > content.entries.length ? <Text className="text-sm text-muted-foreground">{t("messages.more", { count: content.totalEntries-content.entries.length })}</Text> : null}
+            {content.entries.some(entry => entry.kind === "tank_level_up") ? <Text className="text-xs text-muted-foreground">{t("messages.personal_records")}</Text> : null}
+          </View>}
           {body ? (
             <Text className="text-base leading-6 text-foreground">
               {body}

@@ -26,8 +26,6 @@ type CreateChatPinnedAgentParams struct {
 	Position    float64     `json:"position"`
 }
 
-// Idempotent: pinning an already-pinned agent is a no-op that returns the
-// existing row (DO UPDATE keeps `:one` from hitting a no-rows error).
 func (q *Queries) CreateChatPinnedAgent(ctx context.Context, arg CreateChatPinnedAgentParams) (ChatPinnedAgent, error) {
 	row := q.db.QueryRow(ctx, createChatPinnedAgent,
 		arg.WorkspaceID,
@@ -70,8 +68,6 @@ WHERE agent_id IN (
 )
 `
 
-// Scoped to the system agents a runtime delete hard-deletes. User agents keep
-// their pins: since MUL-5559 they survive their runtime as unbound agents.
 func (q *Queries) DeleteChatPinnedAgentsBySystemRuntimeAgents(ctx context.Context, runtimeID pgtype.UUID) error {
 	_, err := q.db.Exec(ctx, deleteChatPinnedAgentsBySystemRuntimeAgents, runtimeID)
 	return err

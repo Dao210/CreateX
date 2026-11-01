@@ -640,7 +640,6 @@ func channelMessageFromCallback(botID, botDisplayName string, mc aibotMsgCallbac
 		// off the resolved body instead and a screenshot-then-"/issue" message
 		// would skip the agent while the parser declined the placeholder line,
 		// leaving the sender with neither an issue nor an answer.
-		SkipAgentRun: isIssueCommand(command),
 		Source: channel.Source{
 			ChannelType: TypeWecom,
 			ChatID:      chatID,
@@ -769,24 +768,6 @@ func stripLeadingMentions(s, botName string) string {
 		}
 		s = trimmed[i:]
 	}
-}
-
-// isIssueCommand asks the engine's own parser instead of mirroring it. The
-// mirror had drifted: it trimmed with strings.TrimSpace, which strips every
-// Unicode space including U+3000 — the ideographic space a Chinese IME emits
-// in full-width mode — while engine.ParseIssueCommand trims only " \t".
-//
-// So a p2p line opening with U+3000 read as a command here and as prose there:
-// SkipAgentRun was set so no agent ran, and the parser declined so no issue was
-// filed. The sender got nothing back and no error anywhere said why. Group
-// messages reach this helper after their leading mentions are normalized, and
-// must use the same parser too.
-//
-// A mirror of a parser is a parser. Delegating costs one allocation on a path
-// that already does I/O, and removes the whole class.
-func isIssueCommand(body string) bool {
-	_, ok := engine.ParseIssueCommand(body)
-	return ok
 }
 
 // channelMsgType maps the raw aibot msg_type onto the normalized enum.

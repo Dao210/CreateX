@@ -24,9 +24,9 @@ import (
 
 	sdk "github.com/auro-ai/auro/server/pkg/composio"
 
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/auro-ai/auro/server/internal/util"
 	db "github.com/auro-ai/auro/server/pkg/db/generated"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // Service-level errors surfaced to the handler layer.

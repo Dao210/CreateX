@@ -26,10 +26,6 @@ type CreateAgentInvocationTargetParams struct {
 	CreatedBy  pgtype.UUID `json:"created_by"`
 }
 
-// Idempotent upsert: re-adding an existing (agent, target_type, target)
-// refreshes created_by/created_at rather than erroring. Callers replace the
-// whole set via DeleteAgentInvocationTargets + a series of these, so the
-// ON CONFLICT is belt-and-suspenders against races.
 func (q *Queries) CreateAgentInvocationTarget(ctx context.Context, arg CreateAgentInvocationTargetParams) error {
 	_, err := q.db.Exec(ctx, createAgentInvocationTarget,
 		arg.AgentID,
@@ -45,9 +41,6 @@ DELETE FROM agent_invocation_target
 WHERE agent_id = $1
 `
 
-// Clears every target for an agent. Used before re-writing the allow-list so
-// the update is a wholesale replace, matching the composio_toolkit_allowlist
-// write model.
 func (q *Queries) DeleteAgentInvocationTargets(ctx context.Context, agentID pgtype.UUID) error {
 	_, err := q.db.Exec(ctx, deleteAgentInvocationTargets, agentID)
 	return err
@@ -67,11 +60,6 @@ type DeleteAgentInvocationTargetsByMemberParams struct {
 	TargetID    pgtype.UUID `json:"target_id"`
 }
 
-// Removes member-target grants pointing at a leaving user, SCOPED to a single
-// workspace. A user may belong to multiple workspaces; removing them from one
-// must NOT touch their invocation grants on agents in another workspace. Joins
-// through agent (agent_invocation_target has no workspace_id column and no FK)
-// to bound the delete to @workspace_id.
 func (q *Queries) DeleteAgentInvocationTargetsByMember(ctx context.Context, arg DeleteAgentInvocationTargetsByMemberParams) error {
 	_, err := q.db.Exec(ctx, deleteAgentInvocationTargetsByMember, arg.WorkspaceID, arg.TargetID)
 	return err
@@ -84,30 +72,17 @@ WHERE agent_id IN (
 )
 `
 
-// Application-layer replacement for the (deliberately absent) agent_id ON
-// DELETE CASCADE: removes invocation targets for the system agents a runtime
-// delete is about to hard-delete. MUST run in the same tx as, and BEFORE,
-// DeleteSystemAgentsByRuntime so no orphan target rows survive the agent rows
-// they belonged to. Mirrors the agent hard-delete predicate exactly.
-//
-// Scoped to kind = 'system' since MUL-5559: user agents are no longer deleted
-// with their runtime (they are unbound and keep their configuration), so
-// clearing THEIR invocation targets here would silently strip a surviving
-// agent's allow-list.
 func (q *Queries) DeleteAgentInvocationTargetsBySystemRuntimeAgents(ctx context.Context, runtimeID pgtype.UUID) error {
 	_, err := q.db.Exec(ctx, deleteAgentInvocationTargetsBySystemRuntimeAgents, runtimeID)
 	return err
 }
 
 const listAgentInvocationTargets = `-- name: ListAgentInvocationTargets :many
-
 SELECT id, agent_id, target_type, target_id, created_by, created_at FROM agent_invocation_target
 WHERE agent_id = $1
 ORDER BY target_type ASC, created_at ASC
 `
 
-// Agent invocation permission targets (MUL-3963). Rows are the allow-list for
-// agents whose permission_mode = 'public_to'. See migration 130.
 func (q *Queries) ListAgentInvocationTargets(ctx context.Context, agentID pgtype.UUID) ([]AgentInvocationTarget, error) {
 	rows, err := q.db.Query(ctx, listAgentInvocationTargets, agentID)
 	if err != nil {
@@ -141,7 +116,6 @@ WHERE agent_id = ANY($1::uuid[])
 ORDER BY agent_id, target_type ASC, created_at ASC
 `
 
-// Batch load for the agent list endpoint so we don't N+1 per agent.
 func (q *Queries) ListAgentInvocationTargetsByAgentIDs(ctx context.Context, agentIds []pgtype.UUID) ([]AgentInvocationTarget, error) {
 	rows, err := q.db.Query(ctx, listAgentInvocationTargetsByAgentIDs, agentIds)
 	if err != nil {

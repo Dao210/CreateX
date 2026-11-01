@@ -32,7 +32,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-it("refreshes an inactive Inbox after inbox:new then issue:updated (MUL-7286)", async () => {
+it("refreshes an inactive Inbox after a new creation message", async () => {
   const qc = createQueryClient();
   const oldItem: InboxItem = {
     id: "n1",
@@ -41,12 +41,12 @@ it("refreshes an inactive Inbox after inbox:new then issue:updated (MUL-7286)", 
     recipient_id: "u1",
     actor_type: "agent",
     actor_id: "agent-1",
-    type: "new_comment",
+    type: "creation_ready",
     severity: "info",
-    issue_id: "issue-1",
+    issue_id: null,
     title: "Issue 1",
     body: null,
-    issue_status: "todo",
+    issue_status: null,
     read: true,
     archived: false,
     created_at: "2026-09-11T00:00:00Z",
@@ -112,13 +112,6 @@ it("refreshes an inactive Inbox after inbox:new then issue:updated (MUL-7286)", 
     expect(qc.getQueryState(inboxKeys.list("ws-1"))?.isInvalidated).toBe(true);
     expect(listInbox).toHaveBeenCalledTimes(1);
 
-    // Any later issue update patches status, without re-reading notifications.
-    rows = rows.map((item) => ({ ...item, issue_status: "in_progress" }));
-    act(() => {
-      handlers["issue:updated"]!({
-        issue: { id: "issue-1", status: "in_progress", revision: 2 },
-      });
-    });
     page = mountInbox();
     await waitFor(() => expect(listInbox).toHaveBeenCalledTimes(2));
     await waitFor(() => expect(page.result.current.data).toEqual(rows));

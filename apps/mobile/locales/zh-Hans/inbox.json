@@ -2,7 +2,7 @@
   "title": "收件箱",
   "empty": {
     "title": "已处理全部通知",
-    "body": "通知和智能体更新会显示在这里。"
+    "body": "创作进展和整个世界的摘要会出现在这里。"
   },
   "actions": {
     "mark_read": "标记已读",
@@ -20,7 +20,7 @@
   },
   "archive": {
     "confirm_title": "全部归档？",
-    "confirm_body": "这会归档所有收件箱项目，包括已读和未读。你仍可在任务页中找到它们。"
+    "confirm_body": "将归档所有消息，包括未读消息。"
   },
   "errors": {
     "load_failed": "收件箱加载失败：{{message}}"
@@ -88,5 +88,38 @@
   "type.task_completed": "运行完成",
   "type.task_failed": "运行失败",
   "type.run_limit_blocked": "已达到上限，本次运行被阻止",
-  "body.autopilot_title_limit": "自动化 \"{{title}}\" 未启动，因为该世界已达到当前周期 {{limit}} 次运行的上限。额度将在 {{resetAt}} 重置。"
+  "body.autopilot_title_limit": "自动化 \"{{title}}\" 未启动，因为该世界已达到当前周期 {{limit}} 次运行的上限。额度将在 {{resetAt}} 重置。",
+  "messages": {
+    "all": "全部",
+    "creations": "我的创作",
+    "world": "世界摘要",
+    "system": "系统",
+    "creation_ready": "「{{name}}」已准备好",
+    "creation_updated": "「{{name}}」有了新版本",
+    "character_milestone": "「{{name}}」升到了 {{level}} 级",
+    "world_digest": "世界摘要",
+    "tank_created": "{{name}} · 新创作",
+    "tank_updated": "{{name}} · 第 {{revision}} 版",
+    "tank_level_up": "{{name}} · {{level}} 级",
+    "created": "新增创作 {{count}} 件",
+    "updated": "创作更新 {{count}} 件",
+    "milestones": "成长里程碑 {{count}} 项",
+    "view_character": "查看角色",
+    "browse_world": "浏览世界创作",
+    "more": "本期还有 {{count}} 项变化",
+    "personal_records": "成长里程碑来自客户端上报的个人游玩记录。",
+    "unavailable": "当前世界暂未开放此游戏。",
+    "checking": "正在检查游戏访问权限…",
+    "retry": "重试",
+    "view_web": "在网页查看",
+    "empty": "此分类暂无消息。",
+    "window": "{{start}} — {{end}}",
+    "category_label": "消息分类",
+    "resident_wood": "{{name}} 达成了收集 {{target}} 份木材的目标",
+    "resident_coins": "{{name}} 达成了积累 {{target}} 枚金币的目标",
+    "residents": "居民目标达成 {{count}} 项",
+    "view_resident": "查看居民",
+    "view_world": "查看世界",
+    "author": "作者：{{name}}"
+  }
 }

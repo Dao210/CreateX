@@ -57,6 +57,15 @@ export default function NotificationsSettingsScreen() {
       className="flex-1 bg-background"
       contentContainerClassName="px-4 py-4 gap-6"
     >
+      <Section title={t("groups.inbox_notifications")}>
+        {(["creation_updates", "world_digests"] as const).map(key => <View key={key} className="flex-row items-center gap-3 px-4 py-3">
+          <View className="flex-1">
+            <Text className="text-base font-medium text-foreground">{t(`groups.${key}`)}</Text>
+            {key === "world_digests" ? <Text className="mt-0.5 text-xs text-muted-foreground">{t("groups.world_description")}</Text> : null}
+          </View>
+          <Switch accessibilityLabel={t(`groups.${key}`)} checked={preferences[key] !== "muted"} onCheckedChange={checked => onToggle(key, checked)} />
+        </View>)}
+      </Section>
       <Section
         title={t("groups.system")}
       >

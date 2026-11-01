@@ -143,7 +143,7 @@ func (c *telegramChannel) dispatch(ctx context.Context, u Update) error {
 		return nil
 	}
 	if err := c.handler(ctx, msg); err != nil {
-		c.notifyIssueDispatchError(msg)
+
 		return err
 	}
 	return nil
@@ -169,37 +169,6 @@ const (
 	issueErrorReplyTimeout  = 5 * time.Second
 	issueDispatchFailedText = "⚠️ I couldn't create that issue because an internal error occurred. Please try again."
 )
-
-// notifyIssueDispatchError prevents an addressed /issue command from failing
-// silently when the engine returns an infrastructure error before it can
-// produce a normal outcome. It is detached from the polling loop so the
-// Supervisor can reconnect without waiting on the best-effort notice.
-func (c *telegramChannel) notifyIssueDispatchError(msg channel.InboundMessage) {
-	if !isAddressedIssueCommand(msg) {
-		return
-	}
-	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), issueErrorReplyTimeout)
-		defer cancel()
-		chatID, err := strconv.ParseInt(msg.Source.ChatID, 10, 64)
-		if err != nil {
-			c.logger.Warn("telegram: issue dispatch-error reply has invalid chat id", "error", err)
-			return
-		}
-		var threadID int64
-		if msg.Source.ThreadID != "" {
-			threadID, _ = strconv.ParseInt(msg.Source.ThreadID, 10, 64)
-		}
-		if _, err := c.api.SendMessage(ctx, sendMessageParams{
-			ChatID:          chatID,
-			Text:            issueDispatchFailedText,
-			MessageThreadID: threadID,
-			ReplyParameters: optionalReplyParameters(parseMessageRef(msg.MessageID)),
-		}); err != nil {
-			c.logger.WarnContext(ctx, "telegram: issue dispatch-error reply failed", "error", err)
-		}
-	}()
-}
 
 // notifyUnsupported tells an interacting sender their non-text message type is
 // not handled yet. Preserve topic routing and quote the triggering message so

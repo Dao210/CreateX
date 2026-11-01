@@ -15,7 +15,6 @@ import (
 	"github.com/auro-ai/auro/server/internal/dispatch"
 	"github.com/auro-ai/auro/server/internal/entitlement"
 	"github.com/auro-ai/auro/server/internal/events"
-	"github.com/auro-ai/auro/server/internal/issuestatus"
 	obsmetrics "github.com/auro-ai/auro/server/internal/metrics"
 	"github.com/auro-ai/auro/server/internal/util"
 	db "github.com/auro-ai/auro/server/pkg/db/generated"
@@ -153,18 +152,15 @@ func (s *AutopilotService) AdmitAutopilotWebhookDelivery(
 		return run, nil
 	}
 
-	initialStatus := "issue_created"
-	if autopilot.ExecutionMode == "run_only" {
-		initialStatus = "running"
-	}
+	initialStatus := "running"
 	run, _, err := s.createAutopilotRunWithQuota(ctx, autopilot.WorkspaceID, "webhook", "webhook:"+util.UUIDToString(deliveryID), db.CreateAutopilotRunParams{
-		ID:                dbid.NewV7(),
-		AutopilotID:       autopilot.ID,
-		TriggerID:         triggerID,
-		Source:            "webhook",
-		Status:            initialStatus,
-		TriggerPayload:    payload,
-		SquadID:           autopilotSquadAttribution(autopilot),
+		ID:             dbid.NewV7(),
+		AutopilotID:    autopilot.ID,
+		TriggerID:      triggerID,
+		Source:         "webhook",
+		Status:         initialStatus,
+		TriggerPayload: payload,
+
 		WebhookDeliveryID: deliveryID,
 	})
 	if err != nil {
@@ -348,7 +344,6 @@ func (s *AutopilotService) DispatchAutopilotForPlan(
 			"trigger_id", util.UUIDToString(triggerID),
 			"planned_at", plannedAt.UTC().Format(time.RFC3339),
 			"status", existing.Status,
-			"issue_set", existing.IssueID.Valid,
 			"task_set", existing.TaskID.Valid,
 		)
 		recovered, err := s.recoverPartialAutopilotRun(ctx, existing)
@@ -398,8 +393,6 @@ func isAutopilotRunComplete(run db.AutopilotRun) bool {
 	switch run.Status {
 	case "completed", "failed", "skipped":
 		return true
-	case "issue_created":
-		return run.IssueID.Valid
 	case "running":
 		return run.TaskID.Valid
 	default:
@@ -429,19 +422,16 @@ func (s *AutopilotService) dispatchAutopilot(
 	}
 
 	// Determine initial status based on execution mode.
-	initialStatus := "issue_created"
-	if autopilot.ExecutionMode == "run_only" {
-		initialStatus = "running"
-	}
+	initialStatus := "running"
 
 	run, reused, err := s.createAutopilotRunWithQuota(ctx, autopilot.WorkspaceID, source, idempotencyKey, db.CreateAutopilotRunParams{
-		ID:                dbid.NewV7(),
-		AutopilotID:       autopilot.ID,
-		TriggerID:         triggerID,
-		Source:            source,
-		Status:            initialStatus,
-		TriggerPayload:    payload,
-		SquadID:           autopilotSquadAttribution(autopilot),
+		ID:             dbid.NewV7(),
+		AutopilotID:    autopilot.ID,
+		TriggerID:      triggerID,
+		Source:         source,
+		Status:         initialStatus,
+		TriggerPayload: payload,
+
 		PlannedAt:         plannedAt,
 		WebhookDeliveryID: webhookDeliveryID,
 	})
@@ -548,12 +538,12 @@ func (e *errDispatchSkipped) Error() string { return e.reason }
 // admission and dispatch, or the runtime went offline in the gap, we still
 // fail closed instead of enqueueing a doomed task.
 func (s *AutopilotService) dispatchRunOnly(ctx context.Context, ap db.Autopilot, run *db.AutopilotRun, actorUserID pgtype.UUID) error {
-	agent, _, err := s.resolveAutopilotLeader(ctx, ap)
+	agent, err := s.resolveAutopilotAgent(ctx, ap)
 	if err != nil {
 		// Same admission-vs-failure classification as shouldSkipDispatch:
 		// if the row disappeared or the squad was archived between
 		// admission and dispatch, that is a skip, not a failure.
-		if errors.Is(err, pgx.ErrNoRows) || errors.Is(err, errSquadArchived) {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return &errDispatchSkipped{reason: formatAdmissionReason(ap, "assignee no longer resolvable"), code: dispatch.ReasonTargetUnavailable}
 		}
 		return fmt.Errorf("resolve leader: %w", err)
@@ -564,12 +554,6 @@ func (s *AutopilotService) dispatchRunOnly(ctx context.Context, ap db.Autopilot,
 	}
 	if !verdict.Ready() {
 		return &errDispatchSkipped{reason: formatAdmissionReason(ap, verdict.Detail), code: verdict.Reason}
-	}
-
-	// Fail-closed invocation gate for squad autopilots (admission principal =
-	// manual clicker, else the trigger's created_by — see autopilotAdmitInvoke).
-	if ap.AssigneeType == "squad" && !s.autopilotAdmitInvoke(ctx, ap, agent, actorUserID, run.TriggerID) {
-		return &errDispatchSkipped{reason: formatAdmissionReason(ap, "not allowed to invoke private squad leader"), code: dispatch.ReasonInvocationNotAllowed}
 	}
 
 	// Attribution splits on the trigger only to pick WHICH human and which source
@@ -650,56 +634,6 @@ func (s *AutopilotService) dispatchRunOnly(ctx context.Context, ap db.Autopilot,
 	return nil
 }
 
-// SyncRunFromIssue updates the autopilot run when its linked issue reaches a terminal status.
-func (s *AutopilotService) SyncRunFromIssue(ctx context.Context, issue db.Issue) {
-	if !issue.OriginType.Valid || issue.OriginType.String != "autopilot" {
-		return
-	}
-
-	run, err := s.Queries.GetAutopilotRunByIssue(ctx, issue.ID)
-	if err != nil {
-		return // no active run linked to this issue
-	}
-	autopilot, err := s.Queries.GetAutopilot(ctx, run.AutopilotID)
-	if err != nil {
-		return
-	}
-
-	wsID := util.UUIDToString(issue.WorkspaceID)
-
-	// Custom statuses only finalize terminal lifecycle (done/closed). Review
-	// completion and blocked failure remain exclusive to the fixed built-in keys.
-	// The failure reason below deliberately keeps issue.Status, not the
-	// normalized key, so the audit trail names the status a human actually
-	// chose. (MUL-6243)
-	effectiveStatus := issuestatus.Effective(ctx, s.Queries, issue.WorkspaceID, issue.Status)
-
-	switch effectiveStatus {
-	case "done", "in_review":
-		updatedRun, err := s.completeAutopilotRun(ctx, db.UpdateAutopilotRunCompletedParams{
-			ID: run.ID,
-		})
-		if err != nil {
-			slog.Warn("failed to complete autopilot run", "run_id", util.UUIDToString(run.ID), "error", err)
-			return
-		}
-		s.captureAutopilotRunCompleted(autopilot, updatedRun)
-		s.publishRunDone(wsID, updatedRun, "completed")
-	case "cancelled", "blocked":
-		reason := "issue " + issue.Status
-		updatedRun, err := s.failAutopilotRun(ctx, db.UpdateAutopilotRunFailedParams{
-			ID:            run.ID,
-			FailureReason: pgtype.Text{String: reason, Valid: true},
-		})
-		if err != nil {
-			slog.Warn("failed to fail autopilot run", "run_id", util.UUIDToString(run.ID), "error", err)
-			return
-		}
-		s.captureAutopilotRunFailed(autopilot, updatedRun, updatedRun.Source, reason)
-		s.publishRunDone(wsID, updatedRun, "failed")
-	}
-}
-
 // SyncRunFromTask updates the autopilot run when a run_only task completes or fails.
 func (s *AutopilotService) SyncRunFromTask(ctx context.Context, task db.AgentTaskQueue) {
 	if !task.AutopilotRunID.Valid {
@@ -745,79 +679,6 @@ func (s *AutopilotService) SyncRunFromTask(ctx context.Context, task db.AgentTas
 		s.captureAutopilotRunFailed(autopilot, updatedRun, updatedRun.Source, reason)
 		s.publishRunDone(wsID, updatedRun, "failed")
 	}
-}
-
-// SyncRunFromLinkedIssueTask fails a create_issue autopilot run when its
-// linked issue task fails terminally before the issue itself reaches a
-// terminal status. create_issue tasks are linked through issue_id rather than
-// autopilot_run_id, so SyncRunFromTask cannot see them directly. Without this
-// the run would hang in `issue_created` forever — and because the failure-rate
-// auto-pause monitor excludes issue_created/running runs, a consistently
-// failing autopilot would never trip the auto-pause either.
-//
-// "Terminal" means no task is still active for the issue. FailTask enqueues an
-// auto-retry for infra-shaped failures (timeout, runtime offline/recovery,
-// codex no-progress) BEFORE it broadcasts the failure event, so an active task
-// here means another attempt is already in flight — we wait for it instead of
-// failing the run prematurely. Once retries are exhausted (or the failure was
-// never retryable in the first place), the run fails carrying the task's reason.
-func (s *AutopilotService) SyncRunFromLinkedIssueTask(ctx context.Context, task db.AgentTaskQueue) {
-	if task.AutopilotRunID.Valid || !task.IssueID.Valid || task.Status != "failed" {
-		return
-	}
-	// Only create_issue runs link through issue_id (and their linked issue is
-	// always origin_type=autopilot by construction), so a hit here both
-	// identifies an in-flight create_issue run and bails the common case of
-	// ordinary issue/chat task failures after a single query.
-	run, err := s.Queries.GetAutopilotRunByIssue(ctx, task.IssueID)
-	if err != nil {
-		return // no active run linked to this issue
-	}
-	// A still-active task — typically the auto-retry FailTask just enqueued —
-	// means the dispatch isn't terminal yet; wait for the final attempt.
-	hasActive, err := s.Queries.HasActiveTaskForIssue(ctx, task.IssueID)
-	if err != nil {
-		slog.Warn("failed to check active tasks for autopilot issue failure",
-			"issue_id", util.UUIDToString(task.IssueID),
-			"task_id", util.UUIDToString(task.ID),
-			"error", err,
-		)
-		return
-	}
-	if hasActive {
-		return
-	}
-	autopilot, err := s.Queries.GetAutopilot(ctx, run.AutopilotID)
-	if err != nil {
-		return
-	}
-
-	reason := taskFailureReasonForAutopilotRun(task)
-	updatedRun, err := s.failAutopilotRun(ctx, db.UpdateAutopilotRunFailedParams{
-		ID:            run.ID,
-		FailureReason: pgtype.Text{String: reason, Valid: reason != ""},
-	})
-	if err != nil {
-		slog.Warn("failed to fail autopilot run from linked issue task",
-			"run_id", util.UUIDToString(run.ID),
-			"issue_id", util.UUIDToString(task.IssueID),
-			"task_id", util.UUIDToString(task.ID),
-			"error", err,
-		)
-		return
-	}
-	s.captureAutopilotRunFailed(autopilot, updatedRun, updatedRun.Source, reason)
-	s.publishRunDone(util.UUIDToString(autopilot.WorkspaceID), updatedRun, "failed")
-}
-
-func taskFailureReasonForAutopilotRun(task db.AgentTaskQueue) string {
-	if task.Error.Valid && strings.TrimSpace(task.Error.String) != "" {
-		return task.Error.String
-	}
-	if task.FailureReason.Valid && strings.TrimSpace(task.FailureReason.String) != "" {
-		return task.FailureReason.String
-	}
-	return "task failed"
 }
 
 // handleDispatchSkip recognises an errDispatchSkipped returned from a
@@ -891,38 +752,12 @@ func (s *AutopilotService) shouldSkipDispatch(ctx context.Context, ap db.Autopil
 	if !ap.AssigneeID.Valid {
 		return "autopilot has no assignee", dispatch.ReasonTargetUnavailable, true
 	}
-	agent, squadResolved, err := s.resolveAutopilotLeader(ctx, ap)
+	agent, err := s.resolveAutopilotAgent(ctx, ap)
 	if err != nil {
-		// Hard-skip the cases where another retry will produce the same
-		// outcome. Logging is unconditional so ops can still spot a run of
-		// dangling rows pointing at a deleted agent / archived squad.
-		missing := errors.Is(err, pgx.ErrNoRows)
-		archived := errors.Is(err, errSquadArchived)
-		slog.Warn("autopilot admission: failed to resolve leader",
-			"autopilot_id", util.UUIDToString(ap.ID),
-			"assignee_type", ap.AssigneeType,
-			"assignee_id", util.UUIDToString(ap.AssigneeID),
-			"missing", missing,
-			"archived", archived,
-			"error", err,
-		)
-		switch {
-		case archived:
-			// Squad row exists but is archived — DeleteSquad's transfer
-			// should have rewritten this autopilot's assignee to the leader
-			// already; surfacing the case explicitly keeps the failure
-			// reason useful when something slipped past the transfer.
-			return "assignee squad is archived", dispatch.ReasonTargetUnavailable, true
-		case missing && squadResolved:
-			return "assignee squad cannot be resolved", dispatch.ReasonTargetUnavailable, true
-		case missing && !squadResolved:
-			// Agent row gone. With migration 096 the FK is gone too, so
-			// this is the new "agent was hard-deleted under us" case. Skip
-			// rather than fail-open: we know retrying will not help.
+		if errors.Is(err, pgx.ErrNoRows) {
 			return "assignee agent no longer exists", dispatch.ReasonTargetUnavailable, true
 		}
-		// Transient DB error — fail-open so the next scheduler tick gets a
-		// chance to succeed.
+		slog.Warn("autopilot admission: failed to load agent", "error", err)
 		return "", "", false
 	}
 	verdict, err := AgentReadiness(ctx, s.runtimeLookup(), agent)
@@ -935,20 +770,9 @@ func (s *AutopilotService) shouldSkipDispatch(ctx context.Context, ap db.Autopil
 		return "", "", false
 	}
 	if !verdict.Ready() {
-		// A merely-offline machine still gets create_issue work: the issue is
-		// written server-side and the run waits for the laptop to come back. An
-		// unusable runtime does not qualify — nothing there can run until a
-		// human repairs it, so a doomed issue-create is not an improvement.
-		if ap.ExecutionMode == "create_issue" && verdict.Availability == AgentWaitable {
-			slog.Info("autopilot admission: allowing create_issue dispatch for offline runtime",
-				"autopilot_id", util.UUIDToString(ap.ID),
-				"runtime_id", util.UUIDToString(agent.RuntimeID),
-				"reason", verdict.Detail,
-			)
-		} else {
-			return formatAdmissionReason(ap, verdict.Detail), verdict.Reason, true
-		}
+		return formatAdmissionReason(ap, verdict.Detail), verdict.Reason, true
 	}
+
 	// Invocation gate at the autopilot layer (MUL-3963 / MUL-4525). The
 	// admission principal depends on how the dispatch was triggered: a MANUAL
 	// "run now" (actorUserID valid) is a direct human action gated by the human
@@ -987,9 +811,6 @@ func (s *AutopilotService) shouldSkipDispatch(ctx context.Context, ap db.Autopil
 // joining back to autopilot_run.squad_id.
 func formatAdmissionReason(ap db.Autopilot, raw string) string {
 	prefix := "assignee "
-	if ap.AssigneeType == "squad" {
-		prefix = "squad leader "
-	}
 	switch raw {
 	case "agent is archived":
 		return prefix + "agent is archived"
@@ -1008,7 +829,6 @@ func formatAdmissionReason(ap db.Autopilot, raw string) string {
 // admission gate can phrase the skip reason precisely and the failure
 // monitor does not see "cannot be resolved" wear noise for what is a
 // known, expected post-archive condition.
-var errSquadArchived = errors.New("squad is archived")
 
 // resolveAutopilotLeader returns the agent that will actually execute the
 // autopilot's work. For assignee_type='agent' the agent is the assignee
@@ -1027,39 +847,14 @@ var errSquadArchived = errors.New("squad is archived")
 // Unknown assignee_type values return an error. assignee_type is gated by a
 // CHECK constraint at the DB layer, so this only fires if a future code path
 // inserts a row that bypasses the check.
-func (s *AutopilotService) resolveAutopilotLeader(ctx context.Context, ap db.Autopilot) (agent db.Agent, squadResolved bool, err error) {
-	switch ap.AssigneeType {
-	case "", "agent":
-		agent, err = s.Queries.GetAgent(ctx, ap.AssigneeID)
-		return agent, false, err
-	case "squad":
-		squad, err := s.Queries.GetSquad(ctx, ap.AssigneeID)
-		if err != nil {
-			return db.Agent{}, true, fmt.Errorf("load squad: %w", err)
-		}
-		if squad.ArchivedAt.Valid {
-			return db.Agent{}, true, errSquadArchived
-		}
-		agent, err = s.Queries.GetAgent(ctx, squad.LeaderID)
-		if err != nil {
-			return db.Agent{}, true, fmt.Errorf("load squad leader: %w", err)
-		}
-		return agent, true, nil
-	default:
-		return db.Agent{}, false, fmt.Errorf("unknown assignee_type %q", ap.AssigneeType)
-	}
+func (s *AutopilotService) resolveAutopilotAgent(ctx context.Context, ap db.Autopilot) (db.Agent, error) {
+	return s.Queries.GetAgent(ctx, ap.AssigneeID)
 }
 
 // autopilotSquadAttribution returns the squad_id attribution hook for an
 // autopilot_run row. Only populated when assignee_type='squad'. First-version
 // reports do not consume this; it exists so a future squad-cost view does not
 // need to backfill — see RFC §4.e (MUL-2429).
-func autopilotSquadAttribution(ap db.Autopilot) pgtype.UUID {
-	if ap.AssigneeType == "squad" && ap.AssigneeID.Valid {
-		return ap.AssigneeID
-	}
-	return pgtype.UUID{}
-}
 
 // recordSkippedRun persists a `skipped` autopilot_run with the given reason
 // and emits the same WS / analytics signals that a normal terminal transition
@@ -1081,13 +876,13 @@ func (s *AutopilotService) recordSkippedRun(
 		code = pgtype.Text{String: string(reasonCode[0]), Valid: true}
 	}
 	run, err := s.Queries.CreateAutopilotRun(ctx, db.CreateAutopilotRunParams{
-		ID:                dbid.NewV7(),
-		AutopilotID:       autopilot.ID,
-		TriggerID:         triggerID,
-		Source:            source,
-		Status:            "skipped",
-		TriggerPayload:    payload,
-		SquadID:           autopilotSquadAttribution(autopilot),
+		ID:             dbid.NewV7(),
+		AutopilotID:    autopilot.ID,
+		TriggerID:      triggerID,
+		Source:         source,
+		Status:         "skipped",
+		TriggerPayload: payload,
+
 		PlannedAt:         plannedAt,
 		WebhookDeliveryID: webhookDeliveryID,
 		ReasonCode:        code,
@@ -1195,20 +990,7 @@ func (s *AutopilotService) captureAutopilotRunFailed(ap db.Autopilot, run db.Aut
 // to the raw assignee_id rather than dropping the event — incomplete data
 // in the dashboard is preferable to silent attribution gaps.
 func (s *AutopilotService) autopilotAssigneeAnalytics(ap db.Autopilot) analytics.AutopilotAssignee {
-	assignee := analytics.AutopilotAssignee{
-		AssigneeType: ap.AssigneeType,
-	}
-	if ap.AssigneeType == "squad" {
-		assignee.SquadID = util.UUIDToString(ap.AssigneeID)
-		if leader, _, err := s.resolveAutopilotLeader(context.Background(), ap); err == nil {
-			assignee.AgentID = util.UUIDToString(leader.ID)
-		} else {
-			assignee.AgentID = util.UUIDToString(ap.AssigneeID)
-		}
-	} else {
-		assignee.AgentID = util.UUIDToString(ap.AssigneeID)
-	}
-	return assignee
+	return analytics.AutopilotAssignee{AssigneeType: "agent", AgentID: util.UUIDToString(ap.AssigneeID)}
 }
 
 func autopilotErrorType(reason string) string {
@@ -1266,36 +1048,6 @@ var issueTitleTemplateTokenRE = regexp.MustCompile(`\{\{\s*([^{}]*?)\s*\}\}`)
 // substitution logic above and with the docs in autopilots.mdx /
 // autopilots.zh.mdx.
 var SupportedIssueTitleTemplateVariables = []string{"date"}
-
-// ValidateIssueTitleTemplate rejects templates that contain any {{...}} token
-// other than the supported set. An empty template is valid (the autopilot
-// falls back to its own Title). The error message names the first offending
-// token to keep CLI feedback actionable.
-func ValidateIssueTitleTemplate(tmpl string) error {
-	if tmpl == "" {
-		return nil
-	}
-	for _, m := range issueTitleTemplateTokenRE.FindAllStringSubmatch(tmpl, -1) {
-		name := m[1]
-		if !isSupportedIssueTitleVariable(name) {
-			return fmt.Errorf(
-				"unknown template variable %q; supported: {{%s}}",
-				name,
-				strings.Join(SupportedIssueTitleTemplateVariables, "}}, {{"),
-			)
-		}
-	}
-	return nil
-}
-
-func isSupportedIssueTitleVariable(name string) bool {
-	for _, v := range SupportedIssueTitleTemplateVariables {
-		if name == v {
-			return true
-		}
-	}
-	return false
-}
 
 // autopilotAdmitInvoke decides whether the dispatch's admission principal may
 // invoke the target agent (MUL-4525). A MANUAL "run now" (actorUserID valid) is

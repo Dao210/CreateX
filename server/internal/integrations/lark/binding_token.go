@@ -10,9 +10,9 @@ import (
 	"fmt"
 	"time"
 
+	db "github.com/auro-ai/auro/server/pkg/db/generated"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
-	db "github.com/auro-ai/auro/server/pkg/db/generated"
 )
 
 // BindingToken is the public shape of a freshly minted token. The raw
@@ -57,7 +57,7 @@ type InstallerBinder interface {
 type InstallerBindParams struct {
 	WorkspaceID    pgtype.UUID
 	InstallationID pgtype.UUID
-	AuroUserID  pgtype.UUID // the installer's Auro account
+	AuroUserID     pgtype.UUID // the installer's Auro account
 	LarkOpenID     OpenID      // the installer's per-installation open_id
 }
 
@@ -177,7 +177,7 @@ func (s *BindingTokenService) RedeemAndBind(ctx context.Context, raw string, aur
 
 	_, err = qtx.CreateLarkUserBinding(ctx, CreateUserBindingParams{
 		WorkspaceID:    row.WorkspaceID,
-		AuroUserID:  auroUserID,
+		AuroUserID:     auroUserID,
 		InstallationID: row.InstallationID,
 		ChannelUserID:  row.ChannelUserID,
 	})
@@ -251,7 +251,7 @@ func (s *BindingTokenService) BindInstallerTx(ctx context.Context, qtx *ChannelS
 	}
 	_, err = q.CreateLarkUserBinding(ctx, CreateUserBindingParams{
 		WorkspaceID:    p.WorkspaceID,
-		AuroUserID:  p.AuroUserID,
+		AuroUserID:     p.AuroUserID,
 		InstallationID: p.InstallationID,
 		ChannelUserID:  string(p.LarkOpenID),
 	})

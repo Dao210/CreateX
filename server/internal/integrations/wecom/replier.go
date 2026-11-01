@@ -154,11 +154,7 @@ func (r *OutboundReplier) Reply(ctx context.Context, inst engine.ResolvedInstall
 			r.logger.WarnContext(ctx, "wecom replier: new-chat confirmation failed",
 				"installation_id", util.UUIDToString(inst.ID), "error", err)
 		}
-	case engine.OutcomeIssueUsage:
-		if err := r.post(ctx, inst, msg, c.IssueUsage); err != nil {
-			r.logger.WarnContext(ctx, "wecom replier: issue usage reply failed",
-				"installation_id", util.UUIDToString(inst.ID), "error", err)
-		}
+
 	case engine.OutcomeInvokeDenied:
 		if err := r.sendInvokeDenied(ctx, inst, msg); err != nil {
 			r.logger.WarnContext(ctx, "wecom replier: invoke-denied notice failed",
@@ -168,24 +164,7 @@ func (r *OutboundReplier) Reply(ctx context.Context, inst engine.ResolvedInstall
 		// Only a /issue-created message warrants a confirmation; a plain
 		// chat message stays silent (the agent's own reply lands via
 		// EventChatDone / Channel.Send).
-		if res.IssueID.Valid {
-			// The engine reports a duplicate by carrying the OTHER issue's
-			// id, number and title with IssueDuplicate set. Answering both
-			// cases with the created copy told the reporter their bug was
-			// filed under a number somebody else opened, under a title they
-			// never wrote — so they stopped chasing it and the report was
-			// lost. slack/replier.go:125 and dingtalk/replier.go:125 both
-			// branch here; WeCom was the one that did not.
-			text := issueCreatedText(res, c)
-			if res.IssueDuplicate {
-				text = issueDuplicateText(res, c)
-			}
-			if err := r.post(ctx, inst, msg, text); err != nil {
-				r.logger.WarnContext(ctx, "wecom replier: issue confirmation failed",
-					"installation_id", util.UUIDToString(inst.ID),
-					"duplicate", res.IssueDuplicate, "error", err)
-			}
-		}
+
 	}
 }
 
@@ -306,36 +285,4 @@ func (r *OutboundReplier) post(ctx context.Context, inst engine.ResolvedInstalla
 	}
 	chatType := aibotChatTypeFromChannel(msg.Source.ChatType)
 	return sender.sendTextCtx(ctx, chatID, chatType, text)
-}
-
-// issueDuplicateText answers a /issue the engine refused because an active
-// issue already covers it. It names the OTHER issue, which is the whole point:
-// the reporter needs to know where the discussion already is, not to be handed
-// an id they will read as their own.
-//
-// That title belongs to the pre-existing issue, so it is text some *other*
-// member wrote — not even the reporter's own, which is what makes this the
-// worse of the two /issue call sites — and the reply ships as markdown. The
-// pack's renderer runs it through breakMemberLinks, the same entry point
-// issueCreated uses: it breaks the inline "](" form and the link reference
-// definition a multi-line title can smuggle instead. See markdown.go.
-func issueDuplicateText(res engine.Result, c copyPack) string {
-	return c.issueDuplicate(issueRef(res), res.IssueTitle)
-}
-
-// issueCreatedText answers a /issue the engine accepted. The title is the
-// reporter's own text and this confirmation goes back into the chat that
-// triggered it — in a group, in front of the room — so the pack breaks its
-// links before it goes out. See copyPack.issueCreated.
-func issueCreatedText(res engine.Result, c copyPack) string {
-	return c.issueCreated(issueRef(res), res.IssueTitle)
-}
-
-// issueRef is how an issue is named in a confirmation: its identifier when the
-// engine produced one, its number otherwise.
-func issueRef(res engine.Result) string {
-	if res.IssueIdentifier != "" {
-		return res.IssueIdentifier
-	}
-	return fmt.Sprintf("#%d", res.IssueNumber)
 }

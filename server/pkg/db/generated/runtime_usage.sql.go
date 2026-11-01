@@ -30,9 +30,6 @@ type GetRuntimeTaskHourlyActivityRow struct {
 	Count int32 `json:"count"`
 }
 
-// Hour-of-day distribution for queue starts. Bucketed in the viewer's
-// tz so "this runtime is busy in the afternoon" actually means
-// the operator's afternoon, not UTC's.
 func (q *Queries) GetRuntimeTaskHourlyActivity(ctx context.Context, arg GetRuntimeTaskHourlyActivityParams) ([]GetRuntimeTaskHourlyActivityRow, error) {
 	rows, err := q.db.Query(ctx, getRuntimeTaskHourlyActivity, arg.RuntimeID, arg.Tz)
 	if err != nil {
@@ -96,14 +93,6 @@ type GetRuntimeUsageByHourRow struct {
 	TaskCount                int32  `json:"task_count"`
 }
 
-// Per-(hour, model) token aggregates (hour ∈ 0..23) for a runtime since a
-// cutoff. Powers the "By hour" tab — shows when in the day this runtime is
-// doing real work, with model preserved for client-side cost calculation
-// (same reason as ListRuntimeUsageByAgent above). Hours with zero activity
-// are omitted; the client fills the 24-bucket axis.
-//
-// Hours are extracted in the viewer's tz via @tz so afternoon
-// work bucketed at UTC 06:00 lands in 14:00 for a UTC+8 viewer.
 func (q *Queries) GetRuntimeUsageByHour(ctx context.Context, arg GetRuntimeUsageByHourParams) ([]GetRuntimeUsageByHourRow, error) {
 	rows, err := q.db.Query(ctx, getRuntimeUsageByHour, arg.RuntimeID, arg.Tz, arg.Since)
 	if err != nil {
@@ -179,17 +168,6 @@ type ListRuntimeUsageRow struct {
 	UncostedCacheWriteTokens int64       `json:"uncosted_cache_write_tokens"`
 }
 
-// Reads from the UTC-bucketed `task_usage_hourly` rollup table,
-// aggregated to per-(date, provider, model) under the
-// caller-supplied @tz. Powers the trend chart on the runtime detail
-// page and the per-row cost cell on the runtimes list.
-//
-// @tz is required, even if the caller intends "UTC", so the bucket
-// cast is unambiguous — `bucket_hour` is UTC and the caller picks the
-// calendar boundary per request.
-//
-// provider is LOWER()-normalized so mixed-case historical rows merge
-// (same reason as ListRuntimeUsageByAgent below).
 func (q *Queries) ListRuntimeUsage(ctx context.Context, arg ListRuntimeUsageParams) ([]ListRuntimeUsageRow, error) {
 	rows, err := q.db.Query(ctx, listRuntimeUsage, arg.RuntimeID, arg.Tz, arg.Since)
 	if err != nil {
@@ -267,17 +245,6 @@ type ListRuntimeUsageByAgentRow struct {
 	TaskCount                int32       `json:"task_count"`
 }
 
-// Per-(agent, provider, model) token aggregates for a runtime since a cutoff. Powers
-// the runtime-detail "Cost by agent" tab. task_usage only carries task_id,
-// so we join the queue to expose agent_id. The model dimension is kept on
-// purpose: cost is computed client-side from a per-model pricing table, so
-// collapsing models server-side would erase the information needed to do
-// that arithmetic. The client groups by agent_id and sums cost per agent.
-//
-// This view doesn't bucket by date, so it doesn't need @tz; only the
-// @since cutoff is provided in runtime-local terms (computed in Go).
-// provider is LOWER()-normalized so mixed-case historical rows merge with
-// new rows (see ListDashboardUsageDaily in task_usage.sql).
 func (q *Queries) ListRuntimeUsageByAgent(ctx context.Context, arg ListRuntimeUsageByAgentParams) ([]ListRuntimeUsageByAgentRow, error) {
 	rows, err := q.db.Query(ctx, listRuntimeUsageByAgent, arg.RuntimeID, arg.Since)
 	if err != nil {

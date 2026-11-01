@@ -9,9 +9,8 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/jackc/pgx/v5/pgtype"
-	"github.com/auro-ai/auro/server/internal/integrations/channel"
 	db "github.com/auro-ai/auro/server/pkg/db/generated"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // OutcomeReplier reacts to the Dispatcher's verdict by posting the
@@ -192,33 +191,13 @@ func (r *LarkOutcomeReplier) Reply(ctx context.Context, inst Installation, msg I
 		if err := r.sendChatNotice(ctx, inst, msg, chatStartedCopy); err != nil {
 			r.log.Warn("lark outcome replier: new-chat confirmation failed", "installation_id", uuidString(inst.ID), "chat_id", string(msg.ChatID), "err", err.Error())
 		}
-	case OutcomeIssueUsage:
-		copy := issueUsageCopy
-		if res.IssueUsageHadMedia {
-			copy = issueUsageWithMediaCopy
-		}
-		if err := r.sendChatNotice(ctx, inst, msg, copy); err != nil {
-			r.log.Warn("lark outcome replier: issue usage reply failed",
-				"installation_id", uuidString(inst.ID),
-				"chat_id", string(msg.ChatID),
-				"err", err.Error(),
-			)
-		}
+
 	case OutcomeIngested:
 		// The agent's chat reply itself goes through the Patcher. An /issue
 		// command gets an immediate product result: either the newly created
 		// issue or the active duplicate that blocked it. Gate on IssueID.Valid
 		// so a plain chat message stays silent here.
-		if res.IssueID.Valid {
-			if err := r.sendIssueOutcome(ctx, inst, msg, res); err != nil {
-				r.log.Warn("lark outcome replier: issue outcome reply failed",
-					"installation_id", uuidString(inst.ID),
-					"chat_id", string(msg.ChatID),
-					"issue_id", uuidString(res.IssueID),
-					"err", err.Error(),
-				)
-			}
-		}
+
 	case OutcomeDropped:
 		// OutcomeDropped is informational; no user-visible reply.
 	}
@@ -260,36 +239,6 @@ func isBindingPromptUnavailable(err error) bool {
 	return larkErrorCode(err) == codeNoAvailability
 }
 
-// sendIssueOutcome posts either the created confirmation or active-duplicate
-// conflict as plain text, with a link to the relevant issue when configured.
-func (r *LarkOutcomeReplier) sendIssueOutcome(ctx context.Context, inst Installation, msg InboundMessage, res DispatchResult) error {
-	if msg.ChatID == "" {
-		return errors.New("missing chat_id")
-	}
-	creds, err := r.installationCredentials(inst)
-	if err != nil {
-		return err
-	}
-	text := issueCreatedText(res, r.appURL)
-	if res.IssueDuplicate {
-		text = issueDuplicateText(res, r.appURL)
-	}
-	// Share the Patcher's classified fallback: a thread reply that
-	// fails because the topic cannot receive it (recalled trigger,
-	// topics disabled, aggregated message) falls back to a chat-level
-	// send so the product result is not lost; transport/5xx/rate-limit
-	// failures stay failures rather than leaking into the group chat.
-	return sendWithReplyFallback(r.log, "send issue outcome text", inboundReplyTarget(msg), func(t ReplyTarget) error {
-		_, err := r.client.SendTextMessage(ctx, SendTextParams{
-			InstallationID: creds,
-			ChatID:         msg.ChatID,
-			Text:           text,
-			ReplyTarget:    t,
-		})
-		return err
-	})
-}
-
 // inboundReplyTarget mirrors threadReplyTarget (used by the event-driven
 // Patcher) case for case — topic trigger threads, ordinary group trigger
 // replies natively, p2p and untriggered sends stay chat-level — but
@@ -308,51 +257,6 @@ func inboundReplyTarget(msg InboundMessage) ReplyTarget {
 		return ReplyTarget{}
 	}
 	return ReplyTarget{MessageID: msg.MessageID}
-}
-
-// issueCreatedText composes the user-facing confirmation. Identifier
-// always wins over a bare number — DispatchResult.IssueIdentifier
-// already encodes the workspace prefix when available. AppURL is optional:
-// when empty (self-host operators who haven't configured AURO_APP_URL) the
-// message still confirms the issue, just without a deep link the user can tap.
-func issueCreatedText(res DispatchResult, appURL string) string {
-	identifier := res.IssueIdentifier
-	if identifier == "" {
-		identifier = fmt.Sprintf("#%d", res.IssueNumber)
-	}
-	title := strings.TrimSpace(res.IssueTitle)
-	var line string
-	if title == "" {
-		line = fmt.Sprintf("Created %s", identifier)
-	} else {
-		line = fmt.Sprintf("Created %s — %s", identifier, title)
-	}
-	// Link off IssueIdentifier, not the local display value: the "#42" fallback
-	// above is a degraded label, never a routable identifier.
-	if link := channel.IssueWebLink(appURL, res.IssueWorkspaceSlug, res.IssueIdentifier); link != "" {
-		return line + "\n" + link
-	}
-	return line
-}
-
-func issueDuplicateText(res DispatchResult, appURL string) string {
-	identifier := res.IssueIdentifier
-	if identifier == "" {
-		identifier = fmt.Sprintf("#%d", res.IssueNumber)
-	}
-	title := strings.TrimSpace(res.IssueTitle)
-	var line string
-	if title == "" {
-		line = fmt.Sprintf("Not created — active issue %s already exists.", identifier)
-	} else {
-		line = fmt.Sprintf("Not created — active issue %s already exists: %s", identifier, title)
-	}
-	// Link off IssueIdentifier, not the local display value: the "#42" fallback
-	// above is a degraded label, never a routable identifier.
-	if link := channel.IssueWebLink(appURL, res.IssueWorkspaceSlug, res.IssueIdentifier); link != "" {
-		return line + "\n" + link
-	}
-	return line
 }
 
 func (r *LarkOutcomeReplier) sendChatNotice(ctx context.Context, inst Installation, msg InboundMessage, body string) error {

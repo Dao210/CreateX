@@ -1,14 +1,17 @@
-import { isSystemInboxItem } from "@auro/core/inbox/system-notifications";
+import { isVisibleInboxItem } from "@auro/core/inbox/system-notifications";
 import { useMemo } from "react";
 import {
   ActionSheetIOS,
   Alert,
   FlatList,
   View,
+  Pressable,
+  ScrollView,
 } from "react-native";
 import { useQuery } from "@tanstack/react-query";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { inboxCategory, parseInboxCategory } from "@auro/core/inbox/messages";
 import type { InboxItem } from "@auro/core/types";
 import { Text } from "@/components/ui/text";
 import { Button } from "@/components/ui/button";
@@ -21,7 +24,6 @@ import { inboxListOptions } from "@/data/queries/inbox";
 import {
   useArchiveAllInbox,
   useArchiveAllReadInbox,
-  useArchiveCompletedInbox,
   useArchiveInbox,
   useMarkAllInboxRead,
   useMarkInboxRead,
@@ -37,6 +39,8 @@ import {
 
 export default function Inbox() {
   const { t } = useT("inbox");
+  const params = useLocalSearchParams<{ category?: string }>();
+  const category = parseInboxCategory(params.category ?? null);
   const wsId = useWorkspaceStore((s) => s.currentWorkspaceId);
   const wsSlug = useWorkspaceStore((s) => s.currentWorkspaceSlug);
   const { colorScheme } = useColorScheme();
@@ -46,15 +50,17 @@ export default function Inbox() {
   // Dedup + drop archived to match web/desktop. See CLAUDE.md
   // "Behavioral parity" → inbox dedup incident.
   const data = useMemo(
-    () => deduplicateInboxItems((rawItems ?? []).filter(isSystemInboxItem)),
-    [rawItems],
+    () => deduplicateInboxItems((rawItems ?? []).filter(isVisibleInboxItem)).filter(item => category === "all" || inboxCategory(item) === category).sort((a,b) => {
+      const weight = (severity: string) => severity === "action_required" ? 2 : severity === "attention" ? 1 : 0;
+      return weight(b.severity) - weight(a.severity) || Date.parse(b.created_at) - Date.parse(a.created_at);
+    }),
+    [rawItems, category],
   );
   const markRead = useMarkInboxRead();
   const markAllRead = useMarkAllInboxRead();
   const archive = useArchiveInbox();
   const archiveAll = useArchiveAllInbox();
   const archiveAllRead = useArchiveAllReadInbox();
-  const archiveCompleted = useArchiveCompletedInbox();
 
   const onPressItem = (item: InboxItem) => {
     if (!item.read) {
@@ -77,21 +83,19 @@ export default function Inbox() {
       t("common:actions.cancel"),
       t("actions.mark_all_read"),
       t("actions.archive_all_read"),
-      t("actions.archive_completed"),
       t("actions.archive_all"),
     ];
     ActionSheetIOS.showActionSheetWithOptions(
       {
         options,
         cancelButtonIndex: 0,
-        destructiveButtonIndex: 4,
+        destructiveButtonIndex: 3,
         title: t("title"),
       },
       (i) => {
         if (i === 1) markAllRead.mutate();
         else if (i === 2) archiveAllRead.mutate();
-        else if (i === 3) archiveCompleted.mutate();
-        else if (i === 4) {
+        else if (i === 3) {
           Alert.alert(
             t("archive.confirm_title"),
             t("archive.confirm_body"),
@@ -124,6 +128,11 @@ export default function Inbox() {
           </>
         }
       />
+      <View className="border-b border-border">
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="gap-2 px-4 py-2">
+          {(["all", "creations", "world", "system"] as const).map(value => <Pressable key={value} accessibilityRole="button" accessibilityState={{ selected: category === value }} onPress={() => router.setParams({ category: value })} className={category === value ? "rounded-lg bg-secondary px-3 py-2" : "rounded-lg px-3 py-2"}><Text className={category === value ? "text-sm font-semibold text-foreground" : "text-sm text-muted-foreground"}>{t(`messages.${value}`)}</Text></Pressable>)}
+        </ScrollView>
+      </View>
       {isLoading ? (
         <InboxLoading />
       ) : error ? (

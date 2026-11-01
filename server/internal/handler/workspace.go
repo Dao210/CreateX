@@ -7,12 +7,12 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strings"
 	"time"
 
 	"github.com/auro-ai/auro/server/internal/analytics"
-	"github.com/auro-ai/auro/server/internal/issuestatus"
 	"github.com/auro-ai/auro/server/internal/logger"
 	obsmetrics "github.com/auro-ai/auro/server/internal/metrics"
 	db "github.com/auro-ai/auro/server/pkg/db/generated"
@@ -28,70 +28,6 @@ var nonAlphanumeric = regexp.MustCompile(`[^a-zA-Z0-9]`)
 var workspaceSlugPattern = regexp.MustCompile(`^[a-z0-9]+(?:-[a-z0-9]+)*$`)
 var issuePrefixPattern = regexp.MustCompile(`^[A-Z0-9]{1,10}$`)
 
-// defaultIssuePrefixFromSlug derives a new workspace's default issue prefix
-// from its slug: alphanumerics only, first 4 chars, uppercased.
-// Examples: "acme" → "ACME", "front-end" → "FRON", "team-2" → "TEAM".
-//
-// The slug — not the name — is the derivation source on purpose (MUL-6050).
-// Name is the one field in the create flow that accepts non-ASCII, so deriving
-// an ASCII-only prefix from it forced every CJK/emoji-named workspace onto the
-// same "WS" fallback. Slug is validated as `^[a-z0-9]+(-[a-z0-9]+)*$` and
-// required, so it always yields a non-empty, workspace-specific prefix.
-//
-// Kept byte-for-byte in sync with the client-side preview in
-// packages/views/onboarding/steps/step-workspace.tsx — what the user sees on
-// the create screen has to be what the server would derive.
-func defaultIssuePrefixFromSlug(slug string) string {
-	head := nonAlphanumeric.ReplaceAllString(slug, "")
-	if head == "" {
-		// Unreachable for a validated slug; keeps the function total so a
-		// future caller can never persist an empty prefix.
-		return "WS"
-	}
-	if len(head) > 4 {
-		head = head[:4]
-	}
-	return strings.ToUpper(head)
-}
-
-// legacyIssuePrefixFromName is the pre-MUL-6050 derivation: first 3 ASCII
-// letters of the workspace name, uppercased, "WS" when the name has none.
-//
-// FROZEN — do not "fix" this to match defaultIssuePrefixFromSlug. Its only
-// caller is getIssuePrefix's fallback for workspaces whose stored prefix is
-// empty (rows predating the column). Issue identifiers are computed at read
-// time from the current prefix, so changing what this returns would silently
-// rewrite the identifier of every historical issue in those workspaces.
-// Deliberate product decision: no backfill, existing workspaces stay as they
-// are; only newly created ones follow the slug-derived rule.
-func legacyIssuePrefixFromName(name string) string {
-	letters := nonAlpha.ReplaceAllString(name, "")
-	if len(letters) == 0 {
-		return "WS"
-	}
-	letters = strings.ToUpper(letters)
-	if len(letters) > 3 {
-		letters = letters[:3]
-	}
-	return letters
-}
-
-// normalizeIssuePrefix trims and uppercases a client-supplied issue prefix.
-// An all-whitespace value means "not provided" and reports ("", true) so the
-// caller can fall back to its default. Anything else must be 1-10 chars of
-// A-Z0-9, mirroring the client-side guardrail in
-// packages/views/settings/components/workspace-tab.tsx.
-func normalizeIssuePrefix(raw string) (string, bool) {
-	prefix := strings.ToUpper(strings.TrimSpace(raw))
-	if prefix == "" {
-		return "", true
-	}
-	if !issuePrefixPattern.MatchString(prefix) {
-		return "", false
-	}
-	return prefix, true
-}
-
 const issuePrefixFormatError = "issue prefix must be 1-10 uppercase letters or digits"
 
 type WorkspaceResponse struct {
@@ -102,10 +38,10 @@ type WorkspaceResponse struct {
 	Context     *string `json:"context"`
 	Settings    any     `json:"settings"`
 	Repos       any     `json:"repos"`
-	IssuePrefix string  `json:"issue_prefix"`
-	AvatarURL   *string `json:"avatar_url"`
-	CreatedAt   string  `json:"created_at"`
-	UpdatedAt   string  `json:"updated_at"`
+
+	AvatarURL *string `json:"avatar_url"`
+	CreatedAt string  `json:"created_at"`
+	UpdatedAt string  `json:"updated_at"`
 }
 
 func (h *Handler) workspaceToResponse(w db.Workspace) WorkspaceResponse {
@@ -131,10 +67,10 @@ func (h *Handler) workspaceToResponse(w db.Workspace) WorkspaceResponse {
 		Context:     textToPtr(w.Context),
 		Settings:    settings,
 		Repos:       repos,
-		IssuePrefix: w.IssuePrefix,
-		AvatarURL:   h.resolveAvatarURLPtr(textToPtr(w.AvatarUrl)),
-		CreatedAt:   timestampToString(w.CreatedAt),
-		UpdatedAt:   timestampToString(w.UpdatedAt),
+
+		AvatarURL: h.resolveAvatarURLPtr(textToPtr(w.AvatarUrl)),
+		CreatedAt: timestampToString(w.CreatedAt),
+		UpdatedAt: timestampToString(w.UpdatedAt),
 	}
 }
 
@@ -178,7 +114,6 @@ type CreateWorkspaceRequest struct {
 	Slug        string  `json:"slug"`
 	Description *string `json:"description"`
 	Context     *string `json:"context"`
-	IssuePrefix *string `json:"issue_prefix"`
 }
 
 func (h *Handler) CreateWorkspace(w http.ResponseWriter, r *http.Request) {
@@ -218,21 +153,6 @@ func (h *Handler) CreateWorkspace(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Resolve the prefix before opening the transaction: an invalid one is a
-	// 400 that should never cost a connection.
-	issuePrefix := ""
-	if req.IssuePrefix != nil {
-		prefix, ok := normalizeIssuePrefix(*req.IssuePrefix)
-		if !ok {
-			writeError(w, http.StatusBadRequest, issuePrefixFormatError)
-			return
-		}
-		issuePrefix = prefix
-	}
-	if issuePrefix == "" {
-		issuePrefix = defaultIssuePrefixFromSlug(req.Slug)
-	}
-
 	tx, err := h.TxStarter.Begin(r.Context())
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to create workspace")
@@ -246,7 +166,6 @@ func (h *Handler) CreateWorkspace(w http.ResponseWriter, r *http.Request) {
 		Slug:        req.Slug,
 		Description: ptrToText(req.Description),
 		Context:     ptrToText(req.Context),
-		IssuePrefix: issuePrefix,
 	})
 	if err != nil {
 		if isUniqueViolation(err) {
@@ -270,10 +189,6 @@ func (h *Handler) CreateWorkspace(w http.ResponseWriter, r *http.Request) {
 	// Seed the 7 built-in issue statuses inside the same transaction, so a
 	// workspace is never visible without its status catalog — an issue cannot
 	// be created before its status can be resolved. (MUL-6243)
-	if err := issuestatus.Ensure(r.Context(), qtx, ws.ID); err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to seed issue statuses: "+err.Error())
-		return
-	}
 
 	// NOTE: CreateWorkspace deliberately does NOT mark the user as
 	// onboarded. The `onboarded_at` flag is owned by CompleteOnboarding
@@ -307,8 +222,8 @@ type UpdateWorkspaceRequest struct {
 	Context     *string `json:"context"`
 	Settings    any     `json:"settings"`
 	Repos       any     `json:"repos"`
-	IssuePrefix *string `json:"issue_prefix"`
-	AvatarURL   *string `json:"avatar_url"`
+
+	AvatarURL *string `json:"avatar_url"`
 }
 
 type workspaceRepoRef struct {
@@ -383,17 +298,7 @@ func (h *Handler) UpdateWorkspace(w http.ResponseWriter, r *http.Request) {
 		params.Context = pgtype.Text{String: *req.Context, Valid: true}
 	}
 	if req.Settings != nil {
-		if incoming, ok := req.Settings.(map[string]any); ok {
-			// Only an old client's flip of the retired PR switch needs the
-			// stored value; see reconcilePRMergeSettings.
-			var stored map[string]any
-			if _, sent := incoming[prAutoCompleteLegacyKey]; sent {
-				if existing, err := h.Queries.GetWorkspace(r.Context(), idUUID); err == nil {
-					_ = json.Unmarshal(existing.Settings, &stored)
-				}
-			}
-			reconcilePRMergeSettings(stored, incoming)
-		}
+
 		s, _ := json.Marshal(req.Settings)
 		params.Settings = s
 	}
@@ -405,16 +310,7 @@ func (h *Handler) UpdateWorkspace(w http.ResponseWriter, r *http.Request) {
 		}
 		params.Repos = reposJSON
 	}
-	if req.IssuePrefix != nil {
-		prefix, ok := normalizeIssuePrefix(*req.IssuePrefix)
-		if !ok {
-			writeError(w, http.StatusBadRequest, issuePrefixFormatError)
-			return
-		}
-		if prefix != "" {
-			params.IssuePrefix = pgtype.Text{String: prefix, Valid: true}
-		}
-	}
+
 	if req.AvatarURL != nil {
 		// Read the stored value so an unchanged re-send skips revalidation —
 		// this handler is the one avatar writer that doesn't already have the
@@ -1325,4 +1221,41 @@ func (h *Handler) DeleteWorkspace(w http.ResponseWriter, r *http.Request) {
 	h.notifyDaemonWorkspacesChanged(affectedUserIDs...)
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func isValidGitRepoURL(s string) bool {
+	if u, err := url.Parse(s); err == nil && u.Host != "" {
+		switch u.Scheme {
+		case "http", "https", "ssh", "git":
+			return true
+		}
+	}
+	// scp-like ssh shorthand: [user@]host:path with a non-empty host and path,
+	// and no spaces. Reject anything that looks like a URL with a scheme
+	// (those should go through url.Parse above).
+	if strings.Contains(s, " ") || strings.Contains(s, "://") {
+		return false
+	}
+	colon := strings.Index(s, ":")
+	if colon <= 0 || colon == len(s)-1 {
+		return false
+	}
+	// In scp-like ssh shorthand `[user@]host:path`, `@` is only meaningful
+	// as a user separator before the first ':'. If '@' appears at or after
+	// the colon it is not the user separator — reject as malformed rather
+	// than guess (and avoid a slice-bounds panic from blindly slicing).
+	at := strings.Index(s, "@")
+	if at >= colon {
+		return false
+	}
+	hostStart := 0
+	if at >= 0 {
+		hostStart = at + 1
+	}
+	host := s[hostStart:colon]
+	path := s[colon+1:]
+	if host == "" || path == "" {
+		return false
+	}
+	return true
 }

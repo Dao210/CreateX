@@ -9,7 +9,6 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -37,21 +36,21 @@ type AutopilotResponse struct {
 	WorkspaceID string  `json:"workspace_id"`
 	Title       string  `json:"title"`
 	Description *string `json:"description"`
-	ProjectID   *string `json:"project_id"`
+
 	// AssigneeType is "agent" or "squad". Path A from MUL-2429: when set
 	// to "squad", AssigneeID points at squad(id) rather than agent(id) and
 	// dispatch resolves to squad.leader_id at run time.
-	AssigneeType       string  `json:"assignee_type"`
-	AssigneeID         string  `json:"assignee_id"`
-	Status             string  `json:"status"`
-	PauseReason        *string `json:"pause_reason"`
-	ExecutionMode      string  `json:"execution_mode"`
-	IssueTitleTemplate *string `json:"issue_title_template"`
-	CreatedByType      string  `json:"created_by_type"`
-	CreatedByID        string  `json:"created_by_id"`
-	LastRunAt          *string `json:"last_run_at"`
-	CreatedAt          string  `json:"created_at"`
-	UpdatedAt          string  `json:"updated_at"`
+	AssigneeType  string  `json:"assignee_type"`
+	AssigneeID    string  `json:"assignee_id"`
+	Status        string  `json:"status"`
+	PauseReason   *string `json:"pause_reason"`
+	ExecutionMode string  `json:"execution_mode"`
+
+	CreatedByType string  `json:"created_by_type"`
+	CreatedByID   string  `json:"created_by_id"`
+	LastRunAt     *string `json:"last_run_at"`
+	CreatedAt     string  `json:"created_at"`
+	UpdatedAt     string  `json:"updated_at"`
 
 	// List-endpoint-only derived fields (absent on the detail/create/update
 	// responses and on older servers — clients must treat them as optional).
@@ -62,7 +61,6 @@ type AutopilotResponse struct {
 
 	// Always non-nil (empty slice when no subscribers configured) so
 	// frontend optional-chain rules can treat the field as authoritative.
-	Subscribers []AutopilotSubscriberEntry `json:"subscribers"`
 
 	// CanWrite reports whether the requesting caller may perform write/execute
 	// operations on this autopilot — editing, deleting, triggering, and
@@ -182,7 +180,7 @@ type AutopilotRunResponse struct {
 
 // ── Converters ──────────────────────────────────────────────────────────────
 
-func autopilotToResponse(a db.Autopilot, subscribers []db.AutopilotSubscriber) AutopilotResponse {
+func autopilotToResponse(a db.Autopilot) AutopilotResponse {
 	assigneeType := a.AssigneeType
 	if assigneeType == "" {
 		// Older rows pre-MUL-2429 may surface as "" against an out-of-date
@@ -190,32 +188,23 @@ func autopilotToResponse(a db.Autopilot, subscribers []db.AutopilotSubscriber) A
 		// non-null.
 		assigneeType = "agent"
 	}
-	subResp := make([]AutopilotSubscriberEntry, len(subscribers))
-	for i, s := range subscribers {
-		subResp[i] = AutopilotSubscriberEntry{
-			UserType:  s.UserType,
-			UserID:    uuidToString(s.UserID),
-			CreatedAt: timestampToString(s.CreatedAt),
-		}
-	}
 	return AutopilotResponse{
-		ID:                 uuidToString(a.ID),
-		WorkspaceID:        uuidToString(a.WorkspaceID),
-		Title:              a.Title,
-		Description:        textToPtr(a.Description),
-		ProjectID:          uuidToPtr(a.ProjectID),
-		AssigneeType:       assigneeType,
-		AssigneeID:         uuidToString(a.AssigneeID),
-		Status:             a.Status,
-		PauseReason:        textToPtr(a.PauseReason),
-		ExecutionMode:      a.ExecutionMode,
-		IssueTitleTemplate: textToPtr(a.IssueTitleTemplate),
-		CreatedByType:      a.CreatedByType,
-		CreatedByID:        uuidToString(a.CreatedByID),
-		LastRunAt:          timestampToPtr(a.LastRunAt),
-		CreatedAt:          timestampToString(a.CreatedAt),
-		UpdatedAt:          timestampToString(a.UpdatedAt),
-		Subscribers:        subResp,
+		ID:          uuidToString(a.ID),
+		WorkspaceID: uuidToString(a.WorkspaceID),
+		Title:       a.Title,
+		Description: textToPtr(a.Description),
+
+		AssigneeType:  assigneeType,
+		AssigneeID:    uuidToString(a.AssigneeID),
+		Status:        a.Status,
+		PauseReason:   textToPtr(a.PauseReason),
+		ExecutionMode: a.ExecutionMode,
+
+		CreatedByType: a.CreatedByType,
+		CreatedByID:   uuidToString(a.CreatedByID),
+		LastRunAt:     timestampToPtr(a.LastRunAt),
+		CreatedAt:     timestampToString(a.CreatedAt),
+		UpdatedAt:     timestampToString(a.UpdatedAt),
 	}
 }
 
@@ -359,27 +348,25 @@ func runToResponseSlim(r db.AutopilotRun) AutopilotRunResponse {
 type CreateAutopilotRequest struct {
 	Title       string  `json:"title"`
 	Description *string `json:"description"`
-	ProjectID   *string `json:"project_id"`
+
 	// AssigneeType is optional and defaults to "agent" — preserves backward
 	// compatibility with desktop clients shipped before MUL-2429.
-	AssigneeType       *string           `json:"assignee_type"`
-	AssigneeID         string            `json:"assignee_id"`
-	ExecutionMode      string            `json:"execution_mode"`
-	IssueTitleTemplate *string           `json:"issue_title_template"`
-	Subscribers        []SubscriberInput `json:"subscribers"`
+	AssigneeType  *string `json:"assignee_type"`
+	AssigneeID    string  `json:"assignee_id"`
+	ExecutionMode string  `json:"execution_mode"`
 }
 
 type UpdateAutopilotRequest struct {
-	Title              *string `json:"title"`
-	Description        *string `json:"description"`
-	ProjectID          *string `json:"project_id"`
-	AssigneeType       *string `json:"assignee_type"`
-	AssigneeID         *string `json:"assignee_id"`
-	Status             *string `json:"status"`
-	ExecutionMode      *string `json:"execution_mode"`
-	IssueTitleTemplate *string `json:"issue_title_template"`
+	Title       *string `json:"title"`
+	Description *string `json:"description"`
+
+	AssigneeType  *string `json:"assignee_type"`
+	AssigneeID    *string `json:"assignee_id"`
+	Status        *string `json:"status"`
+	ExecutionMode *string `json:"execution_mode"`
+
 	// Wholesale replacement when present; omit to leave subscribers untouched.
-	Subscribers []SubscriberInput `json:"subscribers"`
+
 }
 
 type SubscriberInput struct {
@@ -468,40 +455,9 @@ func (h *Handler) ListAutopilots(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Subscribers are fetched for the whole page in one batched query. An
-	// earlier version passed nil here to dodge an N+1, but the response type
-	// serializes a nil slice as [] rather than omitting it, so every listed
-	// autopilot claimed to have no subscribers while the detail endpoint
-	// reported the real ones — a silently wrong value is worse than a missing
-	// one (MUL-6680). The batch keys off the primary key's leading column, so
-	// this costs one indexed query per page, not one per row.
-	subsByAutopilot := map[string][]db.AutopilotSubscriber{}
-	autopilotIDs := make([]pgtype.UUID, 0, len(autopilots))
-	for _, row := range autopilots {
-		autopilotIDs = append(autopilotIDs, row.Autopilot.ID)
-	}
-	if len(autopilotIDs) > 0 {
-		subs, err := h.Queries.ListAutopilotSubscribersForAutopilots(r.Context(), autopilotIDs)
-		if err != nil {
-			// Fail closed. Degrading to an empty set here would reintroduce
-			// exactly the bug this endpoint was fixed for: subscribers is a
-			// non-omitempty field documented as authoritative, so an empty
-			// value on a failed read is indistinguishable from "none
-			// configured" — and a caller acting on it can overwrite a real
-			// subscriber list. An error the caller can see and retry is the
-			// only honest answer.
-			writeError(w, http.StatusInternalServerError, "failed to list autopilot subscribers")
-			return
-		}
-		for _, s := range subs {
-			id := uuidToString(s.AutopilotID)
-			subsByAutopilot[id] = append(subsByAutopilot[id], s)
-		}
-	}
-
 	resp := make([]AutopilotResponse, len(autopilots))
 	for i, row := range autopilots {
-		r := autopilotToResponse(row.Autopilot, subsByAutopilot[uuidToString(row.Autopilot.ID)])
+		r := autopilotToResponse(row.Autopilot)
 		r.TriggerKinds = row.TriggerKinds
 		if row.NextRunAt.Valid {
 			r.NextRunAt = timestampToPtr(row.NextRunAt)
@@ -529,15 +485,7 @@ func (h *Handler) GetAutopilot(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	subs, err := h.Queries.ListAutopilotSubscribers(r.Context(), autopilot.ID)
-	if err != nil {
-		// Fail closed for the same reason the list endpoint does: an empty
-		// subscribers array is a claim, not an absence, and this response is
-		// what clients round-trip back into a full-replace PATCH.
-		writeError(w, http.StatusInternalServerError, "failed to list autopilot subscribers")
-		return
-	}
-	resp := autopilotToResponse(autopilot, subs)
+	resp := autopilotToResponse(autopilot)
 
 	// Resolve the acting caller's write access once: it both stamps can_write and
 	// gates webhook-secret exposure. Webhook tokens are trigger-granting
@@ -823,15 +771,9 @@ func (h *Handler) CreateAutopilot(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "execution_mode is required")
 		return
 	}
-	if req.ExecutionMode != "create_issue" && req.ExecutionMode != "run_only" {
-		writeError(w, http.StatusBadRequest, "execution_mode must be create_issue or run_only")
+	if req.ExecutionMode != "run_only" {
+		writeError(w, http.StatusBadRequest, "execution_mode must be run_only")
 		return
-	}
-	if req.IssueTitleTemplate != nil {
-		if err := service.ValidateIssueTitleTemplate(*req.IssueTitleTemplate); err != nil {
-			writeError(w, http.StatusBadRequest, err.Error())
-			return
-		}
 	}
 
 	workspaceID := h.resolveWorkspaceID(r)
@@ -861,20 +803,9 @@ func (h *Handler) CreateAutopilot(w http.ResponseWriter, r *http.Request) {
 		assigneeType = *req.AssigneeType
 	}
 	if !isValidAutopilotAssigneeType(assigneeType) {
-		writeError(w, http.StatusBadRequest, "assignee_type must be agent or squad")
+		writeError(w, http.StatusBadRequest, "assignee_type must be agent")
 		return
 	}
-	projectID, ok := h.parseAutopilotProjectID(w, r, req.ProjectID, wsUUID)
-	if !ok {
-		return
-	}
-
-	// Parse before insert so a malformed payload doesn't open a transaction.
-	subscribers, ok := parseAutopilotSubscribers(w, req.Subscribers)
-	if !ok {
-		return
-	}
-
 	tx, err := h.TxStarter.Begin(r.Context())
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to create autopilot")
@@ -882,15 +813,6 @@ func (h *Handler) CreateAutopilot(w http.ResponseWriter, r *http.Request) {
 	}
 	defer tx.Rollback(r.Context())
 	qtx := h.Queries.WithTx(tx)
-
-	// This must be the first lock family in the transaction. Member revocation
-	// takes the same per-(workspace, user) locks before pruning templates and
-	// deleting member rows. Re-checking membership after those locks means
-	// either this save commits first and revocation prunes it, or revocation
-	// commits first and this save rejects the departed subscriber.
-	if !h.lockAndValidateAutopilotSubscribers(w, r, qtx, subscribers, wsUUID) {
-		return
-	}
 
 	// Keep save-time readiness validation in the same transaction as the
 	// insert. The assignment lock serializes this path with Runtime teardown,
@@ -900,17 +822,15 @@ func (h *Handler) CreateAutopilot(w http.ResponseWriter, r *http.Request) {
 	}
 
 	autopilot, err := qtx.CreateAutopilot(r.Context(), db.CreateAutopilotParams{
-		WorkspaceID:        wsUUID,
-		Title:              req.Title,
-		AssigneeType:       assigneeType,
-		AssigneeID:         assigneeUUID,
-		Status:             "active",
-		ExecutionMode:      req.ExecutionMode,
-		CreatedByType:      "member",
-		CreatedByID:        actor.UserID,
-		Description:        ptrToText(req.Description),
-		IssueTitleTemplate: ptrToText(req.IssueTitleTemplate),
-		ProjectID:          projectID,
+		WorkspaceID:   wsUUID,
+		Title:         req.Title,
+		AssigneeType:  assigneeType,
+		AssigneeID:    assigneeUUID,
+		Status:        "active",
+		ExecutionMode: req.ExecutionMode,
+		CreatedByType: "member",
+		CreatedByID:   actor.UserID,
+		Description:   ptrToText(req.Description),
 	})
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to create autopilot")
@@ -925,26 +845,11 @@ func (h *Handler) CreateAutopilot(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	for _, subscriber := range subscribers {
-		if err := qtx.AddAutopilotSubscriber(r.Context(), db.AddAutopilotSubscriberParams{
-			AutopilotID: autopilot.ID,
-			UserType:    "member",
-			UserID:      subscriber.UserID,
-		}); err != nil {
-			writeError(w, http.StatusInternalServerError, "failed to add autopilot subscriber")
-			return
-		}
-	}
 	if err := tx.Commit(r.Context()); err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to create autopilot")
 		return
 	}
-	subs, err := h.Queries.ListAutopilotSubscribers(r.Context(), autopilot.ID)
-	if err != nil {
-		subs = nil
-	}
-
-	resp := autopilotToResponse(autopilot, subs)
+	resp := autopilotToResponse(autopilot)
 	h.publish(protocol.EventAutopilotCreated, workspaceID, "member", userID, map[string]any{"autopilot": resp})
 	obsmetrics.RecordEvent(h.Analytics, h.Metrics, analytics.AutopilotCreated(
 		userID,
@@ -959,81 +864,6 @@ func (h *Handler) CreateAutopilot(w http.ResponseWriter, r *http.Request) {
 type autopilotSubscriberCandidate struct {
 	UserID     pgtype.UUID
 	InputIndex int
-}
-
-// parseAutopilotSubscribers validates the wire shape without reading mutable
-// membership state. Membership is checked only after the write transaction
-// owns the same serialization locks as member revocation.
-func parseAutopilotSubscribers(w http.ResponseWriter, raw []SubscriberInput) ([]autopilotSubscriberCandidate, bool) {
-	if len(raw) == 0 {
-		return nil, true
-	}
-	out := make([]autopilotSubscriberCandidate, 0, len(raw))
-	seen := make(map[string]bool, len(raw))
-	for i, entry := range raw {
-		if entry.UserType != "member" {
-			writeError(w, http.StatusBadRequest, fmt.Sprintf("subscribers[%d].user_type must be 'member'", i))
-			return nil, false
-		}
-		if entry.UserID == "" {
-			writeError(w, http.StatusBadRequest, fmt.Sprintf("subscribers[%d].user_id is required", i))
-			return nil, false
-		}
-		uid, ok := parseUUIDOrBadRequest(w, entry.UserID, fmt.Sprintf("subscribers[%d].user_id", i))
-		if !ok {
-			return nil, false
-		}
-		canonicalID := uuidToString(uid)
-		if seen[canonicalID] {
-			continue
-		}
-		seen[canonicalID] = true
-		out = append(out, autopilotSubscriberCandidate{UserID: uid, InputIndex: i})
-	}
-	return out, true
-}
-
-// lockAndValidateAutopilotSubscribers serializes subscriber-template writes
-// with member revocation. Locks and row checks both use canonical UUID order,
-// so two saves containing the same members in different request orders cannot
-// deadlock each other.
-func (h *Handler) lockAndValidateAutopilotSubscribers(
-	w http.ResponseWriter,
-	r *http.Request,
-	qtx *db.Queries,
-	subscribers []autopilotSubscriberCandidate,
-	workspaceID pgtype.UUID,
-) bool {
-	ordered := append([]autopilotSubscriberCandidate(nil), subscribers...)
-	sort.Slice(ordered, func(i, j int) bool {
-		return uuidToString(ordered[i].UserID) < uuidToString(ordered[j].UserID)
-	})
-
-	for _, subscriber := range ordered {
-		if err := qtx.LockSubscriberWrites(r.Context(), db.LockSubscriberWritesParams{
-			WorkspaceID: workspaceID,
-			UserID:      subscriber.UserID,
-		}); err != nil {
-			writeError(w, http.StatusInternalServerError, "failed to validate autopilot subscribers")
-			return false
-		}
-	}
-	for _, subscriber := range ordered {
-		if _, err := qtx.LockActiveMember(r.Context(), db.LockActiveMemberParams{
-			UserID:      subscriber.UserID,
-			WorkspaceID: workspaceID,
-		}); err != nil {
-			if errors.Is(err, pgx.ErrNoRows) {
-				writeError(w, http.StatusBadRequest, fmt.Sprintf(
-					"subscribers[%d] is not a member of this workspace", subscriber.InputIndex,
-				))
-				return false
-			}
-			writeError(w, http.StatusInternalServerError, "failed to validate autopilot subscribers")
-			return false
-		}
-	}
-	return true
 }
 
 func (h *Handler) UpdateAutopilot(w http.ResponseWriter, r *http.Request) {
@@ -1066,11 +896,9 @@ func (h *Handler) UpdateAutopilot(w http.ResponseWriter, r *http.Request) {
 	json.Unmarshal(bodyBytes, &rawFields)
 
 	params := db.UpdateAutopilotParams{
-		ID:                 prev.ID,
-		Description:        prev.Description,
-		AssigneeID:         prev.AssigneeID,
-		IssueTitleTemplate: prev.IssueTitleTemplate,
-		ProjectID:          prev.ProjectID,
+		ID:          prev.ID,
+		Description: prev.Description,
+		AssigneeID:  prev.AssigneeID,
 	}
 	if req.Title != nil {
 		params.Title = pgtype.Text{String: *req.Title, Valid: true}
@@ -1083,22 +911,6 @@ func (h *Handler) UpdateAutopilot(w http.ResponseWriter, r *http.Request) {
 	}
 	if _, ok := rawFields["description"]; ok {
 		params.Description = ptrToText(req.Description)
-	}
-	if _, ok := rawFields["issue_title_template"]; ok {
-		if req.IssueTitleTemplate != nil {
-			if err := service.ValidateIssueTitleTemplate(*req.IssueTitleTemplate); err != nil {
-				writeError(w, http.StatusBadRequest, err.Error())
-				return
-			}
-		}
-		params.IssueTitleTemplate = ptrToText(req.IssueTitleTemplate)
-	}
-	if _, ok := rawFields["project_id"]; ok {
-		projectID, ok := h.parseAutopilotProjectID(w, r, req.ProjectID, prev.WorkspaceID)
-		if !ok {
-			return
-		}
-		params.ProjectID = projectID
 	}
 	// assignee_type and assignee_id are validated as a pair: switching
 	// between agent and squad without supplying a new id would leave the
@@ -1114,7 +926,7 @@ func (h *Handler) UpdateAutopilot(w http.ResponseWriter, r *http.Request) {
 			nextType = *req.AssigneeType
 		}
 		if !isValidAutopilotAssigneeType(nextType) {
-			writeError(w, http.StatusBadRequest, "assignee_type must be agent or squad")
+			writeError(w, http.StatusBadRequest, "assignee_type must be agent")
 			return
 		}
 		if idSent {
@@ -1143,21 +955,6 @@ func (h *Handler) UpdateAutopilot(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Parse subscriber wire values up-front. Mutable membership is revalidated
-	// under the revocation serialization locks after the transaction starts.
-	var (
-		subscribers        []autopilotSubscriberCandidate
-		replaceSubscribers bool
-	)
-	if _, sent := rawFields["subscribers"]; sent {
-		replaceSubscribers = true
-		validated, vok := parseAutopilotSubscribers(w, req.Subscribers)
-		if !vok {
-			return
-		}
-		subscribers = validated
-	}
-
 	tx, err := h.TxStarter.Begin(r.Context())
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to update autopilot")
@@ -1165,12 +962,6 @@ func (h *Handler) UpdateAutopilot(w http.ResponseWriter, r *http.Request) {
 	}
 	defer tx.Rollback(r.Context())
 	qtx := h.Queries.WithTx(tx)
-
-	// Lock subscriber identities before assignment and autopilot rows. This is
-	// the same global order used by CreateAutopilot and member revocation.
-	if !h.lockAndValidateAutopilotSubscribers(w, r, qtx, subscribers, prev.WorkspaceID) {
-		return
-	}
 
 	// Retargeting must validate the polymorphic reference; resuming must also
 	// validate Runtime readiness. Keep both in this transaction so Runtime
@@ -1243,33 +1034,12 @@ func (h *Handler) UpdateAutopilot(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if replaceSubscribers {
-		if err := qtx.DeleteAutopilotSubscribersForAutopilot(r.Context(), autopilot.ID); err != nil {
-			writeError(w, http.StatusInternalServerError, "failed to update subscribers")
-			return
-		}
-		for _, subscriber := range subscribers {
-			if err := qtx.AddAutopilotSubscriber(r.Context(), db.AddAutopilotSubscriberParams{
-				AutopilotID: autopilot.ID,
-				UserType:    "member",
-				UserID:      subscriber.UserID,
-			}); err != nil {
-				writeError(w, http.StatusInternalServerError, "failed to add autopilot subscriber")
-				return
-			}
-		}
-	}
-
 	if err := tx.Commit(r.Context()); err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to update autopilot")
 		return
 	}
 
-	subs, err := h.Queries.ListAutopilotSubscribers(r.Context(), autopilot.ID)
-	if err != nil {
-		subs = nil
-	}
-	resp := autopilotToResponse(autopilot, subs)
+	resp := autopilotToResponse(autopilot)
 	h.publish(protocol.EventAutopilotUpdated, workspaceID, "member", userID, map[string]any{"autopilot": resp})
 	writeJSON(w, http.StatusOK, resp)
 }
@@ -1301,8 +1071,7 @@ func autopilotRuleSubstantiveChange(prev, next db.Autopilot) bool {
 		prev.AssigneeID != next.AssigneeID ||
 		prev.Status != next.Status ||
 		prev.ExecutionMode != next.ExecutionMode ||
-		prev.Description != next.Description ||
-		prev.IssueTitleTemplate != next.IssueTitleTemplate
+		prev.Description != next.Description
 }
 
 // recordAutopilotRuleVersion appends one rule-version snapshot for a substantive
@@ -1311,29 +1080,6 @@ func autopilotRuleSubstantiveChange(prev, next db.Autopilot) bool {
 // version is atomic with the autopilot write.
 func (h *Handler) recordAutopilotRuleVersion(ctx context.Context, q *db.Queries, ap db.Autopilot, publishedByType string, publishedByID pgtype.UUID) error {
 	return service.RecordAutopilotRuleVersion(ctx, q, ap, publishedByType, publishedByID)
-}
-
-func (h *Handler) parseAutopilotProjectID(
-	w http.ResponseWriter,
-	r *http.Request,
-	raw *string,
-	workspaceID pgtype.UUID,
-) (pgtype.UUID, bool) {
-	if raw == nil || *raw == "" {
-		return pgtype.UUID{}, true
-	}
-	projectID, ok := parseUUIDOrBadRequest(w, *raw, "project_id")
-	if !ok {
-		return pgtype.UUID{}, false
-	}
-	if _, err := h.Queries.GetProjectInWorkspace(r.Context(), db.GetProjectInWorkspaceParams{
-		ID:          projectID,
-		WorkspaceID: workspaceID,
-	}); err != nil {
-		writeError(w, http.StatusBadRequest, "project_id must reference a project in this workspace")
-		return pgtype.UUID{}, false
-	}
-	return projectID, true
 }
 
 func (h *Handler) DeleteAutopilot(w http.ResponseWriter, r *http.Request) {
@@ -1780,14 +1526,14 @@ func isAllowedWebhookProvider(p string) bool {
 
 func isValidAutopilotAssigneeType(t string) bool {
 	switch t {
-	case "agent", "squad":
+	case "agent":
 		return true
 	default:
 		return false
 	}
 }
 
-// validateAutopilotAssigneeForSave checks that the assignee (agent or squad)
+// validateAutopilotAssigneeForSave checks that the assignee (agent)
 // exists in the given workspace and, when requireRuntime is true, that its
 // effective Agent has a Runtime. It takes assignment locks through q so active
 // saves and the caller's Autopilot write are serialized with Runtime teardown.
@@ -1824,51 +1570,8 @@ func (h *Handler) validateAutopilotAssigneeForSave(
 			return false
 		}
 		return true
-	case "squad":
-		squad, err := q.LockSquadForAutopilotAssignment(r.Context(), db.LockSquadForAutopilotAssignmentParams{
-			ID:          assigneeID,
-			WorkspaceID: workspaceID,
-		})
-		if err != nil {
-			writeError(w, http.StatusBadRequest, "assignee must be a valid squad in this workspace")
-			return false
-		}
-		// Archived squads must be rejected at save time: the dispatcher will
-		// otherwise produce an unbroken stream of skipped runs against a
-		// squad that can never be revived without an explicit un-archive.
-		// Pair with TransferSquadAutopilotsToLeader on DeleteSquad so any
-		// autopilot that survives the archive flips to assignee_type='agent'
-		// (the leader) and stops referencing the dead squad row.
-		if squad.ArchivedAt.Valid {
-			writeError(w, http.StatusUnprocessableEntity, "squad is archived; pick a different squad")
-			return false
-		}
-		leader, err := q.LockAgentForAutopilotAssignment(r.Context(), db.LockAgentForAutopilotAssignmentParams{
-			ID:          squad.LeaderID,
-			WorkspaceID: workspaceID,
-		})
-		if err != nil {
-			writeError(w, http.StatusBadRequest, "squad leader agent not found")
-			return false
-		}
-		if leader.ArchivedAt.Valid {
-			writeError(w, http.StatusUnprocessableEntity, "squad leader is archived; pick a different squad or rotate the leader before assigning autopilot")
-			return false
-		}
-		if requireRuntime && !leader.RuntimeID.Valid {
-			writeError(w, http.StatusUnprocessableEntity, "squad leader needs a runtime before this autopilot can be active")
-			return false
-		}
-		// Private-leader gate: the member configuring the autopilot must have
-		// access to the private leader, same as validateAssigneePair.
-		actorType, actorID := h.resolveActor(r, requestUserID(r), util.UUIDToString(workspaceID))
-		if !h.canInvokeAgent(r.Context(), leader, actorType, actorID, h.invokeOriginatorFromRequest(r, actorType, actorID), util.UUIDToString(workspaceID)) {
-			writeError(w, http.StatusForbidden, "cannot assign autopilot to squad with private leader")
-			return false
-		}
-		return true
 	default:
-		writeError(w, http.StatusBadRequest, "assignee_type must be agent or squad")
+		writeError(w, http.StatusBadRequest, "assignee_type must be agent")
 		return false
 	}
 }

@@ -1,12 +1,12 @@
 export type AutopilotStatus = "active" | "paused" | "archived";
 
-export type AutopilotExecutionMode = "create_issue" | "run_only";
+export type AutopilotExecutionMode = "run_only";
 
 // `assignee_type` selects which polymorphic actor backs the autopilot:
 // "agent" → assignee_id references agent(id); "squad" → assignee_id references
 // squad(id) and dispatch resolves to squad.leader_id at run time (MUL-2429,
 // Path A). Older servers omit this field — callers should default to "agent".
-export type AutopilotAssigneeType = "agent" | "squad";
+export type AutopilotAssigneeType = "agent";
 
 export type AutopilotTriggerKind = "schedule" | "webhook" | "api";
 
@@ -15,7 +15,6 @@ export type AutopilotTriggerKind = "schedule" | "webhook" | "api";
 // handle it explicitly — falling through to a generic case used to show
 // the run as still-pending which masked the no-op.
 export type AutopilotRunStatus =
-  | "issue_created"
   | "running"
   | "completed"
   | "failed"
@@ -28,7 +27,6 @@ export interface Autopilot {
   workspace_id: string;
   title: string;
   description: string | null;
-  project_id?: string | null;
   assignee_type: AutopilotAssigneeType;
   assignee_id: string;
   status: AutopilotStatus;
@@ -36,7 +34,6 @@ export interface Autopilot {
   // pauses and older servers.
   pause_reason?: string | null;
   execution_mode: AutopilotExecutionMode;
-  issue_title_template: string | null;
   created_by_type: string;
   created_by_id: string;
   last_run_at: string | null;
@@ -49,9 +46,6 @@ export interface Autopilot {
   trigger_kinds?: string[];
   next_run_at?: string | null;
   last_run_status?: string | null;
-  // List endpoint returns []; only the detail endpoint populates this.
-  // Treat undefined as empty on older servers.
-  subscribers?: AutopilotSubscriber[];
   // Whether the requesting user may edit / delete / trigger / manage this
   // autopilot (creator, workspace owner/admin, or a granted collaborator).
   // Present on list and detail responses; absent on older servers — treat
@@ -156,30 +150,22 @@ export interface AutopilotSubscriberInput {
 export interface CreateAutopilotRequest {
   title: string;
   description?: string;
-  project_id?: string | null;
   // Optional on the wire — when omitted the server defaults to "agent" so
   // older clients keep working.
   assignee_type?: AutopilotAssigneeType;
   assignee_id: string;
   execution_mode: AutopilotExecutionMode;
-  issue_title_template?: string;
-  subscribers?: AutopilotSubscriberInput[];
 }
 
 export interface UpdateAutopilotRequest {
   title?: string;
   description?: string | null;
-  project_id?: string | null;
   // Send `assignee_type` together with `assignee_id` whenever you change the
   // assignee — the server requires both for a type swap.
   assignee_type?: AutopilotAssigneeType;
   assignee_id?: string;
   status?: AutopilotStatus;
   execution_mode?: AutopilotExecutionMode;
-  issue_title_template?: string | null;
-  // When present, fully replaces the autopilot's subscriber template;
-  // omit to leave it untouched.
-  subscribers?: AutopilotSubscriberInput[];
 }
 
 export interface CreateAutopilotTriggerRequest {

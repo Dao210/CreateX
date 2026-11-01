@@ -7,7 +7,7 @@ import { GameProgressSchema, SiegeProgressResponseSchema, TankProgressResponseSc
 import type { InboxFilters } from "../inbox/filter-store";
 import type { ArchivedInboxPage, ArchivedInboxFacets } from "../types/inbox";
 import { configStore } from "../config";
-import type { UpdateMeRequest, CreateMemberRequest, UpdateMemberRequest, Agent, MikaBootstrapResponse, CreateAgentRequest, AgentBuilderRuntimeSwitch, AgentBuilderSession, AgentBuilderSessionSummary, StoredAgentDraft, UpdateAgentRequest, AgentEnvResponse, UpdateAgentEnvRequest, AgentTask, AgentActivityBucket, AgentRunCount, WorkspaceWorkingAgent, WorkspaceWorkingAgentMineRelation, WorkspaceWorkingAgentType, AgentRuntime, RuntimeProfile, CreateRuntimeProfileRequest, UpdateRuntimeProfileRequest, InboxItem, InboxWorkspaceUnread, Workspace, WorkspaceRepo, WorkspaceMcpServer, MemberWithUser, User, Skill, SkillSummary, CreateSkillRequest, UpdateSkillRequest, SetAgentSkillsRequest, SetAgentRuntimeSkillEnabledRequest, PersonalAccessToken, CreatePersonalAccessTokenRequest, CreatePersonalAccessTokenResponse, RuntimeUsage, RuntimeHourlyActivity, RuntimeUsageByAgent, RuntimeUsageByHour, DashboardUsageDaily, DashboardUsageByAgent, DashboardAgentRunTime, DashboardRunTimeDaily, DashboardFailureDaily, DashboardFailureByAgent, RuntimeUpdate, RuntimeModelListRequest, RuntimeLocalSkillListRequest, CreateRuntimeLocalSkillImportRequest, RuntimeLocalSkillImportRequest, AssigneeFrequencyEntry, TaskMessagePayload, Attachment, ChatSession, ChatPinnedAgent, ChatMessage, ChatMessagesPage, ChatDraftRestoresResponse, ChatPendingTask, PrioritizeQueuedChatTaskResponse, PendingChatTasksResponse, SendChatMessageResponse, StartMikaOnboardingResponse, CancelTaskResponse, Label, CreateLabelRequest, UpdateLabelRequest, ListLabelsResponse, LabelResourceType, ResourceLabelsResponse, PinnedItem, CreatePinRequest, PinnedItemType, ReorderPinsRequest, Invitation, ShareLink, ShareLinkInfo, Autopilot, AutopilotTrigger, AutopilotRun, AutopilotQuotaUsage, CreateAutopilotRequest, UpdateAutopilotRequest, CreateAutopilotTriggerRequest, UpdateAutopilotTriggerRequest, ListAutopilotsResponse, CronPreviewResponse, GetAutopilotResponse, AutopilotCollaboratorsResponse, ListAutopilotRunsResponse, ListWebhookDeliveriesResponse, WebhookDelivery, NotificationPreferenceResponse, NotificationPreferences, PluginHookResult, PluginInstallation, PluginInstallationListResponse, PluginPackage, PluginPackageListResponse, PluginSurfaceLaunch, PluginInvocation, PluginMCPTool, PluginPreview, PluginTokenIssue, PluginPreviewRequest, PluginInstallRequest, PluginConfigRequest, ListGitHubInstallationsResponse, ListGitHubRepositoriesResponse, GitHubConnectResponse, ListVCSConnectionsResponse, ConnectVCSRequest, ConnectVCSResponse, ListLarkInstallationsResponse, BeginLarkInstallResponse, LarkInstallStatusResponse, RedeemLarkBindingTokenResponse, ComposioToolkit, ComposioConnection, ComposioConnectInitResponse, SlackInstallation, ListSlackInstallationsResponse, RegisterSlackBYORequest, RedeemSlackBindingTokenResponse, DingTalkInstallation, ListDingTalkInstallationsResponse, ListDingTalkGroupsResponse, ListDingTalkGroupsParams, RegisterDingTalkBYORequest, RedeemDingTalkBindingTokenResponse, WecomInstallation, ListWecomInstallationsResponse, RegisterWecomBYORequest, RedeemWecomBindingTokenResponse, TelegramInstallation, ListTelegramInstallationsResponse, RegisterTelegramRequest, RedeemTelegramBindingTokenResponse, BillingBalance, BillingTransactionsPage, BillingBatchesPage, BillingTopupsPage, BillingPriceTier, CreateBillingCheckoutSessionRequest, CreateBillingCheckoutSessionResponse, BillingCheckoutSessionStatus, CreateBillingPortalSessionResponse, WorkspaceSubscriptionSummary, WorkspaceSubscriptionPrices, CreateWorkspaceSubscriptionCheckoutRequest, CreateWorkspaceSubscriptionCheckoutResponse, WorkspaceSubscriptionSeatReconcileResult, PreviewWorkspaceSeatPurchaseRequest, WorkspaceSeatPurchasePreview, PurchaseWorkspaceSeatsRequest, PurchaseWorkspaceSeatsResponse, CreateWorkspaceSubscriptionPortalResponse } from "../types";
+import type { UpdateMeRequest, CreateMemberRequest, UpdateMemberRequest, Agent, MikaBootstrapResponse, CreateAgentRequest, AgentBuilderRuntimeSwitch, AgentBuilderSession, AgentBuilderSessionSummary, StoredAgentDraft, UpdateAgentRequest, AgentEnvResponse, UpdateAgentEnvRequest, AgentTask, AgentActivityBucket, AgentRunCount, WorkspaceWorkingAgent, WorkspaceWorkingAgentMineRelation, WorkspaceWorkingAgentType, AgentRuntime, RuntimeProfile, CreateRuntimeProfileRequest, UpdateRuntimeProfileRequest, InboxItem, InboxWorkspaceUnread, Workspace, WorkspaceRepo, WorkspaceMcpServer, MemberWithUser, User, Skill, SkillSummary, CreateSkillRequest, UpdateSkillRequest, SetAgentSkillsRequest, SetAgentRuntimeSkillEnabledRequest, PersonalAccessToken, CreatePersonalAccessTokenRequest, CreatePersonalAccessTokenResponse, RuntimeUsage, RuntimeHourlyActivity, RuntimeUsageByAgent, RuntimeUsageByHour, DashboardUsageDaily, DashboardUsageByAgent, DashboardAgentRunTime, DashboardRunTimeDaily, DashboardFailureDaily, DashboardFailureByAgent, RuntimeUpdate, RuntimeModelListRequest, RuntimeLocalSkillListRequest, CreateRuntimeLocalSkillImportRequest, RuntimeLocalSkillImportRequest, TaskMessagePayload, Attachment, ChatSession, ChatPinnedAgent, ChatMessage, ChatMessagesPage, ChatDraftRestoresResponse, ChatPendingTask, PrioritizeQueuedChatTaskResponse, PendingChatTasksResponse, SendChatMessageResponse, StartMikaOnboardingResponse, CancelTaskResponse, Label, CreateLabelRequest, UpdateLabelRequest, ListLabelsResponse, LabelResourceType, ResourceLabelsResponse, Invitation, ShareLink, ShareLinkInfo, Autopilot, AutopilotTrigger, AutopilotRun, AutopilotQuotaUsage, CreateAutopilotRequest, UpdateAutopilotRequest, CreateAutopilotTriggerRequest, UpdateAutopilotTriggerRequest, ListAutopilotsResponse, CronPreviewResponse, GetAutopilotResponse, AutopilotCollaboratorsResponse, ListAutopilotRunsResponse, ListWebhookDeliveriesResponse, WebhookDelivery, NotificationPreferenceResponse, NotificationPreferences, PluginHookResult, PluginInstallation, PluginInstallationListResponse, PluginPackage, PluginPackageListResponse, PluginSurfaceLaunch, PluginInvocation, PluginMCPTool, PluginPreview, PluginTokenIssue, PluginPreviewRequest, PluginInstallRequest, PluginConfigRequest, ListGitHubInstallationsResponse, ListGitHubRepositoriesResponse, GitHubConnectResponse, ListVCSConnectionsResponse, ConnectVCSRequest, ConnectVCSResponse, ListLarkInstallationsResponse, BeginLarkInstallResponse, LarkInstallStatusResponse, RedeemLarkBindingTokenResponse, ComposioToolkit, ComposioConnection, ComposioConnectInitResponse, SlackInstallation, ListSlackInstallationsResponse, RegisterSlackBYORequest, RedeemSlackBindingTokenResponse, DingTalkInstallation, ListDingTalkInstallationsResponse, ListDingTalkGroupsResponse, ListDingTalkGroupsParams, RegisterDingTalkBYORequest, RedeemDingTalkBindingTokenResponse, WecomInstallation, ListWecomInstallationsResponse, RegisterWecomBYORequest, RedeemWecomBindingTokenResponse, TelegramInstallation, ListTelegramInstallationsResponse, RegisterTelegramRequest, RedeemTelegramBindingTokenResponse, BillingBalance, BillingTransactionsPage, BillingBatchesPage, BillingTopupsPage, BillingPriceTier, CreateBillingCheckoutSessionRequest, CreateBillingCheckoutSessionResponse, BillingCheckoutSessionStatus, CreateBillingPortalSessionResponse, WorkspaceSubscriptionSummary, WorkspaceSubscriptionPrices, CreateWorkspaceSubscriptionCheckoutRequest, CreateWorkspaceSubscriptionCheckoutResponse, WorkspaceSubscriptionSeatReconcileResult, PreviewWorkspaceSeatPurchaseRequest, WorkspaceSeatPurchasePreview, PurchaseWorkspaceSeatsRequest, PurchaseWorkspaceSeatsResponse, CreateWorkspaceSubscriptionPortalResponse } from "../types";
 import type { OnboardingCompletionPath } from "../onboarding/types";
 import type {
   CreateFeedbackResponse,
@@ -781,10 +781,6 @@ export class ApiClient {
     });
   }
 
-  async getAssigneeFrequency(): Promise<AssigneeFrequencyEntry[]> {
-    return this.fetch("/api/assignee-frequency");
-  }
-
   // Agents
   async listAgents(params?: { workspace_id?: string; include_archived?: boolean }): Promise<Agent[]> {
     const search = new URLSearchParams();
@@ -1494,11 +1490,10 @@ export class ApiClient {
   // ---------------------------------------------------------------------------
 
   async getDashboardUsageDaily(
-    params: { days?: number; project_id?: string | null; tz?: string },
+    params: { days?: number; tz?: string },
   ): Promise<DashboardUsageDaily[]> {
     const search = new URLSearchParams();
     if (params.days) search.set("days", String(params.days));
-    if (params.project_id) search.set("project_id", params.project_id);
     if (params.tz) search.set("tz", params.tz);
     const raw = await this.fetch<unknown>(`/api/dashboard/usage/daily?${search}`);
     return parseWithFallback<DashboardUsageDaily[]>(
@@ -1510,11 +1505,10 @@ export class ApiClient {
   }
 
   async getDashboardUsageByAgent(
-    params: { days?: number; project_id?: string | null; tz?: string },
+    params: { days?: number; tz?: string },
   ): Promise<DashboardUsageByAgent[]> {
     const search = new URLSearchParams();
     if (params.days) search.set("days", String(params.days));
-    if (params.project_id) search.set("project_id", params.project_id);
     if (params.tz) search.set("tz", params.tz);
     const raw = await this.fetch<unknown>(`/api/dashboard/usage/by-agent?${search}`);
     return parseWithFallback<DashboardUsageByAgent[]>(
@@ -1526,11 +1520,10 @@ export class ApiClient {
   }
 
   async getDashboardAgentRunTime(
-    params: { days?: number; project_id?: string | null; tz?: string },
+    params: { days?: number; tz?: string },
   ): Promise<DashboardAgentRunTime[]> {
     const search = new URLSearchParams();
     if (params.days) search.set("days", String(params.days));
-    if (params.project_id) search.set("project_id", params.project_id);
     // `tz` aligns the "last N days" cutoff with the viewer's calendar,
     // matching the per-agent token card.
     if (params.tz) search.set("tz", params.tz);
@@ -1544,11 +1537,10 @@ export class ApiClient {
   }
 
   async getDashboardRunTimeDaily(
-    params: { days?: number; project_id?: string | null; tz?: string },
+    params: { days?: number; tz?: string },
   ): Promise<DashboardRunTimeDaily[]> {
     const search = new URLSearchParams();
     if (params.days) search.set("days", String(params.days));
-    if (params.project_id) search.set("project_id", params.project_id);
     // `tz` cuts the day buckets in the viewer's calendar so Time / Tasks
     // align with the Cost / Tokens charts.
     if (params.tz) search.set("tz", params.tz);
@@ -1562,11 +1554,10 @@ export class ApiClient {
   }
 
   async getDashboardFailuresDaily(
-    params: { days?: number; project_id?: string | null; tz?: string },
+    params: { days?: number; tz?: string },
   ): Promise<DashboardFailureDaily[]> {
     const search = new URLSearchParams();
     if (params.days) search.set("days", String(params.days));
-    if (params.project_id) search.set("project_id", params.project_id);
     // `tz` cuts the day buckets in the viewer's calendar so the Errors chart
     // shares an x-axis with the other four metrics.
     if (params.tz) search.set("tz", params.tz);
@@ -1580,11 +1571,10 @@ export class ApiClient {
   }
 
   async getDashboardFailuresByAgent(
-    params: { days?: number; project_id?: string | null; tz?: string },
+    params: { days?: number; tz?: string },
   ): Promise<DashboardFailureByAgent[]> {
     const search = new URLSearchParams();
     if (params.days) search.set("days", String(params.days));
-    if (params.project_id) search.set("project_id", params.project_id);
     if (params.tz) search.set("tz", params.tz);
     const raw = await this.fetch<unknown>(`/api/dashboard/failures/by-agent?${search}`);
     return parseWithFallback<DashboardFailureByAgent[]>(
@@ -1770,16 +1760,24 @@ export class ApiClient {
     });
   }
 
+  private async updateInboxItem(id: string, action: "read" | "unread" | "archive" | "unarchive"): Promise<InboxItem> {
+    const endpoint = `/api/inbox/${encodeURIComponent(id)}/${action}`;
+    const raw = await this.fetch<unknown>(endpoint, { method: "POST" });
+    const item = parseWithFallback<InboxItem | null>(raw, InboxItemListSchema.element, null, { endpoint: `POST ${endpoint}` });
+    if (!item) throw new Error("Invalid inbox item response");
+    return item;
+  }
+
   async markInboxRead(id: string): Promise<InboxItem> {
-    return this.fetch(`/api/inbox/${id}/read`, { method: "POST" });
+    return this.updateInboxItem(id, "read");
   }
 
   async markInboxUnread(id: string): Promise<InboxItem> {
-    return this.fetch(`/api/inbox/${id}/unread`, { method: "POST" });
+    return this.updateInboxItem(id, "unread");
   }
 
   async archiveInbox(id: string): Promise<InboxItem> {
-    return this.fetch(`/api/inbox/${id}/archive`, { method: "POST" });
+    return this.updateInboxItem(id, "archive");
   }
 
   // Archived notifications, backing the inbox's "Archived" sub-view. Capped
@@ -1826,7 +1824,7 @@ export class ApiClient {
   }
 
   async unarchiveInbox(id: string): Promise<InboxItem> {
-    return this.fetch(`/api/inbox/${id}/unarchive`, { method: "POST" });
+    return this.updateInboxItem(id, "unarchive");
   }
 
   // Raw unread ROW count — not the number any badge shows. The inbox renders
@@ -1860,10 +1858,6 @@ export class ApiClient {
 
   async archiveAllReadInbox(): Promise<{ count: number }> {
     return this.fetch("/api/inbox/archive-all-read", { method: "POST" });
-  }
-
-  async archiveCompletedInbox(): Promise<{ count: number }> {
-    return this.fetch("/api/inbox/archive-completed", { method: "POST" });
   }
 
   // Notification preferences
@@ -1919,14 +1913,14 @@ export class ApiClient {
     return this.fetch(`/api/workspaces/${id}`);
   }
 
-  async createWorkspace(data: { name: string; slug: string; description?: string; context?: string; issue_prefix?: string }): Promise<Workspace> {
+  async createWorkspace(data: { name: string; slug: string; description?: string; context?: string; }): Promise<Workspace> {
     return this.fetch("/api/workspaces", {
       method: "POST",
       body: JSON.stringify(data),
     });
   }
 
-  async updateWorkspace(id: string, data: { name?: string; description?: string; context?: string; settings?: Record<string, unknown>; repos?: WorkspaceRepo[]; issue_prefix?: string; avatar_url?: string }): Promise<Workspace> {
+  async updateWorkspace(id: string, data: { name?: string; description?: string; context?: string; settings?: Record<string, unknown>; repos?: WorkspaceRepo[]; avatar_url?: string }): Promise<Workspace> {
     return this.fetch(`/api/workspaces/${id}`, {
       method: "PATCH",
       body: JSON.stringify(data),
@@ -2588,7 +2582,6 @@ export class ApiClient {
     data: {
       agent_id: string;
       title?: string;
-      project_id?: string | null;
     },
     workspaceSlug?: string,
   ): Promise<ChatSession> {
@@ -2625,7 +2618,7 @@ export class ApiClient {
 
   async updateChatSession(
     id: string,
-    data: { title: string } | { project_id: string | null },
+    data: { title: string } | { },
   ): Promise<ChatSession> {
     return this.fetch(`/api/chat/sessions/${id}`, {
       method: "PATCH",
@@ -2987,32 +2980,6 @@ export class ApiClient {
     });
     return parseWithFallback(raw, ResourceLabelsResponseSchema, EMPTY_RESOURCE_LABELS_RESPONSE, {
       endpoint: `DELETE /api/${resourceType === "agent" ? "agents" : "skills"}/{id}/labels/{labelId}`,
-    });
-  }
-
-  // Pins
-  async listPins(): Promise<PinnedItem[]> {
-    // include=view is the capability opt-in: the server withholds view pins
-    // from clients that don't declare support (old builds treated any
-    // non-issue pin as a project pin and auto-deleted it on 404).
-    return this.fetch("/api/pins?include=view");
-  }
-
-  async createPin(data: CreatePinRequest): Promise<PinnedItem> {
-    return this.fetch("/api/pins", {
-      method: "POST",
-      body: JSON.stringify(data),
-    });
-  }
-
-  async deletePin(itemType: PinnedItemType, itemId: string): Promise<void> {
-    await this.fetch(`/api/pins/${itemType}/${itemId}`, { method: "DELETE" });
-  }
-
-  async reorderPins(data: ReorderPinsRequest): Promise<void> {
-    await this.fetch("/api/pins/reorder", {
-      method: "PUT",
-      body: JSON.stringify(data),
     });
   }
 

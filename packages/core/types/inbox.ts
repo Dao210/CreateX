@@ -1,8 +1,12 @@
 import type { IssuePriority, IssueStatus } from "./issue";
+import type { InboxContent } from "../inbox/messages";
 
 export type InboxSeverity = "action_required" | "attention" | "info";
 
 export type InboxItemType =
+  | "creation_ready"
+  | "character_milestone"
+  | "world_digest"
   | "issue_assigned"
   | "issue_subscribed"
   | "unassigned"
@@ -67,6 +71,7 @@ export interface InboxItem {
   archived: boolean;
   created_at: string;
   details: Record<string, string> | null;
+  content?: InboxContent | null;
 }
 
 

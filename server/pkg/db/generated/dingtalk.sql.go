@@ -128,16 +128,6 @@ type DeleteDingTalkInstallationForReplacementParams struct {
 	AgentID        pgtype.UUID `json:"agent_id"`
 }
 
-// Retires an installation when the same agent is connected with a DIFFERENT
-// AppKey. A senderStaffId is scoped to one DingTalk organization, so none of the
-// old installation's identity, token, session, dedup, or outbound state may
-// cross into the new robot. The caller inserts a fresh installation in the same
-// transaction, giving the replacement a new installation_id that also fences
-// late writes and replies from the old connection.
-//
-// Chat sessions themselves remain as history, but their channel bindings and
-// outbound cards are removed. Audit and media-intent rows remain useful for
-// diagnostics / reconciliation, so their installation references are detached.
 func (q *Queries) DeleteDingTalkInstallationForReplacement(ctx context.Context, arg DeleteDingTalkInstallationForReplacementParams) (pgtype.UUID, error) {
 	row := q.db.QueryRow(ctx, deleteDingTalkInstallationForReplacement, arg.InstallationID, arg.WorkspaceID, arg.AgentID)
 	var id pgtype.UUID
@@ -189,10 +179,6 @@ type GetDingTalkInstallationOwnerForUpdateRow struct {
 	AppID string      `json:"app_id"`
 }
 
-// Reads the current robot identity after LockDingTalkInstallationOwner has
-// serialized the logical owner slot. app_id is non-null for every DingTalk
-// installation; COALESCE treats malformed legacy config as a different robot,
-// which safely replaces it instead of preserving unknown identity state.
 func (q *Queries) GetDingTalkInstallationOwnerForUpdate(ctx context.Context, arg GetDingTalkInstallationOwnerForUpdateParams) (GetDingTalkInstallationOwnerForUpdateRow, error) {
 	row := q.db.QueryRow(ctx, getDingTalkInstallationOwnerForUpdate, arg.WorkspaceID, arg.AgentID)
 	var i GetDingTalkInstallationOwnerForUpdateRow
@@ -227,8 +213,6 @@ type ListDingTalkBotIdentitiesByWorkspaceRow struct {
 	BotIdentityIssue string      `json:"bot_identity_issue"`
 }
 
-// Identity is installation-owned, so forgetting or collapsing groups cannot
-// change the connection label.
 func (q *Queries) ListDingTalkBotIdentitiesByWorkspace(ctx context.Context, arg ListDingTalkBotIdentitiesByWorkspaceParams) ([]ListDingTalkBotIdentitiesByWorkspaceRow, error) {
 	rows, err := q.db.Query(ctx, listDingTalkBotIdentitiesByWorkspace, arg.WorkspaceID, arg.FilterByAgent, arg.AgentID)
 	if err != nil {
@@ -305,8 +289,6 @@ type ListDingTalkGroupPresencesByWorkspaceRow struct {
 	MentionCount      int64              `json:"mention_count"`
 }
 
-// Active rows are the default inventory. Inactive rows are loaded only when a
-// client expands one installation's historical section.
 func (q *Queries) ListDingTalkGroupPresencesByWorkspace(ctx context.Context, arg ListDingTalkGroupPresencesByWorkspaceParams) ([]ListDingTalkGroupPresencesByWorkspaceRow, error) {
 	rows, err := q.db.Query(ctx, listDingTalkGroupPresencesByWorkspace,
 		arg.WorkspaceID,
@@ -347,7 +329,6 @@ func (q *Queries) ListDingTalkGroupPresencesByWorkspace(ctx context.Context, arg
 }
 
 const listDingTalkUserBindingsForMember = `-- name: ListDingTalkUserBindingsForMember :many
-
 SELECT installation_id, channel_user_id
 FROM channel_user_binding
 WHERE workspace_id = $1
@@ -366,12 +347,6 @@ type ListDingTalkUserBindingsForMemberRow struct {
 	ChannelUserID  string      `json:"channel_user_id"`
 }
 
-// DingTalk-specific installation identity operations. The underlying channel_*
-// tables are shared, but these replacement semantics belong to DingTalk's BYO
-// AppKey model and deliberately stay out of the shared channel query surface.
-// Returns only the requesting Auro member's DingTalk identities. The
-// installation list is member-visible, so returning every member's staff id
-// here would expose staff ID values more broadly than necessary.
 func (q *Queries) ListDingTalkUserBindingsForMember(ctx context.Context, arg ListDingTalkUserBindingsForMemberParams) ([]ListDingTalkUserBindingsForMemberRow, error) {
 	rows, err := q.db.Query(ctx, listDingTalkUserBindingsForMember, arg.WorkspaceID, arg.AuroUserID)
 	if err != nil {
@@ -407,11 +382,6 @@ type LockDingTalkInstallationOwnerParams struct {
 	AgentID     pgtype.UUID `json:"agent_id"`
 }
 
-// Serializes install / replacement decisions for one logical
-// (workspace, agent, channel) slot. A different-AppKey replacement deletes the
-// old row and inserts a fresh installation id; the advisory lock closes the
-// gap where two concurrent replacements could otherwise miss each other's new
-// row and update it in place, carrying identity state across robot boundaries.
 func (q *Queries) LockDingTalkInstallationOwner(ctx context.Context, arg LockDingTalkInstallationOwnerParams) error {
 	_, err := q.db.Exec(ctx, lockDingTalkInstallationOwner, arg.WorkspaceID, arg.AgentID)
 	return err
@@ -430,9 +400,6 @@ type RecordDingTalkGroupActivityParams struct {
 	ConversationID string      `json:"conversation_id"`
 }
 
-// Advances activity only after the deduplicated inbound message is durable.
-// Presence observation runs first, so a forgotten group is recreated before
-// this update executes.
 func (q *Queries) RecordDingTalkGroupActivity(ctx context.Context, arg RecordDingTalkGroupActivityParams) (pgtype.UUID, error) {
 	row := q.db.QueryRow(ctx, recordDingTalkGroupActivity, arg.InstallationID, arg.ConversationID)
 	var installation_id pgtype.UUID
@@ -506,9 +473,6 @@ type RecordDingTalkGroupPresenceParams struct {
 	ConversationTitle string      `json:"conversation_title"`
 }
 
-// Records an observed bot/group pair without carrying routing state. The
-// installation identity is copied only for compatibility with the preceding
-// draft; readers use dingtalk_bot_identity as the authority.
 func (q *Queries) RecordDingTalkGroupPresence(ctx context.Context, arg RecordDingTalkGroupPresenceParams) (pgtype.UUID, error) {
 	row := q.db.QueryRow(ctx, recordDingTalkGroupPresence,
 		arg.InstallationID,
@@ -570,10 +534,6 @@ type UpsertDingTalkBotIdentityParams struct {
 	BotIdentityIssue string      `json:"bot_identity_issue"`
 }
 
-// Bot identity and the optional permission issue belong to the installation,
-// not to any one group. Keep this as a separate command so the mixed-version
-// compatibility trigger can observe the completed command state when the
-// group-presence command runs next.
 func (q *Queries) UpsertDingTalkBotIdentity(ctx context.Context, arg UpsertDingTalkBotIdentityParams) (pgtype.UUID, error) {
 	row := q.db.QueryRow(ctx, upsertDingTalkBotIdentity,
 		arg.InstallationID,

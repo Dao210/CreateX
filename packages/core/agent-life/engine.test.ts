@@ -66,3 +66,14 @@ describe("Agent Life rule authority", () => {
     expect(LifeSnapshotSchema.safeParse({ world: { tick: "bad" } }).success).toBe(false);
   });
 });
+
+it("records a resident goal only when its persistent resource total first crosses the target", () => {
+  const agents = seedResidents(1).map(agent => ({ ...agent, position: { ...LIFE_MAP.forest } }));
+  const agent = agents[0]!;
+  const resources = seedResources(agents);
+  resources.find(resource => resource.owner === agent.id && resource.kind === agent.goal.kind)!.amount = agent.goal.target-1;
+  const actions = [{ id: randomUUID(), agentId: agent.id, intent: { kind: "GATHER_WOOD" as const }, reason: "goal", startedTick: 0, dueTick: 1, status: "running" as const }];
+  const result = advanceTick({ tick: 0, agents, resources, actions }, randomUUID);
+  expect(result.events.filter(event => event.kind === "goal_reached")).toEqual([{ actionId: null, agentId: agent.id, kind: "goal_reached", payload: { name: agent.name, goalKind: "wood", target: agent.goal.target } }]);
+  expect(advanceTick(result.state, randomUUID).events.filter(event => event.kind === "goal_reached")).toHaveLength(0);
+});

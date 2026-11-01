@@ -16,8 +16,16 @@ SELECT jsonb_build_object(
 )::jsonb AS snapshot
 FROM life_world w WHERE w.workspace_id=$1;
 
+
+
+
+
 -- name: LockLifeWorldForDeletion :exec
 SELECT 1 FROM life_world WHERE workspace_id=$1 FOR UPDATE;
+
+
+
+
 
 -- name: DeleteLifeWorldState :exec
 WITH deleted_events AS (

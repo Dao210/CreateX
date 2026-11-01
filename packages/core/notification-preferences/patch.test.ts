@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { describe, expect, it } from "vitest";
 import {
   applyNotificationPreferencePatch,
@@ -73,4 +74,10 @@ describe("notification preference patches", () => {
       ),
     ).toEqual({});
   });
+});
+
+it("keeps world subscriptions independent from creation updates and OS banners", () => {
+  expect(deriveNotificationPreferencePatch({}, { world_digests: "muted" })).toEqual({ world_digests: "muted" });
+  expect(applyNotificationPreferencePatch({ world_digests: "muted", system_notifications: "muted" }, { creation_updates: "muted" })).toEqual({ world_digests: "muted", system_notifications: "muted", creation_updates: "muted" });
+  expect(deriveNotificationPreferencePatch({ world_digests: "muted" }, {})).toEqual({ world_digests: "all" });
 });

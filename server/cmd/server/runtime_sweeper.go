@@ -7,18 +7,16 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/auro-ai/auro/server/internal/analytics"
 	"github.com/auro-ai/auro/server/internal/events"
 	"github.com/auro-ai/auro/server/internal/handler"
-	"github.com/auro-ai/auro/server/internal/issuestatus"
 	obsmetrics "github.com/auro-ai/auro/server/internal/metrics"
 	"github.com/auro-ai/auro/server/internal/service"
 	"github.com/auro-ai/auro/server/internal/util"
 	db "github.com/auro-ai/auro/server/pkg/db/generated"
 	"github.com/auro-ai/auro/server/pkg/protocol"
-	"github.com/auro-ai/auro/server/pkg/redact"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const (
@@ -175,7 +173,6 @@ func runRuntimeSweeper(ctx context.Context, queries *db.Queries, liveness handle
 
 func runDelegatedFailureRecoverySweeper(ctx context.Context, taskSvc *service.TaskService) {
 	runPeriodicSweep(ctx, delegatedFailureRecoverySweepInterval, func() {
-		sweepPendingDelegatedFailureRecoveries(ctx, taskSvc)
 	})
 }
 
@@ -183,36 +180,6 @@ func runRuntimeGCSweeper(ctx context.Context, txStarter runtimeGCTxStarter, quer
 	runPeriodicSweep(ctx, runtimeGCSweepInterval, func() {
 		gcRuntimes(ctx, txStarter, queries, metrics, publisher)
 	})
-}
-
-// sweepPendingDelegatedFailureRecoveries retries durable coordinator handoffs
-// that were not acquired by an executable task. It runs independently of
-// stale-task discovery, which is what repairs a recovery dispatch lost before
-// a server restart.
-func sweepPendingDelegatedFailureRecoveries(ctx context.Context, taskSvc *service.TaskService) (stats runtimeSweepStageStats) {
-	startedAt := time.Now()
-	defer func() {
-		observeRuntimeSweepStage(taskServiceMetrics(taskSvc), obsmetrics.RuntimeSweepStageDelegatedFailureRecovery, startedAt, stats)
-	}()
-
-	result, err := taskSvc.RecoverPendingDelegatedFailures(ctx, delegatedFailureRecoveryBatchSize)
-	stats.candidates = result.Scanned
-	stats.changed = result.Replayed + result.Exhausted
-	if err != nil {
-		slog.Warn("delegated failure recovery sweeper: replay failed",
-			"replayed", result.Replayed,
-			"exhausted", result.Exhausted,
-			"error", err,
-		)
-		return
-	}
-	if result.Replayed > 0 {
-		slog.Info("delegated failure recovery sweeper: replayed pending recoveries", "count", result.Replayed)
-	}
-	if result.Exhausted > 0 {
-		slog.Warn("delegated failure recovery sweeper: automatic attempts exhausted", "count", result.Exhausted)
-	}
-	return
 }
 
 // sweepStaleRuntimes marks runtimes offline if they haven't heartbeated. Task
@@ -683,78 +650,6 @@ func sweepDeferredChatFinalizations(ctx context.Context, queries *db.Queries, ta
 	}
 	slog.Info("chat finalize sweeper: settled deferred cancellations", "count", len(rows))
 	return
-}
-
-// broadcastFailedTasks is preserved as a thin shim for the integration tests
-// in this package. New call sites should use TaskService.HandleFailedTasks
-// directly so the side effects (event broadcast, agent reconcile, issue
-// rollback, auto-retry) are guaranteed in one place.
-func broadcastFailedTasks(ctx context.Context, queries *db.Queries, taskSvc *service.TaskService, bus *events.Bus, tasks []db.AgentTaskQueue) {
-	if taskSvc != nil {
-		taskSvc.HandleFailedTasks(ctx, tasks)
-		return
-	}
-	// Fallback path used by tests that don't construct a TaskService:
-	// publish task:failed events with workspace IDs and reset stuck issues.
-	processedIssues := make(map[string]bool)
-	affectedAgents := make(map[string]pgtype.UUID)
-	for _, t := range tasks {
-		failureReason := "agent_error"
-		if t.FailureReason.Valid && t.FailureReason.String != "" {
-			failureReason = t.FailureReason.String
-		}
-		workspaceID := ""
-		if t.IssueID.Valid {
-			if issue, err := queries.GetIssue(ctx, t.IssueID); err == nil {
-				workspaceID = util.UUIDToString(issue.WorkspaceID)
-				issueKey := util.UUIDToString(t.IssueID)
-				// Only issues whose status means "an agent is actively working"
-				// get reset, which since MUL-7240 is the fixed in_progress key
-				// alone. in_review and blocked are deliberately excluded — they
-				// mean a human or an external dependency owns the issue now,
-				// and resetting those to todo would re-trigger an agent on work
-				// someone else is holding. A CUSTOM started status is excluded
-				// because custom statuses inherit lifecycle only, not the
-				// active-status recovery rule; Effective() no longer projects a
-				// nonterminal custom key onto a built-in, so this is a key
-				// comparison on purpose. (MUL-6243, MUL-7240)
-				effectiveStatus := issuestatus.Effective(ctx, queries, issue.WorkspaceID, issue.Status)
-				if effectiveStatus == "in_progress" && !processedIssues[issueKey] {
-					processedIssues[issueKey] = true
-					if hasActive, herr := queries.HasActiveTaskForIssue(ctx, t.IssueID); herr == nil && !hasActive {
-						queries.UpdateIssueStatus(ctx, db.UpdateIssueStatusParams{ID: t.IssueID, Status: "todo", WorkspaceID: issue.WorkspaceID})
-					}
-				}
-			}
-		}
-		payload := map[string]any{
-			"task_id":        util.UUIDToString(t.ID),
-			"agent_id":       util.UUIDToString(t.AgentID),
-			"issue_id":       util.UUIDToString(t.IssueID),
-			"status":         "failed",
-			"failure_reason": failureReason,
-			"retry_pending":  false,
-		}
-		if t.Error.Valid && t.Error.String != "" {
-			payload["error"] = redact.Text(t.Error.String)
-		}
-		e := events.Event{
-			Type:        protocol.EventTaskFailed,
-			WorkspaceID: workspaceID,
-			ActorType:   "system",
-			TaskID:      util.UUIDToString(t.ID),
-			Payload:     payload,
-		}
-		if t.ChatSessionID.Valid {
-			e.ChatSessionID = util.UUIDToString(t.ChatSessionID)
-			payload["chat_session_id"] = e.ChatSessionID
-		}
-		bus.Publish(e)
-		affectedAgents[util.UUIDToString(t.AgentID)] = t.AgentID
-	}
-	for _, agentID := range affectedAgents {
-		reconcileAgentStatus(ctx, queries, bus, agentID)
-	}
 }
 
 // reconcileAgentStatus refreshes agent status from the current working task

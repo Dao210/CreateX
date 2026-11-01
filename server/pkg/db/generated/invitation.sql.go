@@ -118,10 +118,6 @@ type ExpireStalePendingInvitationsParams struct {
 	InviteeEmail string      `json:"invitee_email"`
 }
 
-// Mark any past-due pending invitations for (workspace_id, invitee_email) as expired,
-// so the next CreateInvitation does not collide with the partial unique index
-// idx_invitation_unique_pending (which is WHERE status = 'pending' and cannot
-// itself reference now() in its predicate).
 func (q *Queries) ExpireStalePendingInvitations(ctx context.Context, arg ExpireStalePendingInvitationsParams) ([]WorkspaceInvitation, error) {
 	rows, err := q.db.Query(ctx, expireStalePendingInvitations, arg.WorkspaceID, arg.InviteeEmail)
 	if err != nil {

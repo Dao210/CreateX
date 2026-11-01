@@ -8,11 +8,7 @@ import type { ReactNode } from "react";
 
 import { setApiInstance } from "../api";
 import type { ApiClient } from "../api/client";
-import {
-  useConsumeChatDraftRestore,
-  useSetChatSessionArchived,
-  useSetChatSessionProject,
-} from "./mutations";
+import { useConsumeChatDraftRestore, useSetChatSessionArchived } from "./mutations";
 import { chatKeys } from "./queries";
 import type { ChatSession } from "../types";
 
@@ -150,45 +146,6 @@ describe("useSetChatSessionProject", () => {
   afterEach(() => {
     qc.clear();
     vi.restoreAllMocks();
-  });
-
-  it("optimistically removes the project from the existing session", async () => {
-    updateChatSession.mockResolvedValue(makeSession({ project_id: null }));
-    qc.setQueryData<ChatSession[]>(chatKeys.sessions(WS_ID), [
-      makeSession({ project_id: "project-1" }),
-    ]);
-
-    const { result } = renderHook(() => useSetChatSessionProject(), {
-      wrapper: createWrapper(qc),
-    });
-
-    await act(async () => {
-      await result.current.mutateAsync({ sessionId: "s1", projectId: null });
-    });
-
-    expect(updateChatSession).toHaveBeenCalledWith("s1", { project_id: null });
-    expect(qc.getQueryData<ChatSession[]>(chatKeys.sessions(WS_ID))![0]!.project_id).toBeNull();
-  });
-
-  it("rolls the project back when the update fails", async () => {
-    updateChatSession.mockRejectedValue(new Error("boom"));
-    qc.setQueryData<ChatSession[]>(chatKeys.sessions(WS_ID), [
-      makeSession({ project_id: "project-1" }),
-    ]);
-
-    const { result } = renderHook(() => useSetChatSessionProject(), {
-      wrapper: createWrapper(qc),
-    });
-
-    await act(async () => {
-      await expect(
-        result.current.mutateAsync({ sessionId: "s1", projectId: null }),
-      ).rejects.toThrow("boom");
-    });
-
-    expect(
-      qc.getQueryData<ChatSession[]>(chatKeys.sessions(WS_ID))![0]!.project_id,
-    ).toBe("project-1");
   });
 });
 

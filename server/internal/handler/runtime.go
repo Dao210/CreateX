@@ -971,7 +971,7 @@ func (h *Handler) PublishRuntimeTeardown(ctx context.Context, res service.Runtim
 	}
 	for _, a := range res.PausedAutopilots {
 		h.publish(protocol.EventAutopilotUpdated, wsID, actorType, actorID, map[string]any{
-			"autopilot": autopilotToResponse(a, nil),
+			"autopilot": autopilotToResponse(a),
 		})
 	}
 	if publishRuntimeRefresh {

@@ -76,7 +76,6 @@ type DeleteSkillParams struct {
 	WorkspaceID pgtype.UUID `json:"workspace_id"`
 }
 
-// Defense-in-depth: workspace_id is a SQL-layer tenant guard. See DeleteIssue.
 func (q *Queries) DeleteSkill(ctx context.Context, arg DeleteSkillParams) error {
 	_, err := q.db.Exec(ctx, deleteSkill, arg.ID, arg.WorkspaceID)
 	return err
@@ -133,8 +132,6 @@ type GetSkillByWorkspaceAndNameParams struct {
 	Name        string      `json:"name"`
 }
 
-// Used by skill import and runtime-local skill discovery to reuse a workspace
-// skill by name rather than violating UNIQUE(workspace_id, name).
 func (q *Queries) GetSkillByWorkspaceAndName(ctx context.Context, arg GetSkillByWorkspaceAndNameParams) (Skill, error) {
 	row := q.db.QueryRow(ctx, getSkillByWorkspaceAndName, arg.WorkspaceID, arg.Name)
 	var i Skill
@@ -254,8 +251,6 @@ type ListAgentSkillSummariesRow struct {
 	Enabled     bool               `json:"enabled"`
 }
 
-// Summary variant for the agent skills list endpoint — omits `content` for
-// the same reason as ListSkillSummariesByWorkspace.
 func (q *Queries) ListAgentSkillSummaries(ctx context.Context, agentID pgtype.UUID) ([]ListAgentSkillSummariesRow, error) {
 	rows, err := q.db.Query(ctx, listAgentSkillSummaries, agentID)
 	if err != nil {
@@ -287,14 +282,12 @@ func (q *Queries) ListAgentSkillSummaries(ctx context.Context, agentID pgtype.UU
 }
 
 const listAgentSkills = `-- name: ListAgentSkills :many
-
 SELECT s.id, s.workspace_id, s.name, s.description, s.content, s.config, s.created_by, s.created_at, s.updated_at, s.plugin_installation_id FROM skill s
 JOIN agent_skill ask ON ask.skill_id = s.id
 WHERE ask.agent_id = $1 AND ask.enabled = TRUE
 ORDER BY s.name ASC
 `
 
-// Agent-Skill junction
 func (q *Queries) ListAgentSkills(ctx context.Context, agentID pgtype.UUID) ([]Skill, error) {
 	rows, err := q.db.Query(ctx, listAgentSkills, agentID)
 	if err != nil {
@@ -340,12 +333,6 @@ type ListAgentSkillsByIDsParams struct {
 	SkillIds []pgtype.UUID `json:"skill_ids"`
 }
 
-// Scoped variant of ListAgentSkills: the same junction predicate, narrowed to
-// a set of requested skill IDs. The skill-bundle resolve path asks for one
-// skill per request, so loading the agent's whole set there costs a full read
-// and hash of every skill on every request. The junction predicate is also the
-// authorization: an ID the agent does not have enabled simply returns no row,
-// which the caller reports as not-found.
 func (q *Queries) ListAgentSkillsByIDs(ctx context.Context, arg ListAgentSkillsByIDsParams) ([]Skill, error) {
 	rows, err := q.db.Query(ctx, listAgentSkillsByIDs, arg.AgentID, arg.SkillIds)
 	if err != nil {
@@ -439,19 +426,6 @@ type ListSkillFileMetadataRow struct {
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
 }
 
-// Metadata-only variant of ListSkillFiles: path, byte size and content hash
-// without the body. Same reason as ListSkillSummariesByWorkspace — a skill
-// whose supporting files total ~600KB cannot be listed at all when every row
-// carries its full content, and the one command that would show which file is
-// oversized was the command that timed out (GH auro-ai/auro#7498).
-// size/hash are computed in Postgres so the file bodies never leave it.
-//
-// convert_to(content, 'UTF8'), never content::bytea: the cast runs the bytea
-// INPUT parser over the text, so it reads backslash escapes instead of taking
-// the bytes. A file containing `\x41` would hash as the single byte `A`, and
-// one containing a bare backslash — a regex `\d+`, a Windows path, a LaTeX
-// snippet — fails outright with "invalid input syntax for type bytea",
-// turning an ordinary skill into a 500 on this endpoint.
 func (q *Queries) ListSkillFileMetadata(ctx context.Context, skillID pgtype.UUID) ([]ListSkillFileMetadataRow, error) {
 	rows, err := q.db.Query(ctx, listSkillFileMetadata, skillID)
 	if err != nil {
@@ -481,13 +455,11 @@ func (q *Queries) ListSkillFileMetadata(ctx context.Context, skillID pgtype.UUID
 }
 
 const listSkillFiles = `-- name: ListSkillFiles :many
-
 SELECT id, skill_id, path, content, created_at, updated_at FROM skill_file
 WHERE skill_id = $1
 ORDER BY path ASC
 `
 
-// Skill File CRUD
 func (q *Queries) ListSkillFiles(ctx context.Context, skillID pgtype.UUID) ([]SkillFile, error) {
 	rows, err := q.db.Query(ctx, listSkillFiles, skillID)
 	if err != nil {
@@ -521,12 +493,6 @@ WHERE skill_id = ANY($1::uuid[])
 ORDER BY skill_id, path ASC
 `
 
-// Batch variant of ListSkillFiles: loads every file for a set of skills in one
-// round trip so LoadAgentSkills doesn't issue one query per skill on the
-// task-claim hot path. Ordered by skill_id so the caller can group in a single
-// linear pass. Like ListSkillFiles it returns full file bodies — callers that
-// only need metadata must use ListSkillFileMetadata instead. Uses
-// idx_skill_file_skill.
 func (q *Queries) ListSkillFilesBySkillIDs(ctx context.Context, skillIds []pgtype.UUID) ([]SkillFile, error) {
 	rows, err := q.db.Query(ctx, listSkillFilesBySkillIDs, skillIds)
 	if err != nil {
@@ -572,10 +538,6 @@ type ListSkillSummariesByWorkspaceRow struct {
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
 }
 
-// Same as ListSkillsByWorkspace but omits the SKILL.md `content` column. Used
-// by list endpoints (CLI table, web list page) where the body is never read;
-// shipping it everywhere blew up payload size on workspaces with many skills
-// and caused 15s CLI timeouts from high-latency regions (GH auro-ai/auro#2174).
 func (q *Queries) ListSkillSummariesByWorkspace(ctx context.Context, workspaceID pgtype.UUID) ([]ListSkillSummariesByWorkspaceRow, error) {
 	rows, err := q.db.Query(ctx, listSkillSummariesByWorkspace, workspaceID)
 	if err != nil {
@@ -606,13 +568,11 @@ func (q *Queries) ListSkillSummariesByWorkspace(ctx context.Context, workspaceID
 }
 
 const listSkillsByWorkspace = `-- name: ListSkillsByWorkspace :many
-
 SELECT id, workspace_id, name, description, content, config, created_by, created_at, updated_at, plugin_installation_id FROM skill
 WHERE workspace_id = $1
 ORDER BY name ASC
 `
 
-// Skill CRUD
 func (q *Queries) ListSkillsByWorkspace(ctx context.Context, workspaceID pgtype.UUID) ([]Skill, error) {
 	rows, err := q.db.Query(ctx, listSkillsByWorkspace, workspaceID)
 	if err != nil {

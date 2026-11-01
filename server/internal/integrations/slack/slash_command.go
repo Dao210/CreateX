@@ -12,7 +12,6 @@ import (
 	"github.com/slack-go/slack"
 
 	"github.com/auro-ai/auro/server/internal/integrations/channel/engine"
-	"github.com/auro-ai/auro/server/internal/service"
 	db "github.com/auro-ai/auro/server/pkg/db/generated"
 )
 
@@ -49,10 +48,10 @@ const clearSlashCommand = "/clear"
 const (
 	slashUsageText            = "Tell me what to file, e.g. `/issue the login button does nothing on Safari`."
 	slashQueuedText           = "✅ On it — I'm turning that into an issue. You'll get a Auro notification when it's ready."
-	slashNotMemberText        = "You're not a member of this Auro workspace, so I can't file an issue for you."
-	slashLinkAccountFallback  = "Link your Slack account to Auro first, then try `/issue` again."
+	slashNotMemberText        = "You're not a member of this Auro workspace."
+	slashLinkAccountFallback  = "Link your Slack account to Auro first, then try the command again."
 	slashIssueLimitText       = "⚠️ This workspace has reached its issue limit. Open Auro to view the available recovery options."
-	slashInternalErrorText    = "⚠️ Something went wrong creating the issue. Please try again."
+	slashInternalErrorText    = "⚠️ Something went wrong updating the chat. Please try again."
 	slashDisabledText         = "This Slack app isn't connected to Auro (or was disconnected). Ask a workspace admin to reconnect it."
 	slashNewStartedText       = "✅ Started a new Auro chat."
 	slashNewThreadGuideText   = "In a channel, start the new chat from the target thread with `@Auro /new`."
@@ -70,13 +69,8 @@ type slashQueries interface {
 	GetMemberByUserAndWorkspace(ctx context.Context, arg db.GetMemberByUserAndWorkspaceParams) (db.Member, error)
 }
 
-// quickCreateEnqueuer is the narrow slice of *service.TaskService the slash
 // command needs to hand the invoker's prompt to the agent. *service.TaskService
 // satisfies it; tests supply a fake.
-type quickCreateEnqueuer interface {
-	EnqueueQuickCreateTask(ctx context.Context, workspaceID, requesterID, agentID, squadID pgtype.UUID, prompt, priority, dueDate string, projectID, parentIssueID pgtype.UUID, attachmentIDs []pgtype.UUID) (db.AgentTaskQueue, error)
-}
-
 type slashControlStarter interface {
 	StartSlackDMChat(ctx context.Context, inst engine.ResolvedInstallation, userID pgtype.UUID, cmd slack.SlashCommand, envelopeID string) error
 	ClearSlackDMContext(ctx context.Context, inst engine.ResolvedInstallation, userID pgtype.UUID, cmd slack.SlashCommand, envelopeID string) error
@@ -85,7 +79,6 @@ type slashControlStarter interface {
 // SlashCommandProcessor handles Slack `/issue`, `/new`, and `/clear` commands end to end.
 type SlashCommandProcessor struct {
 	q           slashQueries
-	tasks       quickCreateEnqueuer
 	control     slashControlStarter
 	binding     bindingMinter
 	appURL      string
@@ -102,7 +95,6 @@ type SlashCommandProcessor struct {
 // anything.
 type SlashCommandConfig struct {
 	Queries     *db.Queries
-	Tasks       quickCreateEnqueuer
 	Control     slashControlStarter
 	Binding     bindingMinter
 	AppURL      string
@@ -127,7 +119,6 @@ func NewSlashCommandProcessor(cfg SlashCommandConfig) *SlashCommandProcessor {
 	}
 	p := &SlashCommandProcessor{
 		q:           cfg.Queries,
-		tasks:       cfg.Tasks,
 		control:     cfg.Control,
 		binding:     cfg.Binding,
 		appURL:      strings.TrimRight(cfg.AppURL, "/"),
@@ -153,15 +144,10 @@ func (p *SlashCommandProcessor) Handle(ctx context.Context, cmd slack.SlashComma
 // HandleEnvelope preserves Socket Mode's durable envelope id for control-command dedup.
 func (p *SlashCommandProcessor) HandleEnvelope(ctx context.Context, cmd slack.SlashCommand, envelopeID string) {
 	command := strings.TrimSpace(cmd.Command)
-	if !strings.EqualFold(command, issueSlashCommand) && command != newSlashCommand && command != clearSlashCommand {
+	if command != newSlashCommand && command != clearSlashCommand {
 		return
 	}
-	var text string
-	if command == newSlashCommand || command == clearSlashCommand {
-		text = p.processControl(ctx, cmd, envelopeID)
-	} else {
-		text = p.process(ctx, cmd)
-	}
+	text := p.processControl(ctx, cmd, envelopeID)
 	if text == "" || cmd.ResponseURL == "" {
 		return
 	}
@@ -233,68 +219,6 @@ func (p *SlashCommandProcessor) processControl(ctx context.Context, cmd slack.Sl
 }
 
 // process runs the command and returns the ephemeral text to reply with.
-func (p *SlashCommandProcessor) process(ctx context.Context, cmd slack.SlashCommand) string {
-	prompt := strings.TrimSpace(cmd.Text)
-	if prompt == "" {
-		return slashUsageText
-	}
-
-	inst, err := p.resolveInstallation(ctx, cmd.APIAppID, cmd.TeamID)
-	if err != nil {
-		if !errors.Is(err, engine.ErrInstallationNotFound) {
-			p.logger.WarnContext(ctx, "slack slash command: resolve installation failed",
-				"app_id", cmd.APIAppID, "error", err)
-			return slashInternalErrorText
-		}
-		return slashDisabledText
-	}
-	if !inst.Active {
-		return slashDisabledText
-	}
-
-	userID, err := p.resolveUser(ctx, inst, cmd.UserID)
-	if err != nil {
-		switch {
-		case errors.Is(err, engine.ErrSenderUnbound):
-			return p.bindingText(ctx, inst, cmd.UserID)
-		case errors.Is(err, engine.ErrSenderNotMember):
-			return slashNotMemberText
-		default:
-			p.logger.WarnContext(ctx, "slack slash command: resolve user failed",
-				"app_id", cmd.APIAppID, "error", err)
-			return slashInternalErrorText
-		}
-	}
-
-	// Hand the raw natural-language prompt to the installation's agent as a
-	// quick-create task; the agent authors the well-formed issue in the
-	// background and attributes it to the bound member. No project / parent /
-	// attachments and no squad routing — the slash command targets the
-	// installation's own agent directly.
-	if _, err := p.tasks.EnqueueQuickCreateTask(
-		ctx,
-		inst.WorkspaceID,
-		userID,
-		inst.AgentID,
-		pgtype.UUID{}, // no squad — dispatch straight to the installation agent
-		prompt,
-		"",            // no explicit priority
-		"",            // no explicit due date
-		pgtype.UUID{}, // no project
-		pgtype.UUID{}, // no parent issue
-		nil,           // no attachments
-	); err != nil {
-		var limitErr *service.IssueLimitReachedError
-		if errors.As(err, &limitErr) {
-			return slashIssueLimitText
-		}
-		p.logger.WarnContext(ctx, "slack slash command: enqueue quick-create failed",
-			"app_id", cmd.APIAppID, "error", err)
-		return slashInternalErrorText
-	}
-	return slashQueuedText
-}
-
 // resolveInstallation maps the command's api_app_id (+ event team) to its
 // installation, applying the same team-scoping guard as inbound routing.
 func (p *SlashCommandProcessor) resolveInstallation(ctx context.Context, appID, teamID string) (engine.ResolvedInstallation, error) {

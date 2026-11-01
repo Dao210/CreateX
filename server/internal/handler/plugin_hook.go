@@ -74,13 +74,6 @@ func (h *Handler) InvokePluginHook(w http.ResponseWriter, r *http.Request) {
 		Actor: service.HookActor{Type: "member", ID: actor.Member.UserID},
 		Input: rawOrNil(req.Input),
 	}
-	if req.IssueID != "" {
-		issue, ok := h.pluginIssueForUser(w, r, caller, req.IssueID)
-		if !ok {
-			return
-		}
-		invocation.IssueID = issue.ID
-	}
 
 	result, err := h.PluginService.InvokeHook(r.Context(), invocation, 1)
 	if err != nil {

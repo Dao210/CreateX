@@ -31,6 +31,7 @@ type InboxItemResponse struct {
 	ActorType     *string         `json:"actor_type"`
 	ActorID       *string         `json:"actor_id"`
 	Details       json.RawMessage `json:"details"`
+	Content       json.RawMessage `json:"content,omitempty"`
 }
 
 func inboxToResponse(i db.InboxItem) InboxItemResponse {
@@ -50,6 +51,7 @@ func inboxToResponse(i db.InboxItem) InboxItemResponse {
 		ActorType:     textToPtr(i.ActorType),
 		ActorID:       uuidToPtr(i.ActorID),
 		Details:       json.RawMessage(i.Details),
+		Content:       json.RawMessage(i.Content),
 	}
 }
 
@@ -128,6 +130,7 @@ func inboxRowToResponse(r db.ListInboxItemsRow) InboxItemResponse {
 		ActorType:     textToPtr(r.ActorType),
 		ActorID:       uuidToPtr(r.ActorID),
 		Details:       json.RawMessage(r.Details),
+		Content:       json.RawMessage(r.Content),
 	}
 }
 
@@ -487,41 +490,6 @@ func (h *Handler) ArchiveAllReadInbox(w http.ResponseWriter, r *http.Request) {
 	}
 
 	slog.Info("inbox: archive all read", append(logger.RequestAttrs(r), "user_id", userID, "count", count)...)
-	h.publish(protocol.EventInboxBatchArchived, workspaceID, "member", userID, map[string]any{
-		"recipient_id": userID,
-		"count":        count,
-	})
-
-	writeJSON(w, http.StatusOK, map[string]any{"count": count})
-}
-
-func (h *Handler) ArchiveCompletedInbox(w http.ResponseWriter, r *http.Request) {
-	userID, ok := requireUserID(w, r)
-	if !ok {
-		return
-	}
-	workspaceID := ctxWorkspaceID(r.Context())
-	wsUUID, ok := parseUUIDOrBadRequest(w, workspaceID, "workspace id")
-	if !ok {
-		return
-	}
-
-	terminalStatusKeys, err := h.terminalIssueStatusKeys(r.Context(), wsUUID)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to resolve status categories")
-		return
-	}
-	count, err := h.Queries.ArchiveCompletedInbox(r.Context(), db.ArchiveCompletedInboxParams{
-		WorkspaceID:        wsUUID,
-		RecipientID:        parseUUID(userID),
-		TerminalStatusKeys: terminalStatusKeys,
-	})
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to archive completed inbox")
-		return
-	}
-
-	slog.Info("inbox: archive completed", append(logger.RequestAttrs(r), "user_id", userID, "count", count)...)
 	h.publish(protocol.EventInboxBatchArchived, workspaceID, "member", userID, map[string]any{
 		"recipient_id": userID,
 		"count":        count,

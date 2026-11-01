@@ -1,11 +1,4 @@
--- DingTalk-specific installation identity operations. The underlying channel_*
--- tables are shared, but these replacement semantics belong to DingTalk's BYO
--- AppKey model and deliberately stay out of the shared channel query surface.
-
 -- name: ListDingTalkUserBindingsForMember :many
--- Returns only the requesting Auro member's DingTalk identities. The
--- installation list is member-visible, so returning every member's staff id
--- here would expose staff ID values more broadly than necessary.
 SELECT installation_id, channel_user_id
 FROM channel_user_binding
 WHERE workspace_id = sqlc.arg(workspace_id)
@@ -13,12 +6,11 @@ WHERE workspace_id = sqlc.arg(workspace_id)
   AND channel_type = 'dingtalk'
 ORDER BY bound_at DESC, id ASC;
 
+
+
+
+
 -- name: LockDingTalkInstallationOwner :exec
--- Serializes install / replacement decisions for one logical
--- (workspace, agent, channel) slot. A different-AppKey replacement deletes the
--- old row and inserts a fresh installation id; the advisory lock closes the
--- gap where two concurrent replacements could otherwise miss each other's new
--- row and update it in place, carrying identity state across robot boundaries.
 SELECT pg_advisory_xact_lock(
     hashtextextended(
         (sqlc.arg(workspace_id)::uuid)::text || ':' ||
@@ -27,11 +19,11 @@ SELECT pg_advisory_xact_lock(
     )
 );
 
+
+
+
+
 -- name: GetDingTalkInstallationOwnerForUpdate :one
--- Reads the current robot identity after LockDingTalkInstallationOwner has
--- serialized the logical owner slot. app_id is non-null for every DingTalk
--- installation; COALESCE treats malformed legacy config as a different robot,
--- which safely replaces it instead of preserving unknown identity state.
 SELECT id, COALESCE(config ->> 'app_id', '')::text AS app_id
 FROM channel_installation
 WHERE workspace_id = sqlc.arg(workspace_id)
@@ -39,11 +31,11 @@ WHERE workspace_id = sqlc.arg(workspace_id)
   AND channel_type = 'dingtalk'
 FOR UPDATE;
 
+
+
+
+
 -- name: UpsertDingTalkBotIdentity :one
--- Bot identity and the optional permission issue belong to the installation,
--- not to any one group. Keep this as a separate command so the mixed-version
--- compatibility trigger can observe the completed command state when the
--- group-presence command runs next.
 WITH target AS MATERIALIZED (
     SELECT channel_installation.id, channel_installation.workspace_id
     FROM channel_installation
@@ -84,10 +76,11 @@ WITH target AS MATERIALIZED (
 )
 SELECT target.id FROM target;
 
+
+
+
+
 -- name: RecordDingTalkGroupPresence :one
--- Records an observed bot/group pair without carrying routing state. The
--- installation identity is copied only for compatibility with the preceding
--- draft; readers use dingtalk_bot_identity as the authority.
 WITH target AS MATERIALIZED (
     SELECT channel_installation.id, channel_installation.workspace_id
     FROM channel_installation
@@ -145,19 +138,22 @@ WITH target AS MATERIALIZED (
 )
 SELECT target.id FROM target;
 
+
+
+
+
 -- name: RecordDingTalkGroupActivity :one
--- Advances activity only after the deduplicated inbound message is durable.
--- Presence observation runs first, so a forgotten group is recreated before
--- this update executes.
 UPDATE dingtalk_group_presence
 SET last_active_at = now(), mention_count = mention_count + 1, updated_at = now()
 WHERE installation_id = sqlc.arg(installation_id)
   AND conversation_id = sqlc.arg(conversation_id)
 RETURNING installation_id;
 
+
+
+
+
 -- name: ListDingTalkGroupPresencesByWorkspace :many
--- Active rows are the default inventory. Inactive rows are loaded only when a
--- client expands one installation's historical section.
 SELECT
     presence.conversation_id,
     presence.conversation_title,
@@ -184,6 +180,10 @@ ORDER BY presence.last_active_at DESC NULLS LAST, presence.conversation_title AS
 LIMIT NULLIF(sqlc.arg(page_limit)::integer, 0)
 OFFSET sqlc.arg(page_offset)::integer;
 
+
+
+
+
 -- name: CountInactiveDingTalkGroupPresencesByWorkspace :many
 SELECT presence.installation_id, installation.agent_id, count(*)::bigint AS group_count
 FROM dingtalk_group_presence presence
@@ -195,9 +195,11 @@ WHERE installation.workspace_id = sqlc.arg(workspace_id)
   AND (NOT sqlc.arg(filter_by_agent)::boolean OR installation.agent_id = sqlc.arg(agent_id))
 GROUP BY presence.installation_id, installation.agent_id;
 
+
+
+
+
 -- name: ListDingTalkBotIdentitiesByWorkspace :many
--- Identity is installation-owned, so forgetting or collapsing groups cannot
--- change the connection label.
 SELECT
     installation.id AS installation_id,
     installation.agent_id,
@@ -210,6 +212,10 @@ WHERE installation.workspace_id = sqlc.arg(workspace_id)
   AND installation.status = 'active'
   AND (NOT sqlc.arg(filter_by_agent)::boolean OR installation.agent_id = sqlc.arg(agent_id));
 
+
+
+
+
 -- name: ForgetDingTalkGroupPresence :one
 DELETE FROM dingtalk_group_presence presence
 USING channel_installation installation
@@ -221,17 +227,11 @@ WHERE presence.installation_id = installation.id
   AND installation.channel_type = 'dingtalk'
 RETURNING presence.installation_id;
 
+
+
+
+
 -- name: DeleteDingTalkInstallationForReplacement :one
--- Retires an installation when the same agent is connected with a DIFFERENT
--- AppKey. A senderStaffId is scoped to one DingTalk organization, so none of the
--- old installation's identity, token, session, dedup, or outbound state may
--- cross into the new robot. The caller inserts a fresh installation in the same
--- transaction, giving the replacement a new installation_id that also fences
--- late writes and replies from the old connection.
---
--- Chat sessions themselves remain as history, but their channel bindings and
--- outbound cards are removed. Audit and media-intent rows remain useful for
--- diagnostics / reconciliation, so their installation references are detached.
 WITH retired AS (
     DELETE FROM channel_installation ci
     WHERE ci.id = sqlc.arg(installation_id)

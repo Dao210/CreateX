@@ -11,11 +11,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgconn"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/auro-ai/auro/server/internal/events"
 	db "github.com/auro-ai/auro/server/pkg/db/generated"
 	"github.com/auro-ai/auro/server/pkg/protocol"
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // pgUniqueViolation is the Postgres SQLSTATE for a unique-constraint violation.
@@ -756,7 +756,7 @@ func (s *RegistrationService) finishSuccess(ctx context.Context, sess *registrat
 	if err := s.binder.BindInstallerTx(ctx, qtx, InstallerBindParams{
 		WorkspaceID:    sess.workspaceID,
 		InstallationID: inst.ID,
-		AuroUserID:  sess.initiatorID,
+		AuroUserID:     sess.initiatorID,
 		LarkOpenID:     res.OpenID,
 	}); err != nil {
 		s.cfg.Logger.Warn("lark registration: bind installer",

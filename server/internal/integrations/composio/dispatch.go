@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/auro-ai/auro/server/internal/runtimeapps"
 	"github.com/auro-ai/auro/server/internal/util"
 	sdk "github.com/auro-ai/auro/server/pkg/composio"
 	db "github.com/auro-ai/auro/server/pkg/db/generated"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // mcpOverlayServerName is the deterministic key under `mcpServers` used to

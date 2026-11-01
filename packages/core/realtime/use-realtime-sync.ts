@@ -10,7 +10,6 @@ import { createLogger } from "../logger";
 import { clearWorkspaceStorage } from "../platform/storage-cleanup";
 import { defaultStorage } from "../platform/storage";
 import { getCurrentWsId, getCurrentSlug } from "../platform/workspace-storage";
-import { pinKeys } from "../pins/queries";
 import { autopilotKeys } from "../autopilots/queries";
 import { runtimeKeys } from "../runtimes/queries";
 import { labelKeys } from "../labels/queries";
@@ -27,7 +26,7 @@ import { slackKeys } from "../slack/queries";
 import { dingtalkKeys } from "../dingtalk/queries";
 import { wecomKeys } from "../wecom/queries";
 import { telegramKeys } from "../telegram/queries";
-import { isSystemInboxItem } from "../inbox/system-notifications";
+import { isVisibleInboxItem } from "../inbox/system-notifications";
 import { onInboxNew, onInboxInvalidate, onInboxSummaryInvalidate } from "../inbox/ws-updaters";
 import {
   notificationPreferenceOptions,
@@ -443,8 +442,6 @@ export function applyWorkspaceUpdatedToCache(
   if (next?.id) {
     const list = qc.getQueryData<Workspace[]>(workspaceKeys.list());
     const cached = list?.find((w) => w.id === next.id) ?? null;
-    if (cached && cached.issue_prefix !== next.issue_prefix) {
-    }
     if (cached && list) {
       qc.setQueryData<Workspace[]>(
         workspaceKeys.list(),
@@ -498,12 +495,14 @@ export async function handleInboxNew(
   qc: QueryClient,
   item: InboxItem,
 ): Promise<void> {
-  if (!isSystemInboxItem(item)) return;
+  if (!isVisibleInboxItem(item)) return;
   const sourceWsId = item.workspace_id;
   if (sourceWsId) void onInboxNew(qc, sourceWsId, item);
   // A new item in ANY workspace can light the workspace-switcher dot, so
   // refresh the cross-workspace summary regardless of the active workspace.
   void onInboxSummaryInvalidate(qc);
+  // Hourly world digests are delivered quietly in the inbox.
+  if (item.type === "world_digest") return;
   // Fire a native OS notification only when the app isn't focused. When
   // the user is already looking at Auro, the inbox sidebar's unread
   // styling is enough — no need to interrupt with a banner. `desktopAPI`
@@ -705,11 +704,6 @@ export function useRealtimeSync(
           qc.invalidateQueries({ queryKey: workspaceKeys.agents(wsId) });
           qc.invalidateQueries({ queryKey: workspaceKeys.skills(wsId) });
         }
-      },
-      pin: () => {
-        const wsId = getCurrentWsId();
-        const userId = authStore.getState().user?.id;
-        if (wsId && userId) qc.invalidateQueries({ queryKey: pinKeys.all(wsId, userId) });
       },
       daemon: () => {
         const wsId = getCurrentWsId();

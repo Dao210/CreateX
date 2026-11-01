@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Agent, Comment, Member, RuntimeDevice, Skill } from "../types";
 import {
-  canAssignAgentToIssue,
+  canInvokeAgent,
   canChangeMemberRole,
   canDeleteComment,
   canDeleteRuntime,
@@ -142,7 +142,7 @@ describe("canEditAgent", () => {
   });
 });
 
-describe("canAssignAgentToIssue", () => {
+describe("canInvokeAgent", () => {
   const workspaceTargets = [
     { target_type: "workspace" as const, target_id: null },
   ];
@@ -155,7 +155,7 @@ describe("canAssignAgentToIssue", () => {
       owner_id: ALICE,
     });
     expect(
-      canAssignAgentToIssue(a, { userId: BOB, role: "member" }).allowed,
+      canInvokeAgent(a, { userId: BOB, role: "member" }).allowed,
     ).toBe(true);
   });
 
@@ -166,7 +166,7 @@ describe("canAssignAgentToIssue", () => {
       invocation_targets: workspaceTargets,
       owner_id: ALICE,
     });
-    const d = canAssignAgentToIssue(a, { userId: BOB, role: null });
+    const d = canInvokeAgent(a, { userId: BOB, role: null });
     expect(d.allowed).toBe(false);
     expect(d.reason).toBe("not_member");
   });
@@ -179,7 +179,7 @@ describe("canAssignAgentToIssue", () => {
       owner_id: ALICE,
     });
     expect(
-      canAssignAgentToIssue(a, { userId: ALICE, role: "member" }).allowed,
+      canInvokeAgent(a, { userId: ALICE, role: "member" }).allowed,
     ).toBe(true);
   });
 
@@ -190,7 +190,7 @@ describe("canAssignAgentToIssue", () => {
       invocation_targets: [],
       owner_id: ALICE,
     });
-    const d = canAssignAgentToIssue(a, { userId: BOB, role: "admin" });
+    const d = canInvokeAgent(a, { userId: BOB, role: "admin" });
     expect(d.allowed).toBe(false);
     expect(d.reason).toBe("private_visibility");
   });
@@ -202,7 +202,7 @@ describe("canAssignAgentToIssue", () => {
       invocation_targets: [],
       owner_id: ALICE,
     });
-    const d = canAssignAgentToIssue(a, { userId: BOB, role: "member" });
+    const d = canInvokeAgent(a, { userId: BOB, role: "member" });
     expect(d.allowed).toBe(false);
     expect(d.reason).toBe("private_visibility");
   });
@@ -215,7 +215,7 @@ describe("canAssignAgentToIssue", () => {
       owner_id: ALICE,
     });
     expect(
-      canAssignAgentToIssue(a, { userId: BOB, role: "member" }).allowed,
+      canInvokeAgent(a, { userId: BOB, role: "member" }).allowed,
     ).toBe(true);
   });
 
@@ -227,7 +227,7 @@ describe("canAssignAgentToIssue", () => {
       invocation_targets: [{ target_type: "member", target_id: BOB }],
       owner_id: ALICE,
     });
-    const d = canAssignAgentToIssue(a, { userId: CAROL, role: "member" });
+    const d = canInvokeAgent(a, { userId: CAROL, role: "member" });
     expect(d.allowed).toBe(false);
     expect(d.reason).toBe("private_visibility");
   });
@@ -240,12 +240,12 @@ describe("canAssignAgentToIssue", () => {
       owner_id: ALICE,
     });
     // Even an admin who belongs to the team gets no invocation grant.
-    const d = canAssignAgentToIssue(a, { userId: BOB, role: "admin" });
+    const d = canInvokeAgent(a, { userId: BOB, role: "admin" });
     expect(d.allowed).toBe(false);
     expect(d.reason).toBe("private_visibility");
     // The owner still passes (owner always may invoke).
     expect(
-      canAssignAgentToIssue(a, { userId: ALICE, role: "member" }).allowed,
+      canInvokeAgent(a, { userId: ALICE, role: "member" }).allowed,
     ).toBe(true);
   });
 
@@ -255,7 +255,7 @@ describe("canAssignAgentToIssue", () => {
       permission_mode: "public_to",
       invocation_targets: workspaceTargets,
     });
-    const d = canAssignAgentToIssue(a, { userId: null, role: null });
+    const d = canInvokeAgent(a, { userId: null, role: null });
     expect(d.allowed).toBe(false);
     expect(d.reason).toBe("not_authenticated");
   });
@@ -273,14 +273,14 @@ describe("canAssignAgentToIssue", () => {
     });
     // Non-owner: no grants means denied.
     expect(() =>
-      canAssignAgentToIssue(a, { userId: BOB, role: "member" }),
+      canInvokeAgent(a, { userId: BOB, role: "member" }),
     ).not.toThrow();
-    const d = canAssignAgentToIssue(a, { userId: BOB, role: "member" });
+    const d = canInvokeAgent(a, { userId: BOB, role: "member" });
     expect(d.allowed).toBe(false);
     expect(d.reason).toBe("private_visibility");
     // Owner path still allows.
     expect(
-      canAssignAgentToIssue(a, { userId: ALICE, role: "member" }).allowed,
+      canInvokeAgent(a, { userId: ALICE, role: "member" }).allowed,
     ).toBe(true);
   });
 });

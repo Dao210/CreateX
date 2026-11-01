@@ -177,19 +177,19 @@ func taskScopedAuthToken(task Task) (string, error) {
 
 func taskAuroEnvironment(task Task, agentName, token, configRoot, workspacesRoot, serverURL string, healthPort, slot int, tempDir string) map[string]string {
 	return map[string]string{
-		"AURO_TOKEN":        token,
-		cli.TaskConfigRootEnv:  configRoot,
-		TaskWorkspacesRootEnv:  workspacesRoot,
-		"AURO_SERVER_URL":   serverURL,
-		"AURO_DAEMON_PORT":  strconv.Itoa(healthPort),
-		"AURO_WORKSPACE_ID": task.WorkspaceID,
-		"AURO_AGENT_NAME":   agentName,
-		"AURO_AGENT_ID":     task.AgentID,
-		"AURO_TASK_ID":      task.ID,
-		"AURO_TASK_SLOT":    strconv.Itoa(slot),
-		"TMPDIR":               tempDir,
-		"TMP":                  tempDir,
-		"TEMP":                 tempDir,
+		"AURO_TOKEN":          token,
+		cli.TaskConfigRootEnv: configRoot,
+		TaskWorkspacesRootEnv: workspacesRoot,
+		"AURO_SERVER_URL":     serverURL,
+		"AURO_DAEMON_PORT":    strconv.Itoa(healthPort),
+		"AURO_WORKSPACE_ID":   task.WorkspaceID,
+		"AURO_AGENT_NAME":     agentName,
+		"AURO_AGENT_ID":       task.AgentID,
+		"AURO_TASK_ID":        task.ID,
+		"AURO_TASK_SLOT":      strconv.Itoa(slot),
+		"TMPDIR":              tempDir,
+		"TMP":                 tempDir,
+		"TEMP":                tempDir,
 	}
 }
 
@@ -7773,7 +7773,6 @@ func (d *Daemon) runTask(ctx context.Context, task Task, provider string, slot i
 		IssueID:             task.IssueID,
 		TriggerCommentID:    task.TriggerCommentID,
 		TriggerThreadID:     task.TriggerThreadID,
-		CommentReplyTargets: commentReplyThreads(task),
 		NewCommentCount:     task.NewCommentCount,
 		NewCommentsSince:    task.NewCommentsSince,
 		PriorSessionResumed: task.PriorSessionID != "",
@@ -7802,7 +7801,6 @@ func (d *Daemon) runTask(ctx context.Context, task Task, provider string, slot i
 		AutopilotSource:                  task.AutopilotSource,
 		AutopilotTriggerPayload:          strings.TrimSpace(string(task.AutopilotTriggerPayload)),
 		QuickCreatePrompt:                task.QuickCreatePrompt,
-		IsSquadLeader:                    taskIsSquadLeader(task),
 		RequestingUserName:               task.RequestingUserName,
 		RequestingUserProfileDescription: task.RequestingUserProfileDescription,
 		InitiatorType:                    task.InitiatorType,

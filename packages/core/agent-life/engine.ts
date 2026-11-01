@@ -64,6 +64,9 @@ export function advanceTick(previous: Simulation, nextId: () => string, brain: A
       }
     }
     action.status = valid ? "completed" : "failed";
+    if (balance(before.resources, agent.id, agent.goal.kind) < agent.goal.target && balance(state.resources, agent.id, agent.goal.kind) >= agent.goal.target) {
+      events.push({ actionId: null, agentId: agent.id, kind: "goal_reached", payload: { name: agent.name, goalKind: agent.goal.kind, target: agent.goal.target } });
+    }
     completed.push(action);
     if (intent.kind !== "TALK" || !valid) events.push({ actionId: action.id, agentId: agent.id, kind: valid ? "action_completed" : "action_failed", payload: {
       intent, reason: action.reason, ...(valid ? {

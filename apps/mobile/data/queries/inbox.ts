@@ -1,4 +1,4 @@
-import { isSystemInboxItem } from "@auro/core/inbox/system-notifications";
+import { isVisibleInboxItem } from "@auro/core/inbox/system-notifications";
 import { queryOptions } from "@tanstack/react-query";
 import { api } from "@/data/api";
 
@@ -22,7 +22,7 @@ export const inboxKeys = {
 export const inboxListOptions = (wsId: string | null) =>
   queryOptions({
     queryKey: inboxKeys.list(wsId),
-    queryFn: ({ signal }) => api.listInbox({ signal }).then((items) => items.filter(isSystemInboxItem)),
+    queryFn: ({ signal }) => api.listInbox({ signal }).then((items) => items.filter(isVisibleInboxItem)),
     enabled: !!wsId,
   });
 

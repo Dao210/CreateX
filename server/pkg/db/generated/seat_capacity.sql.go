@@ -183,9 +183,6 @@ WHERE workspace_id = $1
   AND action = 'confirm'
 `
 
-// Confirmed seats are released only through the member-scoped operation below.
-// Never rewrite them to token release: Cloud may accept token release for a
-// used operation, which would let a stale confirm bypass member ownership.
 func (q *Queries) DeleteSeatCapacityConfirmIntentsForWorkspaceDeletion(ctx context.Context, workspaceID pgtype.UUID) error {
 	_, err := q.db.Exec(ctx, deleteSeatCapacityConfirmIntentsForWorkspaceDeletion, workspaceID)
 	return err
@@ -567,9 +564,6 @@ WHERE workspace_id = $1
   AND action NOT IN ('confirm', 'release_member')
 `
 
-// Workspace teardown commits these compensations atomically with removal of
-// the product rows. The FK-free outbox intentionally survives so Cloud can be
-// reconciled after the local workspace no longer exists.
 func (q *Queries) PrepareSeatCapacityOperationReleasesForWorkspaceDeletion(ctx context.Context, workspaceID pgtype.UUID) error {
 	_, err := q.db.Exec(ctx, prepareSeatCapacityOperationReleasesForWorkspaceDeletion, workspaceID)
 	return err

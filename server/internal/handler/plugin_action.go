@@ -207,60 +207,6 @@ func (h *Handler) pluginTokenCaller(w http.ResponseWriter, r *http.Request, toke
 	return caller, actor, true
 }
 
-// pluginIssueForUser is check 3. The workspace comes from the installation, not
-// from a client header, and membership in that workspace was already verified
-// by pluginCaller — so "the issue is in this workspace" plus "the caller is a
-// member of it" is exactly the reach the user already has. An issue outside it
-// is a 404 for the same reason it is on the ordinary endpoint: a plugin must
-// not be able to confirm that an id it cannot read exists.
-func (h *Handler) pluginIssueForUser(w http.ResponseWriter, r *http.Request, caller service.PluginActionCaller, issueID string) (db.Issue, bool) {
-	if issueID == "" {
-		publicapiv1.WriteProblem(w, r, http.StatusNotFound, "not_found", "issue not found")
-		return db.Issue{}, false
-	}
-	// Resolve first, then compare ids: a caller may name an issue by identifier
-	// (PLUG-12) or by uuid, and comparing raw strings would let the same issue
-	// pass under one spelling and fail under the other.
-	issue, ok := h.resolvePluginIssue(r, caller, issueID)
-	if !ok {
-		publicapiv1.WriteProblem(w, r, http.StatusNotFound, "not_found", "issue not found")
-		return db.Issue{}, false
-	}
-	// A callback grant issued about one issue reaches only that issue. Without
-	// this the grant is worth every issue in the workspace its actor can see,
-	// for the whole five minutes it lives.
-	//
-	// 404 rather than 403: the caller may well be able to see this issue by
-	// other means, and "you are scoped elsewhere" would confirm the id exists.
-	if caller.IssueScope.Valid && uuidToString(issue.ID) != uuidToString(caller.IssueScope) {
-		publicapiv1.WriteProblem(w, r, http.StatusNotFound, "not_found", "issue not found")
-		return db.Issue{}, false
-	}
-	return issue, true
-}
-
-// resolvePluginIssue finds an issue inside the caller's workspace, by
-// identifier or by uuid. Membership in that workspace was established by
-// pluginCaller, so this is exactly the reach the caller already has.
-func (h *Handler) resolvePluginIssue(r *http.Request, caller service.PluginActionCaller, issueID string) (db.Issue, bool) {
-	workspaceID := uuidToString(caller.WorkspaceID)
-	if issue, ok := h.resolveIssueByIdentifier(r.Context(), issueID, workspaceID); ok {
-		return issue, true
-	}
-	parsed, err := util.ParseUUID(issueID)
-	if err != nil {
-		return db.Issue{}, false
-	}
-	issue, err := h.Queries.GetIssueInWorkspace(r.Context(), db.GetIssueInWorkspaceParams{
-		ID:          parsed,
-		WorkspaceID: caller.WorkspaceID,
-	})
-	if err != nil {
-		return db.Issue{}, false
-	}
-	return issue, true
-}
-
 // GetPluginContext — GET /v1/context
 func (h *Handler) GetPluginContext(w http.ResponseWriter, r *http.Request) {
 	// No scope: this is the page the user is already looking at.
@@ -285,16 +231,7 @@ func (h *Handler) GetPluginContext(w http.ResponseWriter, r *http.Request) {
 		user = &loaded
 	}
 
-	var issue *db.Issue
-	if issueID := r.URL.Query().Get("issue_id"); issueID != "" {
-		loaded, ok := h.pluginIssueForUser(w, r, caller, issueID)
-		if !ok {
-			return
-		}
-		issue = &loaded
-	}
-
-	writeJSON(w, http.StatusOK, publicPluginContext(h.PluginService.BuildPluginContext(caller, workspace, user, issue)))
+	writeJSON(w, http.StatusOK, publicPluginContext(h.PluginService.BuildPluginContext(caller, workspace, user)))
 }
 
 func publicPluginContext(context service.PluginContext) publicapiv1.Context {
@@ -311,13 +248,7 @@ func publicPluginContext(context service.PluginContext) publicapiv1.Context {
 	if context.User != nil {
 		payload.User = &publicapiv1.ContextUser{ID: context.User.ID, Name: context.User.Name}
 	}
-	if context.Issue != nil {
-		payload.Issue = &publicapiv1.ContextIssue{
-			ID:         context.Issue.ID,
-			Identifier: context.Issue.Identifier,
-			Title:      context.Issue.Title,
-		}
-	}
+
 	return payload
 }
 

@@ -1,34 +1,15 @@
 # Autopilots
 
-An autopilot is not an agent. It is a rule that dispatches work to an agent, or
-to a squad's leader agent.
+An autopilot dispatches instructions to one agent. A schedule, webhook or manual trigger records a run, checks the agent's availability and permissions, then enqueues execution. The final assistant response becomes the run result. The only execution mode is `run_only`.
 
-## Core model
-
-The chain is: trigger fires (`schedule`, `webhook`, or `manual`) → an autopilot
-run is recorded → `execution_mode` decides the output → assignee readiness check
-→ issue/task execution → run status sync.
-
-Webhooks have a durable admission step in front: HTTP ingress stores a queued
-webhook delivery, synchronously creates or reuses its idempotent run, and
-returns `200` with `status=accepted|skipped` plus `run_id`; a leased worker then
-resumes accepted runs and owns recoverable issue/task dispatch.
-
-Execution modes:
-
-- `create_issue` creates a Auro issue, making the run visible as issue state.
-- `run_only` creates an agent task directly. No issue is created; any durable
-  report location has to come from other task context or instructions.
-
-`issue-title-template` only supports `{{date}}`. Do not invent `{{trigger_id}}`,
-`{{branch}}`, or other variables.
+Webhook deliveries use durable admission and an idempotent run identity. Retried deliveries reuse the original run.
 
 ## CLI
 
 ```bash
 auro autopilot list --output json
 auro autopilot get <autopilot-id> --output json
-auro autopilot create --title "<title>" --description "<task prompt>" --agent <agent-name-or-id> --mode create_issue|run_only --output json
+auro autopilot create --title "<title>" --description "<task prompt>" --agent <agent-name-or-id> --mode run_only --output json
 auro autopilot update <autopilot-id> --status active|paused --output json
 auro autopilot runs <autopilot-id> --output json
 auro autopilot trigger-add <autopilot-id> --kind schedule --cron "0 9 * * *" --timezone Asia/Shanghai --output json
@@ -42,11 +23,10 @@ test — those are real side effects. Use `trigger` only when the user explicitl
 asks for a manual run, and `trigger-rotate-url` only when rotating a webhook
 URL; the old URL stops being valid immediately.
 
-`trigger` exits non-zero when the run did not start. Only `issue_created` and
-`running` mean work was dispatched; a `skipped` run — admission refused, runtime
+`trigger` exits non-zero when the run did not start. Only `running` means work was dispatched; a `skipped` run — admission refused, runtime
 offline, quota exhausted, a duplicate already in flight — dispatched nothing, and
 its `failure_reason` says which. Do not report a manual run as done without
-seeing one of those two statuses.
+seeing that status.
 
 The default `auro autopilot list` table includes `LAST_STATUS`. Treat a
 healthy-looking `STATUS=active` row with `LAST_STATUS=failed` as a failing
@@ -67,10 +47,8 @@ material into comments, logs, docs, or PRs.
 
 1. `auro autopilot get <id> --output json` — status, mode, assignee, triggers.
 2. `auro autopilot runs <id> --output json` — run status and failure reason.
-3. If assigned to a squad, inspect the squad: `auro squad get <squad-id> --output json`; execution goes to the leader.
 4. Inspect the target agent/runtime: `auro agent get <agent-id> --output json` and `auro runtime list --output json`.
 5. For webhooks, inspect delivery status: `queued` means the worker has not completed dispatch; `failed` carries the worker error. A provider retry with the same `X-GitHub-Delivery` / `Idempotency-Key` reuses the original delivery.
-6. For `create_issue`, inspect the created issue if the run records one.
 
 ## Access
 

@@ -14,7 +14,7 @@ import type { QueryClient } from "@tanstack/react-query";
 import { getCurrentWsId } from "@auro/core/platform";
 import { workspaceKeys } from "@auro/core/workspace/queries";
 import { useAuthStore } from "@auro/core/auth";
-import { canAssignAgentToIssue } from "@auro/core/permissions";
+import { canInvokeAgent } from "@auro/core/permissions";
 import { isAgentRuntimeBound } from "@auro/core/agents";
 import { isImeComposing } from "@auro/core/utils";
 import { isMentionBoundaryAfter } from "@auro/core/markdown";
@@ -488,7 +488,7 @@ export function createMentionSuggestion(
         (a) =>
           !a.archived_at &&
           (a.name.toLowerCase().includes(q) || matchesPinyin(a.name, q)) &&
-          canAssignAgentToIssue(a, { userId, role: myRole }).allowed,
+          canInvokeAgent(a, { userId, role: myRole }).allowed,
       )
       .map((a) => ({
         id: a.id,

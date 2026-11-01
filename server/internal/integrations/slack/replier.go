@@ -136,24 +136,11 @@ func (r *OutboundReplier) Reply(ctx context.Context, inst engine.ResolvedInstall
 		if err := r.postResult(ctx, inst, msg, res, chatStartedText); err != nil {
 			r.logger.WarnContext(ctx, "slack replier: new-chat confirmation failed", "installation_id", util.UUIDToString(inst.ID), "error", err)
 		}
-	case engine.OutcomeIssueUsage:
-		if err := r.postResult(ctx, inst, msg, res, issueUsageText); err != nil {
-			r.logger.WarnContext(ctx, "slack replier: issue usage reply failed",
-				"installation_id", util.UUIDToString(inst.ID), "error", err)
-		}
+
 	case engine.OutcomeIngested:
 		// Only an /issue product result warrants an immediate reply; a plain
 		// chat message stays silent (the agent's own reply lands via ChatDone).
-		if res.IssueID.Valid {
-			text := issueCreatedText(res)
-			if res.IssueDuplicate {
-				text = issueDuplicateText(res)
-			}
-			if err := r.postResult(ctx, inst, msg, res, text); err != nil {
-				r.logger.WarnContext(ctx, "slack replier: issue outcome reply failed",
-					"installation_id", util.UUIDToString(inst.ID), "error", err)
-			}
-		}
+
 	}
 }
 
@@ -167,9 +154,7 @@ func (r *OutboundReplier) postResult(ctx context.Context, inst engine.ResolvedIn
 		return fmt.Errorf("decode credentials: %w", err)
 	}
 	kind := "control_ack"
-	if res.Outcome == engine.OutcomeIngested && res.IssueID.Valid {
-		kind = "issue_ack"
-	}
+
 	sent, err := r.newSender(creds).SendWithMetadata(ctx, channel.OutboundMessage{
 		ChatID: msg.Source.ChatID, Text: text, ThreadID: msg.Source.ThreadID,
 	}, outboundMetadata(res.ChannelBindingID, res.ChannelRouteRevision, kind))
@@ -220,37 +205,4 @@ func (r *OutboundReplier) sendBindingPrompt(ctx context.Context, inst engine.Res
 	text := "👋 To start chatting with me, link your Slack account to Auro: <" +
 		bindURL + "|link your account>\n(This link expires in 15 minutes.)"
 	return r.postResult(ctx, inst, msg, res, text)
-}
-
-func issueCreatedText(res engine.Result) string {
-	id := issueResultIdentifier(res)
-	title := memberIssueTitle(strings.TrimSpace(res.IssueTitle))
-	if title == "" {
-		return "✅ Created " + id
-	}
-	return "✅ Created " + id + " — " + title
-}
-
-func issueDuplicateText(res engine.Result) string {
-	id := issueResultIdentifier(res)
-	title := memberIssueTitle(strings.TrimSpace(res.IssueTitle))
-	if title == "" {
-		return "⚠️ Not created — active issue " + id + " already exists."
-	}
-	return "⚠️ Not created — active issue " + id + " already exists: " + title
-}
-
-func memberIssueTitle(title string) string {
-	title = channel.BreakMarkdownLinkAdjacency(title)
-	// formatMrkdwn deliberately preserves existing Slack entities such as
-	// <url|label> and <@user>. Encode their opening delimiter before that pass
-	// so member-authored links and mentions are handled as visible text.
-	return strings.ReplaceAll(title, "<", "&lt;")
-}
-
-func issueResultIdentifier(res engine.Result) string {
-	if res.IssueIdentifier != "" {
-		return res.IssueIdentifier
-	}
-	return fmt.Sprintf("#%d", res.IssueNumber)
 }

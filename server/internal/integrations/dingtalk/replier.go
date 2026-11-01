@@ -141,36 +141,14 @@ func (r *OutboundReplier) Reply(ctx context.Context, inst engine.ResolvedInstall
 		if err := r.post(ctx, inst, msg, chatStartedText); err != nil {
 			r.logger.WarnContext(ctx, "dingtalk replier: new-chat confirmation failed", "installation_id", util.UUIDToString(inst.ID), "error", err)
 		}
-	case engine.OutcomeIssueUsage:
-		text := issueUsageText
-		if res.IssueUsageHadMedia {
-			text = issueUsageWithMediaText
-		}
-		if err := r.post(ctx, inst, msg, text); err != nil {
-			r.logger.WarnContext(ctx, "dingtalk replier: issue usage reply failed",
-				"installation_id", util.UUIDToString(inst.ID), "error", err)
-		}
+
 	case engine.OutcomeIngested:
-		if res.IssueID.Valid {
-			text := issueCreatedText(res, r.appURL)
-			if res.IssueDuplicate {
-				text = issueDuplicateText(res, r.appURL)
-			}
-			if err := r.post(ctx, inst, msg, text); err != nil {
-				r.logger.WarnContext(ctx, "dingtalk replier: issue outcome reply failed",
-					"installation_id", util.UUIDToString(inst.ID), "error", err)
-			}
-		}
+
 	case engine.OutcomeDropped:
 		// Dropped /issue commands get a refusal so the sender is not left
 		// waiting for an issue that will never be created; every other drop
 		// (duplicates, unaddressed group chatter) stays silent.
-		if text := droppedReplyText(res, msg); text != "" {
-			if err := r.post(ctx, inst, msg, text); err != nil {
-				r.logger.WarnContext(ctx, "dingtalk replier: drop refusal failed",
-					"installation_id", util.UUIDToString(inst.ID), "error", err)
-			}
-		}
+
 	}
 }
 
@@ -262,81 +240,4 @@ func reactionTargetFromMessage(msg channel.InboundMessage) sendTarget {
 		t.StaffID = msg.Source.SenderID
 	}
 	return t
-}
-
-// isAddressedIssueCommand reports whether msg is an /issue command explicitly
-// addressed to the bot — the gating the deleted pre-engine divert used. Only
-// such messages warrant an error/refusal reply: the sender asked for an
-// action, so silence would read as acceptance.
-func isAddressedIssueCommand(msg channel.InboundMessage) bool {
-	if !msg.AddressedToBot {
-		return false
-	}
-	source := msg.CommandText
-	if source == "" {
-		source = msg.Text
-	}
-	_, ok := engine.ParseIssueCommand(source)
-	return ok
-}
-
-// droppedReplyText maps an OutcomeDropped result to a user-facing refusal.
-func droppedReplyText(res engine.Result, msg channel.InboundMessage) string {
-	if !isAddressedIssueCommand(msg) {
-		return ""
-	}
-	switch res.DropReason {
-	case engine.DropReasonNonWorkspaceMember:
-		return issueNotMemberText
-	case engine.DropReasonRevokedInstallation:
-		return issueDisabledText
-	default:
-		return ""
-	}
-}
-
-func issueCreatedText(res engine.Result, appURL string) string {
-	identifier := issueMarkdownIdentifier(res, appURL)
-	if res.IssueTitle == "" {
-		return "✅ Created " + identifier
-	}
-	return "✅ Created " + identifier + " — " + res.IssueTitle
-}
-
-func issueDuplicateText(res engine.Result, appURL string) string {
-	identifier := issueMarkdownIdentifier(res, appURL)
-	if res.IssueTitle == "" {
-		return "⚠️ Not created — active issue " + identifier + " already exists."
-	}
-	return "⚠️ Not created — active issue " + identifier + " already exists: " + res.IssueTitle
-}
-
-// Link the displayed issue key to its stable UUID within the installation's
-// workspace. Legacy /issues/{key} URLs depend on the reader's last workspace,
-// and a bare #number is not a routable issue identifier.
-func issueMarkdownIdentifier(res engine.Result, appURL string) string {
-	identifier := issueResultIdentifier(res)
-	workspaceSlug := strings.TrimSpace(res.IssueWorkspaceSlug)
-	if !res.IssueID.Valid || workspaceSlug == "" {
-		return identifier
-	}
-	base, err := url.Parse(strings.TrimSpace(appURL))
-	if err != nil || (base.Scheme != "https" && base.Scheme != "http") || base.Hostname() == "" || base.User != nil || base.RawQuery != "" || base.Fragment != "" {
-		return identifier
-	}
-	href := channel.IssueWebLink(base.String(), workspaceSlug, util.UUIDToString(res.IssueID))
-	// Parentheses in an application's base path must not terminate the Markdown
-	// link destination, even when they are valid URL path characters.
-	href = strings.NewReplacer("(", "%28", ")", "%29").Replace(href)
-	return "[" + escapeMarkdownLinkLabel(identifier) + "](" + href + ")"
-}
-
-func issueResultIdentifier(res engine.Result) string {
-	if res.IssueIdentifier != "" {
-		return res.IssueIdentifier
-	}
-	if res.IssueNumber > 0 {
-		return fmt.Sprintf("#%d", res.IssueNumber)
-	}
-	return util.UUIDToString(res.IssueID)
 }

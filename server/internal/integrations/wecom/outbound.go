@@ -814,9 +814,9 @@ func (o *Outbound) tryDeliverInbox(ctx context.Context, item map[string]any, rec
 		return false
 	}
 	binding, err := o.q.FindChannelBindingForMember(ctx, db.FindChannelBindingForMemberParams{
-		WorkspaceID:   workspaceID,
-		AuroUserID: recipientID,
-		ChannelType:   channelTypeWecom,
+		WorkspaceID: workspaceID,
+		AuroUserID:  recipientID,
+		ChannelType: channelTypeWecom,
 	})
 	if err != nil {
 		if !errors.Is(err, pgx.ErrNoRows) {

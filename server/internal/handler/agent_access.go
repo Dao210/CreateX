@@ -251,44 +251,6 @@ func isTerminalTaskStatus(status string) bool {
 	return false
 }
 
-// commentSourceTaskID returns the agent's currently-executing task (from the
-// server-trusted X-Task-ID header), else an invalid UUID. This is the exact
-// lineage CreateComment stamps onto source_task_id, so an edit re-stamps what a
-// fresh authoring of the same content would have stamped and the two resolvers
-// can never disagree (MUL-6490).
-//
-// The task is NOT required to be running on the edited comment's issue: the
-// stamp records "which run wrote this", and a run may legitimately write on
-// another issue. That is safe for the invoke gate because the gate keys on the
-// task's own originator (MUL-6951) — a human who already holds those rights —
-// rather than on a same-issue binding standing in for one.
-func (h *Handler) commentSourceTaskID(r *http.Request) pgtype.UUID {
-	task, ok := h.taskFromRequestHeader(r)
-	if !ok {
-		return pgtype.UUID{}
-	}
-	return task.ID
-}
-
-// taskFromRequestHeader resolves the agent's currently-executing task from the
-// X-Task-ID header (set by the CLI on every request). Returns ok=false when the
-// header is absent, malformed, or names no existing task.
-func (h *Handler) taskFromRequestHeader(r *http.Request) (db.AgentTaskQueue, bool) {
-	taskIDHeader := r.Header.Get("X-Task-ID")
-	if taskIDHeader == "" {
-		return db.AgentTaskQueue{}, false
-	}
-	taskUUID, err := util.ParseUUID(taskIDHeader)
-	if err != nil {
-		return db.AgentTaskQueue{}, false
-	}
-	task, err := h.Queries.GetAgentTask(r.Context(), taskUUID)
-	if err != nil {
-		return db.AgentTaskQueue{}, false
-	}
-	return task, true
-}
-
 // accessibleAgentIDs returns the set of agent IDs in the workspace the actor
 // is allowed to see, for use by workspace-wide aggregation endpoints
 // (run counts, activity histograms, task snapshots) that need to filter out
@@ -400,5 +362,3 @@ func (h *Handler) loadInvocationTargetsByAgent(ctx context.Context, agents []db.
 	}
 	return out, true
 }
-
-

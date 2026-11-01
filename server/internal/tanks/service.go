@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/auro-ai/auro/server/internal/util"
+	"github.com/auro-ai/auro/server/internal/worldinbox"
 	db "github.com/auro-ai/auro/server/pkg/db/generated"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -311,6 +312,13 @@ func (s *Service) Save(ctx context.Context, a Actor, in SaveInput) (Character, e
 			return nil, e
 		}
 		if e = q.InsertTankCharacterRevision(ctx, db.InsertTankCharacterRevisionParams{CharacterID: cid, Revision: int32(revision), WorkspaceID: w, Payload: payload}); e != nil {
+			return nil, e
+		}
+		kind := "tank_created"
+		if revision > 1 {
+			kind = "tank_updated"
+		}
+		if e = worldinbox.Record(ctx, q, w, u, cid, kind, worldinbox.FactKey(id, revision), worldinbox.Entry{Name: c.Draft.Name, Revision: revision, Origin: c.Origin}); e != nil {
 			return nil, e
 		}
 		c.Progression = growth

@@ -8,12 +8,12 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/auro-ai/auro/server/internal/events"
 	"github.com/auro-ai/auro/server/internal/integrations/channel/engine"
 	db "github.com/auro-ai/auro/server/pkg/db/generated"
 	"github.com/auro-ai/auro/server/pkg/protocol"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // CardStatus mirrors lark_outbound_card_message.status. Kept as a typed
@@ -51,10 +51,9 @@ type CardRender struct {
 // during a task lifecycle — IssueNumber is set for `/issue` flows,
 // Content is set for completed chat tasks, ErrorMessage for failed.
 type RenderInput struct {
-	Kind         CardKind
-	AgentName    string
-	IssueNumber  int32
-	IssueID      pgtype.UUID
+	Kind      CardKind
+	AgentName string
+
 	TaskID       pgtype.UUID
 	Content      string
 	ErrorMessage string

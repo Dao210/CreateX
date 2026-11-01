@@ -162,13 +162,6 @@ export function myInvitationListOptions() {
   });
 }
 
-export function assigneeFrequencyOptions(wsId: string) {
-  return queryOptions({
-    queryKey: workspaceKeys.assigneeFrequency(wsId),
-    queryFn: () => api.getAssigneeFrequency(),
-  });
-}
-
 /**
  * The workspace's MCP server library. Fetched for plain members too — the
  * payload is names and transports only, and an agent owner needs to see what

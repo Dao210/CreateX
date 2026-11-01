@@ -1,3 +1,4 @@
+import { InboxContentSchema } from "../inbox/messages";
 import { z } from "zod";
 import type { AgentBuilderRuntimeSwitch, AgentBuilderSession, AgentBuilderSessionSummary, Attachment, AutopilotRun, BillingBalance, BillingBatchesPage, BillingCheckoutSessionStatus, BillingPriceTier, BillingTopupsPage, BillingTransactionsPage, CancelTaskResponse, ChatMessage, ChatDraftRestoresResponse, ChatPendingTask, ChatSession, PrioritizeQueuedChatTaskResponse, SendChatMessageResponse, StartMikaOnboardingResponse, CreateBillingCheckoutSessionResponse, CreateBillingPortalSessionResponse, WorkspaceSubscriptionEntitlements, WorkspaceSubscriptionSummary, WorkspaceSubscriptionPrice, WorkspaceSubscriptionPrices, CreateWorkspaceSubscriptionCheckoutResponse, WorkspaceSubscriptionSeatReconcileResult, WorkspaceSeatPurchasePreview, PurchaseWorkspaceSeatsResponse, CreateWorkspaceSubscriptionPortalResponse, CronPreviewResponse, DingTalkInstallation, ListDingTalkInstallationsResponse, ListDingTalkGroupsResponse, RedeemDingTalkBindingTokenResponse, WecomInstallation, ListWecomInstallationsResponse, RedeemWecomBindingTokenResponse, TelegramInstallation, ListTelegramInstallationsResponse, RedeemTelegramBindingTokenResponse, GitHubConnectResponse, InboxItem, InboxWorkspaceUnread, Label, MemberWithUser, ListGitHubInstallationsResponse, ListGitHubRepositoriesResponse, ListLabelsResponse, ListWebhookDeliveriesResponse, NotificationPreferenceResponse, PluginInstallation, PluginInstallationListResponse, PluginPackage, PluginPackageListResponse, PluginPreview, PluginSurfaceLaunch, ResourceLabelsResponse, RuntimeModelListRequest, ShareLink, ShareLinkInfo, Skill, SkillImportResult, SkillSummary, User, WebhookDelivery, WorkspaceMcpServer } from "../types";
 import type { CloudRuntimeNode } from "../runtimes/cloud-runtime";
@@ -995,7 +996,6 @@ export const ChatSessionSchema: z.ZodType<ChatSession> = z.object({
   workspace_id: z.string().default(""),
   agent_id: z.string().default(""),
   creator_id: z.string().default(""),
-  project_id: z.string().nullable().optional(),
   title: z.string().default(""),
   status: z.enum(["active", "archived"]).catch("active"),
   has_unread: z.boolean().default(false),
@@ -1269,14 +1269,12 @@ const AutopilotListItemSchema = z.object({
   workspace_id: z.string(),
   title: z.string(),
   description: z.string().nullable().optional(),
-  project_id: z.string().nullable().optional(),
   // Older servers (pre-MUL-2429) omit assignee_type; "agent" is the
   // documented default.
   assignee_type: z.string().default("agent"),
   assignee_id: z.string(),
   status: z.string(),
   execution_mode: z.string(),
-  issue_title_template: z.string().nullable().optional(),
   created_by_type: z.string(),
   created_by_id: z.string(),
   last_run_at: z.string().nullable().optional(),
@@ -1485,6 +1483,7 @@ export const InboxItemListSchema = z.array(
       read: z.boolean(),
       archived: z.boolean(),
       created_at: z.string(),
+      content: InboxContentSchema.nullish().catch(null),
     })
     .loose(),
 );

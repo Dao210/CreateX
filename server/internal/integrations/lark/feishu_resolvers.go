@@ -248,15 +248,13 @@ func (r *feishuSessionBinder) AppendMessage(ctx context.Context, p engine.Append
 
 func (r *feishuSessionBinder) BindMedia(ctx context.Context, p engine.BindMediaParams) (engine.BindMediaResult, error) {
 	in := engine.BindMediaInput{
-		MessageID:            p.MessageID,
-		SessionID:            p.SessionID,
-		WorkspaceID:          p.WorkspaceID,
-		Sender:               p.Sender,
-		IssueID:              p.IssueID,
-		IssueDescriptionBase: p.IssueDescriptionBase,
-		IssueCommandText:     p.IssueCommandText,
-		Body:                 p.Body,
-		MediaRefs:            p.MediaRefs,
+		MessageID:   p.MessageID,
+		SessionID:   p.SessionID,
+		WorkspaceID: p.WorkspaceID,
+		Sender:      p.Sender,
+
+		Body:      p.Body,
+		MediaRefs: p.MediaRefs,
 	}
 	if richer, ok := r.session.(interface {
 		BindMediaRefsWithResult(context.Context, engine.BindMediaInput) (engine.BindMediaResult, error)
@@ -301,18 +299,11 @@ func (r *feishuOutboundReplier) Reply(ctx context.Context, inst engine.ResolvedI
 // the OutcomeReplier consumes. The Outcome/DropReason string values match 1:1.
 func dispatchResultFromEngine(res engine.Result) DispatchResult {
 	return DispatchResult{
-		Outcome:            Outcome(string(res.Outcome)),
-		DropReason:         DropReason(string(res.DropReason)),
-		InstallationID:     res.InstallationID,
-		ChatSessionID:      res.ChatSessionID,
-		SenderOpenID:       OpenID(res.Sender),
-		IssueID:            res.IssueID,
-		IssueNumber:        res.IssueNumber,
-		IssueIdentifier:    res.IssueIdentifier,
-		IssueWorkspaceSlug: res.IssueWorkspaceSlug,
-		IssueTitle:         res.IssueTitle,
-		IssueDuplicate:     res.IssueDuplicate,
-		IssueUsageHadMedia: res.IssueUsageHadMedia,
+		Outcome:        Outcome(string(res.Outcome)),
+		DropReason:     DropReason(string(res.DropReason)),
+		InstallationID: res.InstallationID,
+		ChatSessionID:  res.ChatSessionID,
+		SenderOpenID:   OpenID(res.Sender),
 	}
 }
 
