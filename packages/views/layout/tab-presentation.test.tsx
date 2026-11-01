@@ -143,7 +143,7 @@ describe("useTabPresentation — live from cache", () => {
     );
 
     const { result } = renderHook(
-      () => useTabPresentation("/acme/inbox?issue=n7", "Autopilot paused"),
+      () => useTabPresentation("/acme/inbox?item=n7", "Autopilot paused"),
       { wrapper },
     );
 
@@ -158,7 +158,7 @@ describe("useTabPresentation — live from cache", () => {
   });
 
   it("archived inbox: a deep-link lookup supplies the title outside loaded pages", () => {
-    expect(presentationOf("/acme/inbox?view=archived&issue=a3")).toEqual({
+    expect(presentationOf("/acme/inbox?view=archived&item=a3")).toEqual({
       visual: { kind: "icon", icon: "Inbox" }, title: "Deep archived note",
     });
   });

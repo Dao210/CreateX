@@ -35,7 +35,7 @@ export type TabSubject =
   /** An attachment preview. `filename` is the `?name=` hint, or null. */
   | { kind: "attachment"; id: string; filename: string | null }
   /**
-   * The Inbox container; `selectedKey` is the `?issue=` selection or null,
+   * The Inbox container; `selectedKey` is the `?item=` selection or null,
    * `archived` is the `?view=archived` sub-list (its own list/cache).
    */
   | { kind: "inbox"; selectedKey: string | null; archived: boolean }
@@ -89,7 +89,7 @@ export function parseTabSubject(url: string): TabSubject {
     case "inbox":
       return {
         kind: "inbox",
-        selectedKey: query.get("issue") || null,
+        selectedKey: query.get("item") || null,
         archived: query.get("view") === "archived",
       };
     case "chat":

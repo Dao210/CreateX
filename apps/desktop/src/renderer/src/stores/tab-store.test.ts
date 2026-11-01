@@ -81,14 +81,14 @@ describe("resourceKeyForUrl", () => {
 describe("browsingHistoryKeyForUrl", () => {
   it("keeps Inbox selections distinct while ignoring their other view state", () => {
     expect(browsingHistoryKeyForUrl("/acme/inbox")).toBe("/acme/inbox");
-    expect(browsingHistoryKeyForUrl("/acme/inbox?issue=issue-a")).toBe(
-      "/acme/inbox?issue=issue-a",
+    expect(browsingHistoryKeyForUrl("/acme/inbox?item=issue-a")).toBe(
+      "/acme/inbox?item=issue-a",
     );
     expect(
       browsingHistoryKeyForUrl(
-        "/acme/inbox?view=archived&issue=issue-a#comment-comment-1",
+        "/acme/inbox?view=archived&item=issue-a#comment-comment-1",
       ),
-    ).toBe("/acme/inbox?issue=issue-a");
+    ).toBe("/acme/inbox?item=issue-a");
   });
 
   it("continues treating ordinary query and hash changes as one resource", () => {
@@ -543,21 +543,21 @@ describe("navigateActiveSession", () => {
     store.switchWorkspace("acme");
 
     store.navigateActiveSession("/acme/inbox");
-    store.navigateActiveSession("/acme/inbox?issue=issue-a", {
+    store.navigateActiveSession("/acme/inbox?item=issue-a", {
       replace: true,
     });
-    store.navigateActiveSession("/acme/inbox?issue=issue-b", {
+    store.navigateActiveSession("/acme/inbox?item=issue-b", {
       replace: true,
     });
 
     const state = useTabStore.getState();
     expect(getActiveTab(state)?.history).toEqual({
-      stack: ["/acme/me", "/acme/inbox?issue=issue-b"],
+      stack: ["/acme/me", "/acme/inbox?item=issue-b"],
       index: 1,
     });
     expect(state.byWorkspace.acme.browsingHistory).toEqual([
-      "/acme/inbox?issue=issue-b",
-      "/acme/inbox?issue=issue-a",
+      "/acme/inbox?item=issue-b",
+      "/acme/inbox?item=issue-a",
       "/acme/inbox",
       "/acme/me",
     ]);
@@ -567,20 +567,20 @@ describe("navigateActiveSession", () => {
     const store = useTabStore.getState();
     store.switchWorkspace("acme");
     store.navigateActiveSession("/acme/inbox");
-    store.navigateActiveSession("/acme/inbox?issue=issue-a", {
+    store.navigateActiveSession("/acme/inbox?item=issue-a", {
       replace: true,
     });
-    store.navigateActiveSession("/acme/inbox?issue=issue-b", {
+    store.navigateActiveSession("/acme/inbox?item=issue-b", {
       replace: true,
     });
     store.navigateActiveSession(
-      "/acme/inbox?view=archived&issue=issue-a#comment-comment-1",
+      "/acme/inbox?view=archived&item=issue-a#comment-comment-1",
       { replace: true },
     );
 
     expect(useTabStore.getState().byWorkspace.acme.browsingHistory).toEqual([
-      "/acme/inbox?view=archived&issue=issue-a#comment-comment-1",
-      "/acme/inbox?issue=issue-b",
+      "/acme/inbox?view=archived&item=issue-a#comment-comment-1",
+      "/acme/inbox?item=issue-b",
       "/acme/inbox",
       "/acme/me",
     ]);
@@ -1553,9 +1553,9 @@ describe("mergePersistedTabs (rehydration, MUL-4370)", () => {
             browsingHistory: [
               "/acme/chat/issue-1?tab=activity",
               "/acme/chat/issue-1",
-              "/acme/inbox?view=archived&issue=issue-b",
-              "/acme/inbox?issue=issue-a#comment-comment-1",
-              "/acme/inbox?issue=issue-a",
+              "/acme/inbox?view=archived&item=issue-b",
+              "/acme/inbox?item=issue-a#comment-comment-1",
+              "/acme/inbox?item=issue-a",
               "/acme/inbox",
               "/other/chat/issue-2",
               "/login",
@@ -1569,8 +1569,8 @@ describe("mergePersistedTabs (rehydration, MUL-4370)", () => {
 
     expect(result.byWorkspace.acme.browsingHistory).toEqual([
       "/acme/chat/issue-1?tab=activity",
-      "/acme/inbox?view=archived&issue=issue-b",
-      "/acme/inbox?issue=issue-a#comment-comment-1",
+      "/acme/inbox?view=archived&item=issue-b",
+      "/acme/inbox?item=issue-a#comment-comment-1",
       "/acme/inbox",
     ]);
   });

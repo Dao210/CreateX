@@ -27,7 +27,7 @@ describe("system notification inbox", () => {
     expect(screen.queryByText("old quick-create")).not.toBeInTheDocument();
   });
   it("reads a selected system notification and marks it read", () => {
-    state.items = [item("paused", "autopilot_paused")]; state.params = new URLSearchParams("issue=paused");
+    state.items = [item("paused", "autopilot_paused")]; state.params = new URLSearchParams("item=paused");
     renderWithI18n(<InboxPage />);
     expect(screen.getByText("paused body")).toBeInTheDocument();
     expect(state.markRead).toHaveBeenCalledWith("paused");
@@ -38,7 +38,7 @@ describe("system notification inbox", () => {
     expect(screen.getByText("archived system")).toBeInTheDocument(); expect(screen.queryByText("archived task")).not.toBeInTheDocument();
   });
   it("preserves recovery for an autopilot quota notification", () => {
-    state.items = [item("quota", "autopilot_quota_exceeded")]; state.params = new URLSearchParams("issue=quota"); renderWithI18n(<InboxPage />);
+    state.items = [item("quota", "autopilot_quota_exceeded")]; state.params = new URLSearchParams("item=quota"); renderWithI18n(<InboxPage />);
     fireEvent.click(screen.getByText("View upgrade options")); expect(state.recover).toHaveBeenCalled();
   });
 });
@@ -55,14 +55,14 @@ it("preserves the world category in the URL and excludes personal notices from t
   expect(state.replace).toHaveBeenCalledWith("/acme/inbox?category=creations");
 });
 it("renders a factual digest and links the character within its source world", () => {
-  state.items = [worldMessage()]; state.params = new URLSearchParams("issue=digest");
+  state.items = [worldMessage()]; state.params = new URLSearchParams("item=digest");
   renderWithI18n(<InboxPage />);
   expect(screen.getByText("Forest scout · New creation")).toBeInTheDocument();
   expect(screen.getByRole("link", { name: "View character" })).toHaveAttribute("href", "/acme/tanks?character=00000000-0000-4000-8000-000000000002");
   expect(state.markRead).toHaveBeenCalledWith("digest");
 });
 it("keeps historical content and removes game links when the game is closed", () => {
-  state.available = false; state.items = [worldMessage()]; state.params = new URLSearchParams("issue=digest");
+  state.available = false; state.items = [worldMessage()]; state.params = new URLSearchParams("item=digest");
   renderWithI18n(<InboxPage />);
   expect(screen.getByText("Forest scout · New creation")).toBeInTheDocument();
   expect(screen.queryByRole("link", { name: "View character" })).not.toBeInTheDocument();
@@ -73,14 +73,14 @@ it("links an authoritative resident milestone to that resident in the bound worl
   const message = worldMessage();
   message.content!.entries[0] = { ...message.content!.entries[0]!, kind: "resident_goal_reached", name: "Ada", goalKind: "coins", target: 20 };
   message.content!.totals = { created: 0, updated: 0, milestones: 0, residents: 1 };
-  state.items = [message]; state.params = new URLSearchParams("issue=digest");
+  state.items = [message]; state.params = new URLSearchParams("item=digest");
   renderWithI18n(<InboxPage />);
   expect(screen.getByText("Ada earned 20 coins")).toBeInTheDocument();
   expect(screen.getByRole("link", { name: "View resident" })).toHaveAttribute("href", "/acme/life?resident=00000000-0000-4000-8000-000000000002");
 });
 
 it("keeps a recovery destination when a paused notice has no optional details", () => {
-  state.items = [item("paused", "autopilot_paused")]; state.params = new URLSearchParams("issue=paused");
+  state.items = [item("paused", "autopilot_paused")]; state.params = new URLSearchParams("item=paused");
   renderWithI18n(<InboxPage />);
   expect(screen.getByRole("link", { name: "View automation" })).toHaveAttribute("href", "/acme/autopilots");
 });

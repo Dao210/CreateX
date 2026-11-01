@@ -193,9 +193,9 @@ function DesktopInboxBridge() {
   }, [push]);
 
   useEffect(() => {
-    return window.desktopAPI.onInboxOpen(({ slug, issueKey }) => {
+    return window.desktopAPI.onInboxOpen(({ slug, itemId }) => {
       if (!slug) return;
-      const inboxPath = `${paths.workspace(slug).inbox()}?issue=${encodeURIComponent(issueKey)}`;
+      const inboxPath = `${paths.workspace(slug).inbox()}?item=${encodeURIComponent(itemId)}`;
       pushRef.current(inboxPath);
     });
   }, []);

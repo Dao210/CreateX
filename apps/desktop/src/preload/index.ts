@@ -154,16 +154,14 @@ const desktopAPI = {
   /**
    * Show a native OS notification for a new inbox item. Fired from the
    * renderer only when the app is unfocused — in-focus feedback is the
-   * inbox sidebar's unread styling. `slug`, `itemId`, and `issueKey` are
+   * inbox sidebar's unread styling. `slug` and `itemId` are
    * all round-tripped on click: slug pins routing to the source workspace
    * (the user may switch workspaces before clicking the banner), itemId
-   * lets the renderer mark the row read, issueKey maps to the inbox URL
-   * param.
+   * selects the inbox row and lets the renderer mark it read.
    */
   showNotification: (payload: {
     slug: string;
     itemId: string;
-    issueKey: string;
     title: string;
     body: string;
   }) => ipcRenderer.send("notification:show", payload),
@@ -176,14 +174,13 @@ const desktopAPI = {
   /**
    * Subscribe to "open this inbox row" requests sent by the main process
    * when the user clicks an OS notification banner. Returns an unsubscribe
-   * function. The payload echoes the `slug`, `itemId`, and `issueKey` that
+   * function. The payload echoes the `slug` and `itemId` that
    * were passed to `showNotification`.
    */
   onInboxOpen: (
     callback: (payload: {
       slug: string;
       itemId: string;
-      issueKey: string;
     }) => void,
   ) => subscribeToMainRendererChannel("inbox:open", callback),
   /** Listen for native macOS back/forward swipe gestures. */

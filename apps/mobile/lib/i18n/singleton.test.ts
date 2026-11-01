@@ -22,8 +22,8 @@ describe("mobile i18n singleton", () => {
 
   it("formats counts with interpolation", async () => {
     await i18n.changeLanguage("zh-Hans");
-    expect(i18n.t("execution:list.count_other", { count: 3 })).toBe(
-      "3 个任务",
+    expect(i18n.t("inbox:messages.created", { count: 3 })).toBe(
+      "新增创作 3 件",
     );
   });
 });

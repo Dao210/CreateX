@@ -703,7 +703,6 @@ describe("handleInboxNew", () => {
     expect(showNotification).toHaveBeenCalledWith({
       slug: "",
       itemId: "item-1",
-      issueKey: "item-1",
       title: "Mentioned you",
       body: "in a comment",
     });

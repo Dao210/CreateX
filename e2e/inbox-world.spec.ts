@@ -51,6 +51,7 @@ test("MCP creation arrives live, an immutable whole-world digest includes anothe
   const creation = page.getByRole("button").filter({ hasText: "「Inbox 赤狐」已准备好" });
   await expect(creation).toBeVisible({ timeout: 20000 });
   await creation.click();
+  await expect(page).toHaveURL(/\?item=/);
   await expect(page.getByRole("link", { name: "查看角色", exact: true })).toHaveAttribute("href", `/${workspace.slug}/tanks?character=${character.id}`);
   await expect.poll(async () => {
     const response = await request.get("/api/inbox", { headers });
@@ -87,7 +88,18 @@ test("MCP creation arrives live, an immutable whole-world digest includes anothe
   await expect(page.getByText("邻居的侦察者 · 新创作", { exact: true })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await page.screenshot({ path: "test-results/inbox/world-phone.png", fullPage: true });
-  await page.evaluate(() => document.documentElement.classList.add("dark"));
+  // Persist the theme and reload through the real provider so its native
+  // control color scheme stays in sync with the dark semantic tokens.
+  await page.evaluate(() => localStorage.setItem("theme", "dark"));
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await expect(page.locator("html")).toHaveClass(/dark/);
+  await expect(page.getByText("邻居的侦察者 · 新创作", { exact: true })).toBeVisible();
+  expect(await page.locator("html").evaluate(element => getComputedStyle(element).colorScheme)).toBe("dark");
+  const foreground = await page.getByRole("heading", { name: "世界摘要", exact: true }).evaluate(element => getComputedStyle(element).color);
+  for (const name of ["世界摘要", "已归档", "归档", "标为未读"]) {
+    const action = page.getByRole("button", { name, exact: true });
+    expect(await action.evaluate(element => getComputedStyle(element).color), `Dark ${name} text uses the foreground token`).toBe(foreground);
+  }
   await page.screenshot({ path: "test-results/inbox/world-phone-dark.png", fullPage: true });
   await page.getByRole("button", { name: "收件箱", exact: true }).last().click();
   await expect(page.getByRole("button").filter({ hasText: "新增创作 2 件" })).toBeVisible();

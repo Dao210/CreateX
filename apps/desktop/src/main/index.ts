@@ -701,7 +701,6 @@ if (!gotTheLock) {
         dispatchToMainRenderer("inbox:open", {
           slug: payload.slug,
           itemId: payload.itemId,
-          issueKey: payload.issueKey,
         });
       });
       notification.show();

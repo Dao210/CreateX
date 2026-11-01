@@ -7,23 +7,17 @@
  *   - mark-read: flip `read` to true locally; rollback on error; settle invalidate.
  *     `onMutate` writes setQueryData BEFORE awaiting cancelQueries — this is
  *     load-bearing for iOS Stack push transitions: when the user taps an
- *     inbox row and we router.push to issue/[id], iOS captures a snapshot of
+ *     inbox row and we router.push to inbox/[id], iOS captures a snapshot of
  *     the source view for the slide animation; if the read-state flip hadn't
  *     landed in cache by that snapshot, the row appears unread frozen in
  *     the animation. Synchronous setQueryData ensures the next paint already
  *     has the flipped state. (Previously the caller did this hack at tap
  *     site; moved into the mutation so every caller benefits.)
- *   - archive single: flip `archived` to true on the item AND on every other
- *     inbox row that shares the same `issue_id` (web does the same — see
- *     packages/core/inbox/mutations.ts:37-46). Visually the row disappears
- *     because `deduplicateInboxItems` (apps/mobile/lib/inbox-display.ts)
- *     filters archived items out before render.
- *   - mark-all-read: flip `read` to true on every non-archived row (matches
- *     web; the server-side query does the same predicate).
- *   - archive batch (all / all-read / completed): no optimistic patch — the
- *     row predicates depend on server-side state (e.g. issue.status="done"
- *     isn't carried on every row, and mobile shouldn't re-derive the filter).
- *     Just invalidate on settle. Matches web.
+ *   - archive single: patch only the selected message, preserving other
+ *     digest windows and personal notices for the same creation.
+ *   - mark-all-read: flip `read` to true on every non-archived row.
+ *   - archive batch: await the server and invalidate because its selection
+ *     may include messages that are not loaded locally.
  */
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { QueryClient } from "@tanstack/react-query";
@@ -94,16 +88,9 @@ export function useArchiveInbox() {
       const key = inboxKeys.list(wsId);
       await qc.cancelQueries({ queryKey: key });
       const prev = qc.getQueryData<InboxItem[]>(key);
-      // Match web: archive every row that shares the same issue_id — the
-      // single archive endpoint archives all sibling rows server-side too
-      // (`server/internal/queries/inbox.sql` UPDATE … WHERE issue_id = ?).
-      // Patching only the tapped row would let dedup'd siblings briefly
-      // resurface between the request and the WS invalidate.
-      const target = prev?.find((i) => i.id === id);
-      const issueId = target?.issue_id ?? null;
       qc.setQueryData<InboxItem[]>(key, (old) =>
         old?.map((item) =>
-          item.id === id || (issueId && item.issue_id === issueId)
+          item.id === id
             ? { ...item, archived: true }
             : item,
         ),
@@ -145,11 +132,7 @@ export function useMarkAllInboxRead() {
   });
 }
 
-// Batch archive mutations — invalidate-only, matching web. The optimistic
-// path isn't worth the complexity: archive-completed depends on the issue
-// status of each linked issue (not carried on InboxItem), and predicting
-// that on the client risks divergence with the server's SQL filter. The badge
-// therefore catches up on settle rather than moving instantly.
+// Batch archive predicates belong to the server; refresh after confirmation.
 export function useArchiveAllInbox() {
   const qc = useQueryClient();
   const wsId = useWorkspaceStore((s) => s.currentWorkspaceId);

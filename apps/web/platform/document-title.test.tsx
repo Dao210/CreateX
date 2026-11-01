@@ -95,12 +95,12 @@ describe("WorkspaceDocumentTitle", () => {
   });
 
   it("resolves against the full URL so a container's selection titles the tab", () => {
-    open("/acme/inbox", "issue=abc&view=archived");
+    open("/acme/inbox", "item=abc&view=archived");
     presentation.title = "MUL-9: Ping";
 
     render(<WorkspaceDocumentTitle />);
 
-    expect(presentation.urls).toContain("/acme/inbox?issue=abc&view=archived");
+    expect(presentation.urls).toContain("/acme/inbox?item=abc&view=archived");
     expect(document.title).toBe("MUL-9: Ping | Weave a World");
   });
 

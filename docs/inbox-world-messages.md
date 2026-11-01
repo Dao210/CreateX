@@ -84,10 +84,13 @@ malformed content falls back to the stored title/body. Malformed optional detail
 fall back to null without discarding other messages. The retired issue fields
 remain explicit null values at the response boundary, and retired status/priority
 archive filters return no matches rather than silently expanding the result. Retired task messages stay
-excluded from listing, unread counts and mutations. The `issue` selection query
-parameter remains for existing notification links; it identifies the inbox row.
+excluded from listing, unread counts and mutations. The `item` selection query
+parameter identifies the inbox row independently of any retired task routes.
 
 ## Verification
+
+Latest acceptance record: [2026-11-02](evidence/inbox-world-2026-11-02.md), including
+isolated production-browser coverage and the remaining host-check limitations.
 
 - `make inbox-test-db`: disposable-schema source/settlement, concurrent delivery,
   rollback/retry, membership and world isolation, immutable read/archive state.

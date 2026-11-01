@@ -355,10 +355,10 @@ function inboxSelectionKeyForUrl(url: string): string | null {
 
   const hashIndex = suffix.indexOf("#");
   const search = hashIndex === -1 ? suffix.slice(1) : suffix.slice(1, hashIndex);
-  const selectedKey = new URLSearchParams(search).get("issue");
+  const selectedKey = new URLSearchParams(search).get("item");
   if (!selectedKey) return null;
 
-  return `${pathname}?issue=${encodeURIComponent(selectedKey)}`;
+  return `${pathname}?item=${encodeURIComponent(selectedKey)}`;
 }
 
 /**

@@ -18,7 +18,7 @@ import { useNavigation } from "@auro/views/navigation";
  * workspace — not the active one, so a click always opens the right inbox even
  * after the user switches workspaces (#3766). An empty slug (unresolved
  * source) is ignored. Marking the row read is handled by InboxPage's
- * selected-item effect, which covers the `?issue=` URL-param path.
+ * selected-item effect, which covers the `?item=` URL-param path.
  */
 export function WebNotificationBridge() {
   const { push } = useNavigation();
@@ -31,9 +31,9 @@ export function WebNotificationBridge() {
 
   useEffect(() => {
     registerSystemNotificationClickHandler(
-      ({ slug, issueKey }: SystemNotificationPayload) => {
+      ({ slug, itemId }: SystemNotificationPayload) => {
         if (!slug) return;
-        const inboxPath = `${paths.workspace(slug).inbox()}?issue=${encodeURIComponent(issueKey)}`;
+        const inboxPath = `${paths.workspace(slug).inbox()}?item=${encodeURIComponent(itemId)}`;
         pushRef.current(inboxPath);
       },
     );

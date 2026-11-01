@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it, vi } from "vitest";
 import { QueryClient } from "@tanstack/react-query";
-import { useMarkInboxRead } from "./inbox";
+import { useArchiveInbox, useMarkInboxRead } from "./inbox";
 import type { InboxItem } from "@auro/core/types";
 
 const state = vi.hoisted(() => ({ client: null as QueryClient | null }));
@@ -29,4 +29,27 @@ describe("mobile navigation-time read", () => {
     expect(client.getQueryData<InboxItem[]>(key)?.[0]?.read).toBe(false);
     client.clear();
   });
+});
+
+it("archives only the selected message and rolls it back without altering another digest window", async () => {
+  const client = new QueryClient();
+  state.client = client;
+  const key = ["inbox", "w", "list"];
+  const entries = [
+    { id: "previous-hour", archived: false, read: true, details: { character_id: "shared-creation" } },
+    { id: "current-hour", archived: false, read: false, details: { character_id: "shared-creation" } },
+  ];
+  client.setQueryData(key, entries);
+  const mutation = useArchiveInbox() as unknown as {
+    onMutate: (id: string) => Promise<{ prev: InboxItem[]; key: readonly unknown[] }>;
+    onError: (error: Error, id: string, context: { prev: InboxItem[]; key: readonly unknown[] }) => void;
+  };
+  const context = await mutation.onMutate("previous-hour");
+  expect(client.getQueryData<InboxItem[]>(key)).toEqual([
+    { ...entries[0], archived: true },
+    entries[1],
+  ]);
+  mutation.onError(new Error("network"), "previous-hour", context);
+  expect(client.getQueryData(key)).toEqual(entries);
+  client.clear();
 });

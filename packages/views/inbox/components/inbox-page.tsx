@@ -30,7 +30,7 @@ export function InboxPage() {
   const { searchParams, replace } = useNavigation();
   const archived = searchParams.get("view") === "archived";
   const category = parseInboxCategory(searchParams.get("category"));
-  const selectedKey = searchParams.get("issue") ?? "";
+  const selectedKey = searchParams.get("item") ?? "";
   const manuallyUnread = useRef<string | null>(null);
   const active = useQuery({ ...inboxListOptions(wsId), enabled: !archived });
   const archive = useInfiniteQuery({ ...archivedInboxPagesOptions(wsId, EMPTY_INBOX_FILTERS), enabled: archived });
@@ -55,7 +55,7 @@ export function InboxPage() {
     const params = new URLSearchParams();
     if (nextArchived) params.set("view", "archived");
     if (nextCategory !== "all") params.set("category", nextCategory);
-    if (id) params.set("issue", id);
+    if (id) params.set("item", id);
     const suffix = params.toString();
     replace(paths.inbox() + (suffix ? `?${suffix}` : ""));
   };
