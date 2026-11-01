@@ -221,7 +221,7 @@ export default function ProfileSettingsScreen() {
           <TextField
             value={name}
             onChangeText={setName}
-            placeholder={t("profile.name")}
+            placeholder={t("profile.name_placeholder")}
             autoCapitalize="words"
             autoCorrect={false}
             returnKeyType="done"

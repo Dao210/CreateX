@@ -12,9 +12,9 @@ import (
 	"time"
 	"unicode/utf8"
 
+	db "github.com/auro-ai/auro/server/pkg/db/generated"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
-	db "github.com/auro-ai/auro/server/pkg/db/generated"
 )
 
 // cursorQuery builds a properly URL-encoded query string for the recent +

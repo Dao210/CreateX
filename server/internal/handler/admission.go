@@ -39,7 +39,7 @@ const (
 	DispatchDeferred DispatchStatus = "deferred"
 	// DispatchSteered: the comment was bound to the target's running turn
 	// instead of starting a run. Only returned when the author asked to steer.
-	DispatchSteered DispatchStatus = "steered"
+
 	// DispatchBlocked: the run was refused. ReasonCode carries why.
 	DispatchBlocked DispatchStatus = "blocked"
 )
@@ -53,10 +53,10 @@ const (
 type DispatchReasonCode = dispatch.ReasonCode
 
 const (
-	ReasonQueued                = dispatch.ReasonQueued
-	ReasonCoalesced             = dispatch.ReasonCoalesced
-	ReasonDeferred              = dispatch.ReasonDeferred
-	ReasonSteered               = dispatch.ReasonSteered
+	ReasonQueued    = dispatch.ReasonQueued
+	ReasonCoalesced = dispatch.ReasonCoalesced
+	ReasonDeferred  = dispatch.ReasonDeferred
+
 	ReasonInvocationNotAllowed  = dispatch.ReasonInvocationNotAllowed
 	ReasonTargetUnavailable     = dispatch.ReasonTargetUnavailable
 	ReasonRuntimeOffline        = dispatch.ReasonRuntimeOffline
@@ -70,27 +70,6 @@ const (
 	ReasonIssueInTriage         = dispatch.ReasonIssueInTriage
 	ReasonInternalError         = dispatch.ReasonInternalError
 )
-
-// DispatchTarget is the caller-visible reference to an execution target. Name
-// is populated ONLY when the caller is allowed to see the target; a blocked
-// private-agent invoke returns Type/ID (already known to the caller from their
-// own request) but never a Name they were not otherwise entitled to.
-type DispatchTarget struct {
-	Type string `json:"type"` // "agent" | "squad"
-	ID   string `json:"id"`
-	Name string `json:"name,omitempty"`
-}
-
-// DispatchOutcome is the unified per-target result returned by every sync
-// enqueue entry point. It is additive on the wire: old clients that ignore it
-// keep working. TaskID / RunID are set when a run/task was produced.
-type DispatchOutcome struct {
-	Status     DispatchStatus     `json:"status"`
-	ReasonCode DispatchReasonCode `json:"reason_code"`
-	Target     *DispatchTarget    `json:"target,omitempty"`
-	TaskID     *string            `json:"task_id,omitempty"`
-	RunID      *string            `json:"run_id,omitempty"`
-}
 
 // dispatchBlockedResponse is the structured body of a blocked synchronous
 // enqueue (403/409). `error` is a generic, non-enumerating English fallback for

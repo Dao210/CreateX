@@ -22,10 +22,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/auro-ai/auro/server/internal/auth"
 	"github.com/auro-ai/auro/server/internal/storage"
 	db "github.com/auro-ai/auro/server/pkg/db/generated"
+	"github.com/go-chi/chi/v5"
 )
 
 // createHandlerTestChatSession seeds a chat_session row owned by testUserID

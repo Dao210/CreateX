@@ -5,15 +5,6 @@ import { Copy } from "lucide-react";
 import { Input } from "@auro/ui/components/ui/input";
 import { Textarea } from "@auro/ui/components/ui/textarea";
 import { Button } from "@auro/ui/components/ui/button";
-import { Label } from "@auro/ui/components/ui/label";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@auro/ui/components/ui/dialog";
 import { copyText } from "@auro/ui/lib/clipboard";
 import {
   AlertDialog,
@@ -34,7 +25,6 @@ import {
   workspaceKeys,
   workspaceListOptions,
 } from "@auro/core/workspace/queries";
-import { issueKeys } from "@auro/core/issues/queries";
 import { api } from "@auro/core/api";
 import {
   resolvePostAuthDestination,
@@ -54,7 +44,6 @@ import {
   SettingsSaveState,
   SettingsSection,
   SettingsTab,
-  type SettingsSaveStatus,
 } from "./settings-layout";
 import { useAutoSave } from "./use-auto-save";
 
@@ -141,9 +130,6 @@ export function WorkspaceTab() {
   const [name, setName] = useState(workspace?.name ?? "");
   const [description, setDescription] = useState(workspace?.description ?? "");
   const [context, setContext] = useState(workspace?.context ?? "");
-  const [prefixDraft, setPrefixDraft] = useState<string | null>(null);
-  const [prefixSaveStatus, setPrefixSaveStatus] =
-    useState<SettingsSaveStatus>("idle");
   const [actionId, setActionId] = useState<string | null>(null);
   const [confirmAction, setConfirmAction] = useState<{
     title: string;
@@ -172,20 +158,8 @@ export function WorkspaceTab() {
     setName(workspace?.name ?? "");
     setDescription(workspace?.description ?? "");
     setContext(workspace?.context ?? "");
-    setPrefixDraft(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally keyed on id only; see comment above
   }, [workspace?.id]);
-
-  // Letters + digits only, uppercase, capped at 10 chars. The backend
-  // uppercases and trims on its side too — this is purely a UX guardrail
-  // so the value the user sees in the input matches what gets persisted.
-  const normalizePrefix = (raw: string) =>
-    raw.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 10);
-
-  const normalizedPrefix = normalizePrefix(prefixDraft ?? "");
-  const prefixChanged =
-    !!workspace && normalizedPrefix !== workspace.issue_prefix;
-  const prefixInvalid = normalizedPrefix.length === 0;
 
   const detailsDraft = useMemo(
     () => ({ name, description, context }),
@@ -222,31 +196,6 @@ export function WorkspaceTab() {
     enabled: !!workspace && canManageWorkspace && !!name.trim(),
     isEqual: workspaceDetailsEqual,
   });
-
-  const performPrefixSave = async (nextPrefix: string) => {
-    if (!workspace) return;
-    setPrefixSaveStatus("saving");
-    try {
-      const updated = await api.updateWorkspace(workspace.id, {
-        issue_prefix: nextPrefix,
-      });
-      qc.setQueryData(workspaceKeys.list(), (old: Workspace[] | undefined) =>
-        old?.map((ws) => (ws.id === updated.id ? updated : ws)),
-      );
-      // Issue identifiers are computed from the workspace prefix at read time,
-      // so every cached issue key is stale after this confirmed change.
-      await qc.invalidateQueries({ queryKey: issueKeys.all(updated.id) });
-      setPrefixSaveStatus("saved");
-      setPrefixDraft(null);
-    } catch (error) {
-      setPrefixSaveStatus("error");
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : t(($) => $.workspace.toast_save_failed),
-      );
-    }
-  };
 
   const handleLeaveWorkspace = () => {
     if (!workspace) return;
@@ -297,12 +246,6 @@ export function WorkspaceTab() {
       {value || <span className="text-faint-foreground">—</span>}
     </p>
   );
-  const saveStatus =
-    prefixSaveStatus === "saving" || prefixSaveStatus === "error"
-      ? prefixSaveStatus
-      : detailsAutoSave.status === "idle"
-        ? prefixSaveStatus
-        : detailsAutoSave.status;
 
   return (
     <SettingsTab title={t(($) => $.page.tabs.general)} scope="workspace">
@@ -311,7 +254,7 @@ export function WorkspaceTab() {
         title={t(($) => $.workspace.section_general)}
         action={
           <SettingsSaveState
-            status={saveStatus}
+            status={detailsAutoSave.status}
             savingLabel={t(($) => $.auto_save.saving)}
             savedLabel={t(($) => $.auto_save.saved)}
             errorLabel={t(($) => $.auto_save.failed)}
@@ -448,32 +391,6 @@ export function WorkspaceTab() {
               </Button>
             </span>
           </SettingsRow>
-
-          <SettingsRow
-            anchor="issue-prefix"
-            label={t(($) => $.workspace.issue_prefix_label)}
-            description={t(($) => $.workspace.issue_prefix_hint, {
-              example: `${workspace.issue_prefix}-123`,
-            })}
-          >
-            <span className="flex items-center gap-3">
-              <code className="font-mono text-label text-foreground">
-                {workspace.issue_prefix}
-              </code>
-              {canManageWorkspace ? (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setPrefixSaveStatus("idle");
-                    setPrefixDraft(workspace.issue_prefix);
-                  }}
-                >
-                  {t(($) => $.workspace.change_prefix)}
-                </Button>
-              ) : null}
-            </span>
-          </SettingsRow>
         </SettingsCard>
       </SettingsSection>
 
@@ -527,86 +444,6 @@ export function WorkspaceTab() {
           </SettingsCard>
         </SettingsSection>
       )}
-
-      <Dialog
-        open={prefixDraft !== null}
-        onOpenChange={(open) => {
-          if (!open && prefixSaveStatus !== "saving") setPrefixDraft(null);
-        }}
-      >
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>{t(($) => $.workspace.prefix_dialog_title)}</DialogTitle>
-            <DialogDescription>
-              {t(($) => $.workspace.prefix_dialog_description)}
-            </DialogDescription>
-          </DialogHeader>
-          <form
-            className="space-y-4"
-            onSubmit={(event) => {
-              event.preventDefault();
-              if (prefixInvalid || !prefixChanged) return;
-              void performPrefixSave(normalizedPrefix);
-            }}
-          >
-            <div className="space-y-1.5">
-              <Label htmlFor="workspace-issue-prefix">
-                {t(($) => $.workspace.prefix_new_label)}
-              </Label>
-              <Input
-                id="workspace-issue-prefix"
-                name="workspace-issue-prefix"
-                autoComplete="off"
-                autoCapitalize="characters"
-                spellCheck={false}
-                value={prefixDraft ?? ""}
-                onChange={(event) => setPrefixDraft(normalizePrefix(event.target.value))}
-                maxLength={10}
-                aria-invalid={prefixInvalid}
-                className="font-mono uppercase"
-                autoFocus
-              />
-              <p className="text-caption text-muted-foreground">
-                {t(($) => $.workspace.prefix_rule)}
-              </p>
-            </div>
-            <div className="flex items-center gap-2 rounded-lg border border-surface-border px-3 py-2 font-mono text-label">
-              <span className="text-muted-foreground line-through">
-                {`${workspace.issue_prefix}-123`}
-              </span>
-              <span aria-hidden="true" className="text-muted-foreground">→</span>
-              <span className="font-medium">
-                {`${normalizedPrefix || workspace.issue_prefix}-123`}
-              </span>
-            </div>
-            <p className="text-caption leading-5 text-destructive">
-              {t(($) => $.workspace.prefix_external_warning, {
-                oldExample: `${workspace.issue_prefix}-123`,
-              })}
-            </p>
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setPrefixDraft(null)}
-                disabled={prefixSaveStatus === "saving"}
-              >
-                {t(($) => $.workspace.confirm_cancel)}
-              </Button>
-              <Button
-                type="submit"
-                variant="destructive"
-                disabled={prefixInvalid || !prefixChanged || prefixSaveStatus === "saving"}
-                aria-busy={prefixSaveStatus === "saving" || undefined}
-              >
-                {t(($) => $.workspace.prefix_confirm_action, {
-                  prefix: normalizedPrefix || workspace.issue_prefix,
-                })}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
 
       <AlertDialog open={!!confirmAction} onOpenChange={(v) => { if (!v) setConfirmAction(null); }}>
         <AlertDialogContent>

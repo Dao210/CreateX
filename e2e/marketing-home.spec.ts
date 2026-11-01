@@ -18,7 +18,7 @@ for (const { locale, lang, heading, about } of languages) {
     await page.route("**/api/reach/**", (route) => route.fulfill({ status: 503, body: "unavailable" }));
     await page.goto(`/?lang=${locale}`);
     await expect(page.locator("html")).toHaveAttribute("lang", lang);
-    await expect(page.getByRole("heading", { level: 1 })).toHaveText(heading);
+    await expect(page.getByRole("heading", { level: 1 })).toHaveAccessibleName(heading);
     await expect(page.locator("canvas")).toBeVisible();
     await expect(page.locator("footer a[aria-current=page]")).toHaveAttribute("hrefLang", locale);
     expect(applicationRequests).toEqual([]);
@@ -39,7 +39,7 @@ test("the first map and language navigation work without JavaScript", async ({ b
   expect(await page.locator("svg[role=img] path").count()).toBeGreaterThan(4);
   await page.locator("footer a[hrefLang=ja]").click();
   await expect(page.locator("html")).toHaveAttribute("lang", "ja-JP");
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText("生命を創り、世界を織りなす。");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveAccessibleName("生命を創り、世界を織りなす。");
   await page.goto("/about");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Weave a World について");
   await context.close();
@@ -52,7 +52,7 @@ test("the map survives malformed data and a missing Canvas context", async ({ pa
   await page.route("**/api/reach/**", (route) => route.fulfill({ json: { entities: null, chronicle: {} } }));
   await page.goto("/?lang=en");
   await expect(page.locator("svg[role=img]")).toBeVisible();
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText(languages[0]!.heading);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveAccessibleName(languages[0]!.heading);
   await expect.poll(() => errors).toEqual([]);
 });
 
@@ -64,6 +64,22 @@ test("mobile navigation opens and the page fits the viewport", async ({ page }) 
   await page.locator("details").getByRole("link", { name: "About Weave a World" }).click();
   await expect(page).toHaveURL(/\/about\?lang=en$/);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+});
+
+test("the world entry points reach the world preview", async ({ page }) => {
+  await page.route("**/api/reach/**", (route) => route.fulfill({ status: 503, body: "unavailable" }));
+  await page.goto("/?lang=en");
+  await page.locator('a[href="#world"]').click();
+  await expect(page).toHaveURL(/#world$/);
+  const map = page.getByTestId("world-map");
+  await expect(map).toBeInViewport();
+  expect(await page.evaluate(() => {
+    const scroller = document.querySelector(".overflow-y-auto");
+    return scroller ? scroller.scrollTop : window.scrollY;
+  })).toBeGreaterThan(0);
+  await page.goto("/about?lang=en");
+  await page.locator('header a[href="/?lang=en#world"]').first().click();
+  await expect(map).toBeInViewport();
 });
 
 test("the login entry still initializes application providers", async ({ page }) => {

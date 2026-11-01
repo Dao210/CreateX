@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Bot } from "lucide-react";
 import { useWorkspaceId } from "@auro/core/hooks";
 import { isAgentRuntimeBound } from "@auro/core/agents";
-import { agentListOptions, squadListOptions } from "@auro/core/workspace/queries";
+import { agentListOptions } from "@auro/core/workspace/queries";
 import type { AutopilotAssigneeType } from "@auro/core/types";
 import { ActorAvatar } from "../../../common/actor-avatar";
 import {
@@ -13,7 +13,7 @@ import {
   PickerItem,
   PickerSection,
   PickerEmpty,
-} from "../../../issues/components/pickers/property-picker";
+} from "../../../common/selection-picker";
 import { useT } from "../../../i18n";
 import { matchesPinyin } from "../../../editor/extensions/pinyin-match";
 
@@ -40,26 +40,17 @@ export function AgentPicker({
   const [open, setOpen] = useState(false);
   const [filter, setFilter] = useState("");
   const { data: agents = [] } = useQuery(agentListOptions(wsId));
-  const { data: squads = [] } = useQuery(squadListOptions(wsId));
 
   const activeAgents = useMemo(() => agents.filter((a) => !a.archived_at), [agents]);
-  const activeSquads = useMemo(() => squads.filter((s) => !s.archived_at), [squads]);
-  const agentsById = useMemo(
-    () => new Map(activeAgents.map((agent) => [agent.id, agent])),
-    [activeAgents],
-  );
 
   const selectedAgent =
     assignee?.type === "agent" ? activeAgents.find((a) => a.id === assignee.id) : undefined;
-  const selectedSquad =
-    assignee?.type === "squad" ? activeSquads.find((s) => s.id === assignee.id) : undefined;
-  const selectedName = selectedAgent?.name ?? selectedSquad?.name;
+  const selectedName = selectedAgent?.name;
 
   const query = filter.trim().toLowerCase();
   const matches = (name: string) =>
     !query || name.toLowerCase().includes(query) || matchesPinyin(name, query);
   const filteredAgents = activeAgents.filter((a) => matches(a.name));
-  const filteredSquads = activeSquads.filter((s) => matches(s.name));
 
   const isSelected = (type: AutopilotAssigneeType, id: string) =>
     assignee?.type === type && assignee?.id === id;
@@ -82,7 +73,7 @@ export function AgentPicker({
       trigger={
         customTrigger ?? (
           <>
-            {assignee && (selectedAgent || selectedSquad) ? (
+            {assignee && selectedAgent ? (
               <>
                 <ActorAvatar
                   actorType={assignee.type}
@@ -102,7 +93,7 @@ export function AgentPicker({
         )
       }
     >
-      {filteredAgents.length === 0 && filteredSquads.length === 0 ? (
+      {filteredAgents.length === 0 ? (
         <PickerEmpty />
       ) : (
         <>
@@ -129,30 +120,7 @@ export function AgentPicker({
               })}
             </PickerSection>
           )}
-          {filteredSquads.length > 0 && (
-            <PickerSection label={t(($) => $.agent_picker.squads_group)}>
-              {filteredSquads.map((s) => {
-                const leader = agentsById.get(s.leader_id);
-                const runtimeBound = !!leader && isAgentRuntimeBound(leader);
-                return (
-                  <PickerItem
-                    key={s.id}
-                    selected={isSelected("squad", s.id)}
-                    disabled={!runtimeBound}
-                    tooltip={
-                      runtimeBound
-                        ? undefined
-                        : t(($) => $.agent_picker.squad_runtime_required)
-                    }
-                    onClick={() => handlePick("squad", s.id)}
-                  >
-                    <ActorAvatar actorType="squad" actorId={s.id} size="sm" />
-                    <span className="truncate">{s.name}</span>
-                  </PickerItem>
-                );
-              })}
-            </PickerSection>
-          )}
+          
         </>
       )}
     </PropertyPicker>

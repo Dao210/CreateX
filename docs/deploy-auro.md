@@ -6,6 +6,8 @@
 ./scripts/deploy-createx.sh             # 只显示方案
 ./scripts/deploy-createx.sh preflight   # 只读检查
 ./scripts/deploy-createx.sh deploy      # 本地构建并部署
+./scripts/deploy-createx.sh web         # 只构建并切换 Web 端
+./scripts/deploy-createx.sh webcheck    # Web 单端发布的只读前置检查
 ./scripts/deploy-createx.sh verify
 ```
 
@@ -46,6 +48,12 @@
 ./scripts/deploy-createx.sh resources   # 移除旧版 Createx 配额，仅重启 Createx
 ssh auro 'sudo journalctl -u createx-api -u createx-web -n 100 --no-pager'
 ```
+
+### Web 单端发布
+
+`./scripts/deploy-createx.sh web` 只本地构建 Next standalone（含 Linux ARM64 sharp 原生依赖），上传后在服务器把当前版本的 API 二进制与迁移原样复制进新 release，切换 `current` 并只重启 `createx-web`。不执行数据库备份与迁移，不重启 API，不改动 systemd unit 与 Nginx。首次部署必须先执行完整 `deploy`；`webcheck` 可在构建前只读确认当前版本存在。
+
+Web 单端 release ID 以 `-web` 结尾，manifest 额外记录 `web_commit=`，`commit=` 仍为运行中 API 的提交，`verify` 的 `/health` 校验因此不变；对 web-only 版本，API 进程目录放宽为任意历史 release。API 崩溃自愈或后续完整部署时仍从 `current` 加载同一二进制。静态资源按内容哈希增量写入 `/var/lib/createx/static`，旧页面引用的 chunk 保留。激活失败只回退 Web；`rollback` 仍整体回退并重启两个服务。后端代码或迁移有变更时不要使用该命令。
 
 ## 内部访问与正式域名
 

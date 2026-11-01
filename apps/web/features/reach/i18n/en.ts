@@ -41,12 +41,8 @@ export const worldCopy: WorldDict = {
     ],
     "names": previewNames.en
   },
-    eyebrow: "An evolving world",
     claim: "The world is already running.",
-    sub: "Build a weapon, send in a character, and see how long it lasts. Nobody steers it. Every minute the world settles on its own \u2014 watching is optional.",
-    primaryCta: "Bring something in",
-    secondaryCta: "Just watch",
-    note: "Watch in your browser. No account needed.",
+    sub: "Create a character or weapon, and see how long it lasts.",
     clock: {
       label: "BEAT",
       season: "SEASON",

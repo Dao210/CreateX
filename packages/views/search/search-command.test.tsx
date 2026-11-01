@@ -11,6 +11,7 @@ const state = vi.hoisted(() => ({
   queries: [] as { queryKey: readonly unknown[]; enabled?: boolean }[],
   members: [] as { user_id: string; name: string; email: string; role: string; avatar_url: null }[],
 }));
+vi.mock("@auro/core/admin", () => ({ isGameId: (key: string) => ["siege", "life", "tanks"].includes(key), useWorldGames: () => ({ data: { games: ["siege", "life", "tanks"].map(gameId => ({ gameId, available: true, visible: true })) } }) }));
 vi.mock("@auro/core/hooks", () => ({ useWorkspaceId: () => "ws-test" }));
 vi.mock("@auro/core/paths", async (original) => ({ ...(await original<typeof import("@auro/core/paths")>()), useWorkspacePaths: () => paths.workspace("acme") }));
 vi.mock("../navigation", async (original) => ({ ...(await original<typeof import("../navigation")>()), useIntentNavigate: () => state.navigate }));

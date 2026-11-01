@@ -14,7 +14,6 @@ import {
 import { useWorkspaceId } from "@auro/core/hooks";
 import type { Agent } from "@auro/core/types";
 import { agentListOptions } from "@auro/core/workspace/queries";
-import { projectListOptions } from "@auro/core/projects/queries";
 import {
   dashboardKeys,
   dashboardUsageDailyOptions,
@@ -57,13 +56,8 @@ import {
   isSyntheticAgentRow,
   mergeAgentDashboardRows,
 } from "../utils";
-import {
-  ALL_PROJECTS,
-  DurationNumberFlow,
-  dimsForDays,
-  type TimeRange,
-} from "./dashboard-shared";
-import { ProjectFilter, TimeRangeFilter } from "./dashboard-filters";
+import { DurationNumberFlow, dimsForDays, type TimeRange } from "./dashboard-shared";
+import { TimeRangeFilter } from "./dashboard-filters";
 import { UsageTrendCard } from "./usage-trend-card";
 import { Leaderboard } from "./leaderboard";
 import { ErrorsTab } from "./errors-tab";
@@ -154,7 +148,6 @@ export function DashboardPage() {
   const navigation = useNavigation();
   const locales = i18n.resolvedLanguage ?? i18n.language;
   const [days, setDays] = useState<TimeRange>(30);
-  const [projectValue, setProjectValue] = useState<string>(ALL_PROJECTS);
 
   // The tab lives in the URL because the Errors view is the half of this page
   // people paste at each other ("this agent failed 54 times, see for
@@ -174,20 +167,10 @@ export function DashboardPage() {
   // The user can save model prices from the runtimes page; re-render when
   // they do so the dashboard reflects the new rates.
   useCustomPricingStore((s) => s.pricings);
-
-  const { data: projects = [] } = useQuery(projectListOptions(wsId));
   const agentsQuery = useQuery(agentListOptions(wsId));
   const agents = agentsQuery.data ?? EMPTY_AGENTS;
+  const projectId = null;
 
-  // Validate the picked project against the current workspace's list. A
-  // stale UUID — left over from a project that's been deleted, or from the
-  // previous workspace after a switch — would silently filter every query to
-  // empty rows while the header still reads "All projects". Derive the
-  // effective filter so the API call matches the user-visible selection.
-  const projectId = useMemo(() => {
-    if (projectValue === ALL_PROJECTS) return null;
-    return projects.some((p) => p.id === projectValue) ? projectValue : null;
-  }, [projectValue, projects]);
 
   // The weekly charts paint `ceil(days / 7)` trailing calendar weeks anchored
   // at today-in-UTC. In the worst case (today = Sunday) the leftmost Monday
@@ -515,11 +498,7 @@ export function DashboardPage() {
           </TabsList>
           <div className="flex shrink-0 items-center gap-2">
             <TimeRangeFilter days={days} onChange={setDays} />
-            <ProjectFilter
-              projects={projects}
-              projectValue={projectValue}
-              onProjectChange={setProjectValue}
-            />
+            
           </div>
         </div>
       </div>

@@ -13,7 +13,7 @@ import { create } from "zustand";
  * dispatch target. Modeling them as application state removes all three.
  */
 export type WindowOverlay =
-  | { type: "admin" }
+  | { type: "admin"; module?: "games" | "mcp" }
   | { type: "new-workspace" }
   | { type: "invite"; invitationId: string }
   | { type: "invitations" }

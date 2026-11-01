@@ -11,11 +11,11 @@ import (
 	"testing"
 	"testing/iotest"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/auro-ai/auro/server/internal/auth"
 	"github.com/auro-ai/auro/server/internal/middleware"
 	"github.com/auro-ai/auro/server/internal/testutil"
 	db "github.com/auro-ai/auro/server/pkg/db/generated"
+	"github.com/jackc/pgx/v5"
 )
 
 type googleRoundTripper func(*http.Request) (*http.Response, error)

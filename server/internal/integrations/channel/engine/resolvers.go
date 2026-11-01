@@ -412,13 +412,6 @@ type ResolverSet struct {
 	OriginType   string
 }
 
-// IssueCreator is the narrow subset of service.IssueService the Router needs
-// for the /issue command. Shared across platforms.
-type IssueCreator interface {
-	Create(ctx context.Context, p service.IssueCreateParams, opts service.IssueCreateOpts) (service.IssueCreateResult, error)
-	PublishAttachmentsChanged(ctx context.Context, issue db.Issue, actorID pgtype.UUID)
-}
-
 // TaskEnqueuer is the narrow subset of service.TaskService the Router needs to
 // trigger a chat run. Shared across platforms.
 type TaskEnqueuer interface {
@@ -427,7 +420,7 @@ type TaskEnqueuer interface {
 	EnqueuePreparedChannelChatTaskInTx(ctx context.Context, tx pgx.Tx, session db.ChatSession, initiatorUserID pgtype.UUID, forceFreshSession bool, contextRevision int64, prepared service.PreparedChatTaskEnqueue) (db.AgentTaskQueue, error)
 	FinalizeChatTaskEnqueue(ctx context.Context, task db.AgentTaskQueue)
 	PromoteChannelChatTasksIfMediaReady(ctx context.Context, sessionID pgtype.UUID) error
-	PromoteDeferredChannelIssueTask(ctx context.Context, taskID pgtype.UUID) error
+
 	// MemberMayInvokeAgent applies the invocation policy by agent id: the
 	// Router has the installation's agent id, not the loaded row.
 	//

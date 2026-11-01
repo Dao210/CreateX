@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/auro-ai/auro/server/internal/events"
 	"github.com/auro-ai/auro/server/pkg/protocol"
+	"github.com/google/uuid"
 )
 
 // createTestIssueLabel creates an issue-scoped label in the test workspace via

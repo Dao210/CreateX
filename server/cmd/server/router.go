@@ -18,6 +18,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 
+	"github.com/auro-ai/auro/server/internal/adminauth"
 	"github.com/auro-ai/auro/server/internal/analytics"
 	"github.com/auro-ai/auro/server/internal/auth"
 	"github.com/auro-ai/auro/server/internal/cloudruntime"
@@ -25,6 +26,7 @@ import (
 	"github.com/auro-ai/auro/server/internal/entitlement"
 	"github.com/auro-ai/auro/server/internal/events"
 	"github.com/auro-ai/auro/server/internal/featureflags"
+	"github.com/auro-ai/auro/server/internal/gameadmin"
 	"github.com/auro-ai/auro/server/internal/gameprogress"
 	"github.com/auro-ai/auro/server/internal/handler"
 	"github.com/auro-ai/auro/server/internal/integrations/channel"
@@ -108,10 +110,7 @@ var corsExposedHeaders = []string{
 
 func registerPluginActionRoutes(r chi.Router, h *handler.Handler) {
 	r.Get(publicapiv1.PathContext, h.GetPluginContext)
-	r.Get(publicapiv1.PathIssue, h.GetPluginIssue)
-	r.Patch(publicapiv1.PathIssue, h.PatchPluginIssue)
-	r.Get(publicapiv1.PathIssueComments, h.ListPluginComments)
-	r.Post(publicapiv1.PathIssueComments, h.CreatePluginComment)
+
 	r.Get(publicapiv1.PathStorageScope, h.ListPluginStorage)
 	r.Get(publicapiv1.PathStorageValue, h.GetPluginStorage)
 	r.Put(publicapiv1.PathStorageValue, h.PutPluginStorage)
@@ -269,6 +268,7 @@ type RouterOptions struct {
 	Siege        *siege.Service
 	Tanks        *tanks.Service
 	MCPAdmin     *mcpadmin.Service
+	GameAdmin    *gameadmin.Service
 	DaemonHub    *daemonws.Hub
 	DaemonWakeup service.TaskWakeupNotifier
 	FeatureFlags *featureflag.Service
@@ -430,6 +430,13 @@ func seatCapacityExecutor(cloudURL string) seatcapacity.Executor {
 // callers that only need the HTTP handler (tests, the simple
 // NewRouter shim) discard the second value.
 func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus, analyticsClient analytics.Client, rdb redis.UniversalClient, opts RouterOptions) (chi.Router, *handler.Handler) {
+	if opts.GameAdmin == nil {
+		gate, _ := adminauth.New(pool, "")
+		if opts.MCPAdmin != nil {
+			gate = opts.MCPAdmin.Gate
+		}
+		opts.GameAdmin = &gameadmin.Service{Pool: pool, Auth: gate}
+	}
 	queries := db.New(pool)
 	emailSvc := service.NewEmailService()
 	daemonHub := opts.DaemonHub
@@ -484,7 +491,6 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 	h.FeatureFlags = opts.FeatureFlags
 	h.TaskService.FeatureFlags = opts.FeatureFlags
 	h.TaskService.Metrics = opts.BusinessMetrics
-	h.IssueService.Metrics = opts.BusinessMetrics
 	entitlementClient, entitlementErr := entitlement.New(entitlement.Config{
 		BaseURL:  signupConfig.CloudURL,
 		Observer: opts.BusinessMetrics,
@@ -495,7 +501,6 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 	} else if entitlementClient.Enabled() {
 		h.Entitlements = entitlementClient
 		h.TaskService.Entitlements = entitlementClient
-		h.IssueService.Entitlements = entitlementClient
 		h.AutopilotService.Entitlements = entitlementClient
 		h.AutopilotService.QuotaMetrics = opts.BusinessMetrics
 	}
@@ -560,7 +565,7 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 	// connection of its own outside the per-installation supervisor. The Router
 	// is the single shared inbound handler injected into every Channel.
 	channelRegistry := channel.NewRegistry()
-	channelRouter := engine.NewRouter(h.IssueService, h.TaskService, queries, engine.RouterConfig{
+	channelRouter := engine.NewRouter(h.TaskService, queries, engine.RouterConfig{
 		Logger: slog.Default(), Lifecycle: h,
 	})
 	// Debounce the per-session run trigger so a burst of messages collapses
@@ -1629,8 +1634,6 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 		r.Get("/tasks/{taskId}/messages", h.ListTaskMessages)
 		r.Post("/tasks/{taskId}/cancel-ack", h.AckTaskCancelled)
 
-		r.Post("/workspaces/{workspaceId}/issues/gc-check", h.BatchIssueGCCheck)
-		r.Get("/issues/{issueId}/gc-check", h.GetIssueGCCheck)
 		r.Get("/chat-sessions/{sessionId}/gc-check", h.GetChatSessionGCCheck)
 		r.Get("/autopilot-runs/{runId}/gc-check", h.GetAutopilotRunGCCheck)
 		r.Get("/tasks/{taskId}/gc-check", h.GetTaskGCCheck)
@@ -1683,6 +1686,10 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 		r.Get("/api/me", h.GetMe)
 		if opts.MCPAdmin != nil {
 			r.Handle("/api/admin/*", (&mcpadmin.HTTP{Service: opts.MCPAdmin}).Handler())
+		}
+		if opts.GameAdmin != nil {
+			r.Handle("/api/admin/games", opts.GameAdmin.AdminHandler())
+			r.Handle("/api/admin/games/*", opts.GameAdmin.AdminHandler())
 		}
 		r.Patch("/api/me", h.UpdateMe)
 		r.Patch("/api/me/onboarding", h.PatchOnboarding)
@@ -2019,134 +2026,44 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 		r.Group(func(r chi.Router) {
 			r.Use(middleware.RequireWorkspaceMember(queries))
 
+			gameGuard := opts.GameAdmin.Guard
+			r.Get("/api/games", opts.GameAdmin.MemberHandler)
 			// Doodle Siege (docs/siege-integration-plan.md). Mounted rather than
 			// re-routed: the handler already speaks /api/siege/*, the same paths
 			// standalone mode serves. siegeOwner is the only glue — it turns the
 			// member resolved by the middleware into the game's owner.
 			if opts.Siege != nil {
-				r.Handle("/api/siege/*", siegeOwner((&siege.HTTP{Service: opts.Siege}).Handler()))
+				r.Handle("/api/siege/*", gameGuard("siege", siegeOwner((&siege.HTTP{Service: opts.Siege}).Handler())))
 			}
 			if opts.Tanks != nil {
-				r.Handle("/api/tanks/*", tankActor((&tanks.HTTP{Service: opts.Tanks, Control: opts.MCPAdmin, AllowedOrigins: allowedOrigins()}).Handler()))
+				r.Handle("/api/tanks/*", gameGuard("tanks", tankActor((&tanks.HTTP{Service: opts.Tanks, Control: opts.MCPAdmin, AllowedOrigins: allowedOrigins()}).Handler())))
 			}
 			// Personal game progress shared by Siege and Tank Defense. Content
 			// stays in each game's authoritative store; this endpoint only
 			// accumulates stars, best scores and unlocked stages.
 			progress := gameProgressActor((&gameprogress.HTTP{Store: gameprogress.New(pool)}).Handler())
+			if opts.GameAdmin != nil {
+				progress = opts.GameAdmin.ProgressGuard(progress)
+			}
 			r.Handle("/api/game-progress", progress)
 			r.Handle("/api/game-progress/*", progress)
-			r.Get("/api/life", life.Handler(queries))
+			r.Method("GET", "/api/life", gameGuard("life", life.Handler(queries)))
 
 			// Assignee frequency
 			r.Get("/api/assignee-frequency", h.GetAssigneeFrequency)
 
 			// Local search index sync for Web/Desktop (MUL-7754). Human clients
 			// only: agents search through /api/issues/search.
-			r.Route("/api/search-index", func(r chi.Router) {
-				r.Use(handler.RequireHumanActor)
-				r.Use(h.RequireLocalSearchIndex)
-				r.Get("/manifest", h.GetSearchIndexManifest)
-				r.Get("/snapshot", h.GetSearchIndexSnapshot)
-				r.Post("/changes", h.ListSearchIndexChanges)
-			})
 
 			// Issues
-			r.Route("/api/issues", func(r chi.Router) {
-				r.Get("/limit-usage", h.GetIssueLimitUsage)
-				r.Post("/table/groups", h.ListIssueTableGroups)
-				r.Post("/table/rows", h.ListIssueTableRows)
-				r.Post("/table/facets", h.ListIssueTableFacets)
-				r.Get("/search", h.SearchIssues)
-				r.Get("/child-progress", h.ChildIssueProgress)
-				r.Get("/children", h.ListChildrenByParents)
-				r.Get("/grouped", h.ListGroupedIssues)
-				r.Get("/", h.ListIssues)
-				// POST twin of GET /api/issues for oversized filter sets
-				// (agents-working ids facet) — see QueryIssues.
-				r.Post("/query", h.QueryIssues)
-				r.Post("/", h.CreateIssue)
-				r.Post("/quick-create", h.QuickCreateIssue)
-				r.Post("/preview-trigger", h.PreviewIssueTrigger)
-				r.Post("/batch-update", h.BatchUpdateIssues)
-				r.Post("/batch-delete", h.BatchDeleteIssues)
-				r.Route("/{id}", func(r chi.Router) {
-					r.Get("/", h.GetIssue)
-					r.Put("/", h.UpdateIssue)
-					r.Post("/move", h.MoveIssue)
-					r.Delete("/", h.DeleteIssue)
-					r.Post("/comments/trigger-preview", h.PreviewCommentTriggers)
-					r.Post("/comments", h.CreateComment)
-					r.Get("/comments", h.ListComments)
-					r.Get("/timeline", h.ListTimeline)
-					r.Get("/subscribers", h.ListIssueSubscribers)
-					r.Post("/subscribe", h.SubscribeToIssue)
-					r.Post("/unsubscribe", h.UnsubscribeFromIssue)
-					r.Post("/unsubscribe/subtree", h.UnsubscribeFromIssueSubtree)
-					r.Get("/wakeups", h.ListIssueWakeups)
-					r.Post("/wakeups", h.CreateIssueWakeup)
-					r.Put("/wakeups/{wakeupID}", h.CreateIssueWakeup)
-					r.Post("/wakeups/{wakeupID}/disable", h.DisableIssueWakeup)
-					r.Post("/wakeups/{wakeupID}/enable", h.EnableIssueWakeup)
-					r.Patch("/wakeups/{wakeupID}/instruction", h.EditIssueWakeupInstruction)
-					r.Delete("/wakeups/{wakeupID}", h.DeleteIssueWakeup)
-					r.Post("/wakeups/{wakeupID}/trigger", h.TriggerIssueWakeup)
-					r.Post("/wakeups/{wakeupID}/checkin", h.CheckInIssueWakeup)
-					r.Get("/wakeups/{wakeupID}/runs", h.ListIssueWakeupRuns)
-					r.Get("/system-wakeups", h.ListIssueSystemWakeups)
-					r.Put("/system-wakeups/{rule}", h.UpdateIssueSystemWakeup)
-					r.Get("/active-task", h.GetActiveTaskForIssue)
-					r.Post("/tasks/{taskId}/cancel", h.CancelTask)
-					r.With(handler.RequireHumanActor).Post("/tasks/{taskId}/supplements", h.CreateTaskSupplement)
-					r.With(handler.RequireHumanActor).Post("/tasks/{taskId}/supplements/{commentId}/retry", h.RetryTaskSupplement)
-					r.Post("/rerun", h.RerunIssue)
-					r.Post("/quick-actions/{quickActionId}/run", h.RunQuickAction)
-					r.Post("/quick-actions/{quickActionId}/render", h.RenderQuickAction)
-					r.Get("/task-runs", h.ListTasksByIssue)
-					r.Get("/usage", h.GetIssueUsage)
-					r.Post("/reactions", h.AddIssueReaction)
-					r.Delete("/reactions", h.RemoveIssueReaction)
-					r.Get("/attachments", h.ListAttachments)
-					r.Get("/children", h.ListChildIssues)
-					r.Get("/duplicates", h.ListIssueDuplicates)
-					r.Get("/labels", h.ListLabelsForIssue)
-					r.Post("/labels", h.AttachLabel)
-					r.Delete("/labels/{labelId}", h.DetachLabel)
-					r.Get("/metadata", h.ListIssueMetadata)
-					r.Put("/metadata/{key}", h.SetIssueMetadataKey)
-					r.Delete("/metadata/{key}", h.DeleteIssueMetadataKey)
-					r.Put("/properties/{propertyId}", h.SetIssueProperty)
-					r.Delete("/properties/{propertyId}", h.DeleteIssueProperty)
-					r.Get("/pull-requests", h.ListPullRequestsForIssue)
-					r.Post("/pull-requests", h.LinkIssuePullRequest)
-					r.Delete("/pull-requests/{prId}", h.UnlinkIssuePullRequest)
-					r.Put("/pr-auto-complete", h.SetIssuePRAutoComplete)
-				})
-			})
 
 			// Task messages (user-facing, not daemon auth)
 			r.Get("/api/tasks/{taskId}/messages", h.ListTaskMessagesByUser)
-			r.With(handler.RequireHumanActor).Post("/api/tasks/{taskId}/retry-source-context", h.RetrySourceContextQuickCreate)
 
 			// Issue quick actions (definitions; running one lives under
 			// /api/issues/{id}/quick-actions/{quickActionId}/run)
-			r.Route("/api/quick-actions", func(r chi.Router) {
-				r.Get("/", h.ListQuickActions)
-				r.Post("/", h.CreateQuickAction)
-				r.Route("/{id}", func(r chi.Router) {
-					r.Patch("/", h.UpdateQuickAction)
-					r.Delete("/", h.DeleteQuickAction)
-				})
-			})
 
 			// Custom issue properties (definitions; values live under /api/issues/{id}/properties)
-			r.Route("/api/properties", func(r chi.Router) {
-				r.Get("/", h.ListProperties)
-				r.Post("/", h.CreateProperty)
-				r.Route("/{id}", func(r chi.Router) {
-					r.Get("/", h.GetProperty)
-					r.Patch("/", h.UpdateProperty)
-				})
-			})
 
 			// Labels
 			r.Route("/api/labels", func(r chi.Router) {
@@ -2162,50 +2079,12 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 			// Issue status catalog (MUL-6243). Reads are open to any member —
 			// every client needs the catalog to render a status. Writes are
 			// gated to workspace owner/admin inside the handlers.
-			r.Route("/api/issue-statuses", func(r chi.Router) {
-				r.Get("/", h.ListIssueStatuses)
-				r.Post("/", h.CreateIssueStatus)
-				r.Patch("/reorder", h.ReorderIssueStatuses)
-				r.Route("/{id}", func(r chi.Router) {
-					r.Patch("/", h.UpdateIssueStatus)
-					r.Delete("/", h.ArchiveIssueStatus)
-				})
-			})
 
 			// Projects
-			r.Route("/api/projects", func(r chi.Router) {
-				r.Get("/search", h.SearchProjects)
-				r.Get("/", h.ListProjects)
-				r.Post("/", h.CreateProject)
-				r.Route("/{id}", func(r chi.Router) {
-					r.Get("/", h.GetProject)
-					r.Put("/", h.UpdateProject)
-					r.Delete("/", h.DeleteProject)
-					r.Get("/resources", h.ListProjectResources)
-					r.Post("/resources", h.CreateProjectResource)
-					r.Put("/resources/{resourceId}", h.UpdateProjectResource)
-					r.Delete("/resources/{resourceId}", h.DeleteProjectResource)
-				})
-			})
 
 			// Squads
-			r.Route("/api/squads", func(r chi.Router) {
-				r.Get("/", h.ListSquads)
-				r.Post("/", h.CreateSquad)
-				r.Route("/{id}", func(r chi.Router) {
-					r.Get("/", h.GetSquad)
-					r.Put("/", h.UpdateSquad)
-					r.Delete("/", h.DeleteSquad)
-					r.Get("/members", h.ListSquadMembers)
-					r.Get("/members/status", h.ListSquadMemberStatus)
-					r.Post("/members", h.AddSquadMember)
-					r.Delete("/members", h.RemoveSquadMember)
-					r.Patch("/members/role", h.UpdateSquadMemberRole)
-				})
-			})
 
 			// Squad leader evaluation (writes to activity_log)
-			r.Post("/api/issues/{id}/squad-evaluated", h.RecordSquadLeaderEvaluation)
 
 			// Autopilots
 			r.Route("/api/autopilots", func(r chi.Router) {
@@ -2246,15 +2125,6 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 			// Saved issue views (MUL-4796).
 			r.Get("/api/issue-view-preferences", h.GetIssueViewPreference)
 			r.Put("/api/issue-view-preferences", h.PutIssueViewPreference)
-			r.Route("/api/issue-views", func(r chi.Router) {
-				r.Get("/", h.ListIssueViews)
-				r.Post("/", h.CreateIssueView)
-				r.Route("/{id}", func(r chi.Router) {
-					r.Get("/", h.GetIssueViewByID)
-					r.Patch("/", h.UpdateIssueView)
-					r.Delete("/", h.DeleteIssueView)
-				})
-			})
 
 			// Attachments
 			r.Get("/api/attachments/{id}", h.GetAttachmentByID)
@@ -2267,22 +2137,6 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 			r.Delete("/api/attachments/{id}", h.DeleteAttachment)
 
 			// Comments
-			r.Route("/api/comments/{commentId}", func(r chi.Router) {
-				r.With(handler.RequireHumanActor).Get("/sub-issue-preview", h.PreviewCommentSubIssue)
-				r.With(handler.RequireHumanActor).Post("/sub-issues", h.CreateCommentSubIssue)
-				r.Put("/", h.UpdateComment)
-				r.Delete("/", h.DeleteComment)
-				// Same handler under a path servers from before #8296 do not
-				// route. Clients that promise "replies are kept" call this one,
-				// so a request that reaches an older server — mid-rollout, after
-				// a rollback, or self-hosted — fails instead of deleting the
-				// replies with the comment.
-				r.Delete("/keep-replies", h.DeleteComment)
-				r.Post("/resolve", h.ResolveComment)
-				r.Delete("/resolve", h.UnresolveComment)
-				r.Post("/reactions", h.AddReaction)
-				r.Delete("/reactions", h.RemoveReaction)
-			})
 
 			// Agents
 			r.Route("/api/agents", func(r chi.Router) {
@@ -2427,11 +2281,8 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 			// Workspace-wide agent task snapshot for presence derivation:
 			// every active task + each agent's most recent terminal task.
 			r.Get("/api/agent-task-snapshot", h.ListWorkspaceAgentTaskSnapshot)
-			r.Get("/api/issue-wakeup-summaries", h.ListWorkspaceWakeupSummaries)
+
 			r.Get("/api/issue-wakeups", h.ListWorkspaceWakeups)
-			r.Get("/api/issue-wakeup-paused", h.ListPausedWakeups)
-			r.Get("/api/system-wakeups", h.ListWorkspaceSystemWakeups)
-			r.Put("/api/system-wakeups/{rule}", h.UpdateWorkspaceSystemWakeup)
 
 			// Independent workspace-level list backing the issues-header
 			// "agents working" chip and its assignee-id Table filter.

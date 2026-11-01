@@ -10,13 +10,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-chi/chi/v5"
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgtype"
 	composio "github.com/auro-ai/auro/server/internal/integrations/composio"
 	"github.com/auro-ai/auro/server/internal/util"
 	sdk "github.com/auro-ai/auro/server/pkg/composio"
 	db "github.com/auro-ai/auro/server/pkg/db/generated"
+	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const composioTestUserID = "22222222-2222-2222-2222-222222222222"

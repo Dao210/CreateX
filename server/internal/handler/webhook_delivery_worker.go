@@ -9,9 +9,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/auro-ai/auro/server/internal/service"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
-	"github.com/auro-ai/auro/server/internal/service"
 
 	db "github.com/auro-ai/auro/server/pkg/db/generated"
 )

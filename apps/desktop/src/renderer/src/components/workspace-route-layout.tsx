@@ -10,9 +10,7 @@ import { getCurrentSlug, setCurrentWorkspace } from "@auro/core/platform";
 import { isWorkspaceDeletePending } from "@auro/core/workspace/pending-delete";
 import { useAuthStore } from "@auro/core/auth";
 import { useWorkspaceSeen } from "@auro/views/workspace/use-workspace-seen";
-import { WelcomeAfterOnboarding } from "@auro/views/workspace/welcome-after-onboarding";
 import { WorkspacePresencePrefetch } from "@auro/views/layout";
-import { SourceBackfillModal } from "@auro/views/onboarding";
 import { useTabStore } from "@/stores/tab-store";
 import { useWindowOverlayStore } from "@/stores/window-overlay-store";
 
@@ -186,14 +184,13 @@ export function WorkspaceRouteLayout() {
        *  Once the overlay closes the hook re-evaluates and pops the
        *  Modal — unless the store signal has already been consumed, in
        *  which case the hook renders null. */}
-      {!overlayActive && <WelcomeAfterOnboarding />}
       {/* Source-attribution backfill: same Dialog the web shell mounts
        *  inside DashboardLayout. Desktop's WorkspaceRouteLayout doesn't
        *  wrap DashboardLayout, so the modal has to be wired in directly
        *  here. Same overlay-suppression rule as WelcomeAfterOnboarding —
        *  a portal-rendered Dialog at z-50 would otherwise sit above an
        *  active pre-workspace overlay. */}
-      {!overlayActive && <SourceBackfillModal />}
+      {!overlayActive &&}
     </WorkspaceSlugProvider>
   );
 }

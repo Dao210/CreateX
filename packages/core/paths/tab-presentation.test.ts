@@ -93,36 +93,6 @@ describe("resolveTabPresentation — direct resources", () => {
 });
 
 describe("resolveTabPresentation — containers keep their icon, title tracks selection", () => {
-  it("inbox: icon is always Inbox; title is the selected item or Inbox", () => {
-    expect(present("/acme/inbox")).toEqual({
-      visual: { kind: "icon", icon: "Inbox" },
-      title: { kind: "nav", navKey: "inbox" },
-    });
-    // Selected but not yet resolved → still Inbox, never a stale title.
-    expect(present("/acme/inbox?issue=MUL-9")).toEqual({
-      visual: { kind: "icon", icon: "Inbox" },
-      title: { kind: "nav", navKey: "inbox" },
-    });
-    // Selected issue → Inbox icon + issue title (distinct from a direct issue,
-    // which would show a status icon).
-    expect(
-      present("/acme/inbox?issue=MUL-9", {
-        inboxSelection: { kind: "issue", identifier: "MUL-9", title: "Bug" },
-      }),
-    ).toEqual({
-      visual: { kind: "icon", icon: "Inbox" },
-      title: { kind: "text", text: "MUL-9: Bug" },
-    });
-    // Selected non-issue notification → its display title.
-    expect(
-      present("/acme/inbox?issue=n1", {
-        inboxSelection: { kind: "item", title: "Quick create failed" },
-      }),
-    ).toEqual({
-      visual: { kind: "icon", icon: "Inbox" },
-      title: { kind: "text", text: "Quick create failed" },
-    });
-  });
 
   it("chat: icon is always MessageSquare; title is the session or Chat", () => {
     expect(present("/acme/chat")).toEqual({

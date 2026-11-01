@@ -12,8 +12,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/auro-ai/auro/server/internal/testutil"
+	"github.com/go-chi/chi/v5"
 )
 
 func vcsHandlerRequest(method, path string, body any, connectionID string) *http.Request {

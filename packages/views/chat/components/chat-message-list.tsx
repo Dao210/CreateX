@@ -32,7 +32,7 @@ import { isTaskMessageTaskId, taskMessagesOptions } from "@auro/core/chat/querie
 import { RichContent } from "../../rich-content";
 import { RichContentScrollRootProvider } from "../../rich-content/scroll-root";
 import { copyText } from "@auro/ui/lib/clipboard";
-import { AttachmentList } from "../../issues/components/comment-card";
+import { AttachmentList } from "../../attachments/attachment-list";
 import { PreviewSequenceProvider, collectPreviewSequence } from "../../editor";
 import type { AgentAvailability } from "@auro/core/agents";
 import { resolveFailureReasonKey } from "@auro/core/agents";

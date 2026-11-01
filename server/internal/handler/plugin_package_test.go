@@ -13,9 +13,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/auro-ai/auro/server/internal/service"
 	"github.com/auro-ai/auro/server/pkg/plugincontract"
+	"github.com/go-chi/chi/v5"
 )
 
 // Publishing, and the guarantee it exists for.

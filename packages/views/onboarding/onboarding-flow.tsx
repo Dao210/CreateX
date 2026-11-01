@@ -412,7 +412,6 @@ function OnboardingStepFlow({
 export type OnboardingMode = "first_run" | "new_workspace";
 
 export type OnboardingDestination =
-  | { kind: "issue"; issueId: string }
   | {
       kind: "chat";
       sessionId: string;

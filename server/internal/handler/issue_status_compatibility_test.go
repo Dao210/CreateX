@@ -7,10 +7,10 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/google/uuid"
 	"github.com/auro-ai/auro/server/internal/issuestatus"
 	"github.com/auro-ai/auro/server/internal/testutil"
 	db "github.com/auro-ai/auro/server/pkg/db/generated"
+	"github.com/google/uuid"
 )
 
 // These are the installed Web/Desktop consumer's literal accepted buckets,

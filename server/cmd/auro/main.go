@@ -45,16 +45,16 @@ func init() {
 	rootCmd.PersistentFlags().BoolVar(&debugFlag, "debug", false, "Print full error details on failure (env: AURO_DEBUG)")
 
 	// Core commands
-	issueCmd.GroupID = groupCore
-	projectCmd.GroupID = groupCore
+	
+	
 	labelCmd.GroupID = groupCore
-	propertyCmd.GroupID = groupCore
+	
 	agentCmd.GroupID = groupCore
 	autopilotCmd.GroupID = groupCore
 	workspaceCmd.GroupID = groupCore
 	repoCmd.GroupID = groupCore
 	skillCmd.GroupID = groupCore
-	squadCmd.GroupID = groupCore
+	
 	chatCmd.GroupID = groupCore
 	tanksCmd.GroupID = groupCore
 
@@ -72,16 +72,16 @@ func init() {
 	updateCmd.GroupID = groupAdditional
 	versionCmd.GroupID = groupAdditional
 
-	rootCmd.AddCommand(issueCmd)
-	rootCmd.AddCommand(projectCmd)
+	
+	
 	rootCmd.AddCommand(labelCmd)
-	rootCmd.AddCommand(propertyCmd)
+	
 	rootCmd.AddCommand(agentCmd)
 	rootCmd.AddCommand(autopilotCmd)
 	rootCmd.AddCommand(workspaceCmd)
 	rootCmd.AddCommand(repoCmd)
 	rootCmd.AddCommand(skillCmd)
-	rootCmd.AddCommand(squadCmd)
+	
 	rootCmd.AddCommand(chatCmd)
 	rootCmd.AddCommand(tanksCmd)
 	rootCmd.AddCommand(daemonCmd)

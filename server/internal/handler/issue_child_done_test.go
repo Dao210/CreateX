@@ -10,9 +10,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/auro-ai/auro/server/internal/service"
 	"github.com/auro-ai/auro/server/internal/testutil"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // childDoneFixture creates a parent + child pair so the child_done system rule

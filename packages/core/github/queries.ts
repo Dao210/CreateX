@@ -31,10 +31,3 @@ export const githubInstallationRepositoriesOptions = (
     getNextPageParam: (lastPage) => lastPage.next_page ?? undefined,
     enabled: !!wsId && !!installationId,
   });
-
-export const issuePullRequestsOptions = (issueId: string) =>
-  queryOptions({
-    queryKey: githubKeys.pullRequests(issueId),
-    queryFn: () => api.listIssuePullRequests(issueId),
-    enabled: !!issueId,
-  });

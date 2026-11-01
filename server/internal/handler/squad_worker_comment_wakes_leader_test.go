@@ -6,9 +6,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/auro-ai/auro/server/internal/testutil"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
-	"github.com/auro-ai/auro/server/internal/testutil"
 )
 
 func TestGuestSquadWorkerReplayRequiresPlannedInput_GH8301(t *testing.T) {

@@ -28,6 +28,9 @@ owned_file "$TEMP/ours"
 ln -s "$TEMP/ours" "$TEMP/symlink"
 reject owned_file "$TEMP/symlink"
 valid_release 20261028T120000Z-0123456789ab-dirty
+valid_release 20261028T120000Z-0123456789ab-web
+valid_release 20261028T120000Z-0123456789ab-dirty-web
+reject valid_release 20261028T120000Z-0123456789ab-api
 reject valid_release '../../agentpage'
 
 render_nginx > "$TEMP/internal"
@@ -61,6 +64,38 @@ reject activate "$BASE/releases/new"
 rm "$BASE/current"
 reject activate "$BASE/releases/new"
 [[ ! -L "$BASE/current" ]]
+
+# A web-only update requires a current full release to carry the API binaries.
+BASE="$TEMP/web-only-test"
+mkdir -p "$BASE/releases"
+reject current_release
+mkdir -p "$BASE/releases/old"
+printf 'release=old\ncommit=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n' > "$BASE/releases/old/manifest"
+ln -s "$BASE/releases/old" "$BASE/current"
+[[ "$(current_release)" = "$BASE/releases/old" ]]
+
+# A failed web activation restores the pointer without restarting the API.
+mkdir -p "$BASE/releases/new"
+systemctl() {
+  [[ "$1 $2" = 'restart createx-web' ]] || { echo "Unexpected systemctl call: $*" >&2; exit 1; }
+  [[ "$(readlink "$BASE/current")" = "$BASE/releases/new" ]] && return 1
+  return 0
+}
+wait_ready_web() { [[ "$(readlink "$BASE/current")" != "$BASE/releases/new" ]]; }
+reject activate_web "$BASE/releases/new"
+[[ "$(readlink "$BASE/current")" = "$BASE/releases/old" ]]
+[[ ! -L "$BASE/previous" ]]
+
+# A successful web activation switches the pointer, marks previous, and only
+# ever restarts createx-web.
+systemctl() {
+  [[ "$1 $2" = 'restart createx-web' ]] || { echo "Unexpected systemctl call: $*" >&2; exit 1; }
+  return 0
+}
+wait_ready_web() { :; }
+activate_web "$BASE/releases/new"
+[[ "$(readlink "$BASE/current")" = "$BASE/releases/new" ]]
+[[ "$(readlink "$BASE/previous")" = "$BASE/releases/old" ]]
 
 # Successful command completion must not hide a changed neighbour or a failed
 # neighbour health check; neither case restarts the other application.

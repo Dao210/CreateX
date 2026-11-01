@@ -9,8 +9,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/auro-ai/auro/server/internal/auth"
+	"github.com/go-chi/chi/v5"
 )
 
 // Attachment download capabilities — MUL-5292.

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"github.com/auro-ai/auro/server/internal/gameadmin"
 	"io"
 	"mime"
 	"net/http"
@@ -83,11 +84,11 @@ func (h *HTTP) get(w http.ResponseWriter, r *http.Request) {
 		Siege       *siegeView `json:"siege"`
 		Tanks       *tankView  `json:"tanks"`
 	}{WorkspaceID: actor.WorkspaceID}
-	if stored, ok := rows[GameSiege]; ok {
+	if stored, ok := rows[GameSiege]; ok && gameadmin.ProgressAllowed(r.Context(), GameSiege) {
 		view := viewSiege(stored)
 		response.Siege = &view
 	}
-	if stored, ok := rows[GameTanks]; ok {
+	if stored, ok := rows[GameTanks]; ok && gameadmin.ProgressAllowed(r.Context(), GameTanks) {
 		view := viewTanks(stored)
 		response.Tanks = &view
 	}

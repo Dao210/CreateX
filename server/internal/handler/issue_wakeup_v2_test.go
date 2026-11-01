@@ -8,9 +8,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/auro-ai/auro/server/internal/service"
 	"github.com/auro-ai/auro/server/internal/testutil"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // A status write outside the HTTP handlers still records the child's change

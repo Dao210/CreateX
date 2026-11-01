@@ -678,12 +678,37 @@ type Feedback struct {
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 }
 
+type GamePolicy struct {
+	GameID         string             `json:"game_id"`
+	Scope          string             `json:"scope"`
+	DefaultVisible bool               `json:"default_visible"`
+	Revision       int32              `json:"revision"`
+	UpdatedBy      pgtype.UUID        `json:"updated_by"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+}
+
+type GamePolicyAudit struct {
+	GameID     string             `json:"game_id"`
+	Revision   int32              `json:"revision"`
+	ActorID    pgtype.UUID        `json:"actor_id"`
+	Previous   []byte             `json:"previous"`
+	Current    []byte             `json:"current"`
+	OccurredAt pgtype.Timestamptz `json:"occurred_at"`
+}
+
 type GameProgress struct {
 	WorkspaceID pgtype.UUID        `json:"workspace_id"`
 	UserID      pgtype.UUID        `json:"user_id"`
 	Game        string             `json:"game"`
 	Payload     []byte             `json:"payload"`
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+}
+
+type GameWorldOverride struct {
+	GameID      string      `json:"game_id"`
+	WorkspaceID pgtype.UUID `json:"workspace_id"`
+	Access      string      `json:"access"`
+	Visibility  string      `json:"visibility"`
 }
 
 type GithubInstallation struct {

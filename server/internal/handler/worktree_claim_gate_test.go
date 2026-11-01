@@ -11,9 +11,9 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/jackc/pgx/v5/pgtype"
 	db "github.com/auro-ai/auro/server/pkg/db/generated"
 	"github.com/auro-ai/auro/server/pkg/protocol"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 func localDirRef(t *testing.T, path, daemonID, mode string) json.RawMessage {

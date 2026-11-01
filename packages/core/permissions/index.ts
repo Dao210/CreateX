@@ -19,3 +19,5 @@ export {
   useSkillPermissions,
 } from "./use-resource-permissions";
 export { useCurrentMember } from "./use-current-member";
+
+export { canChooseChatAgent } from "./chat-agent";

@@ -13,7 +13,7 @@ SET enabled = EXCLUDED.enabled, disabled_tools = EXCLUDED.disabled_tools,
 WHERE mcp_service_policy.revision = @expected_revision::integer
 RETURNING *;
 
--- name: LockMCPAdminUser :one
+-- name: LockGlobalAdminUser :one
 SELECT email FROM "user" WHERE id = $1 FOR SHARE;
 
 -- name: InsertMCPActivity :exec

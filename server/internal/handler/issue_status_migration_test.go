@@ -5,9 +5,9 @@ import (
 	"os"
 	"testing"
 
+	"github.com/auro-ai/auro/server/internal/issuestatus"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/auro-ai/auro/server/internal/issuestatus"
 )
 
 // Exercise the actual migration against the previous catalog schema. The

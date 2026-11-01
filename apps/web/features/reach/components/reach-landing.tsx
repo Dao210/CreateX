@@ -8,6 +8,7 @@ import { HeroHeadline } from "./hero-headline";
 import { worldCopyForLocale } from "../i18n";
 import type { SupportedLocale } from "@auro/core/i18n";
 import { SITE_URL, brandForLocale } from "@/lib/brand";
+import { localizedHref } from "@/lib/marketing-urls";
 
 const ACCENT = "#C8622D";
 
@@ -17,33 +18,37 @@ export function ReachLanding({ locale }: { locale: SupportedLocale }) {
 
   return (
     <main className="min-h-full bg-[#0A0B0E] text-[#E8E1D5] selection:bg-[#C8622D]/30">
-      <section id="world" className="relative">
+      <section className="relative">
         <MarketingHeader locale={locale} />
 
         <div className="mx-auto max-w-[1320px] px-4 pb-10 pt-[76px] sm:px-6 lg:px-8 lg:pb-8">
           {/* The claim sits above the world, so a visitor reads what this is
               before deciding whether the map is worth their attention. */}
           <div className="pt-7 sm:pt-9 lg:pt-11">
-            <HeroHeadline copy={copy.hero} slogan={brand.slogan} />
-            <p className="mt-4 text-title-sm font-medium text-[#dc895e]">{brand.genre}</p>
+            <p className="text-[13px] font-medium text-[#dc895e]">{brand.genre}</p>
+            <div className="mt-3">
+              <HeroHeadline copy={copy.hero} slogan={brand.slogan} />
+            </div>
             <p className="mt-4 max-w-[600px] text-balance text-[15.5px] leading-[1.65] text-white/58 sm:text-[16px]">
-              {brand.intro}
+              <span className="font-medium text-[#E8E1D5]">{copy.claim}</span>{" "}
+              {copy.sub}
             </p>
             <div className="mt-6 flex flex-wrap items-center gap-x-3 gap-y-3">
-              <Link href="#create" className={heroButtonClassName("solid")}>
-                {brand.play}
+              <Link href="#world" className={heroButtonClassName("solid")}>
+                {brand.world}
                 <ArrowRight className="size-4" aria-hidden />
               </Link>
-              <Link href="#world" className={heroButtonClassName("ghost")}>
-                {brand.world}
+              <Link href={localizedHref("/login", locale)} className={heroButtonClassName("ghost")}>
+                {brand.play}
               </Link>
-              <span className="text-[13px] text-white/48">{copy.note}</span>
             </div>
           </div>
 
-          <WorldPreview locale={locale} copy={{ clock: copy.clock, feed: copy.feed, map: copy.map, explorer: copy.explorer }}>
-            <WorldPoster label={copy.map.label} />
-          </WorldPreview>
+          <div id="world" className="scroll-mt-6">
+            <WorldPreview locale={locale} copy={{ clock: copy.clock, feed: copy.feed, map: copy.map, explorer: copy.explorer }}>
+              <WorldPoster label={copy.map.label} />
+            </WorldPreview>
+          </div>
 
         </div>
       </section>
@@ -84,7 +89,7 @@ export function ReachLanding({ locale }: { locale: SupportedLocale }) {
         </div>
       </section>
 
-      <Closing line={brand.value} cta={brand.play} />
+      <Closing line={brand.value} cta={brand.play} href={localizedHref("/login", locale)} />
 
       <MarketingFooter locale={locale} />
     </main>
@@ -261,14 +266,14 @@ function ConnectSection({
   );
 }
 
-function Closing({ line, cta }: { line: string; cta: string }) {
+function Closing({ line, cta, href }: { line: string; cta: string; href: string }) {
   return (
     <section className="border-t border-white/8">
       <div className="mx-auto flex max-w-[1320px] flex-col items-start gap-8 px-4 py-20 sm:px-6 sm:py-24 lg:flex-row lg:items-end lg:justify-between lg:px-8">
         <h2 className="max-w-[14ch] text-[2rem] font-semibold leading-[1.1] tracking-[-0.03em] text-[#E8E1D5] sm:text-[2.6rem]">
           {line}
         </h2>
-        <Link href="#create" className={heroButtonClassName("solid")}>
+        <Link href={href} className={heroButtonClassName("solid")}>
           {cta}
           <ArrowRight className="size-4" aria-hidden />
         </Link>

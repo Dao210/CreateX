@@ -10,7 +10,6 @@ import {
   useHasOnboarded,
 } from "@auro/core/paths";
 import { useWorkspaceList } from "@auro/core/workspace";
-import { useRecentIssuesStore } from "@auro/core/issues/stores/recent-issues-store";
 import { useNavigation } from "../navigation";
 
 /**
@@ -63,16 +62,6 @@ export function useDashboardGuard() {
   useEffect(() => {
     useNavigationStore.getState().onPathChange(pathname);
   }, [pathname]);
-
-  // Drop recent-issues buckets for workspaces the user no longer belongs to.
-  // Runs once the workspace list resolves, and again whenever membership
-  // changes (workspace deleted, user kicked, user left).
-  useEffect(() => {
-    if (!workspaceListReady) return;
-    useRecentIssuesStore
-      .getState()
-      .pruneWorkspaces(workspaces.map((w) => w.id));
-  }, [workspaceListReady, workspaces]);
 
   return { user, isLoading, workspace };
 }

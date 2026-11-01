@@ -784,7 +784,7 @@ export const useTabStore = create<TabStore>()(
               });
               return;
             }
-            const tab = makeSession(clean, "Issues");
+            const tab = makeSession(clean, "My creations");
             const nextGroup = withBrowsingVisit(
               reconcileGroup(
                 existing,

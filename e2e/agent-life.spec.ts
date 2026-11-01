@@ -59,7 +59,8 @@ test("headless simulation, real snapshot viewer, workspace isolation and worker 
   const denied = await request.get("/api/life", { headers: { Authorization: `Bearer ${outsider.getToken()}`, "X-Workspace-ID": world.id } });
   expect(denied.status()).toBe(404);
   const empty = await request.get("/api/life", { headers: { Authorization: `Bearer ${outsider.getToken()}`, "X-Workspace-ID": other.id } });
-  expect((await empty.json()).world).toBeNull();
+  expect(empty.status()).toBe(403);
+  expect((await empty.json()).code).toBe("game_unavailable");
   const snapshot = await request.get("/api/life", { headers });
   expect(snapshot.status()).toBe(200); expect((await snapshot.json()).agents).toHaveLength(20);
   await page.context().addCookies([{ name: "auro-locale", value: "zh-Hans", url: baseURL! }]);

@@ -101,12 +101,6 @@ func runtimeLookupResult(err error) string {
 	}
 }
 
-// runtimeLookup returns the issue-sourced lookup, bound to the caller's
-// connection so a read inside the create transaction stays inside it.
-func (s *IssueService) runtimeLookup(q *db.Queries) RuntimeLookup {
-	return RuntimeLookup{Queries: q, Metrics: s.Metrics, Source: obsmetrics.RuntimeLookupSourceIssue}
-}
-
 // runtimeLookup returns the task-sourced lookup for analytics context and the
 // usage provider backfill.
 func (s *TaskService) runtimeLookup() RuntimeLookup {

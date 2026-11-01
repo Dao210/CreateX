@@ -7,7 +7,7 @@ import { Label } from "@auro/ui/components/ui/label";
 import {
   PickerItem,
   PropertyPicker,
-} from "../../../issues/components/pickers";
+} from "../../../common/selection-picker";
 import { CHIP_CLASS } from "./chip";
 import { useT } from "../../../i18n";
 

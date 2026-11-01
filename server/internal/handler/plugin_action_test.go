@@ -11,8 +11,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/go-chi/chi/v5"
 	publicapiv1 "github.com/auro-ai/auro/server/pkg/publicapi/v1"
+	"github.com/go-chi/chi/v5"
 )
 
 // These are the Action API's security properties, not its happy path. Each one

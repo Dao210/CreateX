@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/auro-ai/auro/server/internal/testutil"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // Write protection for an issue in Triage (MUL-7189 §2.2).

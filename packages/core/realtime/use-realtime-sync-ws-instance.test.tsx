@@ -1,24 +1,16 @@
 /**
  * @vitest-environment jsdom
  */
-import { QueryClient, QueryClientProvider, QueryObserver, type InvalidateQueryFilters, type QueryKey } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, QueryObserver } from "@tanstack/react-query";
 import { cleanup, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import type { WSClient } from "../api/ws-client";
-import { defaultStorage } from "../platform/storage";
 import { issueKeys } from "../issues/queries";
 import { chatKeys } from "../chat/queries";
 import { runtimeKeys } from "../runtimes/queries";
 import { workspaceWorkingAgentsKeys } from "../agents/queries";
 import { workspaceKeys } from "../workspace/queries";
-import { issueStatusKeys } from "../issue-statuses/queries";
-import {
-  markWorkspaceDeletePending,
-  unmarkWorkspaceDeletePending,
-} from "../workspace/pending-delete";
-import { setApiInstance } from "../api";
-import type { ApiClient } from "../api/client";
 import type { IssueTableQuerySpec } from "../types";
 import { getCurrentWsId } from "../platform/workspace-storage";
 import { forgetLocalSearchIndex } from "../search-index/instance";
@@ -151,28 +143,6 @@ describe("useRealtimeSync — ws instance change", () => {
     expect(invalidateSpy).not.toHaveBeenCalled();
   });
 
-  it("invalidates chat, pins, labels, and invitations queries on ws instance change", () => {
-    const ws1 = createMockWs();
-    const { rerender } = renderHook(
-      ({ ws }) => useRealtimeSync(ws, stores),
-      { initialProps: { ws: ws1 as WSClient | null }, wrapper: createWrapper(qc) },
-    );
-
-    invalidateSpy.mockClear();
-    rerender({ ws: null });
-
-    const ws2 = createMockWs();
-    rerender({ ws: ws2 });
-
-    const calls = invalidateSpy.mock.calls.map((call: [{ queryKey?: unknown }, ...unknown[]]) => call[0].queryKey);
-    expect(calls).toContainEqual(["chat", "ws-1"]);
-    expect(calls).toContainEqual(["labels", "ws-1"]);
-    expect(calls).toContainEqual(["workspaces", "ws-1", "invitations"]);
-    // A catalog edit made while this client was disconnected is otherwise
-    // invisible for the query's whole 5-minute staleTime.
-    expect(calls).toContainEqual(issueStatusKeys.all("ws-1"));
-  });
-
   it("invalidates agent projections when a daemon changes liveness", () => {
     vi.useFakeTimers();
     try {
@@ -260,51 +230,6 @@ describe("useRealtimeSync — ws instance change", () => {
     expect(calls).toContainEqual(chatKeys.messagesAll());
     expect(calls).toContainEqual(chatKeys.messagesPageAll());
     expect(calls).toContainEqual(chatKeys.pendingTaskAll());
-  });
-
-  it("invalidates one issue attachment cache after detached channel media binds", () => {
-    const ws = createMockWs();
-    renderHook(() => useRealtimeSync(ws, stores), {
-      wrapper: createWrapper(qc),
-    });
-    const attachmentChanged = vi
-      .mocked(ws.on)
-      .mock.calls.find(([event]) => event === "issue_attachments:changed")?.[1];
-    expect(attachmentChanged).toBeDefined();
-
-    (attachmentChanged as (payload: unknown) => void)({ issue_id: "issue-1" });
-
-    expect(invalidateSpy).toHaveBeenCalledWith({
-      queryKey: issueKeys.attachments("issue-1"),
-    });
-  });
-  it("refetches the status catalog after an admin changes it elsewhere", async () => {
-    const ws = createMockWs();
-    renderHook(() => useRealtimeSync(ws, stores), {
-      wrapper: createWrapper(qc),
-    });
-    const onAny = vi.mocked(ws.onAny).mock.calls[0]?.[0];
-    expect(onAny).toBeDefined();
-
-    onAny!({ type: "issue_status:changed", payload: { action: "created" } } as never);
-    await new Promise((resolve) => setTimeout(resolve, 120));
-
-    expect(invalidateSpy).toHaveBeenCalledWith({
-      queryKey: issueStatusKeys.all("ws-1"),
-    });
-    const groupRefresh = invalidateSpy.mock.calls.find(([options]: [InvalidateQueryFilters?]) => options?.predicate);
-    expect(groupRefresh?.[0]?.queryKey).toEqual([...issueKeys.tableAll("ws-1"), "groups"]);
-    const predicate = groupRefresh![0]!.predicate!;
-    expect(predicate({ queryKey: ["issues", "ws-1", "table-query", "groups", {}, { kind: "status" }] } as never)).toBe(true);
-    expect(predicate({ queryKey: ["issues", "ws-1", "table-query", "groups", {}, { kind: "assignee" }] } as never)).toBe(false);
-    // Deliberately NOT the issue caches. A row stores the status KEY; its name,
-    // color and category are resolved from the catalog at render time, so no
-    // cached issue field can go stale here. Dragging every board and list along
-    // would turn one admin rename into a workspace-wide refetch storm on every
-    // connected client. (MUL-6458)
-    expect(invalidateSpy).not.toHaveBeenCalledWith({
-      queryKey: issueKeys.all("ws-1"),
-    });
   });
 
   it("ignores removed DingTalk group-route events", () => {
@@ -412,29 +337,6 @@ describe("useRealtimeSync — Table server membership invalidation", () => {
     return { ...hook, emit: (type: string) => onAny({ type, payload: {} } as never) };
   }
 
-  it("only invalidates working facets and queries whose membership depends on working state", async () => {
-    const { emit } = mountRealtime();
-    const untouched: QueryKey[] = [workingFacet("ws-2")];
-    const affected: QueryKey[] = [workingFacet(), workspaceWorkingAgentsKeys.list("ws-1", "issue")];
-    // Test both server membership forms, including an explicit empty id set,
-    // across rows, descriptors and ordinary facets such as status counts.
-    const filterCases: IssueTableQuerySpec["filters"][] = [{}, { working_only: false }, { working_only: true }, { working_issue_ids: [] }, { working_issue_ids: ["i1"] }];
-    for (const filters of filterCases) {
-      const query = { ...spec, filters };
-      const keys = [
-        issueKeys.tableRows("ws-1", query, { kind: "none" }, null, false, null),
-        issueKeys.tableGroups("ws-1", query, { kind: "status" }),
-        issueKeys.tableFacets("ws-1", { query, facets: [{ kind: "status" }] }),
-      ];
-      (filters.working_only || filters.working_issue_ids ? affected : untouched).push(...keys);
-    }
-    for (const key of [...untouched, ...affected]) qc.setQueryData(key, []);
-    emit("task:completed");
-    await vi.advanceTimersByTimeAsync(1_000);
-    for (const key of affected) expect(qc.getQueryState(key)?.isInvalidated).toBe(true);
-    for (const key of untouched) expect(qc.getQueryState(key)?.isInvalidated).toBe(false);
-  });
-
   it("coalesces a continuous lifecycle stream and eventually clears the final completed run", async () => {
     const { emit } = mountRealtime();
     let count = 1;
@@ -534,110 +436,5 @@ describe("useRealtimeSync — Table server membership invalidation", () => {
     await vi.advanceTimersByTimeAsync(2_000);
     expect(queryFn).toHaveBeenCalledTimes(1);
     unsubscribe();
-  });
-
-  it("invalidates Table queries after a property definition changes", () => {
-    const ws = createMockWs();
-    const invalidate = vi.spyOn(qc, "invalidateQueries");
-    renderHook(() => useRealtimeSync(ws, stores), {
-      wrapper: createWrapper(qc),
-    });
-    const propertyUpdated = vi
-      .mocked(ws.on)
-      .mock.calls.find(([event]) => event === "property:updated")?.[1];
-    expect(propertyUpdated).toBeDefined();
-
-    (propertyUpdated as (payload: unknown) => void)({});
-
-    expect(invalidate).toHaveBeenCalledWith({
-      queryKey: issueKeys.tableAll("ws-1"),
-    });
-  });
-});
-
-describe("useRealtimeSync — workspace:deleted self-initiated suppression", () => {
-  let qc: QueryClient;
-  let stores: RealtimeSyncStores;
-
-  beforeEach(() => {
-    qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    stores = createStores();
-  });
-
-  afterEach(() => {
-    unmarkWorkspaceDeletePending("ws-2");
-    localStorage.clear();
-    vi.mocked(forgetLocalSearchIndex).mockClear();
-  });
-
-  // getCurrentWsId is mocked to "ws-1" at module level, so deleting "ws-2"
-  // never enters the relocate branch — these tests only exercise the
-  // storage-cleanup path, which is the observable difference between a
-  // handled and a suppressed event.
-  const dispatchWorkspaceDeleted = (ws: WSClient, workspaceId: string) => {
-    const call = vi
-      .mocked(ws.on)
-      .mock.calls.find(([event]) => event === "workspace:deleted");
-    expect(call).toBeDefined();
-    (call![1] as (p: unknown) => void)({ workspace_id: workspaceId });
-  };
-
-  it("ignores the event for a delete this client initiated", () => {
-    const ws = createMockWs();
-    renderHook(() => useRealtimeSync(ws, stores), {
-      wrapper: createWrapper(qc),
-    });
-    qc.setQueryData(workspaceKeys.list(), [{ id: "ws-2", slug: "delete-me" }]);
-    defaultStorage.setItem("auro_issue_draft:delete-me", "draft");
-
-    markWorkspaceDeletePending("ws-2");
-    dispatchWorkspaceDeleted(ws, "ws-2");
-
-    // useDeleteWorkspace.onSuccess owns cleanup for self-initiated deletes;
-    // the handler must not have touched storage.
-    expect(defaultStorage.getItem("auro_issue_draft:delete-me")).toBe("draft");
-    expect(forgetLocalSearchIndex).not.toHaveBeenCalled();
-  });
-
-  it("still cleans up for a delete initiated elsewhere", () => {
-    const ws = createMockWs();
-    renderHook(() => useRealtimeSync(ws, stores), {
-      wrapper: createWrapper(qc),
-    });
-    qc.setQueryData(workspaceKeys.list(), [{ id: "ws-2", slug: "delete-me" }]);
-    defaultStorage.setItem("auro_issue_draft:delete-me", "draft");
-
-    dispatchWorkspaceDeleted(ws, "ws-2");
-
-    expect(defaultStorage.getItem("auro_issue_draft:delete-me")).toBeNull();
-    // Not the current workspace, but its local search copy must still go.
-    expect(forgetLocalSearchIndex).toHaveBeenCalledWith("ws-2");
-  });
-});
-
-describe("useRealtimeSync — member:removed", () => {
-  afterEach(() => {
-    vi.mocked(forgetLocalSearchIndex).mockClear();
-  });
-
-  const dispatchMemberRemoved = (ws: WSClient, payload: Record<string, string>) => {
-    const call = vi.mocked(ws.on).mock.calls.find(([event]) => event === "member:removed");
-    expect(call).toBeDefined();
-    (call![1] as (p: unknown) => void)(payload);
-  };
-
-  it("destroys the local search copy when this user is removed", async () => {
-    setApiInstance({ listWorkspaces: vi.fn().mockResolvedValue([]) } as unknown as ApiClient);
-    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    const ws = createMockWs();
-    renderHook(() => useRealtimeSync(ws, createStores()), { wrapper: createWrapper(qc) });
-
-    dispatchMemberRemoved(ws, { member_id: "m2", user_id: "someone-else", workspace_id: "ws-1" });
-    expect(forgetLocalSearchIndex).not.toHaveBeenCalled();
-
-    dispatchMemberRemoved(ws, { member_id: "m1", user_id: "u1", workspace_id: "ws-1" });
-    expect(forgetLocalSearchIndex).toHaveBeenCalledWith("ws-1");
-    // Let the relocate lookup settle before the test tears down.
-    await waitFor(() => expect(qc.getQueryData(workspaceKeys.list())).toEqual([]));
   });
 });

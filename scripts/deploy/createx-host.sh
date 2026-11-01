@@ -10,7 +10,7 @@ MARKER='# Managed by createx deployment v1'
 ORIGIN=http://localhost:23080
 
 die() { echo "Createx: $*" >&2; exit 1; }
-valid_release() { [[ "$1" =~ ^[0-9]{8}T[0-9]{6}Z-[a-f0-9]{12}(-dirty)?$ ]]; }
+valid_release() { [[ "$1" =~ ^[0-9]{8}T[0-9]{6}Z-[a-f0-9]{12}(-dirty)?(-web)?$ ]]; }
 owned_file() {
   if [[ -e "$1" || -L "$1" ]]; then
     [[ -f "$1" && ! -L "$1" ]] && head -n 1 "$1" | grep -Fxq "$MARKER" || die "Refusing foreign file: $1"
@@ -108,6 +108,19 @@ preflight() {
     service_port 23080 nginx.service
   fi
   echo 'Createx preflight passed (no changes)'
+}
+
+current_release() {
+  local source
+  source="$(readlink -f "$BASE/current" 2>/dev/null || true)"
+  [[ "$source" = "$BASE/releases/"* && -s "$source/manifest" ]] || die 'No current release; run a full deploy first'
+  printf '%s\n' "$source"
+}
+
+webcheck() {
+  preflight
+  current_release >/dev/null
+  echo 'Createx web-only preflight passed (no changes)'
 }
 
 locations() {
@@ -349,6 +362,30 @@ wait_ready() {
 }
 switch_link() { ln -sfn "$1" "$BASE/current.next"; mv -Tf "$BASE/current.next" "$BASE/current"; }
 
+wait_ready_web() {
+  local attempt
+  for attempt in {1..45}; do
+    if systemctl is-active --quiet createx-web &&
+      curl -fs --max-time 5 http://127.0.0.1:23000/ >/dev/null; then return 0; fi
+    sleep 1
+  done
+  return 1
+}
+
+activate_web() {
+  local target="$1" old
+  old="$(readlink -f "$BASE/current")"
+  switch_link "$target"
+  if ! systemctl restart createx-web || ! wait_ready_web; then
+    journalctl -u createx-web -n 30 --no-pager >&2
+    switch_link "$old"
+    systemctl restart createx-web
+    wait_ready_web || die 'Previous web release also failed; inspect journal'
+    die 'Web activation failed; API and database untouched'
+  fi
+  if [[ -n "$old" && "$old" != "$target" ]]; then ln -sfn "$old" "$BASE/previous"; fi
+}
+
 activate() {
   local target="$1" old
   old=""
@@ -408,15 +445,25 @@ verify_origin() {
 }
 
 verify() {
-  local target health commit expected port unit pid current
+  local target health commit expected port unit pid current web_only
   target="$(readlink -f "$BASE/current")"
   [[ "$target" = "$BASE/releases/"* && -s "$target/manifest" ]] || die 'Invalid release pointer'
   wait_ready || die 'Services not ready'
+  # A web-only release leaves the API running from the release its binaries were
+  # copied from; any release directory is valid until the API restarts on its own.
+  web_only="$(sed -n 's/^web_commit=//p' "$target/manifest")"
   for unit in api web; do
     pid="$(systemctl show "createx-$unit" -p MainPID --value)"
     current="$(readlink -f "/proc/$pid/cwd")"
-    if [[ "$unit" = api ]]; then expected="$target"; else expected="$target/web/apps/web"; fi
-    [[ "$current" = "$expected" ]] || die "Stale $unit process"
+    if [[ "$unit" = web ]]; then
+      expected="$target/web/apps/web"
+      [[ "$current" = "$expected" ]] || die 'Stale web process'
+    elif [[ -n "$web_only" ]]; then
+      [[ "$current" = "$BASE/releases/"* ]] || die 'Stale api process'
+    else
+      expected="$target"
+      [[ "$current" = "$expected" ]] || die 'Stale api process'
+    fi
   done
   service_port 23000 createx-web.service
   service_port 28080 createx-api.service
@@ -472,6 +519,39 @@ deploy() {
     install_nginx "$candidate"
     rm -f "$candidate"
   fi
+  verify
+  prune
+}
+
+deploy_web() {
+  local upload="$1" release="$2" source source_commit web_commit target
+  [[ "$upload" =~ ^/tmp/createx-upload\.[a-zA-Z0-9]+$ ]] || die 'Invalid upload directory'
+  valid_release "$release" || die 'Invalid release ID'
+  preflight
+  source="$(current_release)"
+  source_commit="$(sed -n 's/^commit=//p' "$source/manifest")"
+  [[ "$source_commit" =~ ^[a-f0-9]{40}$ ]] || die 'Invalid commit in the current release manifest'
+  (cd "$upload" && sha256sum -c "$release.tar.gz.sha256")
+  target="$BASE/releases/$release"
+  [[ ! -e "$target" ]] || die 'Release already exists'
+  install -d -m 0755 "$target"
+  tar -xzf "$upload/$release.tar.gz" -C "$target" --no-same-owner
+  [[ -f "$target/web/apps/web/server.js" && -f "$target/manifest" ]] || die 'Incomplete artifact'
+  grep -Fxq "release=$release" "$target/manifest" || die 'Release manifest mismatch'
+  web_commit="$(sed -n 's/^commit=//p' "$target/manifest")"
+  # API binaries and migrations carry over unchanged so a later API restart
+  # loads the same commit from the new release pointer.
+  cp -a "$source/bin" "$source/migrations" "$source/LICENSE" "$source/NOTICE" "$target/"
+  [[ -x "$target/bin/server" && -x "$target/bin/migrate" ]] || die 'Incomplete API copy'
+  printf 'release=%s\ncommit=%s\nweb_commit=%s\narch=linux-arm64\ndist=%s\n' \
+    "$release" "$source_commit" "$web_commit" '.next-createx' > "$target/manifest"
+  # Persist the writable image cache; compiled application files stay read-only.
+  rm -rf "$target/web/apps/web/.next-createx/cache"
+  ln -s "$STATE/cache" "$target/web/apps/web/.next-createx/cache"
+  cp -a "$target/web/apps/web/.next-createx/static/." "$STATE/static/"
+  chmod -R a+rX "$STATE/static" "$target"
+  smoke_native "$target"
+  activate_web "$target"
   verify
   prune
 }
@@ -583,8 +663,8 @@ prune() {
 main() {
   [[ "$EUID" = 0 ]] || die 'Remote host script requires sudo'
   case "${1:-}" in
-    preflight|verify) [[ $# = 1 ]] || die 'Unexpected arguments'; "$1" ;;
-    deploy|publish|https|rollback|prune|resources)
+    preflight|verify|webcheck) [[ $# = 1 ]] || die 'Unexpected arguments'; "$1" ;;
+    deploy|web|publish|https|rollback|prune|resources)
       # flock releases automatically even when SSH disconnects. No stale lock file deletion.
       exec 9>/run/lock/createx-deploy.lock
       flock -n 9 || die 'Another Createx deployment is running'
@@ -594,6 +674,7 @@ main() {
       trap 'finish_mutation "$?" "$before"' EXIT
       case "$1" in
         deploy) [[ $# = 3 ]] || die 'Expected upload and release'; deploy "$2" "$3" ;;
+        web) [[ $# = 3 ]] || die 'Expected upload and release'; deploy_web "$2" "$3" ;;
         publish) [[ $# = 4 || $# = 5 ]] || die 'Expected domain, certificate, key and optional CA'; publish "$2" "$3" "$4" "${5:-}" ;;
         https) [[ $# = 2 ]] || die 'Expected domain'; https "$2" ;;
         rollback)

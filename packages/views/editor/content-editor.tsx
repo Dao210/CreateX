@@ -174,7 +174,6 @@ interface ContentEditorBaseProps {
    * a "Create sub-issue from selection" action that parents the new issue
    * under this ID and replaces the selection with a mention link.
    */
-  currentIssueId?: string;
   /**
    * When true, the `@` suggestion picker is disabled but the mention node
    * type remains in the schema, so existing mentions pasted in from other
@@ -368,7 +367,6 @@ const ContentEditor = forwardRef<ContentEditorRef, ContentEditorProps>(
       onUploadingChange,
       showBubbleMenu = true,
       selectionAction,
-      currentIssueId,
       disableMentions = false,
       mentionMode = "default",
       mentionContextItems,
@@ -975,7 +973,7 @@ const ContentEditor = forwardRef<ContentEditorRef, ContentEditorProps>(
         >
           <EditorContent className="flex flex-1 flex-col" editor={editor} />
           {showBubbleMenu && (
-            <EditorBubbleMenu editor={editor} currentIssueId={currentIssueId} selectionAction={selectionAction} />
+            <EditorBubbleMenu editor={editor} selectionAction={selectionAction} />
           )}
           <LinkHoverCard {...hover} />
         </div>

@@ -6,8 +6,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/go-chi/chi/v5"
 	db "github.com/auro-ai/auro/server/pkg/db/generated"
+	"github.com/go-chi/chi/v5"
 )
 
 // appendChannelUserMessage writes an inbound channel message the way

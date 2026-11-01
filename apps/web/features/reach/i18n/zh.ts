@@ -41,12 +41,8 @@ export const worldCopy: WorldDict = {
     ],
     "names": previewNames.zh
   },
-    eyebrow: "正在运行的世界",
     claim: "世界已经在跑了。",
-    sub: "造一件武器，送一个角色进去，看它能活多久。没有人操纵它，每分钟自己结算一次。你在不在，都一样。",
-    primaryCta: "带它进来",
-    secondaryCta: "先看看",
-    note: "无需下载，观看不用注册。",
+    sub: "造一个角色或一件武器，看它能活多久。",
     clock: {
       label: "拍",
       season: "赛季",

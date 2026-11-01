@@ -85,14 +85,6 @@ describe("parseTabSubject", () => {
 });
 
 describe("tabSubjectKey", () => {
-  it("is stable for the same subject and distinct across selections", () => {
-    expect(tabSubjectKey({ kind: "issue", id: "x" })).toBe("issue:x");
-    expect(tabSubjectKey({ kind: "chat", sessionId: null })).toBe("chat:");
-    expect(tabSubjectKey({ kind: "chat", sessionId: "s1" })).toBe("chat:s1");
-    expect(
-      tabSubjectKey({ kind: "actor", actorType: "member", id: "m1" }),
-    ).toBe("actor:member:m1");
-  });
 
   it("distinguishes archived inbox and the attachment filename", () => {
     expect(tabSubjectKey({ kind: "inbox", selectedKey: "k", archived: false })).toBe(

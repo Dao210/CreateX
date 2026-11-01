@@ -7,10 +7,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/auro-ai/auro/server/internal/entitlement"
 	"github.com/auro-ai/auro/server/internal/entitlement/entitlementtest"
 	"github.com/auro-ai/auro/server/internal/testutil"
+	"github.com/google/uuid"
 )
 
 // TestTriggerAutopilot_InternalFailureDoesNotEchoError pins MUL-6472: an

@@ -1,5 +1,7 @@
 "use client";
 
+import { GameAccessBoundary } from "../admin/game-access-boundary";
+
 import { lazy, Suspense, useMemo } from "react";
 import { Gamepad2 } from "lucide-react";
 import { useAuthStore } from "@auro/core/auth";
@@ -20,8 +22,8 @@ export function SiegePage({ storage, campaign = false }: { storage: StorageAdapt
   const userId = useAuthStore(state => state.user?.id);
   if (!workspace || !userId) return null;
   const namespace = siegePreferencesKey(userId, workspace.id);
-  return <ScopedSiegePage key={`${namespace}:${campaign}`} storage={storage} namespace={namespace} campaign={campaign}
-    scope={{ workspaceId: workspace.id, workspaceSlug: workspace.slug, userId }} />;
+  return <GameAccessBoundary gameId="siege"><ScopedSiegePage key={`${namespace}:${campaign}`} storage={storage} namespace={namespace} campaign={campaign}
+    scope={{ workspaceId: workspace.id, workspaceSlug: workspace.slug, userId }} /></GameAccessBoundary>;
 }
 
 function ScopedSiegePage({ storage, namespace, campaign, scope }: { storage: StorageAdapter; namespace: string; campaign: boolean; scope: SiegeScope }) {

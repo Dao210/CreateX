@@ -101,10 +101,6 @@ export function ChatComposer({
       value={value}
       onChangeText={onChangeText}
       onSubmit={onSubmit}
-      mentionPickerPath={{
-        pathname: "/[workspace]/mention-picker",
-        params: { workspace: wsSlug ?? "", mode: "chat" },
-      }}
       placeholder={sending ? t("composer.working") : t("composer.message")}
       pillLabel={
         sending

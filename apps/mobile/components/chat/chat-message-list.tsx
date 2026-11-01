@@ -15,7 +15,7 @@
  *   - No "Replied in Ns" badge under assistant bubbles (elapsed_ms is
  *     parsed but not displayed). Easy v2 add — show below the bubble.
  *   - Attachments bound to a message but NOT referenced inline in `content`
- *     render as standalone cards below the bubble via `CommentAttachmentList`
+ *     render as standalone cards below the bubble via `ChatAttachments`
  *     (same component the comment thread uses; mirrors web reusing
  *     `AttachmentList` in chat). Inline `![](url)` / `[name](url)` still flow
  *     through the markdown renderer and are de-duped out of the card list.
@@ -68,7 +68,7 @@ import { ChatTimeline } from "./chat-timeline";
 // Reuse the comment thread's standalone attachment list — same design web
 // reuses in chat (AttachmentList). Renders any bound attachment not already
 // referenced inline in the message content, with same-file dedup.
-import { CommentAttachmentList } from "@/components/issue/comment-attachment-list";
+import { ChatAttachments } from "@/components/chat/chat-attachments";
 import { StatusPill } from "./status-pill";
 import {
   Collapsible,
@@ -318,7 +318,7 @@ function MessageRow({
           selectable={isSelecting}
           compact
         />
-        <CommentAttachmentList
+        <ChatAttachments
           attachments={message.attachments}
           content={message.content}
         />
@@ -409,7 +409,7 @@ function AssistantRow({
           image-only reply is a real ('message') outcome with empty content, so
           it flows through the else-branch above (renders nothing) and the cards
           here ARE the reply. */}
-      <CommentAttachmentList
+      <ChatAttachments
         attachments={message.attachments}
         content={message.content}
       />

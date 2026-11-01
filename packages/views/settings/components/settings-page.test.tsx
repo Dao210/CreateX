@@ -203,7 +203,7 @@ describe("SettingsPage information architecture", () => {
     renderWithI18n(<SettingsPage />);
     const personal = within(nav()).getByRole("region", { name: /Account settings/ });
     expect(within(personal).getByRole("link", { name: "Preferences" })).toBeInTheDocument();
-    expect(within(personal).getByRole("link", { name: "API Tokens" })).toBeInTheDocument();
+    expect(within(personal).queryByRole("link", { name: "API Tokens" })).toBeNull();
 
     // The workspace group is named after the workspace it configures.
     const workspace = within(nav()).getByRole("region", { name: /Acme/ });

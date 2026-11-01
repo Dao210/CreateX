@@ -1,16 +1,5 @@
 package handler
 
-import (
-	"encoding/json"
-	"log/slog"
-	"net/http"
-
-	"github.com/jackc/pgx/v5/pgtype"
-	"github.com/auro-ai/auro/server/internal/logger"
-	"github.com/auro-ai/auro/server/internal/util"
-	db "github.com/auro-ai/auro/server/pkg/db/generated"
-)
-
 // Write protection for a Triage entry (MUL-7189 §2.1, §2.2).
 //
 // Triage is not a status — it lives in issue.triage_state — so status, project,
@@ -31,51 +20,3 @@ import (
 //
 // Carrying the field counts as writing it, even with the value already stored
 // and even when null (which clears). The rule stays one a client can predict.
-
-// triageLockedField returns the Triage-locked field a write carries, or "" when
-// it carries none.
-func triageLockedField(raw map[string]json.RawMessage) string {
-	if _, ok := raw["parent_issue_id"]; ok {
-		return "parent_issue_id"
-	}
-	return ""
-}
-
-func writeIssueInTriage(w http.ResponseWriter, field string) {
-	writeErrorCode(w, http.StatusBadRequest, "issue_in_triage",
-		"the issue is in Triage, so its "+field+" cannot be set; accept it out of Triage first")
-}
-
-// validateBatchTriageLocks rejects a batch that would set a Triage-locked field
-// on any issue in Triage, before anything is written. A silent per-issue skip
-// would report a short `{"updated": N}` with no reason attached.
-func (h *Handler) validateBatchTriageLocks(w http.ResponseWriter, r *http.Request, workspaceID pgtype.UUID, issueIDs []string, rawUpdates map[string]json.RawMessage) bool {
-	field := triageLockedField(rawUpdates)
-	if field == "" {
-		return true
-	}
-	ids := make([]pgtype.UUID, 0, len(issueIDs))
-	for _, id := range issueIDs {
-		// Unparseable ids are skipped by the batch loop as well.
-		if parsed, err := util.ParseUUID(id); err == nil {
-			ids = append(ids, parsed)
-		}
-	}
-	if len(ids) == 0 {
-		return true
-	}
-	inTriage, err := h.Queries.CountIssuesInTriage(r.Context(), db.CountIssuesInTriageParams{
-		WorkspaceID: workspaceID,
-		IssueIds:    ids,
-	})
-	if err != nil {
-		slog.Warn("batch update issues: count triage entries", append(logger.RequestAttrs(r), "error", err)...)
-		writeError(w, http.StatusInternalServerError, "failed to validate issues")
-		return false
-	}
-	if inTriage > 0 {
-		writeIssueInTriage(w, field)
-		return false
-	}
-	return true
-}

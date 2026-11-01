@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgtype"
 	db "github.com/auro-ai/auro/server/pkg/db/generated"
 	"github.com/auro-ai/auro/server/pkg/plugincontract"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // PluginActionCaller is one authorized Action API call: which installation is
@@ -160,12 +160,6 @@ func (s *PluginService) BuildPluginContext(caller PluginActionCaller, workspace 
 			Name: user.Name,
 		}
 	}
-	if issue != nil {
-		payload.Issue = &PluginContextIssue{
-			ID:         uuidString(issue.ID),
-			Identifier: IssueIdentifier(workspace.IssuePrefix, issue.Number),
-			Title:      issue.Title,
-		}
-	}
+
 	return payload
 }

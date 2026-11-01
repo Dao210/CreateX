@@ -330,7 +330,7 @@ describe("navigation item presentation", () => {
     expect(profile).toHaveTextContent("Ada Lovelace");
   });
 
-  it("keeps Analytics and Settings styled like the other nav items", () => {
+  it("keeps Settings styled like the other nav items and hides the usage entry", () => {
     const { container } = render(<AppSidebar />);
     const referenceClassName = container.querySelector(
       'button[data-href="/acme/inbox"]',
@@ -338,11 +338,10 @@ describe("navigation item presentation", () => {
 
     expect(referenceClassName).toBeTruthy();
 
-    for (const href of ["/acme/usage", "/acme/settings?tab=workspace"]) {
-      expect(container.querySelector(`button[data-href="${href}"]`)?.className).toBe(
-        referenceClassName,
-      );
-    }
+    expect(
+      container.querySelector('button[data-href="/acme/settings?tab=workspace"]')?.className,
+    ).toBe(referenceClassName);
+    expect(container.querySelector('button[data-href="/acme/usage"]')).toBeNull();
   });
 
   it("separates world settings from account settings and selects only the active scope", () => {

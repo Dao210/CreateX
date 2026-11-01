@@ -6,11 +6,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 	"github.com/auro-ai/auro/server/internal/service"
 	"github.com/auro-ai/auro/server/internal/testutil"
 	db "github.com/auro-ai/auro/server/pkg/db/generated"
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 )
 
 // The daemon interrupts a running agent the moment a task-status poll answers

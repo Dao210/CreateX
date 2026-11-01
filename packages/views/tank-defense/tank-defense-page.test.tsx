@@ -1,9 +1,12 @@
+import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, screen } from "@testing-library/react";
 import { tankPreferencesKey } from "@auro/core/tank-defense";
 import type { StorageAdapter } from "@auro/core/types";
 import { renderWithI18n } from "../test/i18n";
 import { TankDefensePage } from "./tank-defense-page";
+
+vi.mock("../admin/game-access-boundary", () => ({ GameAccessBoundary: ({ children }: { children: ReactNode }) => children }));
 
 const identity = vi.hoisted(() => ({
   userId: "user-1" as string | null,

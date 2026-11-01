@@ -6,11 +6,11 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/auro-ai/auro/server/internal/featureflags"
 	"github.com/auro-ai/auro/server/internal/service"
 	db "github.com/auro-ai/auro/server/pkg/db/generated"
 	"github.com/auro-ai/auro/server/pkg/plugincontract"
+	"github.com/go-chi/chi/v5"
 )
 
 func (h *Handler) pluginsV1Enabled(ctx context.Context) bool {

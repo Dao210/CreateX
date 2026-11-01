@@ -6,16 +6,11 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
-	"unicode/utf8"
 
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/auro-ai/auro/server/internal/analytics"
 	"github.com/auro-ai/auro/server/internal/attribution"
 	"github.com/auro-ai/auro/server/internal/chattitle"
@@ -34,6 +29,9 @@ import (
 	"github.com/auro-ai/auro/server/pkg/redact"
 	"github.com/auro-ai/auro/server/pkg/skillbundle"
 	"github.com/auro-ai/auro/server/pkg/taskfailure"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type TaskService struct {
@@ -163,20 +161,6 @@ const maxSynthesizedFallbackCommentRunes = 8000
 
 const oversizedFallbackCommentNotice = "This task completed, but its output was too large to post safely. The raw output was not posted. Review the task in this issue's Execution log."
 
-// truncateFallbackCommentBody bounds a synthesized completion-fallback comment
-// body. Unlike truncateForSummary (which flattens newlines for a one-line row
-// snapshot), it preserves genuine final messages below the cap verbatim. Output
-// above the cap is untrusted: the reported failure mode puts process narration
-// and tool traces at the head, so retaining any excerpt can expose execution
-// details and still discard the final answer. Replace the entire body with a
-// fixed notice instead. Callers pass the already-redacted body.
-func truncateFallbackCommentBody(body string, maxRunes int) string {
-	if utf8.RuneCountInString(body) <= maxRunes {
-		return body
-	}
-	return oversizedFallbackCommentNotice
-}
-
 const (
 	taskAnalyticsContextCacheMax = 4096
 	// RuntimeClaimFreshnessSeconds is the maximum DB heartbeat age accepted by
@@ -239,75 +223,6 @@ func (s *TaskService) forgetTaskReclaim(task db.AgentTaskQueue) {
 		util.UUIDToString(task.RuntimeID),
 		util.UUIDToString(task.ID),
 	)
-}
-
-// buildCommentTriggerSummary fetches the comment content and truncates
-// it for storage on the task row. Returns an invalid pgtype.Text when
-// the comment is missing (deleted / wrong workspace / etc) so the column
-// stays NULL — front-end falls back to a structural label in that case.
-//
-// workspaceID scopes the fetch to the task's own workspace: the summary is
-// later returned in claim / task-history responses, so a foreign comment UUID
-// reaching an enqueue/merge path must NOT leak another workspace's text even in
-// truncated form (MUL-4252).
-func (s *TaskService) buildCommentTriggerSummary(ctx context.Context, workspaceID, commentID pgtype.UUID) pgtype.Text {
-	if !commentID.Valid {
-		return pgtype.Text{}
-	}
-	comment, err := s.Queries.GetCommentInWorkspace(ctx, db.GetCommentInWorkspaceParams{
-		ID:          commentID,
-		WorkspaceID: workspaceID,
-	})
-	if err != nil {
-		return pgtype.Text{}
-	}
-	summary := truncateForSummary(comment.Content, triggerSummaryMaxLen)
-	if summary == "" {
-		return pgtype.Text{}
-	}
-	return pgtype.Text{String: summary, Valid: true}
-}
-
-// ResolveOriginatorFromTriggerComment is the exported wrapper used by the
-// comment-merge path (MUL-4195) to compute the top-of-chain human originator
-// for a newly-arrived comment, so a merge can be gated on the originator being
-// unchanged. workspaceID scopes the comment lookup to the task's workspace
-// (MUL-4252). See resolveOriginatorFromTriggerComment for the chain rules.
-func (s *TaskService) ResolveOriginatorFromTriggerComment(ctx context.Context, workspaceID, commentID pgtype.UUID) pgtype.UUID {
-	return s.resolveOriginatorFromTriggerComment(ctx, workspaceID, commentID)
-}
-
-// AttributionForMergedComment resolves the FULL attribution snapshot for a comment
-// being coalesced into an already-queued task (MUL-4302). A merge re-attributes the
-// run to the newly-arrived comment's human, so the whole snapshot — source, evidence,
-// delegation lineage, and both person columns — must move together as one
-// attribution.Result; re-stamping only the person columns would leave a run showing
-// B accountable while still pointing at A's stale source / evidence / level. isMention
-// picks the agent-authored label (delegation for a mention / thread-parent, otherwise
-// comment_source), matching the fresh-enqueue routing.
-//
-// The merge re-opens the same fail-closed decision the original enqueue faced: a merge
-// swaps the effective trigger, responsible human, and evidence to the NEW comment, so
-// "the enqueue already checked" does not carry over. It runs the comment through
-// applyAttributionFallback — the identical fail-closed gate the fresh-enqueue path uses
-// — and returns ErrAttributionFailClosed when the new comment cannot be attributed
-// precisely and the workspace forbids the owner_fallback degrade. The caller must then
-// REFUSE the merge and keep the original (precisely-attributed) task snapshot rather
-// than re-stamp a queued run to a degraded owner_fallback (Elon must-fix).
-func (s *TaskService) AttributionForMergedComment(ctx context.Context, workspaceID, commentID pgtype.UUID, isMention bool, agent db.Agent) (attribution.Result, error) {
-	agentAuthoredSource := attribution.SourceCommentSource
-	if isMention {
-		agentAuthoredSource = attribution.SourceDelegation
-	}
-	attr := s.attributionFromTriggerComment(ctx, workspaceID, commentID, agentAuthoredSource)
-	return s.applyAttributionFallback(ctx, attr, agent)
-}
-
-// BuildCommentTriggerSummary is the exported wrapper used by the comment-merge
-// path (MUL-4195) to refresh a coalesced task's trigger_summary to the newest
-// trigger comment's snapshot. workspaceID scopes the lookup (MUL-4252).
-func (s *TaskService) BuildCommentTriggerSummary(ctx context.Context, workspaceID, commentID pgtype.UUID) pgtype.Text {
-	return s.buildCommentTriggerSummary(ctx, workspaceID, commentID)
 }
 
 // BuildRuntimeMCPOverlayForMerge recomputes the Composio MCP overlay +
@@ -403,185 +318,6 @@ func (s *TaskService) buildRuntimeMCPOverlay(ctx context.Context, originatorUser
 		data.ConnectedApps = raw
 	}
 	return data
-}
-
-// resolveOriginatorFromTriggerComment returns the top-of-chain HUMAN user
-// id for a comment that triggered an Enqueue* path. The chain rules
-// (MUL-3869):
-//
-//   - trigger comment authored by a member → originator = author_id (that
-//     member IS the top-of-chain human).
-//   - trigger comment authored by an agent → read the parent task via
-//     comment.source_task_id and inherit its originator_user_id. This is
-//     the load-bearing case for agent fan-out: agent A @-mentions agent B,
-//     comment author is A, but we MUST surface the human who originally
-//     told A to run, not lose the originator at the first agent hop.
-//   - missing comment / unknown source task / NULL parent originator →
-//     invalid pgtype.UUID. BuildTaskOverlay treats that as "no overlay"
-//     (gate 1).
-//
-// A nil receiver / nil Queries falls through to invalid so unit-test
-// setups that don't wire a DB stay safe. workspaceID scopes the comment lookup
-// to the task's workspace so a foreign comment UUID cannot resolve an
-// originator from another tenant (MUL-4252).
-func (s *TaskService) resolveOriginatorFromTriggerComment(ctx context.Context, workspaceID, commentID pgtype.UUID) pgtype.UUID {
-	// The originator VALUE is independent of the agent-authored source label, so
-	// any label works here; comment_source is passed only as a placeholder.
-	return s.attributionFromTriggerComment(ctx, workspaceID, commentID, attribution.SourceCommentSource).UserID
-}
-
-// attributionFromTriggerComment resolves the full attribution (accountable
-// human + provenance label + delegation lineage + evidence) for a
-// comment-triggered run. It performs the DB reads and hands the gathered facts
-// to the pure attribution.ClassifyComment rules so the classification stays
-// side-effect-free and unit-tested. The returned UserID is byte-identical to
-// the pre-MUL-4302 originator resolution, so authorization behavior (Composio
-// overlay, canInvokeAgent A2A gate) is unchanged. workspaceID scopes the comment
-// lookup to the task's workspace (MUL-4252).
-//
-// agentAuthoredSource selects the label for an agent-authored trigger comment:
-// attribution.SourceCommentSource for the issue-assignee-reacting path,
-// attribution.SourceDelegation for an explicit mention / thread-parent /
-// squad-leader path.
-func (s *TaskService) attributionFromTriggerComment(ctx context.Context, workspaceID, commentID pgtype.UUID, agentAuthoredSource attribution.Source) attribution.Result {
-	if s == nil || s.Queries == nil || !commentID.Valid {
-		return attribution.Result{Source: attribution.SourceUnattributed}
-	}
-	comment, err := s.Queries.GetCommentInWorkspace(ctx, db.GetCommentInWorkspaceParams{
-		ID:          commentID,
-		WorkspaceID: workspaceID,
-	})
-	if err != nil {
-		return attribution.Result{Source: attribution.SourceUnattributed}
-	}
-	return s.attributionFromComment(ctx, comment, agentAuthoredSource)
-}
-
-// attributionFromComment classifies a run from an already-loaded trigger comment,
-// so a caller that already has the row (e.g. to inspect author_type) does not
-// re-read it. Kept byte-identical to the inline logic attributionFromTriggerComment
-// used before, so authorization behavior is unchanged.
-func (s *TaskService) attributionFromComment(ctx context.Context, comment db.Comment, agentAuthoredSource attribution.Source) attribution.Result {
-	facts := attribution.CommentFacts{
-		CommentID:  comment.ID,
-		AuthorType: comment.AuthorType,
-		AuthorID:   comment.AuthorID,
-	}
-	// For an agent-authored comment, walk comment.source_task_id → parent task →
-	// parent.originator_user_id (set by every agent comment-write path since
-	// migration 120). A NULL/missing source task leaves ParentOriginator
-	// invalid, which ClassifyComment maps to unattributed.
-	if comment.AuthorType == "agent" && comment.SourceTaskID.Valid {
-		facts.SourceTaskID = comment.SourceTaskID
-		if parent, err := s.Queries.GetAgentTask(ctx, comment.SourceTaskID); err == nil {
-			facts.ParentOriginator = parent.OriginatorUserID
-			facts.ParentAccountable = parent.AccountableUserID
-		}
-	}
-	return attribution.ClassifyComment(facts, agentAuthoredSource)
-}
-
-// resolveOriginatorForIssueTask returns the top-of-chain human for issue-backed
-// dispatches. Comment-triggered runs keep the existing comment-chain semantics;
-// direct issue assignment/creation falls back to the issue's member creator.
-// Agent-created issues that carry an explicit task-origin link — quick_create
-// (daemon quick-create flow) or agent_create (an agent's ordinary `issue
-// create`, MUL-4305) — inherit that origin task's originator, since origin_id
-// points at the agent_task_queue row that created the issue. Other
-// agent/system origins, including autopilot, deliberately remain unattributed.
-func (s *TaskService) resolveOriginatorForIssueTask(ctx context.Context, issue db.Issue, triggerCommentID pgtype.UUID) pgtype.UUID {
-	return s.attributionForIssueTask(ctx, issue, triggerCommentID, attribution.SourceCommentSource, pgtype.UUID{}).UserID
-}
-
-// attributionForIssueTask resolves the full attribution for an issue-backed
-// enqueue. Comment-triggered runs keep the comment-chain semantics; direct
-// assignment/creation falls back to the issue's member creator; agent-created
-// quick-create issues inherit the origin task's human as a delegation. The
-// accountable-human value is byte-identical to resolveOriginatorForIssueTask,
-// which now delegates here — so there is a single source of truth and
-// authorization is unaffected. agentAuthoredSource labels the agent-authored
-// trigger comment case (see attributionFromTriggerComment).
-func (s *TaskService) attributionForIssueTask(ctx context.Context, issue db.Issue, triggerCommentID pgtype.UUID, agentAuthoredSource attribution.Source, actorUserID pgtype.UUID) attribution.Result {
-	// A direct member action is the accountable human AND originator, ahead of any
-	// trigger comment, origin, or rule (MUL-4302 §4/§5). This covers assign/promote,
-	// a manual autopilot trigger, and a manual rerun — the last of which may INHERIT
-	// a triggerCommentID for the daemon's prompt context, but must still attribute to
-	// the member who clicked rerun, not the original comment's human. So the actor is
-	// checked before the trigger-comment / origin branches.
-	if actorUserID.Valid {
-		return attribution.ClassifyDirect(attribution.DirectFacts{IssueID: issue.ID, ActorUserID: actorUserID})
-	}
-	if triggerCommentID.Valid {
-		if s == nil || s.Queries == nil {
-			return attribution.Result{Source: attribution.SourceUnattributed}
-		}
-		// workspace-scoped so a foreign comment UUID cannot resolve a human from
-		// another tenant (MUL-4252).
-		comment, err := s.Queries.GetCommentInWorkspace(ctx, db.GetCommentInWorkspaceParams{
-			ID:          triggerCommentID,
-			WorkspaceID: issue.WorkspaceID,
-		})
-		if err != nil {
-			return attribution.Result{Source: attribution.SourceUnattributed}
-		}
-		// A member/agent trigger comment resolves the human (direct_human / delegation
-		// / comment_source). A SYSTEM-authored comment — historically the
-		// Stage-completion child-done comment, which woke the parent assignee
-		// and threaded no actor — carries no human and is not part of any delegation
-		// chain. Classifying it would degrade straight to owner_fallback (the agent's
-		// own owner), which is wrong for a Stage cascade: the woken run should be
-		// accountable to whoever caused the PARENT issue to exist. So for a system
-		// comment we skip the comment branch and fall through to the parent issue's
-		// own provenance below — the same creator / agent_create-origin /
-		// autopilot-origin chain a direct enqueue resolves — reaching owner_fallback
-		// only if that provenance itself has no human (MUL-4302; raised by Bohan on
-		// the stage-cascade fallback).
-		if comment.AuthorType != "system" {
-			return s.attributionFromComment(ctx, comment, agentAuthoredSource)
-		}
-	}
-	// Autopilot-origin issues (origin_id is the autopilot id) from a schedule /
-	// webhook trigger attribute to the firing trigger's persisted created_by
-	// principal — trigger_owner (MUL-4302; MUL-6951; legacy semantics in
-	// ResolveAutopilotTriggerPrincipal) — degrading to the audit-only rule publisher
-	// when the trigger has none. That human is the originator as well as the
-	// accountable, so a create_issue-mode run carries the same authorization a
-	// manual "run now" by that member would; an edit of the trigger does not move
-	// it. Resolved the same way
-	// run_only dispatch resolves it, so both autopilot execution modes attribute
-	// identically. (A manual trigger carries an actor and is already handled above.)
-	// The issue only stores the autopilot id, so bridge issue → active run →
-	// trigger_id to find the trigger.
-	if s != nil && s.Queries != nil && issue.OriginType.Valid &&
-		issue.OriginType.String == "autopilot" && issue.OriginID.Valid {
-		var triggerID pgtype.UUID
-		if run, err := s.Queries.GetAutopilotRunByIssue(ctx, issue.ID); err == nil {
-			triggerID = run.TriggerID
-		}
-		return triggerOwnerAttribution(ctx, s.Queries, triggerID, issue.WorkspaceID, issue.OriginID, attribution.EvidenceIssueAssignment, issue.ID)
-	}
-	facts := attribution.DirectFacts{
-		IssueID:     issue.ID,
-		CreatorType: issue.CreatorType,
-		CreatorID:   issue.CreatorID,
-	}
-	// Member-created issues resolve without a DB read. Only origin-linked
-	// agent-created issues (quick_create, agent_create) need to load the origin
-	// task to inherit its human, and only when the DB is wired (nil Queries keeps
-	// unit-test setups safe and yields unattributed). Both origin types stamp
-	// origin_id with the agent_task_queue row that created the issue, so the
-	// top-of-chain human is that task's originator_user_id (MUL-4305).
-	if !(issue.CreatorType == "member" && issue.CreatorID.Valid) &&
-		s != nil && s.Queries != nil && issue.OriginType.Valid && issue.OriginID.Valid &&
-		(issue.OriginType.String == "quick_create" || issue.OriginType.String == "agent_create") {
-		facts.OriginType = issue.OriginType.String
-		facts.OriginTaskID = issue.OriginID
-		if task, err := s.Queries.GetAgentTask(ctx, issue.OriginID); err == nil {
-			facts.OriginOriginator = task.OriginatorUserID
-			facts.OriginAccountable = task.AccountableUserID
-		}
-	}
-	return attribution.ClassifyDirect(facts)
 }
 
 // ruleOwnerAttribution resolves the rule_owner attribution for an autopilot run
@@ -807,17 +543,6 @@ func attributionCreateParams(attr attribution.Result) (source pgtype.Text, deleg
 	return
 }
 
-// OriginatorForIssueTask exposes resolveOriginatorForIssueTask to callers
-// outside the service package (the squad-leader access gate in the handler
-// layer) so the gate judges the top-of-chain human with the exact same
-// resolution the enqueue path persists on the task row. Without a shared entry
-// point the gate saw an empty originator for agent-triggered assigns and denied
-// private leaders that the write path would have attributed correctly
-// (MUL-4305).
-func (s *TaskService) OriginatorForIssueTask(ctx context.Context, issue db.Issue, triggerCommentID pgtype.UUID) pgtype.UUID {
-	return s.resolveOriginatorForIssueTask(ctx, issue, triggerCommentID)
-}
-
 func (s *TaskService) captureTaskDispatched(ctx context.Context, task db.AgentTaskQueue) {
 	if s.Metrics != nil {
 		source, runtimeMode, _ := s.taskMetricsContext(ctx, task)
@@ -957,20 +682,11 @@ func (s *TaskService) taskMetricsContext(ctx context.Context, task db.AgentTaskQ
 	switch {
 	case task.ChatSessionID.Valid:
 		source = "chat"
-	case task.IssueID.Valid:
-		if tc.Source == analytics.SourceAutopilot {
-			source = "autopilot_issue"
-		} else {
-			source = "issue"
-		}
+
 	case task.AutopilotRunID.Valid:
 		source = "autopilot"
 	default:
-		if _, ok := s.parseQuickCreateContext(task); ok {
-			source = "quick_create"
-		} else if tc.Source != "" {
-			source = tc.Source
-		}
+
 	}
 	return source, tc.RuntimeMode, tc.Provider
 }
@@ -984,9 +700,7 @@ func (s *TaskService) taskAnalyticsContext(ctx context.Context, task db.AgentTas
 		TaskID:  util.UUIDToString(task.ID),
 		Source:  analytics.SourceManual,
 	}
-	if task.IssueID.Valid {
-		tc.IssueID = util.UUIDToString(task.IssueID)
-	}
+
 	if task.ChatSessionID.Valid {
 		tc.ChatSessionID = util.UUIDToString(task.ChatSessionID)
 		tc.Source = analytics.SourceChat
@@ -1014,27 +728,6 @@ func (s *TaskService) taskAnalyticsContext(ctx context.Context, task db.AgentTas
 		}
 	}
 
-	if task.IssueID.Valid {
-		if issue, err := s.Queries.GetIssue(ctx, task.IssueID); err == nil {
-			tc.WorkspaceID = util.UUIDToString(issue.WorkspaceID)
-			if issue.CreatorType == "member" {
-				tc.UserID = util.UUIDToString(issue.CreatorID)
-			}
-			if issue.OriginType.Valid {
-				switch issue.OriginType.String {
-				case "autopilot":
-					tc.Source = analytics.SourceAutopilot
-					if ap, err := s.Queries.GetAutopilot(ctx, issue.OriginID); err == nil {
-						if ap.CreatedByType == "member" {
-							tc.UserID = util.UUIDToString(ap.CreatedByID)
-						}
-					}
-				case "quick_create":
-					tc.Source = analytics.SourceManual
-				}
-			}
-		}
-	}
 	if task.ChatSessionID.Valid {
 		if cs, err := s.Queries.GetChatSession(ctx, task.ChatSessionID); err == nil {
 			tc.WorkspaceID = util.UUIDToString(cs.WorkspaceID)
@@ -1051,11 +744,7 @@ func (s *TaskService) taskAnalyticsContext(ctx context.Context, task db.AgentTas
 			}
 		}
 	}
-	if qc, ok := s.parseQuickCreateContext(task); ok {
-		tc.WorkspaceID = qc.WorkspaceID
-		tc.UserID = qc.RequesterID
-		tc.Source = analytics.SourceManual
-	}
+
 	s.storeTaskAnalyticsContext(task, tc)
 	return tc
 }
@@ -1115,396 +804,11 @@ func taskErrorType(reason string) string {
 	}
 }
 
-// EnqueueTaskForIssue creates a queued task for an agent-assigned issue.
-// No context snapshot is stored — the agent fetches all data it needs at
-// runtime via the auro CLI.
-func (s *TaskService) EnqueueTaskForIssue(ctx context.Context, issue db.Issue, triggerCommentID ...pgtype.UUID) (db.AgentTaskQueue, error) {
-	var commentID pgtype.UUID
-	if len(triggerCommentID) > 0 {
-		commentID = triggerCommentID[0]
-	}
-	return s.enqueueIssueTask(ctx, issue, commentID, false, "", pgtype.UUID{}, pgtype.UUID{}, pgtype.Timestamptz{}, OriginDerived)
-}
-
-// EnqueueDeferredChannelIssueTask persists the assigned task for a media-backed
-// channel /issue turn without making it claimable yet. The fireAt deadline is a
-// crash-safe fallback; the channel router promotes the task as soon as the
-// detached attachment transaction settles.
-func (s *TaskService) EnqueueDeferredChannelIssueTask(ctx context.Context, issue db.Issue, fireAt time.Time) (db.AgentTaskQueue, error) {
-	task, err := s.enqueueIssueTask(ctx, issue, pgtype.UUID{}, false, "", pgtype.UUID{}, pgtype.UUID{}, pgtype.Timestamptz{Time: fireAt, Valid: true}, OriginDerived)
-	if err != nil {
-		return db.AgentTaskQueue{}, err
-	}
-	// The task is durable but not claimable yet. Wake once without a task ID so
-	// the daemon refreshes its deferred schedule without treating it as ready.
-	s.notifyRuntimeMayHaveWork(task.RuntimeID, "")
-	return task, nil
-}
-
-// createDeferredChannelIssueTaskWithQueries inserts the inert media-gated task
-// through the caller's query handle. IssueService passes its transaction-bound
-// Queries so the issue and task become visible atomically. Composio is
-// intentionally absent from the transaction-scoped service: the task cannot be
-// claimed while deferred, so the optional external overlay is hydrated after
-// commit without holding database locks across a network call.
-func (s *TaskService) createDeferredChannelIssueTaskWithQueries(ctx context.Context, q *db.Queries, issue db.Issue, fireAt time.Time) (db.AgentTaskQueue, error) {
-	txService := &TaskService{Queries: q}
-	return txService.enqueueIssueTask(ctx, issue, pgtype.UUID{}, false, "", pgtype.UUID{}, pgtype.UUID{}, pgtype.Timestamptz{Time: fireAt, Valid: true}, OriginDerived)
-}
-
-// hydrateDeferredChannelIssueTaskOverlay fills the optional Composio overlay
-// after the issue+task transaction commits. The conditional update refuses to
-// overwrite a comment merge that won the post-commit race and already
-// re-attributed the task (with its own matching overlay).
-func (s *TaskService) hydrateDeferredChannelIssueTaskOverlay(ctx context.Context, task db.AgentTaskQueue) error {
-	if s == nil || s.Queries == nil || s.Composio == nil || !featureflags.ComposioMCPAppsEnabled(ctx, s.FeatureFlags) {
-		return nil
-	}
-	agent, err := s.Queries.GetAgent(ctx, task.AgentID)
-	if err != nil {
-		return fmt.Errorf("load agent for deferred channel issue task overlay: %w", err)
-	}
-	overlay := s.buildRuntimeMCPOverlay(ctx, task.OriginatorUserID, agent)
-	if len(overlay.Overlay) == 0 {
-		return nil
-	}
-	updated, err := s.Queries.SetDeferredChannelIssueTaskRuntimeOverlay(ctx, db.SetDeferredChannelIssueTaskRuntimeOverlayParams{
-		ID:                       task.ID,
-		RuntimeMcpOverlay:        overlay.Overlay,
-		RuntimeConnectedApps:     overlay.ConnectedApps,
-		ExpectedOriginatorUserID: task.OriginatorUserID,
-	})
-	if err != nil {
-		return fmt.Errorf("set deferred channel issue task overlay: %w", err)
-	}
-	if updated == 0 {
-		slog.Debug("deferred channel issue task overlay skipped: task plan changed",
-			"task_id", util.UUIDToString(task.ID))
-	}
-	return nil
-}
-
-// EnqueueTaskForIssueByActor is the assign/promote variant of
-// EnqueueTaskForIssue. actorUserID is the member who performed the
-// assign/promote and becomes the accountable human for the run (MUL-4302 §4);
-// invalid when the caller has no member actor.
-func (s *TaskService) EnqueueTaskForIssueByActor(ctx context.Context, issue db.Issue, actorUserID pgtype.UUID) (db.AgentTaskQueue, error) {
-	return s.enqueueIssueTask(ctx, issue, pgtype.UUID{}, false, "", actorUserID, pgtype.UUID{}, pgtype.Timestamptz{}, OriginDerived)
-}
-
-// EnqueueTaskForIssueWithHandoff is the backward-compatible assign/promote
-// variant used when an installed client still sends handoff_note. The note is
-// persisted on the task so both old and current daemons can render it in the
-// run's opening prompt. Empty text behaves like EnqueueTaskForIssueByActor.
-func (s *TaskService) EnqueueTaskForIssueWithHandoff(ctx context.Context, issue db.Issue, handoffNote string, actorUserID pgtype.UUID) (db.AgentTaskQueue, error) {
-	return s.enqueueIssueTask(ctx, issue, pgtype.UUID{}, false, handoffNote, actorUserID, pgtype.UUID{}, pgtype.Timestamptz{}, OriginDerived)
-}
-
-// enqueueIssueTask is the shared implementation behind EnqueueTaskForIssue
-// and the manual rerun path. forceFreshSession=true marks the task so the
-// daemon claim handler skips the (agent_id, issue_id) resume lookup — the
-// user already judged the prior output bad, a fresh agent session is the
-// expected behavior.
-// ResolveIssueReviewSHA returns the head SHA of the commit currently under
-// review for an issue (the head_sha of its most-relevant linked PR), or the
-// empty string when the issue has no linked PR. Callers thread this into both
-// the reviewer-loop dedup check and the enqueue path so a pending review task
-// pinned to an old head does not satisfy a request after HEAD advanced
-// (TEN-356). Empty string is the safe default: it makes dedup fall back to the
-// pre-TEN-356 (issue_id, agent_id) key and leaves the task's context NULL.
-//
-// The lookup fails soft — any DB error (including "no linked PR") returns "" so
-// a transient github-table hiccup can never over-dedup a review out of
-// existence; the worst case is the pre-TEN-356 coalescing behavior.
-func (s *TaskService) ResolveIssueReviewSHA(ctx context.Context, issueID pgtype.UUID) string {
-	if !issueID.Valid {
-		return ""
-	}
-	sha, err := s.Queries.GetIssueReviewHeadSha(ctx, issueID)
-	if err != nil {
-		if !errors.Is(err, pgx.ErrNoRows) {
-			slog.Warn("resolve issue review sha failed",
-				"issue_id", util.UUIDToString(issueID), "error", err)
-		}
-		return ""
-	}
-	return sha
-}
-
 // headShaText wraps a resolved review SHA into the pgtype.Text the dedup/enqueue
 // queries expect. Empty SHA marshals to an invalid (NULL) Text so the queries
 // take their fall-back branch.
 func headShaText(sha string) pgtype.Text {
 	return pgtype.Text{String: sha, Valid: sha != ""}
-}
-
-// ResolveIssueReviewSHAParam is ResolveIssueReviewSHA wrapped as the pgtype.Text
-// the dedup queries take, so both service- and handler-package call sites can
-// key dedup on the reviewed head with a single call (TEN-356).
-func (s *TaskService) ResolveIssueReviewSHAParam(ctx context.Context, issueID pgtype.UUID) pgtype.Text {
-	return headShaText(s.ResolveIssueReviewSHA(ctx, issueID))
-}
-
-func (s *TaskService) enqueueIssueTask(ctx context.Context, issue db.Issue, triggerCommentID pgtype.UUID, forceFreshSession bool, handoffNote string, actorUserID pgtype.UUID, rerunOfTaskID pgtype.UUID, fireAt pgtype.Timestamptz, origin RunOrigin) (db.AgentTaskQueue, error) {
-	return s.enqueueIssueTaskWithCommentPlan(ctx, issue, triggerCommentID, nil, forceFreshSession, handoffNote, actorUserID, rerunOfTaskID, fireAt, origin)
-}
-
-func (s *TaskService) enqueueIssueTaskWithCommentPlan(ctx context.Context, issue db.Issue, triggerCommentID pgtype.UUID, coalescedCommentIDs []pgtype.UUID, forceFreshSession bool, handoffNote string, actorUserID pgtype.UUID, rerunOfTaskID pgtype.UUID, fireAt pgtype.Timestamptz, origin RunOrigin) (db.AgentTaskQueue, error) {
-	if !issue.AssigneeID.Valid {
-		slog.Error("task enqueue failed", "issue_id", util.UUIDToString(issue.ID), "error", "issue has no assignee")
-		return db.AgentTaskQueue{}, fmt.Errorf("issue has no assignee")
-	}
-	if err := guardIssueNotInTriage(ctx, s.Queries, issue.ID, origin); err != nil {
-		return db.AgentTaskQueue{}, err
-	}
-
-	agent, err := s.Queries.GetAgent(ctx, issue.AssigneeID)
-	if err != nil {
-		slog.Error("task enqueue failed", "issue_id", util.UUIDToString(issue.ID), "error", err)
-		return db.AgentTaskQueue{}, fmt.Errorf("load agent: %w", err)
-	}
-	if agent.ArchivedAt.Valid {
-		slog.Debug("task enqueue skipped: agent is archived", "issue_id", util.UUIDToString(issue.ID), "agent_id", util.UUIDToString(agent.ID))
-		return db.AgentTaskQueue{}, fmt.Errorf("agent is archived")
-	}
-	if !agent.RuntimeID.Valid {
-		slog.Error("task enqueue failed", "issue_id", util.UUIDToString(issue.ID), "error", "agent has no runtime")
-		return db.AgentTaskQueue{}, fmt.Errorf("agent has no runtime")
-	}
-
-	// The issue assignee reacting to an agent-authored comment is a
-	// comment_source attribution (a special case of delegation); a member
-	// comment or direct member assignment is direct_human. attr.UserID is the
-	// same value the pre-MUL-4302 resolver produced, so overlay/authorization
-	// are unchanged; the extra fields are audit provenance.
-	attr := s.attributionForIssueTask(ctx, issue, triggerCommentID, attribution.SourceCommentSource, actorUserID)
-	// No precise human resolved → owner_fallback (accountable = agent owner), or
-	// refuse the enqueue if the workspace is fail-closed (MUL-4302 §3.5).
-	attr, err = s.applyAttributionFallback(ctx, attr, agent)
-	if err != nil {
-		slog.Warn("task enqueue refused: attribution fail-closed", "issue_id", util.UUIDToString(issue.ID), "agent_id", util.UUIDToString(issue.AssigneeID))
-		return db.AgentTaskQueue{}, err
-	}
-	originatorUserID := attr.UserID
-	runtimeMCPOverlay := s.buildRuntimeMCPOverlay(ctx, originatorUserID, agent)
-	attrSource, attrDelegatedFrom, attrEvidenceKind, attrEvidenceRef := attributionCreateParams(attr)
-	createParams := db.CreateAgentTaskParams{
-		ID:                   dbid.NewV7(),
-		AgentID:              issue.AssigneeID,
-		RuntimeID:            agent.RuntimeID,
-		IssueID:              issue.ID,
-		Priority:             priorityToInt(issue.Priority),
-		TriggerCommentID:     triggerCommentID,
-		CoalescedCommentIds:  coalescedCommentIDs,
-		TriggerSummary:       s.buildCommentTriggerSummary(ctx, issue.WorkspaceID, triggerCommentID),
-		ForceFreshSession:    pgtype.Bool{Bool: forceFreshSession, Valid: forceFreshSession},
-		HandoffNote:          pgtype.Text{String: handoffNote, Valid: handoffNote != ""},
-		OriginatorUserID:     originatorUserID,
-		AccountableUserID:    attr.AccountableUserID,
-		RuleVersionID:        attr.RuleVersionID,
-		RerunOfTaskID:        rerunOfTaskID,
-		RuntimeMcpOverlay:    runtimeMCPOverlay.Overlay,
-		RuntimeConnectedApps: runtimeMCPOverlay.ConnectedApps,
-		OriginatorSource:     attrSource,
-		DelegatedFromTaskID:  attrDelegatedFrom,
-		TriggerEvidenceKind:  attrEvidenceKind,
-		TriggerEvidenceRefID: attrEvidenceRef,
-		// Stamp the reviewed head so dedup can distinguish this run's target
-		// from a later request against a new HEAD (TEN-356).
-		HeadSha: headShaText(s.ResolveIssueReviewSHA(ctx, issue.ID)),
-	}
-	var task db.AgentTaskQueue
-	if fireAt.Valid {
-		task, err = s.Queries.CreateDeferredChannelIssueTask(ctx, db.CreateDeferredChannelIssueTaskParams{
-			ID:                   dbid.NewV7(),
-			AgentID:              createParams.AgentID,
-			RuntimeID:            createParams.RuntimeID,
-			IssueID:              createParams.IssueID,
-			Priority:             createParams.Priority,
-			TriggerCommentID:     createParams.TriggerCommentID,
-			CoalescedCommentIds:  createParams.CoalescedCommentIds,
-			TriggerSummary:       createParams.TriggerSummary,
-			ForceFreshSession:    createParams.ForceFreshSession,
-			IsLeaderTask:         createParams.IsLeaderTask,
-			HandoffNote:          createParams.HandoffNote,
-			SquadID:              createParams.SquadID,
-			HeadSha:              createParams.HeadSha,
-			OriginatorUserID:     createParams.OriginatorUserID,
-			AccountableUserID:    createParams.AccountableUserID,
-			RuntimeMcpOverlay:    createParams.RuntimeMcpOverlay,
-			RuntimeConnectedApps: createParams.RuntimeConnectedApps,
-			OriginatorSource:     createParams.OriginatorSource,
-			DelegatedFromTaskID:  createParams.DelegatedFromTaskID,
-			RuleVersionID:        createParams.RuleVersionID,
-			RerunOfTaskID:        createParams.RerunOfTaskID,
-			TriggerEvidenceKind:  createParams.TriggerEvidenceKind,
-			TriggerEvidenceRefID: createParams.TriggerEvidenceRefID,
-			FireAt:               fireAt,
-		})
-	} else {
-		task, err = s.Queries.CreateAgentTask(ctx, createParams)
-	}
-	if err != nil {
-		// A concurrent enqueue for the same (issue, agent) won the race and the
-		// unique index rejected this insert. That is benign — a sibling run
-		// already covers this target — so log it at debug and return a typed
-		// sentinel the caller maps to a coalesced outcome / 409 rather than a
-		// 500 that leaks the raw constraint name (#5914). Mirrors the mention
-		// path in enqueueMentionTaskWithCommentPlan.
-		if isDuplicatePendingTaskErr(err) {
-			slog.Debug("task enqueue coalesced: pending task already exists", "issue_id", util.UUIDToString(issue.ID), "agent_id", util.UUIDToString(issue.AssigneeID))
-			return db.AgentTaskQueue{}, ErrDuplicatePendingTask
-		}
-		slog.Error("task enqueue failed", "issue_id", util.UUIDToString(issue.ID), "error", err)
-		return db.AgentTaskQueue{}, fmt.Errorf("create task: %w", err)
-	}
-
-	slog.Info("task enqueued",
-		"task_id", util.UUIDToString(task.ID),
-		"issue_id", util.UUIDToString(issue.ID),
-		"agent_id", util.UUIDToString(issue.AssigneeID),
-		"force_fresh_session", forceFreshSession,
-	)
-	if fireAt.Valid {
-		return task, nil
-	}
-	// Order matters: broadcast first, notify daemon second. notifyTaskAvailable
-	// kicks an in-process channel that the daemon picks up over HTTP and
-	// claims; the claim path then emits its own task:dispatch. Doing the
-	// queued broadcast afterwards risks the dispatch event reaching clients
-	// before the queued one (rare but unsafe-by-construction). Publishing
-	// in the desired observe-order makes correctness independent of timing.
-	s.broadcastTaskEvent(ctx, protocol.EventTaskQueued, task)
-	s.NotifyTaskEnqueued(ctx, task)
-	return task, nil
-}
-
-// EnqueueTaskForMention creates a queued task for a mentioned agent on an issue.
-// Unlike EnqueueTaskForIssue, this takes an explicit agent ID rather than
-// deriving it from the issue assignee.
-func (s *TaskService) EnqueueTaskForMention(ctx context.Context, issue db.Issue, agentID pgtype.UUID, triggerCommentID pgtype.UUID, origin RunOrigin) (db.AgentTaskQueue, error) {
-	return s.enqueueMentionTask(ctx, issue, agentID, triggerCommentID, false, pgtype.UUID{}, false, "", pgtype.UUID{}, pgtype.UUID{}, origin)
-}
-
-// EnqueueTaskForThreadParent creates a queued task for the agent who authored
-// the direct parent comment a member replied to.
-func (s *TaskService) EnqueueTaskForThreadParent(ctx context.Context, issue db.Issue, agentID pgtype.UUID, triggerCommentID pgtype.UUID) (db.AgentTaskQueue, error) {
-	// Always named: the only caller is a member replying to what this agent said.
-	return s.enqueueMentionTask(ctx, issue, agentID, triggerCommentID, false, pgtype.UUID{}, false, "", pgtype.UUID{}, pgtype.UUID{}, OriginNamed)
-}
-
-// EnqueueTaskForSquadLeader is the leader-role variant of EnqueueTaskForMention.
-// The resulting task carries is_leader_task=true so that downstream
-// self-trigger guards can distinguish a comment posted while the agent was
-// acting as the squad's leader (skip) from one posted while it was acting
-// as a worker (do not skip). This matters for agents that are simultaneously
-// the leader and a worker of the same squad — see migration 090.
-//
-// squadID is stamped onto the task's squad_id column so the daemon claim
-// handler can locate the squad and inject its briefing regardless of how the
-// leader task was triggered (comment @squad, issue assign, autopilot,
-// sub-issue done callback). See migration 127.
-func (s *TaskService) EnqueueTaskForSquadLeader(ctx context.Context, issue db.Issue, leaderID pgtype.UUID, squadID pgtype.UUID, triggerCommentID pgtype.UUID, origin RunOrigin) (db.AgentTaskQueue, error) {
-	return s.enqueueMentionTask(ctx, issue, leaderID, triggerCommentID, true, squadID, false, "", pgtype.UUID{}, pgtype.UUID{}, origin)
-}
-
-// EnqueueTaskForSquadLeaderByActor is the assign/promote variant of
-// EnqueueTaskForSquadLeader. actorUserID is the member who performed the
-// assign/promote and becomes the accountable human (MUL-4302 §4); invalid when
-// the caller has no member actor.
-func (s *TaskService) EnqueueTaskForSquadLeaderByActor(ctx context.Context, issue db.Issue, leaderID pgtype.UUID, squadID pgtype.UUID, actorUserID pgtype.UUID) (db.AgentTaskQueue, error) {
-	return s.enqueueMentionTask(ctx, issue, leaderID, pgtype.UUID{}, true, squadID, false, "", actorUserID, pgtype.UUID{}, OriginDerived)
-}
-
-// EnqueueTaskForSquadLeaderWithHandoff is the squad equivalent of
-// EnqueueTaskForIssueWithHandoff.
-func (s *TaskService) EnqueueTaskForSquadLeaderWithHandoff(ctx context.Context, issue db.Issue, leaderID pgtype.UUID, squadID pgtype.UUID, handoffNote string, actorUserID pgtype.UUID) (db.AgentTaskQueue, error) {
-	return s.enqueueMentionTask(ctx, issue, leaderID, pgtype.UUID{}, true, squadID, false, handoffNote, actorUserID, pgtype.UUID{}, OriginDerived)
-}
-
-func (s *TaskService) enqueueMentionTask(ctx context.Context, issue db.Issue, agentID pgtype.UUID, triggerCommentID pgtype.UUID, isLeader bool, squadID pgtype.UUID, forceFreshSession bool, handoffNote string, actorUserID pgtype.UUID, rerunOfTaskID pgtype.UUID, origin RunOrigin) (db.AgentTaskQueue, error) {
-	return s.enqueueMentionTaskWithCommentPlan(ctx, issue, agentID, triggerCommentID, nil, isLeader, squadID, forceFreshSession, handoffNote, actorUserID, rerunOfTaskID, origin)
-}
-
-func (s *TaskService) enqueueMentionTaskWithCommentPlan(ctx context.Context, issue db.Issue, agentID pgtype.UUID, triggerCommentID pgtype.UUID, coalescedCommentIDs []pgtype.UUID, isLeader bool, squadID pgtype.UUID, forceFreshSession bool, handoffNote string, actorUserID pgtype.UUID, rerunOfTaskID pgtype.UUID, origin RunOrigin) (db.AgentTaskQueue, error) {
-	if err := guardIssueNotInTriage(ctx, s.Queries, issue.ID, origin); err != nil {
-		return db.AgentTaskQueue{}, err
-	}
-	agent, err := s.Queries.GetAgent(ctx, agentID)
-	if err != nil {
-		slog.Error("mention task enqueue failed: agent not found", "issue_id", util.UUIDToString(issue.ID), "agent_id", util.UUIDToString(agentID), "error", err)
-		return db.AgentTaskQueue{}, fmt.Errorf("load agent: %w", err)
-	}
-	if agent.ArchivedAt.Valid {
-		slog.Debug("mention task enqueue skipped: agent is archived", "issue_id", util.UUIDToString(issue.ID), "agent_id", util.UUIDToString(agentID))
-		return db.AgentTaskQueue{}, fmt.Errorf("agent is archived")
-	}
-	if !agent.RuntimeID.Valid {
-		slog.Error("mention task enqueue failed: agent has no runtime", "issue_id", util.UUIDToString(issue.ID), "agent_id", util.UUIDToString(agentID))
-		return db.AgentTaskQueue{}, fmt.Errorf("agent has no runtime")
-	}
-
-	// An explicit mention / thread-parent / squad-leader hop from an
-	// agent-authored comment is a delegation (the parent task's human is
-	// copied); a member mention is direct_human. attr.UserID matches the
-	// pre-MUL-4302 value, so authorization is unchanged.
-	attr := s.attributionForIssueTask(ctx, issue, triggerCommentID, attribution.SourceDelegation, actorUserID)
-	// No precise human resolved → owner_fallback (accountable = agent owner), or
-	// refuse the enqueue if the workspace is fail-closed (MUL-4302 §3.5).
-	attr, err = s.applyAttributionFallback(ctx, attr, agent)
-	if err != nil {
-		slog.Warn("mention task enqueue refused: attribution fail-closed", "issue_id", util.UUIDToString(issue.ID), "agent_id", util.UUIDToString(agentID))
-		return db.AgentTaskQueue{}, err
-	}
-	originatorUserID := attr.UserID
-	runtimeMCPOverlay := s.buildRuntimeMCPOverlay(ctx, originatorUserID, agent)
-	attrSource, attrDelegatedFrom, attrEvidenceKind, attrEvidenceRef := attributionCreateParams(attr)
-	task, err := s.Queries.CreateAgentTask(ctx, db.CreateAgentTaskParams{
-		ID:                   dbid.NewV7(),
-		AgentID:              agentID,
-		RuntimeID:            agent.RuntimeID,
-		IssueID:              issue.ID,
-		Priority:             priorityToInt(issue.Priority),
-		TriggerCommentID:     triggerCommentID,
-		CoalescedCommentIds:  coalescedCommentIDs,
-		TriggerSummary:       s.buildCommentTriggerSummary(ctx, issue.WorkspaceID, triggerCommentID),
-		IsLeaderTask:         pgtype.Bool{Bool: isLeader, Valid: isLeader},
-		ForceFreshSession:    pgtype.Bool{Bool: forceFreshSession, Valid: forceFreshSession},
-		HandoffNote:          pgtype.Text{String: handoffNote, Valid: handoffNote != ""},
-		SquadID:              squadID,
-		OriginatorUserID:     originatorUserID,
-		AccountableUserID:    attr.AccountableUserID,
-		RuleVersionID:        attr.RuleVersionID,
-		RerunOfTaskID:        rerunOfTaskID,
-		RuntimeMcpOverlay:    runtimeMCPOverlay.Overlay,
-		RuntimeConnectedApps: runtimeMCPOverlay.ConnectedApps,
-		OriginatorSource:     attrSource,
-		DelegatedFromTaskID:  attrDelegatedFrom,
-		TriggerEvidenceKind:  attrEvidenceKind,
-		TriggerEvidenceRefID: attrEvidenceRef,
-		// Stamp the reviewed head so dedup can distinguish this run's target
-		// from a later request against a new HEAD (TEN-356).
-		HeadSha: headShaText(s.ResolveIssueReviewSHA(ctx, issue.ID)),
-	})
-	if err != nil {
-		// A concurrent enqueue for the same (issue, agent) won the race and the
-		// unique index rejected this insert. That is benign — a sibling run
-		// already covers this target — so log it at debug and return a typed
-		// sentinel the caller maps to a coalesced outcome / 409 rather than a
-		// 500 that leaks the raw constraint name (#5914).
-		if isDuplicatePendingTaskErr(err) {
-			slog.Debug("mention task enqueue coalesced: pending task already exists", "issue_id", util.UUIDToString(issue.ID), "agent_id", util.UUIDToString(agentID))
-			return db.AgentTaskQueue{}, ErrDuplicatePendingTask
-		}
-		slog.Error("mention task enqueue failed", "issue_id", util.UUIDToString(issue.ID), "agent_id", util.UUIDToString(agentID), "error", err)
-		return db.AgentTaskQueue{}, fmt.Errorf("create task: %w", err)
-	}
-
-	slog.Info("mention task enqueued", "task_id", util.UUIDToString(task.ID), "issue_id", util.UUIDToString(issue.ID), "agent_id", util.UUIDToString(agentID), "is_leader_task", isLeader)
-	// See EnqueueTaskForIssue for ordering rationale.
-	s.broadcastTaskEvent(ctx, protocol.EventTaskQueued, task)
-	s.NotifyTaskEnqueued(ctx, task)
-	return task, nil
 }
 
 // QuickCreateContext is the JSON payload stored on a quick-create task's
@@ -1547,247 +851,6 @@ type QuickCreateContext struct {
 
 // QuickCreateContextType marks a task as a quick-create job.
 const QuickCreateContextType = "quick_create"
-
-// EnqueueQuickCreateTask creates a queued task that has no issue / chat /
-// autopilot link — the user's natural-language prompt is stored in the
-// task's context JSONB and the agent is expected to translate it into a
-// `auro issue create` call. Pre-validates that the agent is reachable
-// (not archived, has a runtime) so the API can reject up-front rather than
-// queue a task no one will ever claim.
-//
-// projectID is optional (zero-valued pgtype.UUID when the user didn't pick
-// one). The handler is responsible for validating it belongs to the same
-// workspace before passing it in.
-//
-// squadID is non-empty (Valid) when the user picked a squad as the actor.
-// The handler has already resolved it to the squad's leader agent for
-// agentID; the squadID hint is stamped into the task context so the daemon
-// claim handler can inject the squad-leader briefing on dispatch.
-//
-// parentIssueID is optional (zero-valued pgtype.UUID when the user didn't
-// open the modal from "Add sub issue"). The handler is responsible for
-// validating it belongs to the same workspace before passing it in.
-func (s *TaskService) EnqueueQuickCreateTask(ctx context.Context, workspaceID, requesterID pgtype.UUID, agentID, squadID pgtype.UUID, prompt, priority, dueDate string, projectID, parentIssueID pgtype.UUID, attachmentIDs []pgtype.UUID) (db.AgentTaskQueue, error) {
-	return s.enqueueQuickCreateTask(ctx, workspaceID, requesterID, agentID, squadID, prompt, priority, dueDate, projectID, parentIssueID, attachmentIDs, nil)
-}
-
-func (s *TaskService) EnqueueQuickCreateTaskWithSourceContext(ctx context.Context, workspaceID, requesterID pgtype.UUID, agentID, squadID pgtype.UUID, prompt, priority, dueDate string, projectID, parentIssueID pgtype.UUID, attachmentIDs []pgtype.UUID, capture SourceContextCapture) (db.AgentTaskQueue, error) {
-	return s.enqueueQuickCreateTask(ctx, workspaceID, requesterID, agentID, squadID, prompt, priority, dueDate, projectID, parentIssueID, attachmentIDs, &capture)
-}
-
-func (s *TaskService) enqueueQuickCreateTask(ctx context.Context, workspaceID, requesterID pgtype.UUID, agentID, squadID pgtype.UUID, prompt, priority, dueDate string, projectID, parentIssueID pgtype.UUID, attachmentIDs []pgtype.UUID, capture *SourceContextCapture) (db.AgentTaskQueue, error) {
-	if err := CheckIssueCreateCapacity(ctx, s.Queries, s.Entitlements, workspaceID); err != nil {
-		return db.AgentTaskQueue{}, fmt.Errorf("preflight quick-create issue capacity: %w", err)
-	}
-	agent, err := s.Queries.GetAgent(ctx, agentID)
-	if err != nil {
-		return db.AgentTaskQueue{}, fmt.Errorf("load agent: %w", err)
-	}
-	if agent.ArchivedAt.Valid {
-		return db.AgentTaskQueue{}, fmt.Errorf("agent is archived")
-	}
-	if !agent.RuntimeID.Valid {
-		return db.AgentTaskQueue{}, fmt.Errorf("agent has no runtime")
-	}
-
-	payload := QuickCreateContext{
-		Type:        QuickCreateContextType,
-		Prompt:      prompt,
-		RequesterID: util.UUIDToString(requesterID),
-		WorkspaceID: util.UUIDToString(workspaceID),
-		Priority:    priority,
-		DueDate:     dueDate,
-	}
-	if projectID.Valid {
-		payload.ProjectID = util.UUIDToString(projectID)
-	}
-	if squadID.Valid {
-		payload.SquadID = util.UUIDToString(squadID)
-	}
-	if parentIssueID.Valid {
-		payload.ParentIssueID = util.UUIDToString(parentIssueID)
-	}
-	if capture != nil {
-		payload.SourceContextID = util.UUIDToString(capture.ID)
-	}
-	if len(attachmentIDs) > 0 {
-		payload.AttachmentIDs = make([]string, 0, len(attachmentIDs))
-		for _, id := range attachmentIDs {
-			if id.Valid {
-				payload.AttachmentIDs = append(payload.AttachmentIDs, util.UUIDToString(id))
-			}
-		}
-	}
-	contextJSON, err := json.Marshal(payload)
-	if err != nil {
-		return db.AgentTaskQueue{}, fmt.Errorf("marshal quick-create context: %w", err)
-	}
-
-	// The requester who submitted the quick-create modal is the direct_human
-	// originator and accountable. Quick-create is the ONE enqueue path with no
-	// antecedent row to point the uniform evidence pair at: the run's whole job is
-	// to CREATE the issue, so at enqueue time there is no comment / issue / session
-	// / run to reference (the issue is linked back later via LinkTaskToIssue).
-	// Evidence is therefore intentionally NULL; the accountable human is captured on
-	// originator/accountable_user_id, so this is not a NULL-source bypass — source
-	// is still stamped direct_human (MUL-4302 §2).
-	attr := attribution.DirectHumanRun(requesterID, "", pgtype.UUID{})
-	// An unresolved requester degrades to owner_fallback (accountable = agent
-	// owner), or is refused if the workspace is fail-closed (MUL-4302 §3.5).
-	attr, err = s.applyAttributionFallback(ctx, attr, agent)
-	if err != nil {
-		return db.AgentTaskQueue{}, err
-	}
-	attrSource, _, attrEvidenceKind, attrEvidenceRef := attributionCreateParams(attr)
-	runtimeMCPOverlay := s.buildRuntimeMCPOverlay(ctx, requesterID, agent)
-	taskID := dbid.NewV7()
-	createParams := db.CreateQuickCreateTaskParams{
-		ID:                   taskID,
-		AgentID:              agentID,
-		RuntimeID:            agent.RuntimeID,
-		Priority:             priorityToInt("high"),
-		Context:              contextJSON,
-		OriginatorUserID:     requesterID,
-		AccountableUserID:    attr.AccountableUserID,
-		RuntimeMcpOverlay:    runtimeMCPOverlay.Overlay,
-		RuntimeConnectedApps: runtimeMCPOverlay.ConnectedApps,
-		OriginatorSource:     attrSource,
-		TriggerEvidenceKind:  attrEvidenceKind,
-		TriggerEvidenceRefID: attrEvidenceRef,
-	}
-	var task db.AgentTaskQueue
-	if capture == nil {
-		task, err = s.Queries.CreateQuickCreateTask(ctx, createParams)
-	} else {
-		tx, beginErr := s.TxStarter.Begin(ctx)
-		if beginErr != nil {
-			return db.AgentTaskQueue{}, fmt.Errorf("begin quick-create source context tx: %w", beginErr)
-		}
-		defer tx.Rollback(ctx)
-		qtx := s.Queries.WithTx(tx)
-		if _, err = qtx.LockIssueForDescriptionUpdate(ctx, db.LockIssueForDescriptionUpdateParams{
-			ID: capture.SourceIssueID, WorkspaceID: workspaceID,
-		}); err == nil {
-			var locked []pgtype.UUID
-			locked, err = qtx.LockCommentAncestorPath(ctx, db.LockCommentAncestorPathParams{
-				CommentID: capture.AnchorCommentID, WorkspaceID: workspaceID, IssueID: capture.SourceIssueID,
-			})
-			if err == nil && len(locked) == 0 {
-				err = ErrAnchorCommentDeleted
-			}
-		}
-		if errors.Is(err, pgx.ErrNoRows) {
-			err = ErrSourceIssueDeleted
-		}
-		if err == nil {
-			var current SourceContextBuild
-			current, err = BuildSourceContext(ctx, qtx, workspaceID, capture.AnchorCommentID)
-			if err == nil && current.Digest != capture.Digest {
-				err = ErrSourceContextChanged
-			}
-		}
-		if err == nil {
-			task, err = qtx.CreateQuickCreateTask(ctx, createParams)
-		}
-		if err == nil {
-			_, err = PersistSourceContext(ctx, qtx, *capture, pgtype.UUID{}, task.ID)
-		}
-		if err == nil {
-			err = tx.Commit(ctx)
-		}
-	}
-	if err != nil {
-		return db.AgentTaskQueue{}, fmt.Errorf("create quick-create task with source context: %w", err)
-	}
-
-	slog.Info("quick-create task enqueued",
-		"task_id", util.UUIDToString(task.ID),
-		"agent_id", util.UUIDToString(agentID),
-		"squad_id", payload.SquadID,
-		"requester_id", util.UUIDToString(requesterID),
-		"workspace_id", util.UUIDToString(workspaceID),
-		"project_id", payload.ProjectID,
-		"parent_issue_id", payload.ParentIssueID,
-	)
-	// Match every other Enqueue* path: kick the daemon WS so the task
-	// gets claimed promptly instead of waiting for the next 30 s poll
-	// cycle. Without this the user perceives "quick create never
-	// triggered" because the modal closes immediately and the task
-	// sits in 'queued' until the next sleepWithContextOrWakeup tick.
-	s.NotifyTaskEnqueued(ctx, task)
-	return task, nil
-}
-
-// RetrySourceContextQuickCreate manually retries a failed issue-less
-// quick-create while retaining the exact pending source context and cloned
-// attachments. The context row is the serialization point: only the task that
-// currently owns origin_task_id may create and receive a successor, so a
-// double-click or a race with automatic retry cannot mint two live attempts.
-//
-// Only the original requester may retry this recovery item. That keeps the
-// direct_human attribution truthful and prevents another workspace member from
-// replaying a private prompt merely by learning the task ID.
-func (s *TaskService) RetrySourceContextQuickCreate(ctx context.Context, workspaceID, requesterID, sourceTaskID pgtype.UUID, canInvoke func(agent db.Agent) bool) (*db.AgentTaskQueue, error) {
-	parent, err := s.Queries.GetAgentTaskInWorkspace(ctx, db.GetAgentTaskInWorkspaceParams{
-		ID: sourceTaskID, WorkspaceID: workspaceID,
-	})
-	if err != nil || parent.Status != "failed" {
-		return nil, ErrSourceContextRetryUnavailable
-	}
-	quickCreate, ok := s.parseQuickCreateContext(parent)
-	if !ok || quickCreate.SourceContextID == "" || quickCreate.RequesterID != util.UUIDToString(requesterID) {
-		return nil, ErrSourceContextRetryUnavailable
-	}
-	contextID, err := util.ParseUUID(quickCreate.SourceContextID)
-	if err != nil {
-		return nil, ErrSourceContextRetryUnavailable
-	}
-	agent, err := s.Queries.GetAgent(ctx, parent.AgentID)
-	if err != nil || agent.ArchivedAt.Valid || !agent.RuntimeID.Valid {
-		return nil, ErrSourceContextRetryUnavailable
-	}
-	if canInvoke != nil && !canInvoke(agent) {
-		return nil, ErrRerunInvokeNotAllowed
-	}
-	if err := CheckIssueCreateCapacity(ctx, s.Queries, s.Entitlements, workspaceID); err != nil {
-		return nil, fmt.Errorf("preflight quick-create issue capacity: %w", err)
-	}
-	overlay := s.buildRuntimeMCPOverlay(ctx, requesterID, agent)
-
-	tx, err := s.TxStarter.Begin(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("begin source context manual retry: %w", err)
-	}
-	defer tx.Rollback(ctx)
-	qtx := s.Queries.WithTx(tx)
-	locked, err := qtx.GetPendingIssueSourceContextByOriginTask(ctx, db.GetPendingIssueSourceContextByOriginTaskParams{
-		WorkspaceID: workspaceID, OriginTaskID: sourceTaskID,
-	})
-	if err != nil || locked.ID != contextID {
-		return nil, ErrSourceContextRetryUnavailable
-	}
-	child, err := qtx.CreateManualQuickCreateRetryTask(ctx, db.CreateManualQuickCreateRetryTaskParams{
-		ActorUserID:          requesterID,
-		RuntimeMcpOverlay:    overlay.Overlay,
-		RuntimeConnectedApps: overlay.ConnectedApps,
-		NewTaskID:            dbid.NewV7(),
-		SourceTaskID:         sourceTaskID,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("create source context manual retry: %w", err)
-	}
-	if _, err := qtx.TransferPendingIssueSourceContextTask(ctx, db.TransferPendingIssueSourceContextTaskParams{
-		NewTaskID: child.ID, WorkspaceID: workspaceID, ID: contextID, OldTaskID: sourceTaskID,
-	}); err != nil {
-		return nil, fmt.Errorf("transfer source context manual retry: %w", err)
-	}
-	if err := tx.Commit(ctx); err != nil {
-		return nil, fmt.Errorf("commit source context manual retry: %w", err)
-	}
-	s.broadcastTaskEvent(ctx, protocol.EventTaskQueued, child)
-	s.NotifyTaskEnqueued(ctx, child)
-	return &child, nil
-}
 
 // ErrChatTaskAgentArchived signals that EnqueueChatTask refused to
 // queue work because the destination agent has been archived. This
@@ -2272,27 +1335,6 @@ func (s *TaskService) PromoteChannelChatTasksIfMediaReady(ctx context.Context, s
 	return nil
 }
 
-// PromoteDeferredChannelIssueTask makes a media-gated /issue task claimable.
-// ErrNoRows means the deadline sweeper already promoted it (or the task was
-// cancelled), so this is idempotent across the two promotion paths.
-func (s *TaskService) PromoteDeferredChannelIssueTask(ctx context.Context, taskID pgtype.UUID) error {
-	task, err := s.Queries.PromoteDeferredChannelIssueTask(ctx, taskID)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return nil
-	}
-	if err != nil {
-		return fmt.Errorf("promote deferred channel issue task: %w", err)
-	}
-	slog.Info("channel media-ready issue task promoted",
-		"task_id", util.UUIDToString(task.ID),
-		"issue_id", util.UUIDToString(task.IssueID),
-		"agent_id", util.UUIDToString(task.AgentID),
-	)
-	s.broadcastTaskEvent(ctx, protocol.EventTaskQueued, task)
-	s.NotifyTaskEnqueued(ctx, task)
-	return nil
-}
-
 // DirectChatSendResult carries the rows a transactional direct-chat send
 // persisted, so the handler can broadcast the user message and shape its
 // response without re-reading them.
@@ -2603,52 +1645,6 @@ func (s *TaskService) OpenMikaOnboardingChat(ctx context.Context, session db.Cha
 	return &out, nil
 }
 
-// CancelTasksForIssue cancels every active task on the issue, reconciles each
-// affected agent's status, and broadcasts task:cancelled events so frontends
-// clear their live cards.
-//
-// Callers are explicit issue-lifecycle cleanup paths only — DeleteIssue and
-// BatchDeleteIssues, where the owning issue row is going away so its tasks
-// must not be left orphaned. A plain status flip, `cancelled` included, no
-// longer routes here (MUL-4465): cancelling an issue is not an implicit "stop
-// all runs" switch. Do not re-add a status-driven caller.
-//
-// Before #1587 this path was "cancel rows and return", which left each affected
-// agent stuck at status="working" indefinitely, requiring a manual
-// `auro agent update <id> --status idle` to unwedge. It now reconciles agent
-// status and broadcasts task:cancelled, matching CancelTask and RerunIssue.
-func (s *TaskService) CancelTasksForIssue(ctx context.Context, issueID pgtype.UUID) error {
-	var cancelled []db.AgentTaskQueue
-	// The cancel and its settlement commit together: a settlement that failed
-	// after the cancel committed could never be repaired, because the outbox
-	// scan excludes a comment whose covering task is terminal and already holds
-	// the receipt. It would neither replay nor settle — it would sit in the
-	// partial index forever.
-	if err := s.runInTx(ctx, func(qtx *db.Queries) error {
-		var err error
-		cancelled, err = qtx.CancelAgentTasksByIssue(ctx, issueID)
-		if err != nil {
-			return err
-		}
-		return SettleTerminalTaskState(ctx, qtx, cancelled...)
-	}); err != nil {
-		return err
-	}
-	for _, t := range cancelled {
-		s.captureTaskCancelled(ctx, t)
-		s.broadcastTaskEvent(ctx, protocol.EventTaskCancelled, t)
-	}
-	// Reconcile once per distinct agent instead of once per cancelled row:
-	// cancelling an issue often stops several tasks owned by the same agent,
-	// and each reconcile is a DB write plus a status broadcast. Matches
-	// CancelTasksForAgent's single-reconcile shape (D#3319).
-	for _, agentID := range distinctAgentIDs(cancelled) {
-		s.ReconcileAgentStatus(ctx, agentID)
-	}
-	s.notifyTasksFinished(cancelled)
-	return nil
-}
-
 // distinctAgentIDs returns each agent id appearing in the cancelled rows once,
 // preserving first-seen order. Bulk cancellations frequently stop several tasks
 // owned by the same agent; reconciling per distinct agent (rather than per row)
@@ -2693,36 +1689,6 @@ func (s *TaskService) CancelTasksForAgent(ctx context.Context, agentID pgtype.UU
 	// working→available based on remaining task counts, no need to call
 	// per row (the rows we just cancelled all belong to the same agent).
 	s.ReconcileAgentStatus(ctx, agentID)
-	s.notifyTasksFinished(cancelled)
-	return cancelled, nil
-}
-
-// CancelTasksByTriggerComment cancels active tasks whose planned comment batch
-// contains the given edited/deleted comment. The historical method name is
-// retained for call-site stability. It must run before deletion clears the
-// trigger FK; the returned rows let the handler re-route every surviving input.
-func (s *TaskService) CancelTasksByTriggerComment(ctx context.Context, commentID pgtype.UUID) ([]db.AgentTaskQueue, error) {
-	var cancelled []db.AgentTaskQueue
-	if err := s.runInTx(ctx, func(qtx *db.Queries) error {
-		var err error
-		cancelled, err = qtx.CancelAgentTasksByTriggerComment(ctx, commentID)
-		if err != nil {
-			return err
-		}
-		return SettleTerminalTaskState(ctx, qtx, cancelled...)
-	}); err != nil {
-		return nil, err
-	}
-	for _, t := range cancelled {
-		s.captureTaskCancelled(ctx, t)
-		s.broadcastTaskEvent(ctx, protocol.EventTaskCancelled, t)
-	}
-	// Reconcile once per distinct agent instead of once per cancelled row: an
-	// edited/deleted trigger comment can cancel several tasks owned by the same
-	// agent, and each reconcile is a DB write plus a status broadcast (D#3319).
-	for _, agentID := range distinctAgentIDs(cancelled) {
-		s.ReconcileAgentStatus(ctx, agentID)
-	}
 	s.notifyTasksFinished(cancelled)
 	return cancelled, nil
 }
@@ -4515,48 +3481,6 @@ func (s *TaskService) CompleteTaskWithTransition(ctx context.Context, taskID pgt
 	// tasks, TriggerCommentID threads the fallback under the original comment;
 	// for assignment-triggered tasks it is NULL and the fallback is top-level.
 	// Chat tasks have no IssueID and are handled separately below.
-	if task.IssueID.Valid {
-		suppressNoActionComment, err := HasSquadLeaderNoActionEvaluationForTask(ctx, s.Queries, task)
-		if err != nil {
-			slog.Warn("checking squad leader no_action evaluation failed",
-				"task_id", util.UUIDToString(task.ID),
-				"issue_id", util.UUIDToString(task.IssueID),
-				"agent_id", util.UUIDToString(task.AgentID),
-				"error", err,
-			)
-		}
-		agentCommented, _ := s.Queries.HasAgentCommentedSince(ctx, db.HasAgentCommentedSinceParams{
-			IssueID:  task.IssueID,
-			AuthorID: task.AgentID,
-			Since:    task.StartedAt,
-		})
-		// A scheduled wakeup check that found nothing new ends with a check-in
-		// instead of a comment (see IssueWakeupService.CheckIn).
-		if !suppressNoActionComment && !agentCommented && !HasWakeupCheckin(task) {
-			var payload protocol.TaskCompletedPayload
-			if err := json.Unmarshal(result, &payload); err == nil {
-				if payload.Output != "" {
-					// Match the CLI's --content / --description behavior: agents that
-					// emit literal `\n` 4-char sequences (Python/JSON-style) get them
-					// decoded into real newlines before the comment hits the DB. See
-					// util.UnescapeBackslashEscapes for the exact contract.
-					body := util.UnescapeBackslashEscapes(payload.Output)
-					if task.TriggerCommentID.Valid && isTrivialDoneOutput(body) {
-						slog.Warn("suppressing trivial comment-trigger fallback output",
-							"task_id", util.UUIDToString(task.ID),
-							"issue_id", util.UUIDToString(task.IssueID),
-							"agent_id", util.UUIDToString(task.AgentID),
-						)
-					} else {
-						// Redact first, then bound: a runaway raw-stream Output (GH #5455)
-						// must never reach the issue thread, even as a clipped excerpt.
-						content := truncateFallbackCommentBody(redact.Text(body), maxSynthesizedFallbackCommentRunes)
-						s.createAgentComment(ctx, task.IssueID, task.AgentID, content, "comment", task.TriggerCommentID, task.ID)
-					}
-				}
-			}
-		}
-	}
 
 	// Quick-create tasks: locate the issue the agent just created and push
 	// an inbox confirmation to the requester. The agent has no issue / chat
@@ -4564,9 +3488,6 @@ func (s *TaskService) CompleteTaskWithTransition(ctx context.Context, taskID pgt
 	// new issue by querying for the most recent issue this agent created in
 	// the requester's workspace since the task started — more robust than
 	// parsing the agent's stdout for an identifier.
-	if qc, ok := s.parseQuickCreateContext(task); ok {
-		s.notifyQuickCreateCompleted(ctx, task, qc, result)
-	}
 
 	// For chat tasks, broadcast chat:done AFTER commit. The single assistant
 	// outcome row (message or no_response) and the resume pointer were already
@@ -4996,34 +3917,14 @@ func (s *TaskService) FailTaskWithTransition(ctx context.Context, taskID pgtype.
 		// can never abort this transaction — which also carries the parent's
 		// failed status.
 		createRetry := wantRetry
-		if createRetry {
-			successor, herr := hasRunnableSuccessor(ctx, qtx, t)
-			if herr != nil {
-				return fmt.Errorf("check runnable successor: %w", herr)
-			}
-			if successor {
-				slog.Info("fail task auto-retry skipped: a successor is already pending",
-					"task_id", util.UUIDToString(taskID),
-					"issue_id", util.UUIDToString(t.IssueID),
-					"agent_id", util.UUIDToString(t.AgentID),
-				)
-				createRetry = false
-			}
-		}
+
 		// The queue door, on the one insert path that cannot fail loudly. A
 		// refusal here must never abort the transaction — it also carries the
 		// parent's failed status, and losing that leaves the task stuck in
 		// 'running' — so both a Triage issue and an unreadable status skip the
 		// retry instead of returning, exactly as the ErrNoRows case below does.
 		if createRetry {
-			if gerr := guardIssueNotInTriage(ctx, qtx, t.IssueID, OriginDerived); gerr != nil {
-				slog.Info("fail task auto-retry skipped: issue does not run",
-					"task_id", util.UUIDToString(taskID),
-					"issue_id", util.UUIDToString(t.IssueID),
-					"error", gerr,
-				)
-				createRetry = false
-			}
+
 		}
 		if createRetry {
 			child, cerr := qtx.CreateRetryTask(ctx, db.CreateRetryTaskParams{
@@ -5036,26 +3937,13 @@ func (s *TaskService) FailTaskWithTransition(ctx context.Context, taskID pgtype.
 			})
 			switch {
 			case cerr == nil:
-				transferErr := transferPendingSourceContextToRetry(ctx, qtx, t, child)
-				if errors.Is(transferErr, pgx.ErrNoRows) {
-					deleted, deleteErr := qtx.DeleteUnstartedQuickCreateRetryTask(ctx, child.ID)
-					if deleteErr != nil || deleted != 1 {
-						return fmt.Errorf("discard source context retry without attach authority: changed=%d: %w", deleted, deleteErr)
-					}
-					slog.Info("fail task auto-retry skipped: source context already transferred or attached",
-						"task_id", util.UUIDToString(taskID),
-						"source_context_retry_id", util.UUIDToString(child.ID),
-					)
-				} else if transferErr != nil {
-					return fmt.Errorf("transfer pending source context to retry: %w", transferErr)
-				} else {
-					if err := qtx.CopyChannelTaskDelivery(ctx, db.CopyChannelTaskDeliveryParams{
-						ChildTaskID: child.ID, ParentTaskID: taskID,
-					}); err != nil {
-						return fmt.Errorf("copy retry channel delivery: %w", err)
-					}
-					retried = &child
+				if err := qtx.CopyChannelTaskDelivery(ctx, db.CopyChannelTaskDeliveryParams{
+					ChildTaskID: child.ID, ParentTaskID: taskID,
+				}); err != nil {
+					return fmt.Errorf("copy retry channel delivery: %w", err)
 				}
+				retried = &child
+
 			case errors.Is(cerr, pgx.ErrNoRows):
 				// The statement wrote nothing: either the owning workspace was
 				// torn down mid-flight, or a rerun took the pending slot after
@@ -5166,16 +4054,6 @@ func (s *TaskService) FailTaskWithTransition(ctx context.Context, taskID pgtype.
 	// platform-authored comment on the source task's issue, routed explicitly to
 	// that task's agent; recoverDelegatedTaskFailure coalesces it with an
 	// existing coordinator run and deduplicates by the failed task id.
-	if retried == nil {
-		_, recoveryErr := s.recoverDelegatedTaskFailure(ctx, task)
-		if recoveryErr != nil {
-			slog.Warn("delegated task failure recovery failed",
-				"task_id", util.UUIDToString(task.ID),
-				"delegated_from_task_id", util.UUIDToString(task.DelegatedFromTaskID),
-				"error", recoveryErr,
-			)
-		}
-	}
 
 	// Skip the per-failure system comment when we'll immediately retry —
 	// the new task will surface its own status to the user, and we don't
@@ -5183,32 +4061,13 @@ func (s *TaskService) FailTaskWithTransition(ctx context.Context, taskID pgtype.
 	// daemon hiccup. Delegated failures keep this existing failed-issue comment
 	// in addition to the coordinator recovery signal, preserving visibility on
 	// both sides of a cross-issue handoff.
-	if errMsg != "" && task.IssueID.Valid && retried == nil {
-		s.createAgentComment(ctx, task.IssueID, task.AgentID, redact.Text(errMsg), "system", task.TriggerCommentID, task.ID)
-	}
 
 	// Quick-create tasks: push a failure inbox notification to the
 	// requester so they can either retry or fall back to the advanced form
 	// without losing their original prompt. Skipped when an auto-retry is
 	// pending — the new attempt will write its own outcome.
 	if retried == nil {
-		if qc, ok := s.parseQuickCreateContext(task); ok {
-			attached, attachedErr := s.sourceContextAttachedByTask(ctx, task, qc)
-			switch {
-			case attachedErr != nil:
-				slog.Error("quick-create failure: source context outcome lookup failed",
-					"task_id", util.UUIDToString(task.ID), "error", attachedErr)
-				s.notifyQuickCreateUnconfirmed(ctx, task, qc)
-			case attached:
-				// The CLI create committed before the runtime reported its own
-				// failure. The attached context is authoritative proof that the
-				// target exists, so reconcile the normal success inbox rather than
-				// inviting a duplicate retry from a misleading failure row.
-				s.notifyQuickCreateCompleted(ctx, task, qc, nil)
-			default:
-				s.notifyQuickCreateFailed(ctx, task, qc, errMsg)
-			}
-		}
+
 	}
 	// Reconcile agent status
 	s.ReconcileAgentStatus(ctx, task.AgentID)
@@ -5378,44 +4237,7 @@ func retryEligible(failureReason string, t db.AgentTaskQueue) bool {
 	return retryableReasons[failureReason] &&
 		t.Attempt < retryAttemptCeiling(failureReason, t.MaxAttempts) &&
 		!t.AutopilotRunID.Valid &&
-		!IsTriageTask(t) &&
-		(t.IssueID.Valid || t.ChatSessionID.Valid || isSourceContextQuickCreateTask(t))
-}
-
-func isSourceContextQuickCreateTask(task db.AgentTaskQueue) bool {
-	if len(task.Context) == 0 || task.IssueID.Valid || task.ChatSessionID.Valid || task.AutopilotRunID.Valid {
-		return false
-	}
-	var quickCreate QuickCreateContext
-	return json.Unmarshal(task.Context, &quickCreate) == nil &&
-		quickCreate.Type == QuickCreateContextType && quickCreate.SourceContextID != ""
-}
-
-// hasRunnableSuccessor reports whether another not-yet-started task already
-// occupies the single queued/dispatched slot that
-// idx_one_pending_task_per_issue_agent_v2 allows per (issue, agent).
-//
-// Both auto-retry paths consult this before inserting a retry child. A manual
-// rerun can now be enqueued BEHIND a still-running task instead of cancelling
-// it, so by the time that task fails its slot may already be taken, and the
-// retry exists to give the issue a runnable successor that already exists.
-//
-// This is advisory only: the query takes no lock, so a rerun committing after it
-// returns is always possible. CreateRetryTask's ON CONFLICT DO NOTHING is what
-// makes losing that race harmless. Skipping early just avoids pointless work and
-// records why no retry was made.
-//
-// Chat / quick-create tasks carry no issue_id, so the index cannot apply to them
-// and their retries can never collide.
-func hasRunnableSuccessor(ctx context.Context, q *db.Queries, task db.AgentTaskQueue) (bool, error) {
-	if !task.IssueID.Valid {
-		return false, nil
-	}
-	return q.HasPendingTaskForIssueAndAgentInThread(ctx, db.HasPendingTaskForIssueAndAgentInThreadParams{
-		ThreadCommentID: task.TriggerCommentID,
-		IssueID:         task.IssueID,
-		AgentID:         task.AgentID,
-	})
+		t.ChatSessionID.Valid
 }
 
 // MaybeRetryFailedTask spawns a fresh queued attempt for a recently-failed
@@ -5485,17 +4307,7 @@ func (s *TaskService) MaybeRetryFailedTask(ctx context.Context, parent db.AgentT
 	// Same advisory slot check as FailTask's path, for the same reason: skip the
 	// work when a successor is already visible. Losing the race is handled by
 	// CreateRetryTask yielding the slot, which this caller reads as "no retry".
-	if successor, herr := hasRunnableSuccessor(ctx, s.Queries, parent); herr != nil {
-		slog.Warn("task auto-retry: successor check failed; attempting retry anyway",
-			"parent_task_id", util.UUIDToString(parent.ID), "error", herr)
-	} else if successor {
-		slog.Info("task auto-retry skipped: a successor is already pending",
-			"parent_task_id", util.UUIDToString(parent.ID),
-			"issue_id", util.UUIDToString(parent.IssueID),
-			"agent_id", util.UUIDToString(parent.AgentID),
-		)
-		return nil, nil
-	}
+
 	if s.TxStarter == nil {
 		return nil, errors.New("task auto-retry: transaction starter is required")
 	}
@@ -5505,15 +4317,7 @@ func (s *TaskService) MaybeRetryFailedTask(ctx context.Context, parent db.AgentT
 	}
 	defer tx.Rollback(ctx)
 	qtx := s.Queries.WithTx(tx)
-	if err := guardIssueNotInTriage(ctx, qtx, parent.IssueID, OriginDerived); err != nil {
-		if errors.Is(err, ErrIssueInTriage) {
-			slog.Info("task auto-retry skipped: issue is in triage",
-				"parent_task_id", util.UUIDToString(parent.ID),
-				"issue_id", util.UUIDToString(parent.IssueID))
-			return nil, nil
-		}
-		return nil, err
-	}
+
 	child, err := qtx.CreateRetryTask(ctx, db.CreateRetryTaskParams{
 		NewTaskID:            dbid.NewV7(),
 		ID:                   parent.ID,
@@ -5540,16 +4344,7 @@ func (s *TaskService) MaybeRetryFailedTask(ctx context.Context, parent db.AgentT
 		)
 		return nil, err
 	}
-	if err := transferPendingSourceContextToRetry(ctx, qtx, parent, child); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			slog.Info("task auto-retry skipped: source context already transferred or attached",
-				"parent_task_id", util.UUIDToString(parent.ID),
-				"source_context_retry_id", util.UUIDToString(child.ID),
-			)
-			return nil, nil
-		}
-		return nil, err
-	}
+
 	if err := qtx.CopyChannelTaskDelivery(ctx, db.CopyChannelTaskDeliveryParams{
 		ChildTaskID: child.ID, ParentTaskID: parent.ID,
 	}); err != nil {
@@ -5575,28 +4370,6 @@ func (s *TaskService) MaybeRetryFailedTask(ctx context.Context, parent db.AgentT
 		s.NotifyTaskEnqueued(ctx, child)
 	}
 	return &child, nil
-}
-
-func transferPendingSourceContextToRetry(ctx context.Context, q *db.Queries, parent, child db.AgentTaskQueue) error {
-	if len(parent.Context) == 0 {
-		return nil
-	}
-	var quickCreate QuickCreateContext
-	if json.Unmarshal(parent.Context, &quickCreate) != nil || quickCreate.Type != QuickCreateContextType || quickCreate.SourceContextID == "" {
-		return nil
-	}
-	workspaceID, err := util.ParseUUID(quickCreate.WorkspaceID)
-	if err != nil {
-		return err
-	}
-	contextID, err := util.ParseUUID(quickCreate.SourceContextID)
-	if err != nil {
-		return err
-	}
-	_, err = q.TransferPendingIssueSourceContextTask(ctx, db.TransferPendingIssueSourceContextTaskParams{
-		NewTaskID: child.ID, WorkspaceID: workspaceID, ID: contextID, OldTaskID: parent.ID,
-	})
-	return err
 }
 
 // RerunIssue creates a fresh queued task for an agent on the issue. Used by
@@ -5637,269 +4410,6 @@ func transferPendingSourceContextToRetry(ctx context.Context, q *db.Queries, par
 // current operator may not invoke the resolved target agent. The handler maps it
 // to a structured 403 (no task was cancelled or created).
 var ErrRerunInvokeNotAllowed = errors.New("rerun: operator not allowed to invoke target agent")
-
-// Only tasks belonging to the target agent on this issue are cancelled.
-// Tasks owned by other agents on the same issue (e.g. a parallel
-// @-mention agent) are left alone — rerun must not collateral-cancel
-// them.
-//
-// canInvoke re-validates that the current operator may invoke the RESOLVED
-// target agent, keyed on the historical agent for a task_id rerun and on the
-// current assignee/leader otherwise (MUL-4525). It runs AFTER the target is
-// resolved but BEFORE any prior task is cancelled or a new one is created, so a
-// caller who can see the issue but cannot invoke its private agent cannot use
-// rerun as a back door — and a blocked rerun mutates nothing. Pass nil only
-// from trusted internal callers (tests, backfill) that have already gated.
-func (s *TaskService) RerunIssue(ctx context.Context, issueID pgtype.UUID, sourceTaskID pgtype.UUID, triggerCommentID pgtype.UUID, actorUserID pgtype.UUID, canInvoke func(agent db.Agent) bool) (*db.AgentTaskQueue, error) {
-	issue, err := s.Queries.GetIssue(ctx, issueID)
-	if err != nil {
-		return nil, fmt.Errorf("load issue: %w", err)
-	}
-	// In Triage a rerun follows its source, and the decision is made here —
-	// before anything is cancelled. The queue door would refuse a derived rerun
-	// anyway, but this path cancels the prior run on its way there, so a late
-	// refusal would leave the issue with one fewer run and no new one.
-	//
-	// Naming no source means "run the assignee again", which is the derived
-	// executor Triage does not have. Naming a discussion run is repeating a
-	// conversation the member started, so it is allowed; naming the triage run
-	// itself is refused further down, with its own reason.
-	rerunOrigin := OriginDerived
-	if sourceTaskID.Valid {
-		rerunOrigin = OriginNamed
-	} else if issue.TriageState.Valid {
-		return nil, ErrIssueInTriage
-	}
-
-	// Determine the target agent for the rerun.
-	var (
-		agentID             pgtype.UUID
-		isLeader            bool
-		squadID             pgtype.UUID
-		coalescedCommentIDs []pgtype.UUID
-	)
-	if sourceTaskID.Valid {
-		sourceTask, err := s.Queries.GetAgentTask(ctx, sourceTaskID)
-		if err != nil {
-			return nil, fmt.Errorf("load source task: %w", err)
-		}
-		if !sourceTask.IssueID.Valid || util.UUIDToString(sourceTask.IssueID) != util.UUIDToString(issueID) {
-			return nil, fmt.Errorf("source task does not belong to this issue")
-		}
-		// A triage run is not an execution run to repeat (MUL-7189 §5.6). This
-		// is the only path that names a source task directly, and it would
-		// otherwise outlive Triage: after accept the issue is runnable again, so
-		// nothing above stops a rerun pointed at the triage task — which resumes
-		// its session through rerun_of_task_id (the claim handler reads the
-		// named source, not GetLastTaskSession) and targets the triager rather
-		// than the issue's assignee. Redoing triage is re-triage, a different
-		// action on a different status.
-		if IsTriageTask(sourceTask) {
-			return nil, ErrRerunSourceIsTriage
-		}
-		agentID = sourceTask.AgentID
-		isLeader = sourceTask.IsLeaderTask
-		// Carry the source task's squad provenance so a rerun of a leader
-		// task still injects the squad briefing at claim time (see migration
-		// 127 / daemon claim handler).
-		squadID = sourceTask.SquadID
-		// Inherit trigger provenance so a per-row rerun of a comment- or
-		// mention-triggered task stays a comment-triggered task. Without
-		// this the daemon's buildCommentPrompt path is skipped (it keys on
-		// TriggerCommentID) and the rerun degrades into a generic issue
-		// run that has lost the original comment context. Only override
-		// when the caller didn't pass one explicitly.
-		if !triggerCommentID.Valid {
-			coalescedCommentIDs = append([]pgtype.UUID{}, sourceTask.CoalescedCommentIds...)
-			sourceTriggerLive := sourceTask.TriggerCommentID.Valid
-			if sourceTriggerLive {
-				// A trigger deleted while it had replies keeps its row as a
-				// tombstone instead of clearing trigger_comment_id; repair the
-				// plan exactly as for a removed trigger.
-				trigger, err := s.Queries.GetComment(ctx, sourceTask.TriggerCommentID)
-				if err != nil && !errors.Is(err, pgx.ErrNoRows) {
-					return nil, fmt.Errorf("load source trigger comment: %w", err)
-				}
-				sourceTriggerLive = err == nil && !trigger.DeletedAt.Valid
-			}
-			if sourceTriggerLive {
-				triggerCommentID = sourceTask.TriggerCommentID
-			} else if len(coalescedCommentIDs) > 0 {
-				triggerCommentID, coalescedCommentIDs, err = s.promoteNewestSurvivingComment(ctx, coalescedCommentIDs)
-				if err != nil {
-					return nil, fmt.Errorf("repair source comment plan: %w", err)
-				}
-			}
-		}
-	} else {
-		switch {
-		case issue.AssigneeType.String == "agent" && issue.AssigneeID.Valid:
-			agentID = issue.AssigneeID
-		case issue.AssigneeType.String == "squad" && issue.AssigneeID.Valid:
-			squad, err := s.Queries.GetSquad(ctx, issue.AssigneeID)
-			if err != nil {
-				return nil, fmt.Errorf("issue is assigned to a squad but squad not found")
-			}
-			agentID = squad.LeaderID
-			isLeader = true
-			squadID = issue.AssigneeID
-		default:
-			return nil, fmt.Errorf("issue is not assigned to an agent or squad")
-		}
-	}
-
-	// Re-validate invoke permission on the RESOLVED target before mutating
-	// anything (MUL-4525). For a task_id rerun this gates the historical agent,
-	// so a since-reassigned issue can't be used to re-fire a private agent the
-	// operator may only view. A block fails closed: no prior task is cancelled,
-	// no new task is created.
-	if canInvoke != nil {
-		targetAgent, err := s.Queries.GetAgent(ctx, agentID)
-		if err != nil {
-			return nil, fmt.Errorf("load target agent: %w", err)
-		}
-		if !canInvoke(targetAgent) {
-			return nil, ErrRerunInvokeNotAllowed
-		}
-	}
-
-	// Clear only the tasks that have not begun executing. Those are the rows the
-	// fresh enqueue would collide with under
-	// idx_one_pending_task_per_issue_agent_v2, and replacing them costs no work
-	// while keeping the new run attributed to the rerunning member (MUL-4302 §5)
-	// rather than inheriting whoever created the pending row.
-	//
-	// A running / waiting_local_directory task is deliberately left alone: an
-	// agent is executing in it. Neither status appears in that unique index, so
-	// the enqueue below inserts a queued row BEHIND the active one, and
-	// ClaimAgentTask's per-(issue, agent) serialization holds it there until the
-	// active run reaches a terminal state. Rerun used to cancel these too, so
-	// asking an agent for another pass silently killed the pass it was still
-	// working on; interrupting an in-flight run is what CancelTask /
-	// `auro issue cancel-task` is for.
-	clearPendingSlot := func() int {
-		var cancelled []db.AgentTaskQueue
-		// Atomic with the cancel: a pending coordinator task can already hold a
-		// recovery receipt, and nothing downstream could repair a settlement
-		// that failed after this committed.
-		cerr := s.runInTx(ctx, func(qtx *db.Queries) error {
-			var err error
-			cancelled, err = qtx.CancelPendingTasksByIssueAndAgentInThread(ctx, db.CancelPendingTasksByIssueAndAgentInThreadParams{
-				ThreadCommentID: triggerCommentID,
-				IssueID:         issueID,
-				AgentID:         agentID,
-			})
-			if err != nil {
-				return err
-			}
-			return SettleTerminalTaskState(ctx, qtx, cancelled...)
-		})
-		if cerr != nil {
-			slog.Warn("rerun: cancel pending tasks failed",
-				"issue_id", util.UUIDToString(issueID),
-				"agent_id", util.UUIDToString(agentID),
-				"error", cerr,
-			)
-		}
-		for _, t := range cancelled {
-			s.captureTaskCancelled(ctx, t)
-			s.ReconcileAgentStatus(ctx, t.AgentID)
-			s.broadcastTaskEvent(ctx, protocol.EventTaskCancelled, t)
-		}
-		return len(cancelled)
-	}
-	cancelledCount := clearPendingSlot()
-
-	// A manual rerun is a NEW direct_human trigger attributed to the rerunning
-	// member, not the original run's human (MUL-4302 §5); actorUserID carries them.
-	// sourceTaskID is the rerun lineage: it rides the CreateAgentTask insert
-	// (rerun_of_task_id) so the queued event / daemon claim never sees a NULL
-	// lineage, and it stays distinct from system-retry's retry_of_task_id (§5).
-	task, err := s.enqueueRerunTask(ctx, issue, agentID, triggerCommentID, coalescedCommentIDs, isLeader, squadID, actorUserID, sourceTaskID, rerunOrigin)
-	if pendingSlotTakenErr(err) {
-		// The clear above and this enqueue are separate commits, so a system
-		// retry created by a concurrent FailTask can take the pending slot in
-		// between. CreateRetryTask yields the slot when it is already occupied,
-		// but it cannot yield to a row that does not exist yet, so a retry
-		// committing inside this window gets there first. Clear once more and
-		// retry: the deliberate human action is the one that should hold the
-		// slot. Bounded to a single extra attempt — a second collision would mean
-		// something is enqueueing in a loop, which is worth surfacing rather than
-		// spinning on.
-		slog.Info("issue rerun: pending slot taken concurrently, reclaiming",
-			"issue_id", util.UUIDToString(issueID),
-			"agent_id", util.UUIDToString(agentID),
-		)
-		cancelledCount += clearPendingSlot()
-		task, err = s.enqueueRerunTask(ctx, issue, agentID, triggerCommentID, coalescedCommentIDs, isLeader, squadID, actorUserID, sourceTaskID, rerunOrigin)
-	}
-	if err != nil {
-		return nil, err
-	}
-	slog.Info("issue rerun enqueued",
-		"task_id", util.UUIDToString(task.ID),
-		"issue_id", util.UUIDToString(issueID),
-		"agent_id", util.UUIDToString(agentID),
-		"source_task_id", util.UUIDToString(sourceTaskID),
-		"is_leader", isLeader,
-		"cancelled_pending", cancelledCount,
-	)
-	return &task, nil
-}
-
-// promoteNewestSurvivingComment repairs a manual rerun whose original trigger
-// was deleted (the FK clears trigger_comment_id, or the trigger is a tombstone,
-// while the UUID-array plan survives). Tombstones never count as survivors.
-// Promoting before enqueue lets the normal enqueue path recompute originator
-// and user-scoped connected-app capabilities from the real comment, rather
-// than carrying the deleted trigger's stale security context.
-func (s *TaskService) promoteNewestSurvivingComment(ctx context.Context, ids []pgtype.UUID) (pgtype.UUID, []pgtype.UUID, error) {
-	type survivingComment struct {
-		id        pgtype.UUID
-		createdAt time.Time
-	}
-	survivors := make([]survivingComment, 0, len(ids))
-	seen := make(map[string]struct{}, len(ids))
-	for _, id := range ids {
-		if !id.Valid {
-			continue
-		}
-		key := util.UUIDToString(id)
-		if _, ok := seen[key]; ok {
-			continue
-		}
-		seen[key] = struct{}{}
-		comment, err := s.Queries.GetComment(ctx, id)
-		if errors.Is(err, pgx.ErrNoRows) {
-			continue
-		}
-		if err != nil {
-			return pgtype.UUID{}, nil, err
-		}
-		if comment.DeletedAt.Valid {
-			continue
-		}
-		survivors = append(survivors, survivingComment{id: comment.ID, createdAt: comment.CreatedAt.Time})
-	}
-	if len(survivors) == 0 {
-		return pgtype.UUID{}, nil, nil
-	}
-	newest := 0
-	for i := 1; i < len(survivors); i++ {
-		if survivors[i].createdAt.After(survivors[newest].createdAt) ||
-			(survivors[i].createdAt.Equal(survivors[newest].createdAt) &&
-				util.UUIDToString(survivors[i].id) > util.UUIDToString(survivors[newest].id)) {
-			newest = i
-		}
-	}
-	remaining := make([]pgtype.UUID, 0, len(survivors)-1)
-	for i, comment := range survivors {
-		if i != newest {
-			remaining = append(remaining, comment.id)
-		}
-	}
-	return survivors[newest].id, remaining, nil
-}
 
 // enqueueRerunTask enqueues a fresh task for the given agent on the issue.
 // When the target agent is the issue's single-agent assignee we use the
@@ -6037,18 +4547,10 @@ func (s *TaskService) HandleFailedTasks(ctx context.Context, tasks []db.AgentTas
 		if child, _ := s.MaybeRetryFailedTask(ctx, t); child != nil {
 			retryPending = true
 			retried++
-			if t.IssueID.Valid {
-				retriedIssues[util.UUIDToString(t.IssueID)] = true
-			}
+
 		}
 		if !retryPending {
-			if _, err := s.recoverDelegatedTaskFailure(ctx, t); err != nil {
-				slog.Warn("handle failed tasks: delegated failure recovery failed",
-					"task_id", util.UUIDToString(t.ID),
-					"delegated_from_task_id", util.UUIDToString(t.DelegatedFromTaskID),
-					"error", err,
-				)
-			}
+
 		}
 
 		failureReason := "agent_error"
@@ -6058,53 +4560,7 @@ func (s *TaskService) HandleFailedTasks(ctx context.Context, tasks []db.AgentTas
 		s.captureTaskFailed(ctx, t)
 
 		workspaceID := ""
-		if t.IssueID.Valid {
-			if issue, err := s.Queries.GetIssue(ctx, t.IssueID); err == nil {
-				workspaceID = util.UUIDToString(issue.WorkspaceID)
-				// Reset stuck in_progress issues only when no other active
-				// task exists for the issue and no retry was just enqueued.
-				issueKey := util.UUIDToString(t.IssueID)
-				// Only "an agent is actively working" resets, and since
-				// MUL-7240 that is the fixed in_progress key alone. in_review
-				// and blocked are excluded because a human or an external
-				// dependency owns the issue then; a CUSTOM started status is
-				// excluded because custom statuses inherit lifecycle only, not
-				// the active-status recovery rule. Effective() no longer
-				// projects a nonterminal custom key onto a built-in, so this is
-				// a key comparison on purpose. (MUL-6243, MUL-7240)
-				effectiveStatus := issuestatus.Effective(ctx, s.Queries, issue.WorkspaceID, issue.Status)
-				if effectiveStatus == "in_progress" && !processedIssues[issueKey] && !retriedIssues[issueKey] {
-					processedIssues[issueKey] = true
-					hasActive, checkErr := s.Queries.HasActiveTaskForIssue(ctx, t.IssueID)
-					if checkErr != nil {
-						slog.Warn("handle failed tasks: active check failed",
-							"issue_id", issueKey,
-							"error", checkErr,
-						)
-					} else if !hasActive {
-						updatedIssue, updateErr := s.Queries.UpdateIssueStatus(ctx, db.UpdateIssueStatusParams{
-							SourceTaskID: t.ID,
-							ID:           t.IssueID,
-							Status:       "todo",
-							WorkspaceID:  issue.WorkspaceID,
-						})
-						if updateErr != nil {
-							slog.Warn("handle failed tasks: reset stuck issue failed",
-								"issue_id", issueKey,
-								"error", updateErr,
-							)
-						} else {
-							// This direct reset bypasses the HTTP UpdateIssue
-							// handler that normally emits issue:updated, so emit
-							// it here too. Without it the board / status-filter
-							// caches keep showing the issue as in_progress until
-							// the next write touches it (#4648 / MUL-3782).
-							s.broadcastIssueUpdated(ctx, updatedIssue, issue.Status)
-						}
-					}
-				}
-			}
-		}
+
 		if workspaceID == "" {
 			workspaceID = s.ResolveTaskWorkspaceID(ctx, t)
 		}
@@ -6148,49 +4604,6 @@ func SettleTerminalTaskState(ctx context.Context, q *db.Queries, tasks ...db.Age
 	if _, err := q.SettleTerminalTaskSupplements(ctx, taskIDs); err != nil {
 		return fmt.Errorf("settle terminal task supplements: %w", err)
 	}
-	return SettleDeliveredDelegatedFailureRecoveries(ctx, q, tasks...)
-}
-
-// SettleDeliveredDelegatedFailureRecoveries retires every delegated-failure
-// recovery comment the given now-terminal tasks actually received, so those
-// comments drop out of idx_comment_delegated_failure_unsettled instead of
-// being re-proven settled by ListPendingDelegatedFailureRecoveries on every
-// sweeper tick. Without it the outbox scan grows with total history even when
-// it returns nothing.
-//
-// INVARIANT: every path that moves tasks to a terminal status must reach
-// SettleTerminalTaskState with the same qtx as the terminal write — per-task
-// writes and bulk cancellations alike, so every marker commits atomically with
-// the status change or not at all. A row stranded by a
-// committed-but-unsettled terminal write
-// cannot be repaired later: ListPendingDelegatedFailureRecoveries excludes a
-// comment whose covering task is already terminal and holds its receipt, so
-// nothing replays the settlement and nothing else marks it, and the index
-// reacquires the unbounded growth it exists to remove.
-//
-// For the same reason the post-commit helpers — BroadcastCancelledTasks,
-// CaptureCancelledTasks, HandleFailedTasks — must never call this: they run
-// after their caller has committed, where a failure here can neither roll back
-// nor be compensated. Do not reintroduce a best-effort settlement outside the
-// transaction; the old one was deleted, not kept.
-//
-// Call this only once the task is terminal. A dispatched task's receipt is
-// still replaceable (SetTaskDeliveredCommentIDs), so settling earlier would
-// freeze a legitimate reclaim window into a permanently lost recovery.
-// SettleDelegatedFailureRecoveriesForTask re-checks the terminal status in SQL,
-// so a mistaken early call updates nothing rather than losing a recovery.
-//
-// A task with no delivery receipt — nearly every task — costs a slice length
-// check and no query.
-func SettleDeliveredDelegatedFailureRecoveries(ctx context.Context, q *db.Queries, tasks ...db.AgentTaskQueue) error {
-	for _, t := range tasks {
-		if len(t.DeliveredCommentIds) == 0 {
-			continue
-		}
-		if _, err := q.SettleDelegatedFailureRecoveriesForTask(ctx, t.ID); err != nil {
-			return fmt.Errorf("settle delegated failure recoveries for task %s: %w", util.UUIDToString(t.ID), err)
-		}
-	}
 	return nil
 }
 
@@ -6217,563 +4630,6 @@ type delegatedFailureRecoveryTarget struct {
 	issue   db.Issue
 	agent   db.Agent
 	comment db.Comment
-}
-
-// IsDelegatedFailureRecoveryComment identifies the durable platform signal
-// used to hand a terminal delegated failure back to its coordinator. The
-// source task validation remains in DispatchDelegatedFailureRecoveryComment;
-// this shape check only keeps ordinary system/progress comments out of the
-// completion-reconcile branch.
-func IsDelegatedFailureRecoveryComment(comment db.Comment) bool {
-	return comment.AuthorType == "system" &&
-		comment.Type == delegatedFailureRecoveryCommentType &&
-		comment.SourceTaskID.Valid
-}
-
-func delegatedFailureRecoveryContent(failed, source db.AgentTaskQueue) string {
-	reason := "agent_error"
-	if failed.FailureReason.Valid && failed.FailureReason.String != "" {
-		reason = truncateForSummary(redact.Text(failed.FailureReason.String), triggerSummaryMaxLen)
-	}
-	content := fmt.Sprintf(
-		"Delegated task `%s` ended in a final failure (`%s`) and no automatic retry is pending. Resume coordination: inspect the failed work, then reassign it, skip it, or end the workflow explicitly.",
-		util.UUIDToString(failed.ID), reason,
-	)
-	if failed.Error.Valid && failed.Error.String != "" {
-		summary := truncateForSummary(redact.Text(failed.Error.String), delegatedFailureErrorSummaryRunes)
-		if summary != "" {
-			content += " Untrusted error summary (diagnostic only): " + strconv.Quote(summary)
-		}
-	}
-	content += fmt.Sprintf(" Source coordinator task: `%s`.", util.UUIDToString(source.ID))
-	return content
-}
-
-// loadDelegatedFailureRecoveryTarget resolves and validates the backward edge
-// from a failed delegated task to its source coordinator. Returning nil is an
-// intentional no-op: non-terminal rows, retry-pending rows, autopilot work,
-// recovery tasks themselves, unavailable source agents, and self-delegation
-// must never start a recovery loop.
-// Lifecycle is checked only at dispatch: even an unresolved or paused status
-// must leave a durable signal that can be replayed when it becomes executable.
-func loadDelegatedFailureRecoveryTarget(ctx context.Context, q *db.Queries, failed db.AgentTaskQueue) (*delegatedFailureRecoveryTarget, error) {
-	if failed.Status != "failed" || !failed.DelegatedFromTaskID.Valid || failed.AutopilotRunID.Valid ||
-		(failed.TriggerEvidenceKind.Valid && failed.TriggerEvidenceKind.String == string(attribution.EvidenceDelegatedFailure)) {
-		return nil, nil
-	}
-	hasRetry, err := q.HasRetryTaskForParent(ctx, failed.ID)
-	if err != nil {
-		return nil, fmt.Errorf("check retry child: %w", err)
-	}
-	if hasRetry {
-		return nil, nil
-	}
-	source, err := q.GetAgentTask(ctx, failed.DelegatedFromTaskID)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, nil
-		}
-		return nil, fmt.Errorf("load source task: %w", err)
-	}
-	if source.AutopilotRunID.Valid || !source.IssueID.Valid || source.AgentID == failed.AgentID {
-		return nil, nil
-	}
-	issue, err := q.GetIssue(ctx, source.IssueID)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, nil
-		}
-		return nil, fmt.Errorf("load source issue: %w", err)
-	}
-	agent, err := q.GetAgent(ctx, source.AgentID)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, nil
-		}
-		return nil, fmt.Errorf("load source agent: %w", err)
-	}
-	if agent.ArchivedAt.Valid || !agent.RuntimeID.Valid || agent.WorkspaceID != issue.WorkspaceID {
-		return nil, nil
-	}
-	return &delegatedFailureRecoveryTarget{failed: failed, source: source, issue: issue, agent: agent}, nil
-}
-
-// canDispatchDelegatedFailureRecovery matches the lifecycle predicate in
-// ListPendingDelegatedFailureRecoveries. It must not gate signal creation:
-// catalog failures are retryable only after the outbox comment is committed.
-func canDispatchDelegatedFailureRecovery(ctx context.Context, q *db.Queries, issue db.Issue) (bool, error) {
-	// A coordinator waiting in Triage is the entry's proposed owner, not its
-	// owner, so a worker failure must not wake it (MUL-7189 §2.3).
-	if issue.TriageState.Valid {
-		return false, nil
-	}
-	category, err := issuestatus.CategoryWithError(ctx, q, issue.WorkspaceID, issue.Status)
-	if err != nil {
-		return false, err
-	}
-	return issue.Status != issuestatus.Backlog &&
-		(category == issuestatus.CategoryUnstarted || category == issuestatus.CategoryStarted), nil
-}
-
-// ensureDelegatedFailureRecoveryComment creates one durable recovery signal
-// per failed task. The failed row lock serializes FailTask and sweeper callers;
-// the comment itself is platform-authored so it does not create subscriber or
-// mention-notification side effects.
-func (s *TaskService) ensureDelegatedFailureRecoveryComment(ctx context.Context, failedID pgtype.UUID) (*delegatedFailureRecoveryTarget, bool, error) {
-	var target *delegatedFailureRecoveryTarget
-	created := false
-	if err := s.runInTx(ctx, func(qtx *db.Queries) error {
-		failed, err := qtx.GetAgentTaskForDelegatedFailureUpdate(ctx, failedID)
-		if err != nil {
-			return fmt.Errorf("lock failed task: %w", err)
-		}
-		target, err = loadDelegatedFailureRecoveryTarget(ctx, qtx, failed)
-		if err != nil || target == nil {
-			return err
-		}
-		comment, err := qtx.GetDelegatedFailureRecoveryComment(ctx, db.GetDelegatedFailureRecoveryCommentParams{
-			IssueID:      target.issue.ID,
-			WorkspaceID:  target.issue.WorkspaceID,
-			SourceTaskID: failed.ID,
-		})
-		if err == nil {
-			target.comment = comment
-			return nil
-		}
-		if !errors.Is(err, pgx.ErrNoRows) {
-			return fmt.Errorf("find recovery comment: %w", err)
-		}
-		createdComment, err := qtx.CreateComment(ctx, db.CreateCommentParams{
-			ID:           dbid.NewV7(),
-			IssueID:      target.issue.ID,
-			WorkspaceID:  target.issue.WorkspaceID,
-			AuthorType:   "system",
-			AuthorID:     pgtype.UUID{Valid: true},
-			Content:      delegatedFailureRecoveryContent(target.failed, target.source),
-			Type:         delegatedFailureRecoveryCommentType,
-			ParentID:     target.source.TriggerCommentID,
-			SourceTaskID: failed.ID,
-		})
-		if err != nil {
-			return fmt.Errorf("create recovery comment: %w", err)
-		}
-		target.comment = createdComment.Comment()
-		created = true
-		return nil
-	}); err != nil {
-		return nil, false, err
-	}
-	if target == nil {
-		return nil, false, nil
-	}
-	if created && s.Bus != nil {
-		s.Bus.Publish(events.Event{
-			Type:        protocol.EventCommentCreated,
-			WorkspaceID: util.UUIDToString(target.issue.WorkspaceID),
-			ActorType:   "system",
-			ActorID:     "",
-			Payload: map[string]any{
-				"comment":      commentEventFields(target.comment),
-				"issue_title":  target.issue.Title,
-				"issue_status": target.issue.Status,
-			},
-		})
-	}
-	return target, created, nil
-}
-
-func delegatedFailureRecoveryExhaustionContent(target *delegatedFailureRecoveryTarget) string {
-	return fmt.Sprintf(
-		"Automatic recovery for delegated task `%s` stopped after %d coordinator tasks ended before receiving the recovery signal. No more recovery tasks will be created automatically; resume or dismiss the work manually. Source coordinator task: `%s`.",
-		util.UUIDToString(target.failed.ID),
-		delegatedFailureRecoveryMaxTaskAttempts,
-		util.UUIDToString(target.source.ID),
-	)
-}
-
-func delegatedFailureRecoveryAttribution(target *delegatedFailureRecoveryTarget) (pgtype.UUID, pgtype.UUID) {
-	originator := target.failed.OriginatorUserID
-	accountable := target.failed.AccountableUserID
-	if originator.Valid {
-		accountable = originator
-	}
-	if !originator.Valid && !accountable.Valid {
-		originator = target.source.OriginatorUserID
-		accountable = target.source.AccountableUserID
-		if originator.Valid {
-			accountable = originator
-		}
-	}
-	return originator, accountable
-}
-
-// exhaustDelegatedFailureRecovery atomically settles the recovery outbox after
-// its bounded automatic attempts, creates one visible system explanation, and
-// notifies the responsible human. The bool reports whether this caller created
-// that terminal outcome. Updating the newest attempt first serializes
-// concurrent sweepers; the second caller then observes the explanation written
-// by the first and does not report another exhaustion.
-func (s *TaskService) exhaustDelegatedFailureRecovery(ctx context.Context, target *delegatedFailureRecoveryTarget) (bool, error) {
-	var exhaustedComment db.Comment
-	var exhaustedInbox db.InboxItem
-	created := false
-	inboxCreated := false
-	if err := s.runInTx(ctx, func(qtx *db.Queries) error {
-		if _, err := qtx.AcknowledgeExhaustedDelegatedFailureRecovery(ctx, db.AcknowledgeExhaustedDelegatedFailureRecoveryParams{
-			CommentID:    target.comment.ID,
-			FailedTaskID: target.failed.ID,
-			MaxAttempts:  delegatedFailureRecoveryMaxTaskAttempts,
-		}); err != nil {
-			return fmt.Errorf("acknowledge exhausted delegated failure recovery: %w", err)
-		}
-
-		// The receipt above lands on the newest attempt row, which may still be
-		// running, so the task-scoped settle cannot see it. Exhaustion is
-		// terminal on its own terms — the attempt budget is spent and the
-		// visible explanation below tells the user why nothing else will run —
-		// so retire the comment directly, in this same transaction.
-		if _, err := qtx.SettleDelegatedFailureRecoveryComment(ctx, target.comment.ID); err != nil {
-			return fmt.Errorf("settle exhausted delegated failure recovery: %w", err)
-		}
-
-		comment, err := qtx.GetDelegatedFailureRecoveryExhaustionComment(ctx, db.GetDelegatedFailureRecoveryExhaustionCommentParams{
-			IssueID:      target.issue.ID,
-			WorkspaceID:  target.issue.WorkspaceID,
-			SourceTaskID: target.failed.ID,
-		})
-		if err == nil {
-			exhaustedComment = comment
-			return nil
-		}
-		if !errors.Is(err, pgx.ErrNoRows) {
-			return fmt.Errorf("find delegated failure exhaustion comment: %w", err)
-		}
-
-		createdComment, err := qtx.CreateComment(ctx, db.CreateCommentParams{
-			ID:           dbid.NewV7(),
-			IssueID:      target.issue.ID,
-			WorkspaceID:  target.issue.WorkspaceID,
-			AuthorType:   "system",
-			AuthorID:     pgtype.UUID{Valid: true},
-			Content:      delegatedFailureRecoveryExhaustionContent(target),
-			Type:         "system",
-			ParentID:     target.source.TriggerCommentID,
-			SourceTaskID: target.failed.ID,
-		})
-		if err != nil {
-			return fmt.Errorf("create delegated failure exhaustion comment: %w", err)
-		}
-		exhaustedComment = createdComment.Comment()
-		created = true
-
-		// Exhaustion deliberately does not @mention the coordinator agent: doing
-		// so would enqueue a fourth recovery run and defeat the attempt bound.
-		// Instead, create one durable action-required inbox item for the human
-		// who originated (or is accountable for) the delegated work.
-		_, recipient := delegatedFailureRecoveryAttribution(target)
-		if recipient.Valid {
-			_, err = qtx.GetMemberByUserAndWorkspace(ctx, db.GetMemberByUserAndWorkspaceParams{
-				UserID:      recipient,
-				WorkspaceID: target.issue.WorkspaceID,
-			})
-			if errors.Is(err, pgx.ErrNoRows) {
-				return nil
-			}
-			if err != nil {
-				return fmt.Errorf("validate delegated failure exhaustion recipient: %w", err)
-			}
-
-			details, err := json.Marshal(map[string]any{
-				"failed_task_id":       util.UUIDToString(target.failed.ID),
-				"source_task_id":       util.UUIDToString(target.source.ID),
-				"coordinator_agent_id": util.UUIDToString(target.agent.ID),
-				"max_attempts":         delegatedFailureRecoveryMaxTaskAttempts,
-			})
-			if err != nil {
-				return fmt.Errorf("encode delegated failure exhaustion details: %w", err)
-			}
-			exhaustedInbox, err = qtx.CreateInboxItem(ctx, db.CreateInboxItemParams{
-				ID:            dbid.NewV7(),
-				WorkspaceID:   target.issue.WorkspaceID,
-				RecipientType: "member",
-				RecipientID:   recipient,
-				Type:          "task_failed",
-				Severity:      "action_required",
-				IssueID:       target.issue.ID,
-				Title:         target.issue.Title,
-				Body:          pgtype.Text{String: exhaustedComment.Content, Valid: true},
-				ActorType:     pgtype.Text{String: "system", Valid: true},
-				ActorID:       pgtype.UUID{},
-				Details:       details,
-			})
-			if err != nil {
-				return fmt.Errorf("create delegated failure exhaustion inbox item: %w", err)
-			}
-			inboxCreated = true
-		}
-		return nil
-	}); err != nil {
-		return false, err
-	}
-
-	if created && s.Bus != nil {
-		s.Bus.Publish(events.Event{
-			Type:        protocol.EventCommentCreated,
-			WorkspaceID: util.UUIDToString(target.issue.WorkspaceID),
-			ActorType:   "system",
-			ActorID:     "",
-			Payload: map[string]any{
-				"comment":      commentEventFields(exhaustedComment),
-				"issue_title":  target.issue.Title,
-				"issue_status": target.issue.Status,
-			},
-		})
-	}
-	if inboxCreated && s.Bus != nil {
-		s.Bus.Publish(events.Event{
-			Type:        protocol.EventInboxNew,
-			WorkspaceID: util.UUIDToString(target.issue.WorkspaceID),
-			ActorType:   "system",
-			ActorID:     "",
-			Payload: map[string]any{"item": map[string]any{
-				"id":             util.UUIDToString(exhaustedInbox.ID),
-				"workspace_id":   util.UUIDToString(exhaustedInbox.WorkspaceID),
-				"recipient_type": exhaustedInbox.RecipientType,
-				"recipient_id":   util.UUIDToString(exhaustedInbox.RecipientID),
-				"type":           exhaustedInbox.Type,
-				"severity":       exhaustedInbox.Severity,
-				"issue_id":       util.UUIDToPtr(exhaustedInbox.IssueID),
-				"title":          exhaustedInbox.Title,
-				"body":           util.TextToPtr(exhaustedInbox.Body),
-				"read":           exhaustedInbox.Read,
-				"archived":       exhaustedInbox.Archived,
-				"created_at":     util.TimestampToString(exhaustedInbox.CreatedAt),
-				"actor_type":     util.TextToPtr(exhaustedInbox.ActorType),
-				"actor_id":       util.UUIDToPtr(exhaustedInbox.ActorID),
-				"details":        json.RawMessage(exhaustedInbox.Details),
-				"issue_status":   target.issue.Status,
-			}},
-		})
-	}
-	return created, nil
-}
-
-// dispatchDelegatedFailureRecovery routes a recovery comment to the source
-// coordinator without relying on generic mention parsing. A pre-claim task
-// absorbs it; otherwise a dedicated queued successor is created. The only
-// state that blocks both writes is a dispatched task (its claim is already
-// built and the pending-task uniqueness slot is still held), so that narrow
-// race records the comment as planned-but-undelivered and lets completion
-// reconciliation schedule the follow-up. The three-pass loop closes state
-// changes around those writes.
-func (s *TaskService) dispatchDelegatedFailureRecovery(ctx context.Context, target *delegatedFailureRecoveryTarget, excludeTaskID pgtype.UUID) (delegatedFailureRecoveryDispatchOutcome, error) {
-	// Signal creation has committed before reaching this shared dispatch path.
-	// Refresh the issue because its status may have changed since creation or
-	// sweep selection; a paused/unreadable lifecycle never settles the signal.
-	//
-	// This is also the queue door for Triage on this path (MUL-7189 §2.3), and
-	// it needs no separate check: Triage is its own category, so it is neither
-	// unstarted nor started and canDispatchDelegatedFailureRecovery already
-	// refuses it. "Covered" is the honest outcome — no further dispatch is owed,
-	// and the run that would answer the comment arrives with accept.
-	issue, err := s.Queries.GetIssue(ctx, target.issue.ID)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return delegatedFailureRecoveryCovered, nil
-	}
-	if err != nil {
-		return delegatedFailureRecoveryCovered, fmt.Errorf("reload recovery source issue: %w", err)
-	}
-	allowed, err := canDispatchDelegatedFailureRecovery(ctx, s.Queries, issue)
-	if err != nil || !allowed {
-		return delegatedFailureRecoveryCovered, err
-	}
-	target.issue = issue
-	const maxAttempts = 3
-	for attempt := 0; attempt < maxAttempts; attempt++ {
-		covered, err := s.Queries.HasTaskCoveringDelegatedFailureComment(ctx, db.HasTaskCoveringDelegatedFailureCommentParams{
-			IssueID:       target.issue.ID,
-			AgentID:       target.agent.ID,
-			CommentID:     target.comment.ID,
-			ExcludeTaskID: excludeTaskID,
-		})
-		if err != nil {
-			return delegatedFailureRecoveryCovered, fmt.Errorf("check recovery coverage: %w", err)
-		}
-		if covered {
-			return delegatedFailureRecoveryCovered, nil
-		}
-
-		recoveryTasks, err := s.Queries.CountDelegatedFailureRecoveryTasks(ctx, target.failed.ID)
-		if err != nil {
-			return delegatedFailureRecoveryCovered, fmt.Errorf("count delegated failure recovery tasks: %w", err)
-		}
-		if recoveryTasks >= delegatedFailureRecoveryMaxTaskAttempts {
-			exhausted, err := s.exhaustDelegatedFailureRecovery(ctx, target)
-			if err != nil {
-				return delegatedFailureRecoveryCovered, err
-			}
-			if exhausted {
-				return delegatedFailureRecoveryExhausted, nil
-			}
-			return delegatedFailureRecoveryCovered, nil
-		}
-
-		if merged, err := s.Queries.MergeDelegatedFailureCommentIntoPendingTask(ctx, db.MergeDelegatedFailureCommentIntoPendingTaskParams{
-			CommentID:      target.comment.ID,
-			TriggerSummary: s.buildCommentTriggerSummary(ctx, target.issue.WorkspaceID, target.comment.ID),
-			IssueID:        target.issue.ID,
-			AgentID:        target.agent.ID,
-		}); err == nil {
-			slog.Info("delegated failure recovery merged into pending coordinator task",
-				"failed_task_id", util.UUIDToString(target.failed.ID),
-				"coordinator_task_id", util.UUIDToString(merged.ID),
-			)
-			return delegatedFailureRecoveryReplayed, nil
-		} else if !errors.Is(err, pgx.ErrNoRows) {
-			return delegatedFailureRecoveryCovered, fmt.Errorf("merge recovery into pending task: %w", err)
-		}
-
-		originator, accountable := delegatedFailureRecoveryAttribution(target)
-		source := attribution.SourceDelegation
-		if !originator.Valid && !accountable.Valid {
-			source = attribution.SourceUnattributed
-		}
-		ruleVersionID := target.failed.RuleVersionID
-		if !ruleVersionID.Valid {
-			ruleVersionID = target.source.RuleVersionID
-		}
-		overlay := s.buildRuntimeMCPOverlay(ctx, originator, target.agent)
-		task, err := s.Queries.CreateAgentTask(ctx, db.CreateAgentTaskParams{
-			ID:                   dbid.NewV7(),
-			AgentID:              target.agent.ID,
-			RuntimeID:            target.agent.RuntimeID,
-			IssueID:              target.issue.ID,
-			Priority:             priorityToInt(target.issue.Priority),
-			TriggerCommentID:     target.comment.ID,
-			TriggerSummary:       s.buildCommentTriggerSummary(ctx, target.issue.WorkspaceID, target.comment.ID),
-			IsLeaderTask:         pgtype.Bool{Bool: target.source.IsLeaderTask, Valid: target.source.IsLeaderTask},
-			SquadID:              target.source.SquadID,
-			OriginatorUserID:     originator,
-			AccountableUserID:    accountable,
-			RuntimeMcpOverlay:    overlay.Overlay,
-			RuntimeConnectedApps: overlay.ConnectedApps,
-			OriginatorSource:     pgtype.Text{String: string(source), Valid: true},
-			DelegatedFromTaskID:  target.failed.ID,
-			RuleVersionID:        ruleVersionID,
-			TriggerEvidenceKind:  pgtype.Text{String: string(attribution.EvidenceDelegatedFailure), Valid: true},
-			TriggerEvidenceRefID: target.failed.ID,
-			HeadSha:              headShaText(s.ResolveIssueReviewSHA(ctx, target.issue.ID)),
-		})
-		if err == nil {
-			slog.Info("delegated failure recovery task enqueued",
-				"failed_task_id", util.UUIDToString(target.failed.ID),
-				"source_task_id", util.UUIDToString(target.source.ID),
-				"recovery_task_id", util.UUIDToString(task.ID),
-				"coordinator_agent_id", util.UUIDToString(target.agent.ID),
-			)
-			s.broadcastTaskEvent(ctx, protocol.EventTaskQueued, task)
-			s.NotifyTaskEnqueued(ctx, task)
-			return delegatedFailureRecoveryReplayed, nil
-		}
-		if !isDuplicatePendingTaskErr(err) {
-			return delegatedFailureRecoveryCovered, fmt.Errorf("create recovery task: %w", err)
-		}
-
-		// A dispatched task still owns the unique queued/dispatched slot, but
-		// its claim payload is immutable. Register the comment as undelivered so
-		// its completion reconciliation creates the successor. Running tasks do
-		// not own that slot, so they took the durable queued-successor path above.
-		if active, err := s.Queries.RegisterPlannedCommentForActiveTask(ctx, db.RegisterPlannedCommentForActiveTaskParams{
-			CommentID: target.comment.ID,
-			IssueID:   target.issue.ID,
-			AgentID:   target.agent.ID,
-		}); err == nil {
-			slog.Info("delegated failure recovery registered behind dispatched coordinator task",
-				"failed_task_id", util.UUIDToString(target.failed.ID),
-				"coordinator_task_id", util.UUIDToString(active.ID),
-			)
-			return delegatedFailureRecoveryReplayed, nil
-		} else if !errors.Is(err, pgx.ErrNoRows) {
-			return delegatedFailureRecoveryCovered, fmt.Errorf("register recovery on dispatched task: %w", err)
-		}
-	}
-	return delegatedFailureRecoveryCovered, fmt.Errorf("delegate failure recovery could not acquire coordinator task slot")
-}
-
-// recoverDelegatedTaskFailure is the shared post-terminal hook for FailTask and
-// HandleFailedTasks. handled reports whether the failure was an eligible
-// delegated terminal; the production terminal paths deliberately retain their
-// legacy raw-error notice alongside the richer coordinator recovery signal.
-func (s *TaskService) recoverDelegatedTaskFailure(ctx context.Context, failed db.AgentTaskQueue) (handled bool, err error) {
-	target, _, err := s.ensureDelegatedFailureRecoveryComment(ctx, failed.ID)
-	if err != nil || target == nil {
-		return false, err
-	}
-	_, err = s.dispatchDelegatedFailureRecovery(ctx, target, pgtype.UUID{})
-	return true, err
-}
-
-// RecoverPendingDelegatedFailures replays the durable recovery outbox. The
-// platform recovery comment is the obligation; it is complete only while a task
-// that carries it can still execute, or after a task records it in
-// delivered_comment_ids. This lets a later sweeper repair a process crash or
-// transient database error between comment creation and coordinator dispatch
-// without producing duplicate runnable tasks.
-func (s *TaskService) RecoverPendingDelegatedFailures(ctx context.Context, maxPerTick int32) (DelegatedFailureRecoverySweepResult, error) {
-	result := DelegatedFailureRecoverySweepResult{}
-	if maxPerTick <= 0 {
-		return result, nil
-	}
-	pending, err := s.Queries.ListPendingDelegatedFailureRecoveries(ctx, maxPerTick)
-	if err != nil {
-		return result, fmt.Errorf("list pending delegated failure recoveries: %w", err)
-	}
-	result.Scanned = len(pending)
-
-	errs := make([]error, 0)
-	for _, comment := range pending {
-		outcome, recoveryErr := s.dispatchDelegatedFailureRecoveryComment(ctx, comment, pgtype.UUID{})
-		if recoveryErr != nil {
-			errs = append(errs, fmt.Errorf("dispatch recovery comment %s: %w", util.UUIDToString(comment.ID), recoveryErr))
-			continue
-		}
-		switch outcome {
-		case delegatedFailureRecoveryReplayed:
-			result.Replayed++
-		case delegatedFailureRecoveryExhausted:
-			result.Exhausted++
-		}
-	}
-	return result, errors.Join(errs...)
-}
-
-// DispatchDelegatedFailureRecoveryComment is used by completion reconciliation
-// when a recovery signal arrived after a coordinator task was claimed. The
-// completed task is excluded from the coverage check because the comment was
-// planned but not delivered to it; routing then merges/enqueues exactly one
-// follow-up.
-func (s *TaskService) DispatchDelegatedFailureRecoveryComment(ctx context.Context, comment db.Comment, completedTaskID pgtype.UUID) error {
-	_, err := s.dispatchDelegatedFailureRecoveryComment(ctx, comment, completedTaskID)
-	return err
-}
-
-func (s *TaskService) dispatchDelegatedFailureRecoveryComment(ctx context.Context, comment db.Comment, completedTaskID pgtype.UUID) (delegatedFailureRecoveryDispatchOutcome, error) {
-	if !IsDelegatedFailureRecoveryComment(comment) {
-		return delegatedFailureRecoveryCovered, nil
-	}
-	failed, err := s.Queries.GetAgentTask(ctx, comment.SourceTaskID)
-	if err != nil {
-		return delegatedFailureRecoveryCovered, fmt.Errorf("load failed recovery source: %w", err)
-	}
-	target, err := loadDelegatedFailureRecoveryTarget(ctx, s.Queries, failed)
-	if err != nil || target == nil {
-		return delegatedFailureRecoveryCovered, err
-	}
-	if target.issue.ID != comment.IssueID || target.issue.WorkspaceID != comment.WorkspaceID {
-		return delegatedFailureRecoveryCovered, fmt.Errorf("delegated failure recovery comment scope mismatch")
-	}
-	target.comment = comment
-	return s.dispatchDelegatedFailureRecovery(ctx, target, completedTaskID)
 }
 
 // runInTx executes fn inside a single DB transaction. If TxStarter is nil
@@ -7359,13 +5215,6 @@ func (s *TaskService) ResolveTaskWorkspaceIDChecked(ctx context.Context, task db
 		}
 	}
 
-	if task.IssueID.Valid {
-		issue, err := s.Queries.GetIssue(ctx, task.IssueID)
-		if err == nil {
-			return util.UUIDToString(issue.WorkspaceID), nil
-		}
-		note(err)
-	}
 	if task.ChatSessionID.Valid {
 		cs, err := s.Queries.GetChatSession(ctx, task.ChatSessionID)
 		if err == nil {
@@ -7389,9 +5238,7 @@ func (s *TaskService) ResolveTaskWorkspaceIDChecked(ctx context.Context, task db
 	// requireDaemonTaskAccess (404 on /start, /progress, /complete, /fail
 	// for the daemon) and silently dropped task:dispatch / task:completed
 	// broadcasts, which is why quick-create tasks appeared stuck queued.
-	if qc, ok := s.parseQuickCreateContext(task); ok {
-		return qc.WorkspaceID, nil
-	}
+
 	if lookupErr != nil {
 		return "", fmt.Errorf("resolve task workspace: %w", lookupErr)
 	}
@@ -7430,124 +5277,6 @@ func (s *TaskService) broadcastChatDone(ctx context.Context, task db.AgentTaskQu
 		ChatSessionID: util.UUIDToString(task.ChatSessionID),
 		Payload:       payload,
 	})
-}
-
-// broadcastIssueUpdated publishes the issue:updated event the frontend's
-// realtime reconcile (onIssueUpdated) relies on to move an issue between status
-// columns / status filters and reconcile their bucket counts. prevStatus is the
-// issue's status before the write so the client can gate that reconcile on
-// status_changed.
-//
-// The `issue` payload is a map (IssueToMap), which the workspace WS fanout
-// (listeners.go SubscribeAll) marshals and broadcasts as-is — that is what
-// drives the UI reconcile. Note this does NOT cover the full HTTP UpdateIssue
-// side effects: the activity-log and inbox listeners type-assert `issue` to a
-// handler.IssueResponse and skip a map, so a background status reset does not
-// emit status-change activity / notifications. That is intentional for the
-// realtime-staleness fix (#4648 / MUL-3782); folding those side effects in
-// would mean unifying the payload type and is left as a follow-up.
-func (s *TaskService) broadcastIssueUpdated(ctx context.Context, issue db.Issue, prevStatus string) {
-	prefix := s.getIssuePrefix(issue.WorkspaceID)
-	s.Bus.Publish(events.Event{
-		Type:        protocol.EventIssueUpdated,
-		WorkspaceID: util.UUIDToString(issue.WorkspaceID),
-		ActorType:   "system",
-		ActorID:     "",
-		Payload: map[string]any{
-			"issue":          IssueToMapResolved(ctx, s.Queries, issue, prefix),
-			"status_changed": prevStatus != issue.Status,
-			"prev_status":    prevStatus,
-		},
-	})
-}
-
-func (s *TaskService) getIssuePrefix(workspaceID pgtype.UUID) string {
-	ws, err := s.Queries.GetWorkspace(context.Background(), workspaceID)
-	if err != nil {
-		return ""
-	}
-	return ws.IssuePrefix
-}
-
-// commentEventFields renders the `comment` object carried by comment:created
-// broadcasts published outside the HTTP handler (agent replies, delegated
-// failure recovery, recovery exhaustion).
-//
-// created_at goes through util.TimestampToString — the SAME helper the REST
-// CommentResponse uses — so the timestamp a client receives over WS is
-// byte-identical to the one it gets when it refetches that comment. These
-// payloads used to format the time with a literal "Z" suffix instead, which
-// is not Go's Z07:00 offset token: pgx decodes timestamptz into the process
-// location (pgtype/timestamptz.go, no ScanLocation configured), so on a
-// deployment whose process TZ is not UTC the broadcast stamped local
-// wall-clock digits with a UTC label. Clients then placed the entry a whole
-// offset away from its real instant and moved it again once a refetch
-// replaced the value — visible as timeline entries jumping position.
-func commentEventFields(c db.Comment) map[string]any {
-	return map[string]any{
-		"id":             util.UUIDToString(c.ID),
-		"issue_id":       util.UUIDToString(c.IssueID),
-		"author_type":    c.AuthorType,
-		"author_id":      util.UUIDToString(c.AuthorID),
-		"content":        c.Content,
-		"type":           c.Type,
-		"parent_id":      util.UUIDToPtr(c.ParentID),
-		"source_task_id": util.UUIDToPtr(c.SourceTaskID),
-		"created_at":     util.TimestampToString(c.CreatedAt),
-	}
-}
-
-func (s *TaskService) createAgentComment(ctx context.Context, issueID, agentID pgtype.UUID, content, commentType string, parentID, sourceTaskID pgtype.UUID) {
-	if content == "" {
-		return
-	}
-	// Look up issue to get workspace ID for mention expansion and broadcasting.
-	issue, err := s.Queries.GetIssue(ctx, issueID)
-	if err != nil {
-		return
-	}
-	// Resolve the thread root for thread-level side effects without overwriting
-	// parentID. The stored parent_id must remain the exact comment being replied
-	// to; recursive thread reads recover the root when needed.
-	var rootComment *db.Comment
-	if parentID.Valid {
-		if root, err := s.Queries.GetThreadRoot(ctx, db.GetThreadRootParams{
-			CommentID:   parentID,
-			WorkspaceID: issue.WorkspaceID,
-		}); err == nil {
-			rootComment = &root
-		}
-	}
-	created, err := s.Queries.CreateComment(ctx, db.CreateCommentParams{
-		ID:           dbid.NewV7(),
-		IssueID:      issueID,
-		WorkspaceID:  issue.WorkspaceID,
-		AuthorType:   "agent",
-		AuthorID:     agentID,
-		Content:      content,
-		Type:         commentType,
-		ParentID:     parentID,
-		SourceTaskID: sourceTaskID,
-	})
-	if err != nil {
-		return
-	}
-	comment := created.Comment()
-	commentFields := commentEventFields(comment)
-	commentFields["revision"] = comment.Revision
-	s.Bus.Publish(events.Event{
-		Type:        protocol.EventCommentCreated,
-		WorkspaceID: util.UUIDToString(issue.WorkspaceID),
-		ActorType:   "agent",
-		ActorID:     util.UUIDToString(agentID),
-		Payload: map[string]any{
-			"comment":        commentFields,
-			"issue_title":    issue.Title,
-			"issue_status":   issue.Status,
-			"issue_revision": created.IssueRevision,
-		},
-	})
-	s.AutoUnresolveThreadOnReply(ctx, rootComment, util.UUIDToString(issue.WorkspaceID), "agent", util.UUIDToString(agentID), sourceTaskID)
 }
 
 // AutoUnresolveThreadOnReply clears resolved_at on the thread root when a
@@ -7638,29 +5367,6 @@ type IssueMapQuerier interface {
 	GetIssueRefInWorkspace(ctx context.Context, arg db.GetIssueRefInWorkspaceParams) (db.GetIssueRefInWorkspaceRow, error)
 }
 
-// IssueToMapResolved is IssueToMap with an AUTHORITATIVE status_category and
-// status_name, both resolved through the catalog so a custom status is not
-// emitted with blanks. Background events go through here; clients treat this
-// payload as a complete issue and bucket it by category. (MUL-6243)
-//
-// Both fields come from ONE catalog read. Resolving them separately would
-// double the query on every event carrying a custom status, and the HTTP
-// rendering already shares a single read through its Resolver. (MUL-6749)
-//
-// duplicate_of is resolved too: a client patches its cache with this
-// snapshot, so a null here would erase a mark the issue still carries
-// (MUL-7349). Only a cancelled issue with a pointer costs a read.
-func IssueToMapResolved(ctx context.Context, q IssueMapQuerier, issue db.Issue, issuePrefix string) map[string]any {
-	m := IssueToMap(issue, issuePrefix)
-	category, name := issuestatus.CategoryAndName(ctx, q, issue.WorkspaceID, issue.Status)
-	m["status_category"] = issuestatus.WireCategory(issue.Status, category)
-	m["status_name"] = name
-	if ref := resolveDuplicateOf(ctx, q, issue, issuePrefix); ref != nil {
-		m["duplicate_of"] = ref
-	}
-	return m
-}
-
 // resolveDuplicateOf renders the original a duplicate points at, in the shape
 // of handler.IssueRefResponse, or nil when the issue carries no live mark: it
 // is not cancelled, has no pointer, or its original is gone.
@@ -7687,103 +5393,6 @@ func resolveDuplicateOf(ctx context.Context, q IssueMapQuerier, issue db.Issue, 
 	}
 }
 
-func IssueToMap(issue db.Issue, issuePrefix string) map[string]any {
-	return map[string]any{
-		"id":           util.UUIDToString(issue.ID),
-		"workspace_id": util.UUIDToString(issue.WorkspaceID),
-		"number":       issue.Number,
-		"identifier":   IssueIdentifier(issuePrefix, issue.Number),
-		"title":        issue.Title,
-		"description":  util.TextToPtr(issue.Description),
-		"status":       issue.Status,
-		// Mirrors handler.IssueResponse.StatusCategory. Built-ins map to a
-		// public lifecycle category without a catalog lookup; custom statuses
-		// are filled by IssueToMapResolved. (MUL-6243)
-		"status_category": builtInStatusCategory(issue.Status),
-		// Mirrors handler.IssueResponse.StatusName. A built-in carries no name
-		// — clients localize those from the key — and a CUSTOM one is filled in
-		// by IssueToMapResolved, which has the catalog. Emitted unconditionally
-		// so this rendering cannot lose a key the HTTP one carries. (MUL-6749)
-		"status_name":     "",
-		"priority":        issue.Priority,
-		"assignee_type":   util.TextToPtr(issue.AssigneeType),
-		"assignee_id":     util.UUIDToPtr(issue.AssigneeID),
-		"creator_type":    issue.CreatorType,
-		"creator_id":      util.UUIDToString(issue.CreatorID),
-		"parent_issue_id": util.UUIDToPtr(issue.ParentIssueID),
-		// Mirrors handler.IssueResponse.DuplicateOf. Null is only true for a
-		// row with no live mark; IssueToMapResolved resolves it for the rest.
-		"duplicate_of":     nil,
-		"project_id":       util.UUIDToPtr(issue.ProjectID),
-		"position":         issue.Position,
-		"stage":            util.Int4ToPtr(issue.Stage),
-		"start_date":       util.DateToPtr(issue.StartDate),
-		"due_date":         util.DateToPtr(issue.DueDate),
-		"created_at":       util.TimestampToString(issue.CreatedAt),
-		"updated_at":       util.TimestampToString(issue.UpdatedAt),
-		"last_activity_at": util.TimestampToNanoPtr(issue.LastActivityAt),
-		"revision":         issue.Revision,
-		"metadata":         util.JSONObjectOrEmpty(issue.Metadata),
-		"properties":       util.JSONObjectOrEmpty(issue.Properties),
-	}
-}
-
-// IssueIdentifier renders the human-facing issue key ("MUL-42"). Callers that
-// resolve the workspace prefix defensively may pass "": a failed workspace
-// lookup should not surface as a stray "-42", so the number stands alone as
-// "#42". The HTTP layer never passes "" — handler.getIssuePrefix derives a
-// prefix from the workspace name before rendering anything.
-func IssueIdentifier(issuePrefix string, number int32) string {
-	if issuePrefix == "" {
-		return "#" + strconv.Itoa(int(number))
-	}
-	return issuePrefix + "-" + strconv.Itoa(int(number))
-}
-
-// parseQuickCreateContext returns the quick-create payload if the task's
-// context JSONB contains type == "quick_create"; otherwise the bool is
-// false so callers can short-circuit. Tasks linked to an issue / chat /
-// autopilot are never quick-create even if they happen to carry a
-// context blob, so those are filtered up front.
-func (s *TaskService) parseQuickCreateContext(task db.AgentTaskQueue) (QuickCreateContext, bool) {
-	if task.IssueID.Valid || task.ChatSessionID.Valid || task.AutopilotRunID.Valid {
-		return QuickCreateContext{}, false
-	}
-	if len(task.Context) == 0 {
-		return QuickCreateContext{}, false
-	}
-	var qc QuickCreateContext
-	if err := json.Unmarshal(task.Context, &qc); err != nil {
-		return QuickCreateContext{}, false
-	}
-	if qc.Type != QuickCreateContextType {
-		return QuickCreateContext{}, false
-	}
-	return qc, true
-}
-
-func (s *TaskService) sourceContextAttachedByTask(ctx context.Context, task db.AgentTaskQueue, qc QuickCreateContext) (bool, error) {
-	if qc.SourceContextID == "" {
-		return false, nil
-	}
-	workspaceID, workspaceErr := util.ParseUUID(qc.WorkspaceID)
-	contextID, contextErr := util.ParseUUID(qc.SourceContextID)
-	if workspaceErr != nil || contextErr != nil {
-		return false, nil
-	}
-	row, err := s.Queries.GetIssueSourceContextByID(ctx, db.GetIssueSourceContextByIDParams{
-		WorkspaceID: workspaceID,
-		ID:          contextID,
-	})
-	if errors.Is(err, pgx.ErrNoRows) {
-		return false, nil
-	}
-	if err != nil {
-		return false, err
-	}
-	return row.State == "attached" && row.IssueID.Valid && row.OriginTaskID == task.ID, nil
-}
-
 // maxQuickCreateFailureDetailRunes bounds the failure reason lifted from a
 // quick-create task's final output. A genuine CLI error (a duplicate message,
 // a validation error) is short; an output far larger than this is a runaway
@@ -7793,147 +5402,6 @@ func (s *TaskService) sourceContextAttachedByTask(ctx context.Context, task db.A
 const maxQuickCreateFailureDetailRunes = 2000
 
 const quickCreateOversizedFailureDetail = "Quick create failed, but the agent's output was too large to show the reason safely. Check the task's execution log for details."
-
-// quickCreateFailureDetail extracts a user-facing failure reason from a
-// quick-create task's final output. The quick-create prompt instructs the agent
-// to exit with the CLI error as its only output when `auro issue create`
-// fails, so this normally carries the real reason (e.g. an active-duplicate
-// message naming the existing issue). Returns "" when there is no usable output
-// so the caller falls back to a generic message; redaction is applied by
-// notifyQuickCreateFailed.
-func quickCreateFailureDetail(result []byte) string {
-	var payload protocol.TaskCompletedPayload
-	if err := json.Unmarshal(result, &payload); err != nil {
-		return ""
-	}
-	// Same unescape as the comment-fallback path: literal `\n` sequences from
-	// agent stdout become real newlines before the reason reaches the user.
-	body := strings.TrimSpace(util.UnescapeBackslashEscapes(payload.Output))
-	if body == "" {
-		return ""
-	}
-	if utf8.RuneCountInString(body) > maxQuickCreateFailureDetailRunes {
-		return quickCreateOversizedFailureDetail
-	}
-	return body
-}
-
-// notifyQuickCreateCompleted writes a success inbox notification to the
-// requester pointing at the issue the agent just created. The issue is
-// stamped with origin_type=quick_create + origin_id=<task_id> by the
-// daemon-injected AURO_QUICK_CREATE_TASK_ID env var, so this lookup is
-// deterministic — robust against the same agent creating other issues in
-// parallel (e.g. assignment task running while max_concurrent_tasks > 1
-// permits another quick-create alongside it).
-func (s *TaskService) notifyQuickCreateCompleted(ctx context.Context, task db.AgentTaskQueue, qc QuickCreateContext, result []byte) {
-	requesterID, err := util.ParseUUID(qc.RequesterID)
-	if err != nil {
-		slog.Warn("quick-create completion: invalid requester id", "task_id", util.UUIDToString(task.ID), "error", err)
-		return
-	}
-	workspaceID, err := util.ParseUUID(qc.WorkspaceID)
-	if err != nil {
-		slog.Warn("quick-create completion: invalid workspace id", "task_id", util.UUIDToString(task.ID), "error", err)
-		return
-	}
-	issue, err := s.Queries.GetIssueByOrigin(ctx, db.GetIssueByOriginParams{
-		WorkspaceID: workspaceID,
-		OriginType:  pgtype.Text{String: "quick_create", Valid: true},
-		OriginID:    task.ID,
-	})
-	if err != nil {
-		if !errors.Is(err, pgx.ErrNoRows) {
-			// The lookup itself failed (DB fault, timeout, …), not a confirmed
-			// "no issue": the agent may well have created the issue, so a
-			// failure inbox would misreport it. But the task is already
-			// completed and nothing retries this reconciliation, so returning
-			// silently would end the run with NO inbox result at all. Write a
-			// neutral, terminal notification instead — the user always gets a
-			// result, and it never asserts a failure we did not observe.
-			slog.Error("quick-create completion: issue lookup failed, writing unconfirmed inbox",
-				"task_id", util.UUIDToString(task.ID),
-				"agent_id", util.UUIDToString(task.AgentID),
-				"workspace_id", qc.WorkspaceID,
-				"error", err,
-			)
-			s.notifyQuickCreateUnconfirmed(ctx, task, qc)
-			return
-		}
-		// No issue created — the agent ran to completion but the CLI create
-		// call must have failed (most often the active-duplicate guard). The
-		// quick-create prompt tells the agent to exit with the CLI error as its
-		// only output, so prefer that as the failure reason instead of a
-		// generic string; fall back to notifyQuickCreateFailed's own default
-		// when the output is empty. This is what turns the opaque "agent
-		// finished without creating an issue" into the concrete reason (#5885).
-		detail := quickCreateFailureDetail(result)
-		slog.Warn("quick-create completion: no issue found, writing failure inbox",
-			"task_id", util.UUIDToString(task.ID),
-			"agent_id", util.UUIDToString(task.AgentID),
-			"workspace_id", qc.WorkspaceID,
-			"has_detail", detail != "",
-		)
-		s.notifyQuickCreateFailed(ctx, task, qc, detail)
-		return
-	}
-
-	// Link the new issue back to this task so subsequent reads (Activity tab,
-	// Recent work, etc.) can navigate to the result instead of leaving it on
-	// the "Creating issue" active wording. The task's source kind remains
-	// quick_create, derived from its typed context. Best-effort: a write failure
-	// here doesn't block the inbox notification, which is the more important
-	// signal to the user.
-	if err := s.Queries.LinkTaskToIssue(ctx, db.LinkTaskToIssueParams{
-		ID:      task.ID,
-		IssueID: issue.ID,
-	}); err != nil {
-		slog.Warn("quick-create completion: link task→issue failed",
-			"task_id", util.UUIDToString(task.ID),
-			"issue_id", util.UUIDToString(issue.ID),
-			"error", err,
-		)
-	}
-
-	// Subscribing the requester used to happen here, at completion. It now
-	// happens at issue-creation time in the shared delegated-subscriber rule
-	// (cmd/server/subscriber_listeners.go → subscribeDelegatedHuman), which
-	// resolves the human from origin_type='quick_create' + the origin task's
-	// originator_user_id — the same origin waterfall attribution uses.
-	//
-	// This was one of three separate hand-rolled fixes for "an agent created
-	// this issue and no human is subscribed" (quick-create here, the autopilot
-	// subscriber template, and — missing entirely until MUL-5483 — ordinary
-	// agent-created sub-issues). Keeping a second write here would leave the
-	// same decision encoded in two places that can drift.
-	prefix := s.getIssuePrefix(workspaceID)
-	identifier := fmt.Sprintf("%s-%d", prefix, issue.Number)
-	details, _ := json.Marshal(map[string]any{
-		"task_id":         util.UUIDToString(task.ID),
-		"agent_id":        util.UUIDToString(task.AgentID),
-		"issue_id":        util.UUIDToString(issue.ID),
-		"identifier":      identifier,
-		"original_prompt": qc.Prompt,
-	})
-	item, err := s.Queries.CreateInboxItem(ctx, db.CreateInboxItemParams{
-		ID:            dbid.NewV7(),
-		WorkspaceID:   workspaceID,
-		RecipientType: "member",
-		RecipientID:   requesterID,
-		Type:          "quick_create_done",
-		Severity:      "info",
-		IssueID:       issue.ID,
-		Title:         issue.Title,
-		Body:          pgtype.Text{},
-		ActorType:     pgtype.Text{String: "agent", Valid: true},
-		ActorID:       task.AgentID,
-		Details:       details,
-	})
-	if err != nil {
-		slog.Error("quick-create completion: inbox write failed", "task_id", util.UUIDToString(task.ID), "error", err)
-		return
-	}
-	s.publishQuickCreateInbox(item, qc.WorkspaceID, util.UUIDToString(task.AgentID), issue.Status)
-}
 
 // Inbox types for the two non-success quick-create outcomes. They are distinct
 // because clients render them differently: the failed type carries an explicit
@@ -7946,19 +5414,6 @@ const (
 	inboxTypeQuickCreateUnconfirmed = "quick_create_unconfirmed"
 )
 
-// notifyQuickCreateFailed writes a failure inbox notification carrying the
-// original prompt + agent ID so the frontend can render an "Edit as
-// advanced form" entry that pre-fills the legacy create-issue modal
-// without asking the user to retype. Use this only when the run is KNOWN not
-// to have produced an issue; when that is merely unverified, use
-// notifyQuickCreateUnconfirmed so the user is not told a definite failure.
-func (s *TaskService) notifyQuickCreateFailed(ctx context.Context, task db.AgentTaskQueue, qc QuickCreateContext, errMsg string) {
-	if errMsg == "" {
-		errMsg = "Quick create did not finish successfully"
-	}
-	s.writeQuickCreateOutcomeInbox(ctx, task, qc, inboxTypeQuickCreateFailed, "Quick create failed", errMsg)
-}
-
 // quickCreateUnconfirmedDetail is the user-facing message for a quick-create
 // run whose outcome could not be verified (the completion lookup itself
 // failed). It must not claim failure: the agent may well have created the
@@ -7966,106 +5421,10 @@ func (s *TaskService) notifyQuickCreateFailed(ctx context.Context, task db.Agent
 // so a retry cannot silently produce the duplicate the guard exists to prevent.
 const quickCreateUnconfirmedDetail = "Couldn't confirm whether the issue was created. Check your recent issues before retrying — creating it again may produce a duplicate."
 
-// notifyQuickCreateUnconfirmed writes a NEUTRAL terminal notification for a
-// quick-create run whose outcome is unverified. The task is already completed
-// and nothing re-runs this reconciliation, so returning without writing here
-// would strand the requester with no inbox result at all — the failure mode
-// this exists to prevent.
-//
-// It uses its own inbox type rather than reusing quick_create_failed: every
-// client renders the failed type with a "Failed:" prefix, which would assert a
-// failure we never observed no matter how neutral the title and body are.
-// Severity stays action_required because the user does need to look.
-func (s *TaskService) notifyQuickCreateUnconfirmed(ctx context.Context, task db.AgentTaskQueue, qc QuickCreateContext) {
-	s.writeQuickCreateOutcomeInbox(ctx, task, qc, inboxTypeQuickCreateUnconfirmed, "Quick create needs a check", quickCreateUnconfirmedDetail)
-}
-
 // quickCreateNotifyTimeout bounds the detached terminal-notification write in
 // writeQuickCreateOutcomeInbox. Long enough for a healthy DB round-trip, short
 // enough that a wedged pool cannot pin the completion goroutine.
 const quickCreateNotifyTimeout = 5 * time.Second
-
-// writeQuickCreateOutcomeInbox writes the shared inbox row used by both
-// non-success outcomes (known failure and unverified outcome). Callers own the
-// user-facing wording and the row type; the row shape — original prompt, agent
-// id, redacted message — is identical so the frontend's recovery affordance
-// keeps working for both.
-func (s *TaskService) writeQuickCreateOutcomeInbox(ctx context.Context, task db.AgentTaskQueue, qc QuickCreateContext, inboxType, title, errMsg string) {
-	requesterID, err := util.ParseUUID(qc.RequesterID)
-	if err != nil {
-		return
-	}
-	workspaceID, err := util.ParseUUID(qc.WorkspaceID)
-	if err != nil {
-		return
-	}
-	// The task is already committed as completed and nothing retries this
-	// notification, so it must not die with the caller's context. This matters
-	// most on the unconfirmed path: the completion lookup may have failed
-	// precisely BECAUSE ctx was cancelled or timed out, and reusing that ctx
-	// would fail the write for the same reason — leaving the user with no
-	// result at all, the exact silent drop this path exists to prevent. Detach
-	// from cancellation, but keep a bound so a wedged DB cannot pin us.
-	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), quickCreateNotifyTimeout)
-	defer cancel()
-	details, _ := json.Marshal(map[string]any{
-		"task_id":           util.UUIDToString(task.ID),
-		"agent_id":          util.UUIDToString(task.AgentID),
-		"original_prompt":   qc.Prompt,
-		"error":             redact.Text(errMsg),
-		"source_context_id": qc.SourceContextID,
-	})
-	item, err := s.Queries.CreateInboxItem(ctx, db.CreateInboxItemParams{
-		ID:            dbid.NewV7(),
-		WorkspaceID:   workspaceID,
-		RecipientType: "member",
-		RecipientID:   requesterID,
-		Type:          inboxType,
-		Severity:      "action_required",
-		IssueID:       pgtype.UUID{},
-		Title:         title,
-		Body:          pgtype.Text{String: redact.Text(errMsg), Valid: true},
-		ActorType:     pgtype.Text{String: "agent", Valid: true},
-		ActorID:       task.AgentID,
-		Details:       details,
-	})
-	if err != nil {
-		slog.Error("quick-create failure: inbox write failed", "task_id", util.UUIDToString(task.ID), "error", err)
-		return
-	}
-	s.publishQuickCreateInbox(item, qc.WorkspaceID, util.UUIDToString(task.AgentID), "")
-}
-
-// publishQuickCreateInbox emits the WS event so the requester's inbox list
-// updates immediately. Mirrors the payload shape used by the other inbox
-// listeners (notification_listeners.go).
-func (s *TaskService) publishQuickCreateInbox(item db.InboxItem, workspaceID, agentID, issueStatus string) {
-	resp := map[string]any{
-		"id":             util.UUIDToString(item.ID),
-		"workspace_id":   util.UUIDToString(item.WorkspaceID),
-		"recipient_type": item.RecipientType,
-		"recipient_id":   util.UUIDToString(item.RecipientID),
-		"type":           item.Type,
-		"severity":       item.Severity,
-		"issue_id":       util.UUIDToPtr(item.IssueID),
-		"title":          item.Title,
-		"body":           util.TextToPtr(item.Body),
-		"read":           item.Read,
-		"archived":       item.Archived,
-		"created_at":     util.TimestampToString(item.CreatedAt),
-		"actor_type":     util.TextToPtr(item.ActorType),
-		"actor_id":       util.UUIDToPtr(item.ActorID),
-		"details":        json.RawMessage(item.Details),
-		"issue_status":   issueStatus,
-	}
-	s.Bus.Publish(events.Event{
-		Type:        protocol.EventInboxNew,
-		WorkspaceID: workspaceID,
-		ActorType:   "agent",
-		ActorID:     agentID,
-		Payload:     map[string]any{"item": resp},
-	})
-}
 
 // agentToMap builds a simple map for broadcasting agent status updates.
 func agentToMap(a db.Agent) map[string]any {

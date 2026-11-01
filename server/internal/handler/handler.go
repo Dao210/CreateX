@@ -215,7 +215,6 @@ type Handler struct {
 	Bus                    *events.Bus
 	TaskService            *service.TaskService
 	PluginService          *service.PluginService
-	IssueService           *service.IssueService
 	AutopilotService       *service.AutopilotService
 	// Entitlements supplies workspace-scoped commercial gates. A nil provider
 	// preserves self-hosted behavior without extra reads.
@@ -497,7 +496,6 @@ func New(queries *db.Queries, txStarter txStarter, hub *realtime.Hub, bus *event
 		Bus:                          bus,
 		TaskService:                  taskSvc,
 		PluginService:                service.NewPluginService(queries, txStarter),
-		IssueService:                 service.NewIssueService(queries, txStarter, bus, analyticsClient, taskSvc),
 		AutopilotService:             service.NewAutopilotService(queries, txStarter, bus, taskSvc),
 		EmailService:                 emailService,
 		UpdateStore:                  NewInMemoryUpdateStore(),
@@ -600,26 +598,6 @@ func writeFeatureDisabled(w http.ResponseWriter, code, msg string) {
 	writeErrorCode(w, http.StatusForbidden, code, msg)
 }
 
-func writeRevisionConflict(w http.ResponseWriter, resourceType string, resourceID pgtype.UUID, expected, actual int64) {
-	writeJSON(w, http.StatusConflict, map[string]any{
-		"error":             "resource changed since it was loaded",
-		"code":              "revision_conflict",
-		"resource_type":     resourceType,
-		"resource_id":       uuidToString(resourceID),
-		"expected_revision": expected,
-		"actual_revision":   actual,
-	})
-}
-
-func writeEditConflict(w http.ResponseWriter, resourceType string, resourceID pgtype.UUID) {
-	writeJSON(w, http.StatusConflict, map[string]any{
-		"error":         "resource field changed since it was loaded",
-		"code":          "revision_conflict",
-		"resource_type": resourceType,
-		"resource_id":   uuidToString(resourceID),
-	})
-}
-
 // Thin wrappers around util functions.
 //
 // parseUUID is intentionally the panicking variant: any handler call site
@@ -678,7 +656,6 @@ func uuidStringsOrEmpty(us []pgtype.UUID) []string {
 
 func int8ToPtr(v pgtype.Int8) *int64 { return util.Int8ToPtr(v) }
 func int4ToPtr(v pgtype.Int4) *int32 { return util.Int4ToPtr(v) }
-func ptrToInt4(v *int32) pgtype.Int4 { return util.PtrToInt4(v) }
 
 // parseUUIDOrBadRequest validates a UUID string sourced from user input
 // (URL params, request body, headers). On invalid input it writes a 400
@@ -828,14 +805,6 @@ func isNotFound(err error) bool {
 func isUniqueViolation(err error) bool {
 	var pgErr *pgconn.PgError
 	return errors.As(err, &pgErr) && pgErr.Code == "23505"
-}
-
-// isCheckViolation reports whether err is a PostgreSQL CHECK constraint
-// violation (SQLSTATE 23514). Used to translate column-level CHECK failures
-// into a 4xx instead of a generic 500.
-func isCheckViolation(err error) bool {
-	var pgErr *pgconn.PgError
-	return errors.As(err, &pgErr) && pgErr.Code == "23514"
 }
 
 func requestUserID(r *http.Request) string {
@@ -1045,47 +1014,6 @@ func (h *Handler) isWorkspaceEntity(ctx context.Context, userType, userID, works
 	default:
 		return false
 	}
-}
-
-func (h *Handler) loadIssueForUser(w http.ResponseWriter, r *http.Request, issueID string) (db.Issue, bool) {
-	if _, ok := requireUserID(w, r); !ok {
-		return db.Issue{}, false
-	}
-
-	workspaceID := h.resolveWorkspaceID(r)
-	if workspaceID == "" {
-		writeError(w, http.StatusBadRequest, "workspace_id is required")
-		return db.Issue{}, false
-	}
-
-	// Try identifier format first (e.g., "JIA-42"). resolveIssueByIdentifier
-	// silently returns false for non-identifier strings, falling through to
-	// the UUID path below.
-	if issue, ok := h.resolveIssueByIdentifier(r.Context(), issueID, workspaceID); ok {
-		return issue, true
-	}
-
-	issueUUID, err := util.ParseUUID(issueID)
-	if err != nil {
-		// Not a valid UUID and didn't match identifier format → 404 (consistent
-		// with previous silent-zero behavior, which would also have produced 404).
-		writeError(w, http.StatusNotFound, "issue not found")
-		return db.Issue{}, false
-	}
-	wsUUID, err := util.ParseUUID(workspaceID)
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid workspace_id")
-		return db.Issue{}, false
-	}
-	issue, err := h.Queries.GetIssueInWorkspace(r.Context(), db.GetIssueInWorkspaceParams{
-		ID:          issueUUID,
-		WorkspaceID: wsUUID,
-	})
-	if err != nil {
-		writeError(w, http.StatusNotFound, "issue not found")
-		return db.Issue{}, false
-	}
-	return issue, true
 }
 
 // resolveIssueByIdentifier tries to look up an issue by "PREFIX-NUMBER" format.

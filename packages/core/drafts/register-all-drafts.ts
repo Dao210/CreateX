@@ -14,19 +14,5 @@
  * only exist once that instance does, and registration is tied to the same
  * lifecycle. There is nothing to import here that would register them earlier.
  */
-import "../issues/stores/draft-store";
-import "../issues/stores/quick-create-store";
-import "../issues/stores/comment-draft-store";
-import "../projects/draft-store";
 import "../feedback/draft-store";
 import "../agents/manual-draft-store";
-import { registerDraftCleanup } from "./cleanup-registry";
-
-// Retired: drafts for a running turn now live in the thread's reply draft.
-// Keep clearing the old persisted key so text written before the move never
-// outlives logout or workspace removal.
-registerDraftCleanup({
-  storageKey: "auro_task_supplement_drafts",
-  workspaceScoped: true,
-  resetInMemory: () => {},
-});

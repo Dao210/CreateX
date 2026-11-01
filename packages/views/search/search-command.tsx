@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, CircleUser, Monitor, Moon, SearchIcon, Sun } from "lucide-react";
 import { Command as CommandPrimitive } from "cmdk";
 import { useQuery } from "@tanstack/react-query";
+import { isGameId, useWorldGames } from "@auro/core/admin";
 import { useWorkspaceId } from "@auro/core/hooks";
 import { useWorkspacePaths, WORKSPACE_PAGES, type WorkspacePageKey } from "@auro/core/paths";
 import { memberListOptions } from "@auro/core/workspace/queries";
@@ -51,6 +52,7 @@ export function SearchCommand() {
   const q = query.trim().toLowerCase();
   const wsId = useWorkspaceId();
   const paths = useWorkspacePaths();
+  const games = useWorldGames(wsId);
   const navigate = useIntentNavigate();
   const intent = useRef<LinkClickIntent>("push");
   const { theme, setTheme } = useTheme();
@@ -70,7 +72,7 @@ export function SearchCommand() {
       keywords: ["account", "profile", "preferences", "settings", "账号", "个人资料", "偏好", "设置"],
     },
   ], [paths, tNav]);
-  const filteredPages = pages.filter((page) => !q || matchesRow(page.label, page.keywords, q));
+  const filteredPages = pages.filter(page => (!isGameId(page.key) || games.data?.games.find(game => game.gameId === page.key)?.available === true) && (!q || matchesRow(page.label, page.keywords, q)));
   const wantsMembers = q.length >= 3 && ["members", "people", "users", "team"].some((word) => word.startsWith(q));
   const filteredMembers = q ? members.filter((member) => wantsMembers || matchesRow(member.name, [member.email, ...(q.length >= 3 ? [member.role] : [])], q)).slice(0, 10) : [];
   const commands = [

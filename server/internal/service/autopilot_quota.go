@@ -7,11 +7,11 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/auro-ai/auro/server/internal/entitlement"
+	db "github.com/auro-ai/auro/server/pkg/db/generated"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
-	"github.com/auro-ai/auro/server/internal/entitlement"
-	db "github.com/auro-ai/auro/server/pkg/db/generated"
 )
 
 // AutopilotQuotaMetrics deliberately accepts only bounded labels. Workspace
@@ -290,13 +290,6 @@ func autopilotRunFromTerminalRow(row db.UpdateAutopilotRunTerminalWithQuotaRow) 
 func (s *AutopilotService) recoverPartialAutopilotRun(ctx context.Context, run db.AutopilotRun) (bool, error) {
 	rows, err := s.Queries.RecoverPartialAutopilotRun(ctx, run.ID)
 	return rows > 0, err
-}
-
-// FailAutopilotRunsByIssue keeps create_issue consumption immutable while
-// releasing any still-reserved run_only slots before deletion clears issue_id.
-func (s *AutopilotService) FailAutopilotRunsByIssue(ctx context.Context, issueID pgtype.UUID) error {
-	_, err := s.Queries.FailAutopilotRunsByIssue(ctx, issueID)
-	return err
 }
 
 func (s *AutopilotService) AutopilotQuotaUsage(ctx context.Context, workspaceID pgtype.UUID) (AutopilotQuotaUsage, error) {

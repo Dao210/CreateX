@@ -10,8 +10,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/jackc/pgx/v5/pgtype"
 	skillpkg "github.com/auro-ai/auro/server/internal/skill"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // maxImportArchiveUploadSize bounds the compressed upload accepted by the

@@ -5,7 +5,7 @@ import { setCurrentWorkspace } from "@auro/core/platform";
 import { AdminPage } from "@auro/views/admin";
 import "@auro/views/admin/admin.css";
 
-export function AdminClient() {
+export function AdminClient({ module = "games" }: { module?: "games" | "mcp" }) {
   useEffect(() => { setCurrentWorkspace(null,null); }, []);
-  return <AdminPage />;
+  return <AdminPage module={module} />;
 }

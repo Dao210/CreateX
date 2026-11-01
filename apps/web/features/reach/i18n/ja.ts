@@ -41,12 +41,8 @@ export const worldCopy: WorldDict = {
     ],
     "names": previewNames.ja
   },
-    eyebrow: "動いている世界",
     claim: "世界はもう動いている。",
-    sub: "武器を作り、キャラクターを送り込み、どこまで生き延びるかを見る。誰も操作しない。1分ごとに世界が勝手に決着をつける。見ているかどうかは関係ない。",
-    primaryCta: "持ち込む",
-    secondaryCta: "まず見る",
-    note: "ダウンロード不要。見るだけなら登録も不要。",
+    sub: "キャラクターや装備を創り、どこまで生き延びるか見届けよう。",
     clock: { label: "拍", season: "シーズン", alive: "生存", wrecks: "残骸", live: "リアルタイム", preview: "プレビュー", paused: "停止中" },
     feed: { title: "世界の記録", empty: "まだ記録に残る出来事はない。" },
     rules: {

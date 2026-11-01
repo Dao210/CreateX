@@ -4,11 +4,11 @@ import (
 	"context"
 	"log/slog"
 
-	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/auro-ai/auro/server/internal/service"
 	db "github.com/auro-ai/auro/server/pkg/db/generated"
 	"github.com/auro-ai/auro/server/pkg/protocol"
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // revokeAndRemoveMember converges all server-side state that should follow a
@@ -137,8 +137,8 @@ func (h *Handler) revokeAndRemoveMember(ctx context.Context, workspaceID, userID
 	// The inbound path also re-checks membership (see ChannelStore.IsWorkspaceMember),
 	// but pruning stops a stale binding from lingering across a remove/re-add.
 	if err := qtx.DeleteChannelUserBindingsByWorkspaceMember(ctx, db.DeleteChannelUserBindingsByWorkspaceMemberParams{
-		WorkspaceID:   workspaceID,
-		AuroUserID: userID,
+		WorkspaceID: workspaceID,
+		AuroUserID:  userID,
 	}); err != nil {
 		return empty, err
 	}

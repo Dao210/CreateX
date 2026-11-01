@@ -16,8 +16,7 @@
  * loaded yet renders a stable type icon and a type label, never a wrong or
  * empty identity, and never borrows the Issues icon.
  */
-import type { IssueStatus, IssueStatusCategory } from "../types";
-import { issueStatusCategory } from "../issues/status-category";
+import type { IssueStatus } from "../types";
 import {
   WORKSPACE_PAGES,
   type NavLabelKey,
@@ -32,9 +31,7 @@ export type TabVisual =
   /** An issue's live status glyph. `null` while the issue is loading.
    *  `category` is what selects the glyph — carried here so the tab strip
    *  never has to resolve a custom status key on its own. (MUL-6243) */
-  | { kind: "issue-status"; status: IssueStatus | null; category?: IssueStatusCategory; color?: string | null; icon?: string | null }
   /** A project's own icon. `null` falls back to the default project glyph. */
-  | { kind: "project-icon"; icon: string | null }
   /** An actor's avatar, resolved by the view layer from `actorType`+`id`. */
   | { kind: "actor"; actorType: TabActorType; id: string };
 
@@ -68,7 +65,6 @@ export interface TabPresentation {
 
 /** Resolved inbox selection, as computed by the view layer from cache. */
 export type InboxSelectionData =
-  | { kind: "issue"; identifier: string; title: string }
   | { kind: "item"; title: string };
 
 /**
@@ -153,22 +149,6 @@ export function resolveTabPresentation(
         title: { kind: "nav", navKey: page.navKey },
       };
     }
-    case "issue":
-      return {
-        visual: {
-          kind: "issue-status",
-          status: data.issue?.status ?? null,
-          ...(data.issue ? { category: issueStatusCategory(data.issue) ?? undefined } : {}),
-        },
-        title: data.issue
-          ? { kind: "text", text: `${data.issue.identifier}: ${data.issue.title}` }
-          : { kind: "tab", tabKey: "issue" },
-      };
-    case "project":
-      return {
-        visual: { kind: "project-icon", icon: data.project?.icon ?? null },
-        title: textOr(data.project?.title, "project"),
-      };
     case "autopilot":
       return {
         visual: { kind: "icon", icon: "Zap" },
@@ -210,9 +190,7 @@ export function resolveTabPresentation(
       let title: TabTitleSpec;
       if (!sel) {
         title = { kind: "nav", navKey: "inbox" };
-      } else if (sel.kind === "issue") {
-        title = { kind: "text", text: `${sel.identifier}: ${sel.title}` };
-      } else {
+      } else{
         const text = sel.title.trim();
         title = text ? { kind: "text", text } : { kind: "nav", navKey: "inbox" };
       }

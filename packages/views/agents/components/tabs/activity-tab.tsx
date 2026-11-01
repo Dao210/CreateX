@@ -2,13 +2,7 @@
 
 import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
-import {
-  CircleHelp,
-  Hash,
-  MessageSquare,
-  Workflow,
-  X,
-} from "lucide-react";
+import { MessageSquare, Workflow, X } from "lucide-react";
 import { toast } from "sonner";
 import {
   Tooltip,
@@ -18,8 +12,8 @@ import {
 import { Button } from "@auro/ui/components/ui/button";
 import { NumberFlow } from "@auro/ui/components/ui/number-flow";
 import { Skeleton } from "@auro/ui/components/ui/skeleton";
-import { useInfiniteQuery, useQueries, useQuery } from "@tanstack/react-query";
-import type { Agent, AgentTask, Issue } from "@auro/core/types";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import type { Agent, AgentTask } from "@auro/core/types";
 import {
   type AgentActivity,
   agentTaskSnapshotOptions,
@@ -29,9 +23,8 @@ import {
 } from "@auro/core/agents";
 import { api } from "@auro/core/api";
 import { useWorkspaceId } from "@auro/core/hooks";
-import { issueDetailOptions } from "@auro/core/issues/queries";
 import { TranscriptButton } from "../../../common/task-transcript";
-import { AttributionBadge } from "../../../issues/components/attribution-badge";
+import { AttributionBadge } from "../../../common/execution/attribution-badge";
 import { taskStatusConfig } from "../../config";
 import { cancellationActorLabel, cancelReasonLabel, failureReasonLabel } from "./task-failure";
 import { Sparkline } from "../sparkline";
@@ -146,35 +139,10 @@ export function ActivityTab({ agent, showPerformance = true }: ActivityTabProps)
 
   const avgDurationMs = activity?.avgDurationMs ?? 0;
 
-  // Resolve issue identifiers + titles for any task we'll render. Going
-  // through `issueDetailOptions` is the same lookup the rest of the app
-  // uses, so the cache is shared and we don't pay for a duplicate request.
-  const displayedTasks = useMemo(
-    () => [...activeTasks, ...recentTasks],
-    [activeTasks, recentTasks],
-  );
-  const issueIds = useMemo(
-    () =>
-      Array.from(
-        new Set(displayedTasks.map((t) => t.issue_id).filter((id) => id !== "")),
-      ),
-    [displayedTasks],
-  );
-  const issueQueries = useQueries({
-    queries: issueIds.map((id) => issueDetailOptions(wsId, id)),
-  });
-  const issueMap = useMemo(() => {
-    const m = new Map<string, Issue>();
-    issueQueries.forEach((q, i) => {
-      const id = issueIds[i]!;
-      if (q.data) m.set(id, q.data);
-    });
-    return m;
-  }, [issueQueries, issueIds]);
 
   return (
     <div className="flex min-w-0 flex-col gap-6">
-      <NowSection tasks={activeTasks} issueMap={issueMap} agent={agent} />
+      <NowSection tasks={activeTasks} agent={agent} />
       {showPerformance && (
         <Last30dSection activity={activity} avgDurationMs={avgDurationMs} />
       )}
@@ -196,7 +164,7 @@ export function ActivityTab({ agent, showPerformance = true }: ActivityTabProps)
             });
           }
         }}
-        issueMap={issueMap}
+       
         agent={agent}
       />
     </div>
@@ -315,11 +283,9 @@ function SuccessRate({
 
 function NowSection({
   tasks,
-  issueMap,
   agent,
 }: {
   tasks: AgentTask[];
-  issueMap: Map<string, Issue>;
   agent: Agent;
 }) {
   const { t } = useT("agents");
@@ -337,7 +303,7 @@ function NowSection({
       ) : (
         <TaskList
           tasks={tasks}
-          issueMap={issueMap}
+         
           timeMode="active"
           agent={agent}
         />
@@ -429,7 +395,6 @@ function RecentWorkSection({
   onShowMore,
   fetchingMore,
   fetchMoreFailed,
-  issueMap,
   agent,
 }: {
   tasks: AgentTask[];
@@ -440,7 +405,6 @@ function RecentWorkSection({
   onShowMore: () => void;
   fetchingMore: boolean;
   fetchMoreFailed: boolean;
-  issueMap: Map<string, Issue>;
   agent: Agent;
 }) {
   const { t } = useT("agents");
@@ -464,7 +428,7 @@ function RecentWorkSection({
       ) : (
         <TaskList
           tasks={tasks}
-          issueMap={issueMap}
+         
           timeMode="completed"
           agent={agent}
         />
@@ -516,12 +480,10 @@ function RecentWorkSkeleton() {
 
 function TaskList({
   tasks,
-  issueMap,
   timeMode,
   agent,
 }: {
   tasks: AgentTask[];
-  issueMap: Map<string, Issue>;
   timeMode: "active" | "completed";
   agent: Agent;
 }) {
@@ -537,7 +499,7 @@ function TaskList({
         <TaskRow
           key={task.id}
           task={task}
-          issueMap={issueMap}
+         
           timeMode={timeMode}
           agent={agent}
         />
@@ -548,12 +510,10 @@ function TaskList({
 
 function TaskRow({
   task,
-  issueMap,
   timeMode,
   agent,
 }: {
   task: AgentTask;
-  issueMap: Map<string, Issue>;
   timeMode: "active" | "completed";
   agent: Agent;
 }) {
@@ -562,8 +522,6 @@ function TaskRow({
   const [cancelling, setCancelling] = useState(false);
   const cfg = taskStatusConfig[task.status] ?? taskStatusConfig.queued!;
   const Icon = cfg.icon;
-  const hasIssue = task.issue_id !== "";
-  const issue = hasIssue ? issueMap.get(task.issue_id) : undefined;
   const isRunning = task.status === "running";
   // Queued tasks have no messages yet — hiding the transcript button avoids
   // a guaranteed "No execution data recorded." dialog open.
@@ -590,36 +548,9 @@ function TaskRow({
     }
   };
 
-  const isTerminalStatus =
-    task.status === "completed" ||
-    task.status === "failed" ||
-    task.status === "cancelled";
-  const sourceFallback = !hasIssue
-    ? task.kind === "quick_create"
-      ? isTerminalStatus
-        ? t(($) => $.tab_body.activity.source_quick_create)
-        : t(($) => $.tab_body.activity.source_creating_issue)
-      : task.chat_session_id
-        ? t(($) => $.tab_body.activity.source_chat_session)
-        : task.autopilot_run_id
-          ? t(($) => $.tab_body.activity.source_autopilot_run)
-          : t(($) => $.tab_body.activity.source_untracked)
-    : null;
-
-  const SourceIcon = hasIssue
-    ? Hash
-    : task.chat_session_id
-      ? MessageSquare
-      : task.autopilot_run_id
-        ? Workflow
-        : CircleHelp;
-  const sourceLabel = hasIssue
-    ? t(($) => $.tab_body.activity.source_issue)
-    : task.chat_session_id
-      ? t(($) => $.tab_body.activity.source_chat)
-      : task.autopilot_run_id
-        ? t(($) => $.tab_body.activity.source_autopilot)
-        : t(($) => $.tab_body.activity.source_untracked);
+  const sourceFallback = task.trigger_summary || (task.chat_session_id ? t(($) => $.tab_body.activity.source_chat_session) : t(($) => $.tab_body.activity.source_autopilot_run));
+  const SourceIcon = task.chat_session_id ? MessageSquare : Workflow;
+  const sourceLabel = task.chat_session_id ? t(($) => $.tab_body.activity.source_chat) : t(($) => $.tab_body.activity.source_autopilot);
 
   const timeText =
     timeMode === "active"
@@ -673,11 +604,6 @@ function TaskRow({
             className="h-3 w-3 shrink-0 text-faint-foreground"
             aria-label={sourceLabel}
           />
-          {issue && (
-            <span className="shrink-0 font-mono text-caption text-muted-foreground">
-              {issue.identifier}
-            </span>
-          )}
           {task.trigger_summary ? (
             // Hover surfaces "why this task ran" — the snapshot lets the
             // agent-side row stay anchored on issue.title (the
@@ -688,10 +614,7 @@ function TaskRow({
               <TooltipTrigger
                 render={
                   <span className="truncate text-body">
-                    {issue?.title ??
-                      (hasIssue
-                        ? t(($) => $.tab_body.activity.issue_short_fallback, { prefix: task.issue_id.slice(0, 8) })
-                        : (sourceFallback ?? t(($) => $.tab_body.activity.source_untracked)))}
+                    {sourceFallback}
                   </span>
                 }
               />
@@ -706,10 +629,7 @@ function TaskRow({
             </Tooltip>
           ) : (
             <span className="truncate text-body">
-              {issue?.title ??
-                (hasIssue
-                  ? t(($) => $.tab_body.activity.issue_short_fallback, { prefix: task.issue_id.slice(0, 8) })
-                  : (sourceFallback ?? t(($) => $.tab_body.activity.source_untracked)))}
+              {sourceFallback}
             </span>
           )}
         </div>

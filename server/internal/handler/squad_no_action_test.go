@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/auro-ai/auro/server/internal/testutil"
+	"github.com/go-chi/chi/v5"
 )
 
 type runningSquadLeaderTaskFixture struct {

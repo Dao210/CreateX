@@ -690,6 +690,9 @@ DELETE FROM project WHERE project.workspace_id = $1;
 
 -- name: DeleteWorkspaceAdministration :exec
 WITH
+game_overrides_deleted AS (
+    DELETE FROM game_world_override WHERE workspace_id = $1
+),
 mcp_activity_deleted AS (
     DELETE FROM mcp_activity WHERE workspace_id = $1
 ),

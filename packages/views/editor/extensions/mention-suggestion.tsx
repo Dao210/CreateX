@@ -23,10 +23,7 @@ import type {
   Agent,
   Squad,
 } from "@auro/core/types";
-import { ListTodo } from "lucide-react";
 import { ActorAvatar } from "../../common/actor-avatar";
-import { StatusIcon } from "../../issues/components/status-icon";
-import { ProjectIcon } from "../../projects/components/project-icon";
 import { useT } from "../../i18n";
 import { Badge } from "@auro/ui/components/ui/badge";
 import {
@@ -36,7 +33,6 @@ import {
 } from "@auro/ui/components/ui/tooltip";
 import { cn } from "@auro/ui/lib/utils";
 import type { IssueStatus, IssueStatusCategory, ProjectStatus } from "@auro/core/types";
-import { PROJECT_STATUS_CONFIG } from "@auro/core/projects/config";
 import type { SuggestionOptions } from "@tiptap/suggestion";
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import { PluginKey } from "@tiptap/pm/state";
@@ -54,7 +50,7 @@ import {
   pickerNavigationDirection,
 } from "../../common/picker-keys";
 import { isTriggerArmedAt } from "./suggestion-trigger-arming";
-import { blockedReasonLabel } from "../../issues/blocked-trigger-copy";
+import { blockedReasonLabel } from "../../agents/blocked-trigger-copy";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -342,8 +338,6 @@ export const MentionList = forwardRef<MentionListRef, MentionListProps>(
 
 function MentionRow({
   item,
-  statusColor,
-  statusIcon,
   selected,
   onSelect,
   buttonRef,
@@ -357,77 +351,6 @@ function MentionRow({
 }) {
   const { t } = useT("editor");
   const { t: issuesT } = useT("issues");
-  if (item.type === "issue") {
-    // Visually dim closed issues (done/cancelled) so they're distinguishable
-    // from active ones in the suggestion list — they're still selectable.
-    const isClosed =
-      item.statusCategory === "done" || item.statusCategory === "closed";
-    return (
-      <button
-        type="button"
-        ref={buttonRef}
-        className={`flex w-full items-center gap-2.5 px-3 py-2 text-left text-caption transition-colors ${
-          selected ? "bg-accent" : "hover:bg-accent/50"
-        } ${isClosed ? "opacity-60" : ""}`}
-        onClick={onSelect}
-      >
-        <span className="flex h-7 w-7 shrink-0 items-center justify-center">
-          {item.status ? (
-            <StatusIcon
-              status={item.status}
-              category={item.statusCategory}
-              color={statusColor}
-              icon={statusIcon}
-              className="h-3.5 w-3.5"
-            />
-          ) : (
-            <ListTodo className="h-3.5 w-3.5 text-muted-foreground" />
-          )}
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="flex min-w-0 items-center gap-2">
-            <span className="shrink-0 font-medium text-muted-foreground">{item.label}</span>
-            {item.description && (
-              <span
-                className={`truncate text-foreground ${isClosed ? "line-through" : ""}`}
-              >
-                {item.description}
-              </span>
-            )}
-          </span>
-        </span>
-      </button>
-    );
-  }
-
-  if (item.type === "project") {
-    const projectStatusCfg = item.projectStatus ? PROJECT_STATUS_CONFIG[item.projectStatus] : null;
-    return (
-      <button
-        type="button"
-        ref={buttonRef}
-        className={`flex w-full items-center gap-2.5 px-3 py-2 text-left text-caption transition-colors ${
-          selected ? "bg-accent" : "hover:bg-accent/50"
-        }`}
-        onClick={onSelect}
-      >
-        <span className="flex h-7 w-7 shrink-0 items-center justify-center">
-          <ProjectIcon project={{ icon: item.icon ?? null }} size="sm" />
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="block truncate font-medium text-foreground">{item.label}</span>
-          {item.description && (
-            <span className="block truncate text-muted-foreground">
-              {item.description}
-            </span>
-          )}
-        </span>
-        {projectStatusCfg && (
-          <span className={`${projectStatusCfg.dotColor} ml-auto size-1.5 shrink-0 rounded-full`} />
-        )}
-      </button>
-    );
-  }
 
   const disabledMessage = item.disabledReason
     ? blockedReasonLabel(item.disabledReason, issuesT)

@@ -60,7 +60,7 @@ function WindowOverlayInner() {
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col overflow-auto bg-background">
-      {overlay.type === "admin" && <AdminPage onClose={close} />}
+      {overlay.type === "admin" && <AdminPage key={overlay.module ?? "games"} module={overlay.module} onClose={close} />}
       {/* Creating a workspace is the onboarding flow entered at the
           workspace step: a second workspace still needs its own runtime and
           its own Mika, so running one flow keeps the two from drifting. */}
@@ -74,8 +74,6 @@ function WindowOverlayInner() {
             close();
             if (ws && destination?.kind === "chat") {
               push(paths.workspace(ws.slug).chatSession(destination.sessionId));
-            } else if (ws && destination?.kind === "issue") {
-              push(paths.workspace(ws.slug).issueDetail(destination.issueId));
             } else if (ws) {
               push(paths.workspace(ws.slug).root());
             }
@@ -96,10 +94,6 @@ function WindowOverlayInner() {
             if (ws && destination?.kind === "chat") {
               push(
                 paths.workspace(ws.slug).chatSession(destination.sessionId),
-              );
-            } else if (ws && destination?.kind === "issue") {
-              push(
-                paths.workspace(ws.slug).issueDetail(destination.issueId),
               );
             } else if (ws) {
               push(paths.workspace(ws.slug).root());

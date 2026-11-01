@@ -14,14 +14,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-chi/chi/v5"
-	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/auro-ai/auro/server/internal/storage"
 	"github.com/auro-ai/auro/server/internal/util"
 	db "github.com/auro-ai/auro/server/pkg/db/generated"
 	"github.com/auro-ai/auro/server/pkg/protocol"
+	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // extContentTypes overrides http.DetectContentType for extensions it gets wrong.
@@ -639,30 +639,7 @@ func (h *Handler) UploadFile(w http.ResponseWriter, r *http.Request) {
 // ListAttachments — GET /api/issues/{id}/attachments
 // ---------------------------------------------------------------------------
 
-func (h *Handler) ListAttachments(w http.ResponseWriter, r *http.Request) {
-	issueID := chi.URLParam(r, "id")
-	issue, ok := h.loadIssueForUser(w, r, issueID)
-	if !ok {
-		return
-	}
 
-	attachments, err := h.Queries.ListAttachmentsByIssue(r.Context(), db.ListAttachmentsByIssueParams{
-		IssueID:     issue.ID,
-		WorkspaceID: issue.WorkspaceID,
-	})
-	if err != nil {
-		slog.Error("failed to list attachments", "error", err)
-		writeError(w, http.StatusInternalServerError, "failed to list attachments")
-		return
-	}
-
-	mode := attachmentURLModeFromRequest(r)
-	resp := make([]AttachmentResponse, len(attachments))
-	for i, a := range attachments {
-		resp[i] = h.attachmentToResponse(a, mode)
-	}
-	writeJSON(w, http.StatusOK, resp)
-}
 
 // ---------------------------------------------------------------------------
 // GetAttachmentByID — GET /api/attachments/{id}
@@ -1506,17 +1483,7 @@ func (h *Handler) DeleteAttachment(w http.ResponseWriter, r *http.Request) {
 // Attachment linking
 // ---------------------------------------------------------------------------
 
-// linkAttachmentsByIssueIDs links unbound attachments to an issue. A caller
-// that did not already advance the issue revision can ask this visible change
-// to advance it exactly once.
-func (h *Handler) linkAttachmentsByIssueIDs(ctx context.Context, issueID, workspaceID pgtype.UUID, ids []pgtype.UUID, bumpRevision bool) (db.LinkAttachmentsToIssueRow, error) {
-	return h.Queries.LinkAttachmentsToIssue(ctx, db.LinkAttachmentsToIssueParams{
-		IssueID:       issueID,
-		WorkspaceID:   workspaceID,
-		AttachmentIds: ids,
-		BumpRevision:  bumpRevision,
-	})
-}
+
 
 // attachmentOwnerLockAttempts bounds the re-read below. An attachment gains an
 // owner once, when the issue or comment it was uploaded for links it, so one

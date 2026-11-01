@@ -3,10 +3,10 @@ package service
 import (
 	"encoding/json"
 
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/auro-ai/auro/server/internal/events"
 	"github.com/auro-ai/auro/server/pkg/plugincontract"
 	"github.com/auro-ai/auro/server/pkg/protocol"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // Translating the internal event bus into the seven events a plugin may

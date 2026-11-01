@@ -1,6 +1,5 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { resetAllRegisteredDrafts } from "../drafts/cleanup-registry";
-import { wipeLocalSearchIndex } from "../search-index/instance";
 import type { StorageAdapter } from "../types/storage";
 import type { Workspace } from "../types";
 import { workspaceKeys } from "../workspace/queries";
@@ -72,7 +71,6 @@ export function clearClientSessionData(
   // The local search index holds a copy of every issue and comment the user
   // could read. Deleting it is asynchronous; nothing waits on it because the
   // next session attaches under its own user id either way.
-  void wipeLocalSearchIndex();
 
   queryClient.clear();
 }

@@ -14,7 +14,7 @@ import (
 
 func TestAdminEmailConfigurationAndPolicyInput(t *testing.T) {
 	s, e := New(nil, " Admin@Example.com,other@example.com ", nil)
-	if e != nil || !s.Configured() || !s.emails["admin@example.com"] {
+	if e != nil || !s.Configured() || !s.AllowsEmail("admin@example.com") {
 		t.Fatalf("configuration=%+v error=%v", s, e)
 	}
 	for _, bad := range []string{"*", "someone", "Name <admin@example.com>"} {

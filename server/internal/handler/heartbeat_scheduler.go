@@ -7,10 +7,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/auro-ai/auro/server/internal/service"
 	db "github.com/auro-ai/auro/server/pkg/db/generated"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // HeartbeatScheduler decides how a "this runtime is alive, bump its
@@ -196,19 +196,9 @@ func (b *BatchedHeartbeatScheduler) Stop() {
 	cancel()
 }
 
-// FlushNow is exposed for tests that want to assert post-flush DB state
-// without sleeping for tickInterval. Production code should rely on Run.
-func (b *BatchedHeartbeatScheduler) FlushNow(ctx context.Context) {
-	b.flushOnce(ctx)
-}
 
-// PendingCount reports the number of unique runtime IDs currently queued.
-// Exposed for tests and potential metrics.
-func (b *BatchedHeartbeatScheduler) PendingCount() int {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-	return len(b.pending)
-}
+
+
 
 func (b *BatchedHeartbeatScheduler) flushOnce(ctx context.Context) {
 	b.mu.Lock()

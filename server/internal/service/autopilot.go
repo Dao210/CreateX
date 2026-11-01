@@ -10,22 +10,20 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/auro-ai/auro/server/internal/analytics"
 	"github.com/auro-ai/auro/server/internal/attribution"
 	"github.com/auro-ai/auro/server/internal/dispatch"
 	"github.com/auro-ai/auro/server/internal/entitlement"
 	"github.com/auro-ai/auro/server/internal/events"
-	"github.com/auro-ai/auro/server/internal/issueguard"
-	"github.com/auro-ai/auro/server/internal/issueposition"
 	"github.com/auro-ai/auro/server/internal/issuestatus"
 	obsmetrics "github.com/auro-ai/auro/server/internal/metrics"
 	"github.com/auro-ai/auro/server/internal/util"
 	db "github.com/auro-ai/auro/server/pkg/db/generated"
 	"github.com/auro-ai/auro/server/pkg/dbid"
 	"github.com/auro-ai/auro/server/pkg/protocol"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // TxStarter abstracts transaction creation (satisfied by pgxpool.Pool).
@@ -41,14 +39,6 @@ type AutopilotService struct {
 	Entitlements entitlement.Provider
 	QuotaMetrics AutopilotQuotaMetrics
 }
-
-// DefaultAutopilotTriggerTimezone is the timezone used to render Autopilot
-// trigger output when a trigger has no configured timezone or the configured
-// timezone fails to load. Exported so the scheduler can use the same default
-// when computing next run times.
-const DefaultAutopilotTriggerTimezone = "UTC"
-
-const autopilotRecentDuplicateWindow = 60 * time.Second
 
 func NewAutopilotService(q *db.Queries, tx TxStarter, bus *events.Bus, taskSvc *TaskService) *AutopilotService {
 	return &AutopilotService{Queries: q, TxStarter: tx, Bus: bus, TaskSvc: taskSvc}
@@ -96,69 +86,6 @@ func RecordAutopilotRuleVersion(ctx context.Context, q *db.Queries, ap db.Autopi
 		return fmt.Errorf("create autopilot rule version: %w", err)
 	}
 	return nil
-}
-
-// DispatchAutopilot is the core execution entry point.
-// It creates a run and either creates an issue or enqueues a direct agent task
-// depending on execution_mode.
-//
-// Before run_only work is queued we run an admission check against the assignee
-// agent's runtime: if it is not online, we record a `skipped` run with a
-// failure_reason and return without enqueueing. This is the "触发时准入" gate
-// from MUL-1899 — without it a paused laptop / offline daemon causes scheduled
-// autopilots to pile thousands of doomed tasks onto agent_task_queue.
-//
-// create_issue mode is different: its primary contract is a durable audit
-// trail. If the assignee has a runtime but that runtime is merely offline,
-// dispatch still creates the issue and issue task so the work is visible and
-// can be claimed when the runtime returns.
-//
-// When assignee_type='squad' the gate runs against the squad leader (Path A
-// from MUL-2429: Autopilot-on-squad ≈ Autopilot-on-leader), with the same
-// create_issue audit-trail exception for a merely offline leader runtime.
-func (s *AutopilotService) DispatchAutopilot(
-	ctx context.Context,
-	autopilot db.Autopilot,
-	triggerID pgtype.UUID,
-	source string,
-	payload []byte,
-) (*db.AutopilotRun, error) {
-	// No member actor on this entry point (schedule / webhook / api, or a manual
-	// trigger without a resolved member): the run acts as the trigger's persisted
-	// created_by principal (trigger_owner; legacy semantics in
-	// ResolveAutopilotTriggerPrincipal), degrading to the audit-only rule_owner when
-	// the trigger has none — in which case it carries no authorization at all
-	// (MUL-6951).
-	// These callers don't surface a per-run reason code to a human, so it is
-	// dropped.
-	// webhookDeliveryID is invalid here — durable webhook deliveries admit through
-	// AdmitAutopilotWebhookDelivery instead of this entry point.
-	run, _, err := s.dispatchAutopilot(ctx, autopilot, triggerID, source, payload, pgtype.Timestamptz{}, pgtype.UUID{}, pgtype.UUID{}, source+":"+newAutopilotIdempotencyKey())
-	return run, err
-}
-
-// DispatchAutopilotManual is the "run now" entry point for a manual trigger.
-// Scheduled / webhook / api dispatch acts as the firing trigger's created_by
-// principal (MUL-6951); a manual trigger is a direct human action by the human who ORDERED
-// it instead, so it need not consult the trigger at all: the run is attributed
-// direct_human to actorUserID, which becomes BOTH its originator (authorization)
-// and accountable human (MUL-4302 §4), across both execution modes.
-//
-// actorUserID is that ordering human — the clicking member, or, when an agent
-// triggers on someone's behalf, the originator it acts for. The HTTP entry point
-// resolves and authorizes it (handler.requireAutopilotTriggerInvoker) and refuses
-// the request outright when no human resolves, so a manual dispatch reaching here
-// with an invalid actorUserID has no principal at all. It then behaves exactly
-// like DispatchAutopilot(source="manual") and, having no trigger to fall back to,
-// is refused by the admission gate (#8078).
-func (s *AutopilotService) DispatchAutopilotManual(
-	ctx context.Context,
-	autopilot db.Autopilot,
-	triggerID pgtype.UUID,
-	payload []byte,
-	actorUserID pgtype.UUID,
-) (*db.AutopilotRun, dispatch.ReasonCode, error) {
-	return s.DispatchAutopilotManualWithKey(ctx, autopilot, triggerID, payload, actorUserID, newAutopilotIdempotencyKey())
 }
 
 // DispatchAutopilotManualWithKey preserves a caller-supplied request key so
@@ -289,11 +216,7 @@ func (s *AutopilotService) DispatchAutopilotForWebhookDelivery(
 		return nil, err
 	}
 	if isAutopilotRunComplete(*run) {
-		if autopilot.ExecutionMode == "create_issue" && run.IssueID.Valid {
-			if repairErr := s.ensureWebhookCreateIssueTask(ctx, autopilot, *run); repairErr != nil {
-				return run, repairErr
-			}
-		}
+
 		return run, nil
 	}
 
@@ -313,68 +236,6 @@ func (s *AutopilotService) DispatchAutopilotForWebhookDelivery(
 	// surface, so actorUserID is invalid and the reason code is dropped.
 	dispatched, _, err := s.dispatchAutopilotRun(ctx, autopilot, triggerID, "webhook", run, pgtype.UUID{})
 	return dispatched, err
-}
-
-// ensureWebhookCreateIssueTask repairs the create_issue crash window after the
-// issue/run transaction commits but before the ordinary task enqueue commits.
-// Any existing issue task is sufficient evidence that ownership has already
-// moved downstream; otherwise enqueue exactly the same assignee path used by
-// the original dispatch.
-func (s *AutopilotService) ensureWebhookCreateIssueTask(ctx context.Context, autopilot db.Autopilot, run db.AutopilotRun) error {
-	hasTasks, err := s.Queries.HasTaskForIssue(ctx, run.IssueID)
-	if err != nil {
-		return fmt.Errorf("dispatch for webhook delivery: inspect issue tasks: %w", err)
-	}
-	if hasTasks {
-		return nil
-	}
-	issue, err := s.Queries.GetIssue(ctx, run.IssueID)
-	if err != nil {
-		return fmt.Errorf("dispatch for webhook delivery: load linked issue: %w", err)
-	}
-	// Repair only work that is still waiting to be picked up. Decided on
-	// lifecycle plus the two exact keys whose behavior does not generalize,
-	// the split MUL-7364 established (MUL-7379):
-	//
-	//   - the fixed in_progress key means an agent is already working, so the
-	//     lost task is still the right thing to create;
-	//   - an unstarted status other than the fixed backlog key is queued work.
-	//     Backlog is parked, and only the literal key parks — a custom
-	//     unstarted status does not inherit parking, exactly as WillEnqueueRun
-	//     treats it;
-	//   - anything else — in_review, blocked, a CUSTOM started status, or a
-	//     terminal one — means a human took the issue over during the crash
-	//     window. Starting an agent on it then is the surprise this guard
-	//     exists to prevent.
-	//
-	// Before MUL-7240 this read Effective() and compared against todo /
-	// in_progress, which also matched custom statuses because every one of them
-	// projected onto a built-in key. Collapsing to four categories left those
-	// custom keys raw, so the guard silently stopped repairing any workspace
-	// with a custom status and the run sat in issue_created with no task.
-	category, err := issuestatus.CategoryWithError(ctx, s.Queries, issue.WorkspaceID, issue.Status)
-	if err != nil {
-		return fmt.Errorf("dispatch for webhook delivery: resolve issue lifecycle: %w", err)
-	}
-	runnable := issue.Status == issuestatus.InProgress ||
-		(category == issuestatus.CategoryUnstarted && issue.Status != issuestatus.Backlog)
-	if !runnable {
-		return nil
-	}
-	if autopilot.AssigneeType == "squad" {
-		leader, _, err := s.resolveAutopilotLeader(ctx, autopilot)
-		if err != nil {
-			return fmt.Errorf("dispatch for webhook delivery: resolve squad leader: %w", err)
-		}
-		if _, err := s.TaskSvc.EnqueueTaskForSquadLeader(ctx, issue, leader.ID, autopilot.AssigneeID, pgtype.UUID{}, OriginDerived); err != nil {
-			return fmt.Errorf("dispatch for webhook delivery: repair squad task: %w", err)
-		}
-		return nil
-	}
-	if _, err := s.TaskSvc.EnqueueTaskForIssue(ctx, issue); err != nil {
-		return fmt.Errorf("dispatch for webhook delivery: repair issue task: %w", err)
-	}
-	return nil
 }
 
 // repairAutopilotRunTaskLink closes the run_only crash window where task
@@ -612,16 +473,7 @@ func (s *AutopilotService) dispatchAutopilotRun(
 	actorUserID pgtype.UUID,
 ) (*db.AutopilotRun, dispatch.ReasonCode, error) {
 	switch autopilot.ExecutionMode {
-	case "create_issue":
-		triggerTimezone := s.resolveAutopilotTriggerTimezone(ctx, triggerID)
-		if err := s.dispatchCreateIssue(ctx, autopilot, run, triggerTimezone, actorUserID); err != nil {
-			if skipped, code := s.handleDispatchSkip(ctx, autopilot, run, err); skipped != nil {
-				return skipped, code, nil
-			}
-			s.failRun(ctx, run.ID, err.Error())
-			s.captureAutopilotRunFailed(autopilot, *run, source, err.Error())
-			return run, dispatchFailReasonCode(err), fmt.Errorf("dispatch create_issue: %w", err)
-		}
+
 	case "run_only":
 		if err := s.dispatchRunOnly(ctx, autopilot, run, actorUserID); err != nil {
 			if skipped, code := s.handleDispatchSkip(ctx, autopilot, run, err); skipped != nil {
@@ -665,289 +517,6 @@ func dispatchFailReasonCode(err error) dispatch.ReasonCode {
 		return dispatch.ReasonAttributionBlocked
 	}
 	return dispatch.ReasonInternalError
-}
-
-// dispatchCreateIssue creates an issue and enqueues a task for the agent.
-//
-// When the autopilot is assigned to a squad (Path A from MUL-2429), the
-// created issue inherits assignee_type='squad' + assignee_id=squad. The
-// existing issue listener chain (shouldEnqueueSquadLeaderOnAssign →
-// enqueueSquadLeaderTask) then routes the work to the squad leader, exactly
-// as a human manually assigning the issue to that squad would.
-//
-// Creator on the issue is always the agent that will actually do the work
-// (the resolved leader for a squad autopilot, otherwise the assignee agent
-// itself), so activity / mentions render with the right author identity.
-func (s *AutopilotService) dispatchCreateIssue(ctx context.Context, ap db.Autopilot, run *db.AutopilotRun, triggerTimezone string, actorUserID pgtype.UUID) error {
-	leader, _, err := s.resolveAutopilotLeader(ctx, ap)
-	if err != nil {
-		return fmt.Errorf("resolve leader: %w", err)
-	}
-	issueCountPolicy := ResolveIssueCountPolicy(ctx, s.Entitlements, ap.WorkspaceID)
-
-	tx, err := s.TxStarter.Begin(ctx)
-	if err != nil {
-		return fmt.Errorf("begin tx: %w", err)
-	}
-	defer tx.Rollback(ctx)
-
-	qtx := s.Queries.WithTx(tx)
-
-	title := s.interpolateTemplate(ap, *run, triggerTimezone)
-	description := s.buildIssueDescription(ap, *run, triggerTimezone)
-
-	// Refresh the autopilot row at dispatch time so we use the current project
-	// binding instead of any stale snapshot the caller may have cached.
-	currentAutopilot, err := qtx.GetAutopilotInWorkspace(ctx, db.GetAutopilotInWorkspaceParams{
-		ID:          ap.ID,
-		WorkspaceID: ap.WorkspaceID,
-	})
-	if err != nil {
-		return fmt.Errorf("refresh autopilot: %w", err)
-	}
-	projectID := currentAutopilot.ProjectID
-
-	if duplicate, found, err := issueguard.LockAndFindRecentAutopilotDuplicate(
-		ctx, qtx, ap.WorkspaceID, ap.ID, projectID, title, autopilotRecentDuplicateWindow,
-	); err != nil {
-		return fmt.Errorf("recent duplicate guard: %w", err)
-	} else if found {
-		return &errDispatchSkipped{reason: "recent duplicate autopilot issue: " + util.UUIDToString(duplicate.ID), code: dispatch.ReasonAlreadyActive}
-	}
-
-	issueNumber, err := AllocateIssueNumber(ctx, qtx, ap.WorkspaceID, issueCountPolicy)
-	if err != nil {
-		var limitErr *IssueLimitReachedError
-		if errors.As(err, &limitErr) {
-			return &errDispatchSkipped{
-				reason: "workspace has reached its issue limit",
-				code:   dispatch.ReasonIssueLimitReached,
-			}
-		}
-		return fmt.Errorf("allocate issue number: %w", err)
-	}
-
-	newPosition, err := issueposition.NextTopPosition(ctx, tx, ap.WorkspaceID, "todo")
-	if err != nil {
-		return fmt.Errorf("get next issue position: %w", err)
-	}
-
-	issue, err := qtx.CreateIssueWithOrigin(ctx, db.CreateIssueWithOriginParams{
-		ID:           dbid.NewV7(),
-		WorkspaceID:  ap.WorkspaceID,
-		Title:        title,
-		Description:  description,
-		Status:       "todo",
-		Priority:     "none",
-		AssigneeType: pgtype.Text{String: ap.AssigneeType, Valid: true},
-		AssigneeID:   ap.AssigneeID,
-		// The agent that the autopilot dispatches to is the issue's creator,
-		// not the human who originally configured the autopilot. The latter
-		// is captured separately via origin_type=autopilot + origin_id. For
-		// squad-assigned autopilots, the creator is the resolved leader —
-		// the same agent the issue listener will end up enqueueing.
-		CreatorType:   "agent",
-		CreatorID:     leader.ID,
-		ParentIssueID: pgtype.UUID{},
-		Position:      newPosition,
-		StartDate:     pgtype.Date{},
-		DueDate:       pgtype.Date{},
-		Number:        issueNumber,
-		ProjectID:     projectID,
-		OriginType:    pgtype.Text{String: "autopilot", Valid: true},
-		OriginID:      ap.ID,
-	})
-	if err != nil {
-		return fmt.Errorf("create issue: %w", err)
-	}
-
-	// Fan out the default subscriber template inside the same tx as the
-	// issue insert, before EventIssueCreated fires — so notification
-	// listeners see the full subscriber set on the first event instead of
-	// racing the listener that would otherwise hydrate the template.
-	templateSubs, err := qtx.ListAutopilotSubscribers(ctx, ap.ID)
-	if err != nil {
-		return fmt.Errorf("list autopilot subscribers: %w", err)
-	}
-	for _, sub := range templateSubs {
-		if _, err := qtx.AddIssueSubscriber(ctx, db.AddIssueSubscriberParams{
-			IssueID:  issue.ID,
-			UserType: sub.UserType,
-			UserID:   sub.UserID,
-			Reason:   "autopilot",
-		}); err != nil {
-			return fmt.Errorf("add autopilot subscriber to issue: %w", err)
-		}
-	}
-
-	// Link the run inside the same tx as the issue insert. This makes the
-	// recent-duplicate guard count only fully observable autopilot issues and
-	// avoids a crash window where recovery would see an orphan issue but no
-	// linked run.
-	updatedRun, err := qtx.UpdateAutopilotRunIssueCreated(ctx, db.UpdateAutopilotRunIssueCreatedParams{
-		ID:      run.ID,
-		IssueID: issue.ID,
-	})
-	if err != nil {
-		return fmt.Errorf("link run to issue: %w", err)
-	}
-	*run = updatedRun
-	if _, err := settleAutopilotQuota(ctx, qtx, run.QuotaReservationID, true); err != nil {
-		return fmt.Errorf("consume quota reservation: %w", err)
-	}
-
-	if err := tx.Commit(ctx); err != nil {
-		return fmt.Errorf("commit tx: %w", err)
-	}
-
-	// Publish issue:created so the existing event chain fires
-	// (subscriber listeners, activity listeners, notification listeners). For
-	// squad autopilots, this is what triggers shouldEnqueueSquadLeaderOnAssign
-	// → enqueueSquadLeaderTask — no separate squad-routing code needed here.
-	prefix := s.getIssuePrefix(ap.WorkspaceID)
-	s.Bus.Publish(events.Event{
-		Type:        protocol.EventIssueCreated,
-		WorkspaceID: util.UUIDToString(ap.WorkspaceID),
-		ActorType:   "agent",
-		ActorID:     util.UUIDToString(leader.ID),
-		Payload: map[string]any{
-			"issue": IssueToMapResolved(ctx, s.Queries, issue, prefix),
-		},
-	})
-	s.captureIssueCreatedFromAutopilot(ap, run, issue, leader.ID)
-
-	// The issue:created notification listener only handles handler.IssueResponse
-	// payloads and only direct-notifies the assignee + @mentions; subscribers
-	// don't get an inbox at creation time on the manual path because there are
-	// none yet. The autopilot path is different: the template subscribers were
-	// fanned out into issue_subscriber inside the tx above, so they exist at the
-	// moment of creation and OQ3 says they should receive the same subscription
-	// events as reason='manual'. Issue creation is one such event — so write
-	// the inbox rows directly here. Done after commit so a failure here doesn't
-	// roll back the issue itself.
-	s.notifyAutopilotSubscribersOnCreate(ctx, ap, issue, leader.ID, templateSubs)
-
-	// Enqueue agent task via the existing flow. Squad-assigned autopilots
-	// route to the resolved leader as the executing agent (Path A from
-	// MUL-2429); agent-assigned autopilots go through the standard issue
-	// path. Both code paths land in agent_task_queue with agent_id = leader.
-	// A MANUAL trigger (valid actorUserID) is a direct human action: enqueue via the
-	// actor-carrying entry points so attribution resolves direct_human to the
-	// triggering member (originator == accountable == actor, MUL-4302 §4). Schedule /
-	// webhook dispatch has no actor and takes the plain entry points, where the
-	// autopilot-origin issue resolves to the trigger's created_by principal
-	// (MUL-6951). The *ByActor variants are the actor-carrying enqueue methods.
-	if ap.AssigneeType == "squad" {
-		// Fail-closed invocation gate: verify the admission principal (manual
-		// clicker, else the trigger's created_by — see autopilotAdmitInvoke) may
-		// still invoke the leader. Catches configs that predate the save-time
-		// gate, and configs that no longer pass (MUL-3963 / MUL-4525).
-		if !s.autopilotAdmitInvoke(ctx, ap, leader, actorUserID, run.TriggerID) {
-			return fmt.Errorf("not allowed to invoke private squad leader")
-		}
-		if actorUserID.Valid {
-			if _, err := s.TaskSvc.EnqueueTaskForSquadLeaderByActor(ctx, issue, leader.ID, ap.AssigneeID, actorUserID); err != nil {
-				return fmt.Errorf("enqueue squad leader task: %w", err)
-			}
-		} else if _, err := s.TaskSvc.EnqueueTaskForSquadLeader(ctx, issue, leader.ID, ap.AssigneeID, pgtype.UUID{}, OriginDerived); err != nil {
-			return fmt.Errorf("enqueue squad leader task: %w", err)
-		}
-	} else if actorUserID.Valid {
-		if _, err := s.TaskSvc.EnqueueTaskForIssueByActor(ctx, issue, actorUserID); err != nil {
-			return fmt.Errorf("enqueue task for issue: %w", err)
-		}
-	} else if _, err := s.TaskSvc.EnqueueTaskForIssue(ctx, issue); err != nil {
-		return fmt.Errorf("enqueue task for issue: %w", err)
-	}
-
-	slog.Info("autopilot dispatched (create_issue)",
-		"autopilot_id", util.UUIDToString(ap.ID),
-		"assignee_type", ap.AssigneeType,
-		"issue_id", util.UUIDToString(issue.ID),
-		"leader_id", util.UUIDToString(leader.ID),
-		"run_id", util.UUIDToString(run.ID),
-	)
-	return nil
-}
-
-// notifyAutopilotSubscribersOnCreate writes an inbox_item for each template
-// subscriber of an autopilot-created issue and broadcasts an inbox:new event
-// so the recipient's inbox updates in real time. Mirrors the inbox payload
-// shape from notification_listeners.go so the WS consumer sees the same fields
-// the listener-driven path produces. Failures are logged, not propagated:
-// the issue and its subscriber rows are already committed, and an inbox-write
-// hiccup must not bubble up as a dispatch failure.
-func (s *AutopilotService) notifyAutopilotSubscribersOnCreate(
-	ctx context.Context,
-	ap db.Autopilot,
-	issue db.Issue,
-	leaderID pgtype.UUID,
-	subscribers []db.AutopilotSubscriber,
-) {
-	if len(subscribers) == 0 {
-		return
-	}
-	details, _ := json.Marshal(map[string]string{
-		"autopilot_id": util.UUIDToString(ap.ID),
-		"reason":       "autopilot",
-	})
-	for _, sub := range subscribers {
-		// Autopilot subscribers are restricted to user_type='member' at the
-		// handler boundary; defend in case that constraint is ever relaxed
-		// (agents don't have inbox).
-		if sub.UserType != "member" {
-			continue
-		}
-		item, err := s.Queries.CreateInboxItem(ctx, db.CreateInboxItemParams{
-			ID:            dbid.NewV7(),
-			WorkspaceID:   ap.WorkspaceID,
-			RecipientType: "member",
-			RecipientID:   sub.UserID,
-			Type:          "issue_subscribed",
-			Severity:      "info",
-			IssueID:       issue.ID,
-			Title:         issue.Title,
-			Body:          pgtype.Text{},
-			ActorType:     pgtype.Text{String: "agent", Valid: true},
-			ActorID:       leaderID,
-			Details:       details,
-		})
-		if err != nil {
-			slog.Error("autopilot subscriber inbox write failed",
-				"autopilot_id", util.UUIDToString(ap.ID),
-				"issue_id", util.UUIDToString(issue.ID),
-				"recipient_id", util.UUIDToString(sub.UserID),
-				"error", err,
-			)
-			continue
-		}
-		s.Bus.Publish(events.Event{
-			Type:        protocol.EventInboxNew,
-			WorkspaceID: util.UUIDToString(ap.WorkspaceID),
-			ActorType:   "agent",
-			ActorID:     util.UUIDToString(leaderID),
-			Payload: map[string]any{
-				"item": map[string]any{
-					"id":             util.UUIDToString(item.ID),
-					"workspace_id":   util.UUIDToString(item.WorkspaceID),
-					"recipient_type": item.RecipientType,
-					"recipient_id":   util.UUIDToString(item.RecipientID),
-					"type":           item.Type,
-					"severity":       item.Severity,
-					"issue_id":       util.UUIDToPtr(item.IssueID),
-					"issue_status":   issue.Status,
-					"title":          item.Title,
-					"body":           util.TextToPtr(item.Body),
-					"read":           item.Read,
-					"archived":       item.Archived,
-					"created_at":     util.TimestampToString(item.CreatedAt),
-					"actor_type":     util.TextToPtr(item.ActorType),
-					"actor_id":       util.UUIDToPtr(item.ActorID),
-					"details":        json.RawMessage(item.Details),
-				},
-			},
-		})
-	}
 }
 
 // errDispatchSkipped wraps a readiness failure encountered after the
@@ -1567,25 +1136,6 @@ func (s *AutopilotService) publishRunDone(workspaceID string, run db.AutopilotRu
 	})
 }
 
-func (s *AutopilotService) captureIssueCreatedFromAutopilot(ap db.Autopilot, run *db.AutopilotRun, issue db.Issue, leaderID pgtype.UUID) {
-	if s.TaskSvc == nil || s.TaskSvc.Analytics == nil {
-		return
-	}
-	// For PostHog the agent_id should be the agent that will actually run
-	// the work (the resolved leader for squad autopilots) so per-agent task
-	// counts line up with what daemons report.
-	obsmetrics.RecordEvent(s.TaskSvc.Analytics, s.TaskSvc.Metrics, analytics.IssueCreated(
-		autopilotActorID(ap),
-		util.UUIDToString(ap.WorkspaceID),
-		util.UUIDToString(issue.ID),
-		util.UUIDToString(leaderID),
-		"",
-		util.UUIDToString(run.ID),
-		analytics.SourceAutopilot,
-		analytics.PlatformServer,
-	))
-}
-
 func (s *AutopilotService) captureAutopilotRunStarted(ap db.Autopilot, run db.AutopilotRun, triggerSource string) {
 	if s.TaskSvc == nil || s.TaskSvc.Analytics == nil {
 		return
@@ -1705,151 +1255,11 @@ func autopilotRunDurationMS(run db.AutopilotRun) int64 {
 	return ms
 }
 
-func (s *AutopilotService) resolveAutopilotTriggerTimezone(ctx context.Context, triggerID pgtype.UUID) string {
-	if !triggerID.Valid || s == nil || s.Queries == nil {
-		return DefaultAutopilotTriggerTimezone
-	}
-
-	trigger, err := s.Queries.GetAutopilotTrigger(ctx, triggerID)
-	if err != nil {
-		slog.Warn("failed to load autopilot trigger timezone; falling back to UTC",
-			"trigger_id", util.UUIDToString(triggerID),
-			"error", err,
-		)
-		return DefaultAutopilotTriggerTimezone
-	}
-
-	timezone := strings.TrimSpace(trigger.Timezone.String)
-	if !trigger.Timezone.Valid || timezone == "" {
-		return DefaultAutopilotTriggerTimezone
-	}
-	if _, err := time.LoadLocation(timezone); err != nil {
-		slog.Warn("invalid autopilot trigger timezone; falling back to UTC",
-			"trigger_id", util.UUIDToString(triggerID),
-			"timezone", timezone,
-			"error", err,
-		)
-		return DefaultAutopilotTriggerTimezone
-	}
-	return timezone
-}
-
-func formatAutopilotRunTimestamp(run db.AutopilotRun, timezone string) string {
-	triggeredAt := autopilotRunTriggeredAt(run)
-	loc, label := autopilotTriggerLocation(timezone)
-	return triggeredAt.In(loc).Format("2006-01-02 15:04") + " " + label
-}
-
-func formatAutopilotRunDate(run db.AutopilotRun, timezone string) string {
-	triggeredAt := autopilotRunTriggeredAt(run)
-	loc, _ := autopilotTriggerLocation(timezone)
-	return triggeredAt.In(loc).Format("2006-01-02")
-}
-
-func autopilotRunTriggeredAt(run db.AutopilotRun) time.Time {
-	if run.TriggeredAt.Valid {
-		return run.TriggeredAt.Time
-	}
-	if run.CreatedAt.Valid {
-		return run.CreatedAt.Time
-	}
-	return time.Now().UTC()
-}
-
-func autopilotTriggerLocation(timezone string) (*time.Location, string) {
-	label := strings.TrimSpace(timezone)
-	if label == "" {
-		label = DefaultAutopilotTriggerTimezone
-	}
-	loc, err := time.LoadLocation(label)
-	if err != nil {
-		return time.UTC, DefaultAutopilotTriggerTimezone
-	}
-	return loc, label
-}
-
-// buildIssueDescription appends an autopilot system instruction to the
-// user-provided description, asking the agent to rename the issue after
-// it understands the actual work. For webhook-sourced runs, also appends
-// a payload section so the agent has the event context inline (otherwise
-// the agent only sees the issue body, never the run's trigger_payload).
-func (s *AutopilotService) buildIssueDescription(ap db.Autopilot, run db.AutopilotRun, triggerTimezone string) pgtype.Text {
-	triggeredAt := formatAutopilotRunTimestamp(run, triggerTimezone)
-	var b strings.Builder
-	b.WriteString(ap.Description.String)
-	b.WriteString("\n\n---\n*Autopilot run triggered at ")
-	b.WriteString(triggeredAt)
-	b.WriteString(". After starting work, rename this issue to accurately reflect what you are doing.*")
-
-	if run.Source == "webhook" && len(run.TriggerPayload) > 0 {
-		event := "webhook.received"
-		var payloadJSON []byte
-		var env struct {
-			Event        string          `json:"event"`
-			EventPayload json.RawMessage `json:"eventPayload"`
-		}
-		if err := json.Unmarshal(run.TriggerPayload, &env); err == nil {
-			if env.Event != "" {
-				event = env.Event
-			}
-			if len(env.EventPayload) > 0 {
-				if pretty, err := prettifyJSON(env.EventPayload); err == nil {
-					payloadJSON = pretty
-				}
-			}
-		}
-		if len(payloadJSON) == 0 {
-			if pretty, err := prettifyJSON(run.TriggerPayload); err == nil {
-				payloadJSON = pretty
-			} else {
-				payloadJSON = run.TriggerPayload
-			}
-		}
-		b.WriteString("\n\nWebhook event: ")
-		b.WriteString(event)
-		b.WriteString("\n\nWebhook payload:\n```json\n")
-		b.Write(payloadJSON)
-		b.WriteString("\n```")
-	}
-
-	return pgtype.Text{String: b.String(), Valid: true}
-}
-
-func prettifyJSON(raw []byte) ([]byte, error) {
-	var v any
-	if err := json.Unmarshal(raw, &v); err != nil {
-		return nil, err
-	}
-	return json.MarshalIndent(v, "", "  ")
-}
-
 // issueTitleTemplateTokenRE matches any {{...}} token in an issue-title
 // template. We deliberately permit whitespace inside the braces ({{ date }})
 // so users can format templates either way; the canonical token is still
 // {{date}}.
 var issueTitleTemplateTokenRE = regexp.MustCompile(`\{\{\s*([^{}]*?)\s*\}\}`)
-
-// interpolateTemplate substitutes supported {{name}} placeholders in the
-// issue title template. Whitespace inside the braces ({{ date }}) is
-// tolerated so the render layer accepts every form that
-// ValidateIssueTitleTemplate accepts — otherwise users would save templates
-// that pass validation but still emit a literal token at trigger time.
-func (s *AutopilotService) interpolateTemplate(ap db.Autopilot, run db.AutopilotRun, triggerTimezone string) string {
-	tmpl := ap.Title
-	if ap.IssueTitleTemplate.Valid && ap.IssueTitleTemplate.String != "" {
-		tmpl = ap.IssueTitleTemplate.String
-	}
-	triggerDate := formatAutopilotRunDate(run, triggerTimezone)
-	return issueTitleTemplateTokenRE.ReplaceAllStringFunc(tmpl, func(match string) string {
-		name := strings.TrimSpace(match[2 : len(match)-2])
-		switch name {
-		case "date":
-			return triggerDate
-		default:
-			return match
-		}
-	})
-}
 
 // SupportedIssueTitleTemplateVariables enumerates the placeholders that
 // interpolateTemplate will substitute. Keep this in sync with the
@@ -1885,14 +1295,6 @@ func isSupportedIssueTitleVariable(name string) bool {
 		}
 	}
 	return false
-}
-
-func (s *AutopilotService) getIssuePrefix(workspaceID pgtype.UUID) string {
-	ws, err := s.Queries.GetWorkspace(context.Background(), workspaceID)
-	if err != nil {
-		return ""
-	}
-	return ws.IssuePrefix
 }
 
 // autopilotAdmitInvoke decides whether the dispatch's admission principal may

@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/auro-ai/auro/server/internal/entitlement"
 	"github.com/auro-ai/auro/server/internal/entitlement/entitlementtest"
+	"github.com/google/uuid"
 )
 
 func TestAutopilotQuotaManualAndWebhookEnforcement(t *testing.T) {

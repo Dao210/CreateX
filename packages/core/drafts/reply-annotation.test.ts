@@ -1,6 +1,5 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import { parseMentions } from "../issues/comment-trigger-outcomes";
 import { composeAnnotatedReply, hasReplyIntent, locateReplyAnnotation, normalizeReplyAnnotations, type ReplyAnnotation } from "./reply-annotation";
 
 const annotation: ReplyAnnotation = {
@@ -34,7 +33,6 @@ describe("annotated reply serialization", () => {
   it("keeps quoted raw mentions and markup inert, while preserving deliberate mentions", () => {
     const mention = "[@Agent](mention://agent/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa)";
     const content = composeAnnotatedReply("", [{ ...annotation, quote: `\`\`\`\n${mention}\n<script>x</script>\n&colon;\n\`\`\``, sourceActorName: mention, note: mention }]);
-    expect(parseMentions(content)).toHaveLength(1);
     expect(content.match(/mention:\/\//g)).toHaveLength(1);
     expect(content).toContain("&#60;script&#62;");
     expect(content).toContain("&amp;colon;");

@@ -149,12 +149,12 @@ func (q *Queries) ListMCPActivity(ctx context.Context, arg ListMCPActivityParams
 	return items, nil
 }
 
-const lockMCPAdminUser = `-- name: LockMCPAdminUser :one
+const lockGlobalAdminUser = `-- name: LockGlobalAdminUser :one
 SELECT email FROM "user" WHERE id = $1 FOR SHARE
 `
 
-func (q *Queries) LockMCPAdminUser(ctx context.Context, id pgtype.UUID) (string, error) {
-	row := q.db.QueryRow(ctx, lockMCPAdminUser, id)
+func (q *Queries) LockGlobalAdminUser(ctx context.Context, id pgtype.UUID) (string, error) {
+	row := q.db.QueryRow(ctx, lockGlobalAdminUser, id)
 	var email string
 	err := row.Scan(&email)
 	return email, err

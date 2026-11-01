@@ -32,8 +32,6 @@ import { useEditorState } from "@tiptap/react";
 import type { Editor } from "@tiptap/core";
 import { posToDOMRect } from "@tiptap/core";
 import { NodeSelection } from "@tiptap/pm/state";
-import { toast } from "sonner";
-import { useCreateIssue } from "@auro/core/issues/mutations";
 import { useT } from "../i18n";
 import { createShortcutChord, type ShortcutChord } from "@auro/core/shortcuts";
 import { ShortcutKeycaps } from "../common/shortcut-keycaps";
@@ -52,29 +50,7 @@ import {
 } from "@auro/ui/components/ui/popover";
 import { Input } from "@auro/ui/components/ui/input";
 import { Button } from "@auro/ui/components/ui/button";
-import {
-  Bold,
-  Italic,
-  Strikethrough,
-  Code,
-  Highlighter,
-  Link2,
-  List,
-  ListOrdered,
-  ListTodo,
-  Quote,
-  ChevronDown,
-  Check,
-  X,
-  Unlink,
-  Type,
-  Heading1,
-  Heading2,
-  Heading3,
-  FilePlus,
-  Loader2,
-  MessageSquarePlus,
-} from "lucide-react";
+import { Bold, Italic, Strikethrough, Code, Highlighter, Link2, List, ListOrdered, ListTodo, Quote, ChevronDown, Check, X, Unlink, Type, Heading1, Heading2, Heading3, MessageSquarePlus } from "lucide-react";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -394,111 +370,14 @@ function ListDropdown({ editor, onOpenChange, isBullet, isOrdered, isTask }: { e
 }
 
 // ---------------------------------------------------------------------------
-// Create Sub-Issue Button
-// ---------------------------------------------------------------------------
-
-/**
- * Turns the current selection into a sub-issue of `parentIssueId` and replaces
- * the selection with a mention link to the new issue. Title is the selected
- * text (trimmed, collapsed whitespace, capped). Only rendered when a parent
- * issue is in scope; otherwise there's no meaningful "sub-issue of" target.
- */
-function CreateSubIssueButton({
-  editor,
-  parentIssueId,
-}: {
-  editor: Editor;
-  parentIssueId: string;
-}) {
-  const { t } = useT("editor");
-  const createIssue = useCreateIssue();
-  const [pending, setPending] = useState(false);
-
-  const handleClick = useCallback(async () => {
-    if (pending) return;
-    const { from, to } = editor.state.selection;
-    if (from === to) return;
-
-    // Title from selection: collapse whitespace, cap length. The full selection
-    // still becomes the link text — only the issue title is capped.
-    const rawTitle = editor.state.doc.textBetween(from, to, " ", " ").trim();
-    const title = rawTitle.replace(/\s+/g, " ").slice(0, 200);
-    if (!title) return;
-
-    setPending(true);
-    try {
-      const newIssue = await createIssue.mutateAsync({
-        title,
-        parent_issue_id: parentIssueId,
-      });
-      editor
-        .chain()
-        .focus()
-        .insertContentAt(
-          { from, to },
-          [
-            {
-              type: "mention",
-              attrs: {
-                id: newIssue.id,
-                label: newIssue.identifier,
-                type: "issue",
-              },
-            },
-            { type: "text", text: " " },
-          ],
-        )
-        .run();
-      toast.success(t(($) => $.bubble_menu.sub_issue.created, { identifier: newIssue.identifier }));
-    } catch (err) {
-      toast.error(
-        err instanceof Error && err.message
-          ? err.message
-          : t(($) => $.bubble_menu.sub_issue.create_failed),
-      );
-    } finally {
-      setPending(false);
-    }
-  }, [editor, parentIssueId, createIssue, pending, t]);
-
-  return (
-    <Tooltip>
-      <TooltipTrigger
-        render={
-          <Toggle
-            size="sm"
-            aria-label={t(($) => $.bubble_menu.sub_issue.tooltip)}
-            pressed={false}
-            disabled={pending}
-            onPressedChange={handleClick}
-            onMouseDown={(e) => e.preventDefault()}
-          />
-        }
-      >
-        {pending ? (
-          <Loader2 className="size-3.5 animate-spin" />
-        ) : (
-          <FilePlus className="size-3.5" />
-        )}
-      </TooltipTrigger>
-      <TooltipContent side="top" sideOffset={8}>
-        {t(($) => $.bubble_menu.sub_issue.tooltip)}
-      </TooltipContent>
-    </Tooltip>
-  );
-}
-
-// ---------------------------------------------------------------------------
 // Main Bubble Menu — @floating-ui/dom + portal to body
 // ---------------------------------------------------------------------------
 
 function EditorBubbleMenu({
   editor,
-  currentIssueId,
   selectionAction,
 }: {
   editor: Editor;
-  currentIssueId?: string;
   selectionAction?: { label: string; onSelect: () => boolean | void };
 }) {
   const { t } = useT("editor");
@@ -696,12 +575,7 @@ function EditorBubbleMenu({
               </TooltipTrigger>
               <TooltipContent side="top" sideOffset={8}>{t(($) => $.bubble_menu.quote)}</TooltipContent>
             </Tooltip>
-            {currentIssueId && (
-              <>
-                <Separator orientation="vertical" className="mx-0.5 h-5" />
-                <CreateSubIssueButton editor={editor} parentIssueId={currentIssueId} />
-              </>
-            )}
+            
             </>}
             {selectionAction && <>
               {!fmt.codeBlock && <Separator orientation="vertical" className="mx-0.5 h-5" />}

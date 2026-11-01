@@ -122,14 +122,6 @@ export default function WorkspaceLayout() {
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="inbox/[id]" options={SHEET_OPTIONS} />
-        <Stack.Screen
-          name="mention-picker"
-          options={{
-            ...SHEET_OPTIONS,
-            headerShown: true,
-            title: t("navigation:routes.mention"),
-          }}
-        />
         <Stack.Screen name="chat-sessions" options={SHEET_OPTIONS} />
         <Stack.Screen name="switch-workspace" options={SHEET_OPTIONS} />
         <Stack.Screen

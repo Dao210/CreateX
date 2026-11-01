@@ -3,8 +3,8 @@ package handler
 import (
 	"context"
 
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/auro-ai/auro/server/internal/service"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // processChildEvents runs the sub-issue rules of these parents (the child_done

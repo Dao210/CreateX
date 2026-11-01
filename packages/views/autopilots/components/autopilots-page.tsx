@@ -44,13 +44,7 @@ import {
   type ListGridSortDirection,
 } from "@auro/ui/components/ui/list-grid";
 import { Skeleton } from "@auro/ui/components/ui/skeleton";
-import {
-  Tabs,
-  TabsList,
-  TabsTrigger,
-  TabsContent,
-} from "@auro/ui/components/ui/tabs";
-import { WorkspaceWakeupCreate, WorkspaceWakeups } from "./workspace-wakeups";
+import { Tabs, TabsList, TabsContent } from "@auro/ui/components/ui/tabs";
 import { useNavigation, useRowLink } from "../../navigation";
 import { ActorAvatar } from "../../common/actor-avatar";
 import { formatInTimeZone } from "../../common/format-in-time-zone";
@@ -621,8 +615,7 @@ function LoadingSkeleton() {
 
 export function AutopilotsPage() {
   const navigation = useNavigation();
-  const tab =
-    navigation.searchParams.get("tab") === "wakeups" ? "wakeups" : "autopilots";
+  const tab = "autopilots";
   const { t } = useT("autopilots");
   const locale = useLocale();
   const wsId = useWorkspaceId();
@@ -639,7 +632,6 @@ export function AutopilotsPage() {
   });
 
   const [createOpen, setCreateOpen] = useState(false);
-  const [wakeupCreateOpen, setWakeupCreateOpen] = useState(false);
   const [selectedTemplate, setSelectedTemplate] =
     useState<AutopilotTemplate | null>(null);
   const [selectedIds, setSelectedIds] = useState<ReadonlySet<string>>(
@@ -816,29 +808,17 @@ export function AutopilotsPage() {
               label={t(($) => $.page.new_autopilot)}
               onClick={() => openCreate()}
             />
-          ) : (
-            <CollectionPageHeaderAction
-              icon={Plus}
-              label={t(($) => $.wakeups.create)}
-              onClick={() => setWakeupCreateOpen(true)}
-            />
-          )
+          ) : null
         }
       />
 
       <div className="shrink-0 border-b px-4 py-1">
         <TabsList variant="line" aria-label={t(($) => $.page.title)}>
-          <TabsTrigger value="autopilots">{t(($) => $.page.title)}</TabsTrigger>
-          <TabsTrigger value="wakeups">{t(($) => $.wakeups.title)}</TabsTrigger>
+          
+          
         </TabsList>
       </div>
-      <TabsContent
-        value="wakeups"
-        className="flex min-h-0 flex-col data-hidden:hidden"
-      >
-        <WorkspaceWakeups key={wsId} />
-        <WorkspaceWakeupCreate open={wakeupCreateOpen} onOpenChange={setWakeupCreateOpen} />
-      </TabsContent>
+      
       <TabsContent
         value="autopilots"
         className="flex min-h-0 flex-col data-hidden:hidden"

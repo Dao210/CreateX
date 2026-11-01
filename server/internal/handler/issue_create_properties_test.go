@@ -10,8 +10,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/google/uuid"
 	"github.com/auro-ai/auro/server/internal/testutil"
+	"github.com/google/uuid"
 )
 
 func createIssueWithPropertyBody(t *testing.T, body map[string]any) IssueResponse {

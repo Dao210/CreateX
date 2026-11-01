@@ -1,5 +1,7 @@
 "use client";
 
+import { GameAccessBoundary } from "../admin/game-access-boundary";
+
 import { useAuthStore } from "@auro/core/auth";
 import { useCurrentWorkspace } from "@auro/core/paths";
 import type { StorageAdapter } from "@auro/core/types";
@@ -14,5 +16,5 @@ export function TankDefensePage({ storage }: TankDefensePageProps) {
   const userId = useAuthStore(state => state.user?.id);
   if (!workspace || !userId) return null;
   const storageKey = tankPreferencesKey(userId, workspace.id);
-  return <TankGarage key={storageKey} storage={storage} storageKey={storageKey} workspace={workspace} userId={userId} />;
+  return <GameAccessBoundary gameId="tanks"><TankGarage key={storageKey} storage={storage} storageKey={storageKey} workspace={workspace} userId={userId} /></GameAccessBoundary>;
 }

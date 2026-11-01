@@ -21,6 +21,7 @@ import (
 	"github.com/auro-ai/auro/server/internal/dbreader"
 	"github.com/auro-ai/auro/server/internal/dbstartup"
 	"github.com/auro-ai/auro/server/internal/events"
+	"github.com/auro-ai/auro/server/internal/gameadmin"
 	"github.com/auro-ai/auro/server/internal/handler"
 	"github.com/auro-ai/auro/server/internal/integrations/wecom"
 	"github.com/auro-ai/auro/server/internal/logger"
@@ -707,6 +708,7 @@ func main() {
 		Siege:               newSiegeService(pool),
 		Tanks:               &tanks.Service{Pool: pool, AppURL: appURLFromEnv()},
 		MCPAdmin:            mcpAdmin,
+		GameAdmin:           &gameadmin.Service{Pool: pool, Auth: mcpAdmin.Gate},
 	})
 	var replicaQueries *db.Queries
 	if replicaPool != nil {
@@ -839,15 +841,7 @@ func main() {
 	// not fit). Crash recovery, occurrence-level idempotency, lease
 	// theft, and retry are all reused from the manager + sys_cron_executions
 	// — there is no separate goroutine for scheduled Autopilot anymore.
-	if err := schedulerMgr.Register(scheduler.SearchIndexChangePruneJob(queries)); err != nil {
-		slog.Warn("scheduler: failed to register search index change prune job", "error", err)
-	}
-	if err := schedulerMgr.Register(scheduler.IssueWakeupJob(&service.IssueWakeupService{Tasks: taskSvc})); err != nil {
-		slog.Error("scheduler: register issue wakeups", "error", err)
-	}
-	if err := schedulerMgr.Register(scheduler.ChildEventSweepJob(&service.IssueWakeupService{Tasks: taskSvc})); err != nil {
-		slog.Error("scheduler: register child-done sweep", "error", err)
-	}
+
 	if err := schedulerMgr.Register(scheduler.AutopilotScheduleDispatchJob(pool, queries, autopilotSvc)); err != nil {
 		slog.Warn("scheduler: failed to register autopilot_schedule_dispatch job", "error", err)
 	}

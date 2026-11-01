@@ -11,7 +11,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/auro-ai/auro/server/internal/entitlement"
 	"github.com/auro-ai/auro/server/internal/entitlement/entitlementtest"
 	"github.com/auro-ai/auro/server/internal/events"
@@ -20,6 +19,7 @@ import (
 	"github.com/auro-ai/auro/server/internal/util"
 	db "github.com/auro-ai/auro/server/pkg/db/generated"
 	"github.com/auro-ai/auro/server/pkg/protocol"
+	"github.com/google/uuid"
 )
 
 func TestWriteSourceContextErrorHidesInternalDetails(t *testing.T) {

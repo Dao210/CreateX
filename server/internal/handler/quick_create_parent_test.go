@@ -7,11 +7,11 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/google/uuid"
 	"github.com/auro-ai/auro/server/internal/entitlement"
 	"github.com/auro-ai/auro/server/internal/entitlement/entitlementtest"
 	"github.com/auro-ai/auro/server/internal/service"
 	"github.com/auro-ai/auro/server/pkg/agent"
+	"github.com/google/uuid"
 )
 
 // TestQuickCreateIssueParentTrustBoundary locks the server-side trust boundary

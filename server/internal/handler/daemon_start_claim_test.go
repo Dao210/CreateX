@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/auro-ai/auro/server/internal/testutil"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 func startClaimFixture(t *testing.T, status string) (string, string, time.Time) {

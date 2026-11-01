@@ -15,10 +15,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/auro-ai/auro/server/internal/util"
 	"github.com/auro-ai/auro/server/internal/util/secretbox"
 	"github.com/auro-ai/auro/server/pkg/plugincontract"
+	"github.com/go-chi/chi/v5"
 )
 
 const (

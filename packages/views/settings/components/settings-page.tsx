@@ -5,8 +5,6 @@ import {
   Bell,
   Blocks,
   CreditCard,
-  Keyboard,
-  KeyRound,
   Laptop,
   Lock,
   MessagesSquare,
@@ -36,14 +34,12 @@ import { AppLink, useNavigation } from "../../navigation";
 import { WorkspaceAvatar } from "../../workspace/workspace-avatar";
 import { AccountTab } from "./account-tab";
 import { PreferencesTab } from "./preferences-tab";
-import { TokensTab } from "./tokens-tab";
 import { WorkspaceTab } from "./workspace-tab";
 import { LabelsTab } from "./labels-tab";
 import { MembersTab } from "./members-tab";
 import { ChannelsTab } from "./channels-tab";
 import { ConnectedAppsTab, useComposioAvailable } from "./connected-apps-tab";
 import { NotificationsTab } from "./notifications-tab";
-import { KeyboardShortcutsTab } from "./keyboard-shortcuts-tab";
 import { PluginsTab } from "./plugins-tab";
 import { McpTab } from "./mcp-tab";
 import { BillingTab } from "./billing-tab";
@@ -143,16 +139,9 @@ export function SettingsPage({ extraDeviceTabs = [] }: SettingsPageProps = {}) {
               Bell,
               <NotificationsTab />,
             ),
-            entry(
-              "shortcuts",
-              t(($) => $.page.tabs.shortcuts),
-              Keyboard,
-              <KeyboardShortcutsTab />,
-            ),
             ...(appsAvailable
               ? [entry("apps", t(($) => $.page.tabs.apps), Plug, <ConnectedAppsTab />)]
               : []),
-            entry("tokens", t(($) => $.page.tabs.tokens), KeyRound, <TokensTab />),
           ],
         },
       ],

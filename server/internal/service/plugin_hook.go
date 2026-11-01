@@ -5,7 +5,6 @@ import (
 	"context"
 	"crypto/hmac"
 	"crypto/sha256"
-	"crypto/subtle"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -16,11 +15,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
 	db "github.com/auro-ai/auro/server/pkg/db/generated"
 	"github.com/auro-ai/auro/server/pkg/plugincontract"
 	"github.com/auro-ai/auro/server/pkg/remotemcp"
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // The hook engine: the one place Auro calls OUT to a plugin's own server.
@@ -40,7 +39,7 @@ const (
 	// How far a request timestamp may be from our clock. Bounds replay: a
 	// captured request is only reusable inside this window, and a handler that
 	// also remembers signatures can close it entirely.
-	hookTimestampTolerance = 5 * time.Minute
+
 	// Fallback when a manifest omits timeout_ms.
 	hookDefaultTimeout = 10 * time.Second
 	// Response bodies are read for the caller, so they are capped. A hook that
@@ -471,40 +470,6 @@ func (s *PluginService) HookSigningSecret(installationID pgtype.UUID) (string, e
 		return "", err
 	}
 	return "whsec_" + hex.EncodeToString(key), nil
-}
-
-// VerifyHookSignature is the receiver's half, exported so a plugin written in Go
-// and our own tests check signatures the same way — a scheme only one side can
-// implement is a scheme nobody can review.
-func VerifyHookSignature(secretHex, timestamp string, body []byte, presented string, now time.Time) error {
-	secretHex = strings.TrimPrefix(secretHex, "whsec_")
-	key, err := hex.DecodeString(secretHex)
-	if err != nil {
-		return errors.New("signing secret is not valid hex")
-	}
-	seconds, err := strconv.ParseInt(timestamp, 10, 64)
-	if err != nil {
-		return errors.New("timestamp is not an integer")
-	}
-	drift := now.Sub(time.Unix(seconds, 0))
-	if drift < 0 {
-		drift = -drift
-	}
-	if drift > hookTimestampTolerance {
-		return errors.New("timestamp is outside the accepted window")
-	}
-	mac := hmac.New(sha256.New, key)
-	mac.Write([]byte(timestamp))
-	mac.Write([]byte("."))
-	mac.Write(body)
-	expected := hex.EncodeToString(mac.Sum(nil))
-	presented = strings.TrimPrefix(presented, hookSignatureVersion+"=")
-	// Constant time: a byte-at-a-time comparison leaks how much of a guessed
-	// signature was right, which is enough to find the rest.
-	if subtle.ConstantTimeCompare([]byte(expected), []byte(presented)) != 1 {
-		return errors.New("signature does not match")
-	}
-	return nil
 }
 
 // checkHookRate caps how often one hook may be called.

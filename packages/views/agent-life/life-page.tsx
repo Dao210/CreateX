@@ -1,5 +1,7 @@
 "use client";
 
+import { GameAccessBoundary } from "../admin/game-access-boundary";
+
 import { useQuery } from "@tanstack/react-query";
 import { House, Sprout, Trees, Users, Leaf } from "lucide-react";
 import { LIFE_MAP, type LifeSnapshot } from "@auro/core/agent-life";
@@ -13,7 +15,7 @@ import { PageHeader } from "../layout/page-header";
 
 export function LifePage() {
   const workspace = useCurrentWorkspace();
-  return workspace ? <LifeContent key={workspace.id} workspaceId={workspace.id} /> : null;
+  return workspace ? <GameAccessBoundary gameId="life"><LifeContent key={workspace.id} workspaceId={workspace.id} /></GameAccessBoundary> : null;
 }
 
 function LifeContent({ workspaceId }: { workspaceId: string }) {

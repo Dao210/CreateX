@@ -9,10 +9,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/auro-ai/auro/server/internal/channelmedia"
 	db "github.com/auro-ai/auro/server/pkg/db/generated"
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 func TestMergeIssueChannelMediaDescriptionProtectsLegacyClient(t *testing.T) {

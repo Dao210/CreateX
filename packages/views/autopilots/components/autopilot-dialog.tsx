@@ -1,25 +1,9 @@
 "use client";
 
-import { useId, useMemo, useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import {
-  Check,
-  ChevronDown,
-  ChevronRight,
-  Clock,
-  FilePlus2,
-  FolderKanban,
-  Maximize2,
-  Minimize2,
-  Play,
-  Plus,
-  Rocket,
-  Users,
-  Webhook,
-  X as XIcon,
-  Zap,
-} from "lucide-react";
+import { ChevronDown, ChevronRight, Clock, Maximize2, Minimize2, Plus, Rocket, Users, Webhook, X as XIcon, Zap } from "lucide-react";
 import { cn } from "@auro/ui/lib/utils";
 import {
   Dialog,
@@ -38,8 +22,7 @@ import {
 import { Button } from "@auro/ui/components/ui/button";
 import { useCurrentWorkspace } from "@auro/core/paths";
 import { useWorkspaceId } from "@auro/core/hooks";
-import { agentListOptions, squadListOptions } from "@auro/core/workspace/queries";
-import { projectListOptions } from "@auro/core/projects/queries";
+import { agentListOptions } from "@auro/core/workspace/queries";
 import {
   useCreateAutopilot,
   useCreateAutopilotTrigger,
@@ -57,10 +40,7 @@ import type {
 import { TitleEditor, ContentEditor, type TitleEditorRef } from "../../editor";
 import { ActorAvatar } from "../../common/actor-avatar";
 import { SegmentedToggle } from "../../common/segmented-toggle";
-import { ProjectPicker } from "../../projects/components/project-picker";
-import { ProjectIcon } from "../../projects/components/project-icon";
 import { AgentPicker, type AssigneeSelection } from "./pickers/agent-picker";
-import { SubscriberMultiSelect } from "./subscriber-multi-select";
 import { AutopilotAccessManager } from "./autopilot-access-manager";
 import { ScheduleEditor } from "./schedule-editor/schedule-editor";
 import { getDefaultScheduleConfig, type ScheduleConfig } from "./schedule-editor/model";
@@ -80,11 +60,9 @@ import type { WebhookEventFilter } from "@auro/core/types";
 export interface AutopilotInitial {
   title: string;
   description: string;
-  project_id: string | null;
   assignee_type: AutopilotAssigneeType;
   assignee_id: string;
   execution_mode: AutopilotExecutionMode;
-  subscriber_user_ids?: string[];
 }
 
 export type AutopilotDialogProps =
@@ -105,17 +83,6 @@ export type AutopilotDialogProps =
       collaborators: AutopilotCollaborator[];
       canManageAccess: boolean;
     };
-
-// ---------------------------------------------------------------------------
-// Static schema-level data (not user-visible)
-// ---------------------------------------------------------------------------
-
-const OUTPUT_MODE_KEYS: AutopilotExecutionMode[] = ["create_issue", "run_only"];
-
-const OUTPUT_MODE_ICONS: Record<AutopilotExecutionMode, typeof FilePlus2> = {
-  create_issue: FilePlus2,
-  run_only: Play,
-};
 
 // ---------------------------------------------------------------------------
 // Webhook event-filter dirty detection
@@ -141,8 +108,6 @@ export function AutopilotDialog(props: AutopilotDialogProps) {
   const workspaceName = useCurrentWorkspace()?.name;
   const wsId = useWorkspaceId();
   const { data: agents = [] } = useQuery(agentListOptions(wsId));
-  const { data: squads = [] } = useQuery(squadListOptions(wsId));
-  const { data: projects = [] } = useQuery(projectListOptions(wsId));
   const [isExpanded, setIsExpanded] = useState(false);
 
   const isCreate = props.mode === "create";
@@ -152,17 +117,10 @@ export function AutopilotDialog(props: AutopilotDialogProps) {
 
   const [title, setTitle] = useState(initial.title ?? "");
   const [description, setDescription] = useState(initial.description ?? "");
-  const [projectId, setProjectId] = useState<string | null>(initial.project_id ?? null);
   const [assigneeType, setAssigneeType] = useState<AutopilotAssigneeType>(
     initial.assignee_type ?? "agent",
   );
   const [assigneeId, setAssigneeId] = useState<string>(initial.assignee_id ?? "");
-  const [executionMode, setExecutionMode] = useState<AutopilotExecutionMode>(
-    initial.execution_mode ?? "create_issue",
-  );
-  const [subscriberUserIds, setSubscriberUserIds] = useState<string[]>(
-    initial.subscriber_user_ids ?? [],
-  );
 
   // The schedule panel speaks for the autopilot's SCHEDULE trigger, not for
   // `triggers[0]` — on a webhook- or api-triggered autopilot that row is one no
@@ -243,20 +201,8 @@ export function AutopilotDialog(props: AutopilotDialogProps) {
   // schedules exist, so `existingSchedule` is non-null whenever it is true.
   const showScheduleEmptyState =
     !isCreate && existingSchedule === null && !scheduleAdded;
+  const selectedAssignee = agents.find((agent) => agent.id === assigneeId);
 
-  const selectedAssignee = useMemo(() => {
-    if (!assigneeId) return null;
-    if (assigneeType === "squad") {
-      const squad = squads.find((s) => s.id === assigneeId);
-      return squad ? { name: squad.name, description: squad.description } : null;
-    }
-    const agent = agents.find((a) => a.id === assigneeId);
-    return agent ? { name: agent.name, description: agent.description } : null;
-  }, [agents, squads, assigneeId, assigneeType]);
-  const selectedProject = useMemo(
-    () => projects.find((project) => project.id === projectId) ?? null,
-    [projects, projectId],
-  );
 
   const handleAssigneeChange = (next: AssigneeSelection) => {
     setAssigneeType(next.type);
@@ -323,14 +269,9 @@ export function AutopilotDialog(props: AutopilotDialogProps) {
         const autopilot = await createAutopilot.mutateAsync({
           title: title.trim(),
           description: description.trim() || undefined,
-          project_id: projectId,
           assignee_type: assigneeType,
           assignee_id: assigneeId,
-          execution_mode: executionMode,
-          subscribers: subscriberUserIds.map((user_id) => ({
-            user_type: "member" as const,
-            user_id,
-          })),
+          execution_mode: "run_only",
         });
         let triggerOk = true;
         let triggerErrMessage: string | null = null;
@@ -376,14 +317,9 @@ export function AutopilotDialog(props: AutopilotDialogProps) {
           id: props.autopilotId,
           title: title.trim(),
           description: description.trim() || null,
-          project_id: projectId,
           assignee_type: assigneeType,
           assignee_id: assigneeId,
-          execution_mode: executionMode,
-          subscribers: subscriberUserIds.map((user_id) => ({
-            user_type: "member" as const,
-            user_id,
-          })),
+          execution_mode: "run_only",
         });
         let triggerOk = true;
         let triggerErrMessage: string | null = null;
@@ -627,7 +563,7 @@ export function AutopilotDialog(props: AutopilotDialogProps) {
               errorId={assigneeErrorId}
             />
 
-            <OutputModeSection mode={executionMode} onChange={setExecutionMode} />
+            
 
             {/* Shown for BOTH output modes (MUL-6681). The project is not only
                 issue routing: for a run_only autopilot it is the ONLY source of
@@ -637,18 +573,9 @@ export function AutopilotDialog(props: AutopilotDialogProps) {
                 or a bare workdir. Hiding it here left run_only autopilots with
                 no way to bind one, and the save below used to send null for
                 run_only, silently clearing a binding made via the CLI. */}
-            <ProjectSection
-              projectId={projectId}
-              selectedProject={selectedProject}
-              onChange={setProjectId}
-            />
+            
 
-            {executionMode === "create_issue" && (
-              <SubscribersSection
-                selectedUserIds={subscriberUserIds}
-                onChange={setSubscriberUserIds}
-              />
-            )}
+            
 
             {isCreate && (
               <TriggerKindSection kind={triggerKind} onChange={setTriggerKind} />
@@ -839,131 +766,6 @@ function AgentSection({
           {t(($) => $.dialog.error_assignee_required)}
         </p>
       )}
-    </div>
-  );
-}
-
-function OutputModeSection({
-  mode,
-  onChange,
-}: {
-  mode: AutopilotExecutionMode;
-  onChange: (mode: AutopilotExecutionMode) => void;
-}) {
-  const { t } = useT("autopilots");
-  return (
-    <div>
-      <SectionLabel>{t(($) => $.dialog.section_output_mode)}</SectionLabel>
-      <div className="space-y-1.5">
-        {OUTPUT_MODE_KEYS.map((key) => {
-          const selected = key === mode;
-          const Icon = OUTPUT_MODE_ICONS[key];
-          return (
-            <button
-              key={key}
-              type="button"
-              onClick={() => onChange(key)}
-              className={cn(
-                "w-full flex items-start gap-2.5 rounded-md border px-3 py-2 text-left cursor-pointer transition-colors",
-                selected
-                  ? "border-primary bg-primary/5"
-                  : "bg-background hover:bg-accent/40",
-              )}
-            >
-              <span
-                className={cn(
-                  "mt-0.5 inline-flex size-4 shrink-0 items-center justify-center rounded-full border",
-                  selected
-                    ? "border-primary bg-primary text-primary-foreground"
-                    : "border-muted-foreground/40 bg-background",
-                )}
-              >
-                {selected ? (
-                  <Check className="size-2.5" strokeWidth={3} />
-                ) : (
-                  <Icon className="size-2.5 opacity-0" />
-                )}
-              </span>
-              <span className="flex-1 min-w-0">
-                <span className="block text-body font-medium">
-                  {t(($) => $.dialog.output_modes[key].label)}
-                </span>
-                <span className="block text-caption text-muted-foreground">
-                  {t(($) => $.dialog.output_modes[key].description)}
-                </span>
-              </span>
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-function ProjectSection({
-  projectId,
-  selectedProject,
-  onChange,
-}: {
-  projectId: string | null;
-  selectedProject: { title: string; icon: string | null } | null;
-  onChange: (projectId: string | null) => void;
-}) {
-  const { t } = useT("autopilots");
-  return (
-    <div>
-      <SectionLabel>{t(($) => $.dialog.section_project)}</SectionLabel>
-      <p className="mb-2 text-micro text-muted-foreground">
-        {t(($) => $.dialog.project_hint)}
-      </p>
-      <ProjectPicker
-        projectId={projectId}
-        onUpdate={(updates) => onChange(updates.project_id ?? null)}
-        align="start"
-        triggerRender={
-          <button
-            type="button"
-            className={cn(
-              "w-full flex items-center gap-2.5 rounded-md border bg-background px-3 py-2 text-left",
-              "hover:bg-accent/40 transition-colors cursor-pointer",
-            )}
-          >
-            {selectedProject ? (
-              <ProjectIcon project={selectedProject} size="md" />
-            ) : (
-              <span className="inline-flex size-5 items-center justify-center rounded-md bg-muted text-muted-foreground">
-                <FolderKanban className="size-3.5" />
-              </span>
-            )}
-            <span className="flex-1 min-w-0 truncate text-body font-medium">
-              {selectedProject?.title ?? t(($) => $.dialog.no_project)}
-            </span>
-            <ChevronDown className="size-3.5 text-muted-foreground shrink-0" />
-          </button>
-        }
-      />
-    </div>
-  );
-}
-
-function SubscribersSection({
-  selectedUserIds,
-  onChange,
-}: {
-  selectedUserIds: string[];
-  onChange: (next: string[]) => void;
-}) {
-  const { t } = useT("autopilots");
-  return (
-    <div>
-      <SectionLabel>{t(($) => $.dialog.section_subscribers)}</SectionLabel>
-      <p className="mb-2 text-micro text-muted-foreground">
-        {t(($) => $.dialog.subscribers_hint)}
-      </p>
-      <SubscriberMultiSelect
-        selectedIds={selectedUserIds}
-        onChange={onChange}
-      />
     </div>
   );
 }

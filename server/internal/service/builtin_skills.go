@@ -12,16 +12,6 @@ var builtinSkillsFS embed.FS
 
 const builtinSkillsRoot = "builtin_skills"
 
-// PlatformSkillName is the built-in skill carrying Auro's platform
-// contracts — issues, mentions, agents, squads, autopilots, projects, runtimes
-// and skill import — behind one routing SKILL.md. Every agent receives it.
-//
-// The daemon's runtime brief names the same skill from its own constant: the
-// daemon runs on the user's machine and must not import this package, so the
-// two are pinned by the brief's rendered-output tests instead of a shared
-// symbol.
-const PlatformSkillName = "auro-platform"
-
 // builtinSkillSystemKey restricts a built-in skill to one product-defined
 // agent, keyed by that agent's system key. A skill absent from this map is
 // universal and every agent receives it.

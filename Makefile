@@ -175,12 +175,15 @@ gc: ## Collect environments whose directory is gone or whose TTL expired
 env-exec: ## Run a command with this environment's variables (ARGS="-- pnpm dev:desktop")
 	@bash scripts/dev-env.sh exec $(ARGS)
 
-.PHONY: life-dev life-test-db
+.PHONY: life-dev life-test-db game-admin-test-db
 life-dev: ## Run the TypeScript world Worker with this checkout's environment
 	@pnpm --filter @auro/agent-life-worker dev
 
 life-test-db: ## Verify world transactions in disposable schemas of this checkout's database
 	@LIFE_TEST_DATABASE_URL="$(DATABASE_URL)" pnpm --filter @auro/agent-life-worker test
+
+game-admin-test-db: ## Verify game policies in disposable schemas of this checkout's database
+	@cd server && GAME_ADMIN_TEST_DATABASE_URL="$(DATABASE_URL)" go test ./internal/gameadmin -count=1
 
 # Single-component entry points. No database preflight: `up` has already proven
 # the database is reachable before it launches anything, and repeating the

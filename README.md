@@ -165,7 +165,7 @@ for endpoints and remaining work, including season archival and creator pages.
 
 The project builds on Auro's account, workspace, agent, and runtime
 infrastructure. Internal `@auro/*` package names and `AURO_*` configuration remain
-in use. Issue, project, my-issues, and squad UI routes are retired; chat is the
+in use. Issue, project, my-issues, and squad UI routes are retired; My Creations is the
 current workspace landing page.
 
 ## Verification

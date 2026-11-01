@@ -32,7 +32,6 @@ export function useSettingsSearchIndex(
         tab: "profile",
         anchor: "about",
         title: t(($) => $.account.profile_description_label),
-        description: t(($) => $.account.profile_description_hint),
       },
       { tab: "preferences", anchor: "language", title: t(($) => $.preferences.language.title) },
       {
@@ -78,11 +77,6 @@ export function useSettingsSearchIndex(
         description: t(($) => $.workspace.context_hint),
       },
       { tab: "workspace", anchor: "slug", title: t(($) => $.workspace.slug_label) },
-      {
-        tab: "workspace",
-        anchor: "issue-prefix",
-        title: t(($) => $.workspace.issue_prefix_label),
-      },
       { tab: "workspace", anchor: "leave", title: t(($) => $.workspace.leave_title) },
       { tab: "workspace", anchor: "delete", title: t(($) => $.workspace.delete_title) },
       { tab: "members", anchor: "invitations", title: t(($) => $.members.pending_label) },

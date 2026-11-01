@@ -10,7 +10,6 @@ import {
   agentTaskSnapshotOptions,
   useAgentPresenceDetail,
 } from "@auro/core/agents";
-import { issueDetailOptions } from "@auro/core/issues";
 import type { AgentTask } from "@auro/core/types";
 import { AlertTriangle } from "lucide-react";
 import { useT, useTimeAgo } from "../../i18n";
@@ -57,10 +56,6 @@ export function AgentLivePeekCard({ agentId }: AgentLivePeekCardProps) {
   }
 
   const agentTasks = snapshot.filter((t) => t.agent_id === agentId);
-  const runningTask = agentTasks.find(
-    (t) => t.status === "running" && !!t.issue_id,
-  );
-  const currentIssueId = runningTask?.issue_id ?? null;
   const lastTerminal = pickLatestTerminal(agentTasks);
 
   const initials = agent.name
@@ -120,12 +115,6 @@ export function AgentLivePeekCard({ agentId }: AgentLivePeekCardProps) {
 
       {/* Meta rows. */}
       <div className="flex flex-col gap-1.5 text-caption">
-        <CurrentIssueRow
-          wsId={wsId}
-          issueId={currentIssueId}
-          label={t(($) => $.live_peek.current_issue_label)}
-          emptyLabel={t(($) => $.live_peek.no_current_issue)}
-        />
         <LastActivityRow
           task={lastTerminal}
           label={t(($) => $.live_peek.last_activity_label)}
@@ -156,47 +145,6 @@ function pickLatestTerminal(tasks: readonly AgentTask[]): AgentTask | null {
     }
   }
   return best;
-}
-
-function CurrentIssueRow({
-  wsId,
-  issueId,
-  label,
-  emptyLabel,
-}: {
-  wsId: string;
-  issueId: string | null;
-  label: string;
-  emptyLabel: string;
-}) {
-  // Lazy issue detail — only enabled while the card is mounted AND we have
-  // a running issue id. snapshot already gives us the id; this hook just
-  // resolves the human identifier (MUL-123) + title.
-  const { data: issue } = useQuery({
-    ...issueDetailOptions(wsId, issueId ?? ""),
-    enabled: !!issueId,
-  });
-
-  return (
-    <div className="flex items-center gap-1.5">
-      <span className="w-16 shrink-0 text-muted-foreground">{label}</span>
-      {issueId ? (
-        issue ? (
-          <span
-            className="min-w-0 truncate text-foreground"
-            title={`${issue.identifier} ${issue.title}`}
-          >
-            <span className="mr-1 font-mono text-micro">{issue.identifier}</span>
-            <span>{issue.title}</span>
-          </span>
-        ) : (
-          <Skeleton className="h-3 w-24" />
-        )
-      ) : (
-        <span className="text-muted-foreground">{emptyLabel}</span>
-      )}
-    </div>
-  );
 }
 
 function LastActivityRow({

@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { useState } from "react";
 import { beforeEach, expect, it, vi } from "vitest";
 import { fireEvent, screen } from "@testing-library/react";
@@ -6,6 +7,8 @@ import { scopedSiegeStorage, siegePreferencesKey } from "@auro/core/siege";
 import type { StorageAdapter } from "@auro/core/types";
 import { renderWithI18n } from "../test/i18n";
 import { SiegePage } from "./siege-page";
+
+vi.mock("../admin/game-access-boundary", () => ({ GameAccessBoundary: ({ children }: { children: ReactNode }) => children }));
 
 const identity = vi.hoisted(() => ({ userId: "alice" as string | null, workspace: { id: "alpha-id", slug: "alpha" } as { id: string; slug: string } | null }));
 vi.mock("@auro/core/auth", () => ({ useAuthStore: Object.assign((selector: (state: { user: { id: string } | null }) => unknown) => selector({ user: identity.userId ? { id: identity.userId } : null }), { getState: () => ({ user: identity.userId ? { id: identity.userId } : null }) }) }));

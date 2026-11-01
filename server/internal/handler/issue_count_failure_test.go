@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/auro-ai/auro/server/internal/testutil"
+	"github.com/jackc/pgx/v5"
 )
 
 type issueCountFailureDB struct {

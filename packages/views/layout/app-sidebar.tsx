@@ -38,6 +38,7 @@ import {
   DropdownMenuTrigger,
 } from "@auro/ui/components/ui/dropdown-menu";
 import { useAuthStore } from "@auro/core/auth";
+import { isGameId, useWorldGames } from "@auro/core/admin";
 import { AdminEntry } from "../admin/admin-entry";
 import { useCurrentWorkspace, useWorkspacePaths, paths } from "@auro/core/paths";
 import {
@@ -109,7 +110,6 @@ const personalNav: { key: NavKey; labelKey: NavLabelKey }[] = [
 ];
 
 const utilityNav: { key: NavKey; labelKey: NavLabelKey }[] = [
-  { key: "usage", labelKey: "usage" },
   { key: "settings", labelKey: "settings" },
 ];
 
@@ -152,6 +152,7 @@ export function AppSidebar({ topSlot, headerClassName, headerStyle }: AppSidebar
   }, [pathname, setOpenMobile]);
 
   const wsId = workspace?.id;
+  const games = useWorldGames(wsId ?? "");
   // Nav badge. Reads the cross-workspace unread summary fetched just below
   // for the switcher dot, so the count costs no request of its own — it used
   // to download the whole inbox list here just to count it (MUL-6967).
@@ -366,7 +367,7 @@ export function AppSidebar({ topSlot, headerClassName, headerStyle }: AppSidebar
           <SidebarGroup>
             <SidebarGroupContent>
               <SidebarMenu className="gap-0.5">
-                {personalNav.map((item) => {
+                {personalNav.filter(item => !isGameId(item.key) || games.data?.games.some(game => game.gameId === item.key && game.available && game.visible) === true).map((item) => {
                   const href = p[item.key]();
                   const Icon = routeIconForPath(href);
                   const isActive = isNavActive(pathname, href);

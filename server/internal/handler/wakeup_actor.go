@@ -4,8 +4,8 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/jackc/pgx/v5"
 	db "github.com/auro-ai/auro/server/pkg/db/generated"
+	"github.com/jackc/pgx/v5"
 )
 
 type wakeupActorKey struct{}

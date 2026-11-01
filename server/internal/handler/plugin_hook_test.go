@@ -4,17 +4,18 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"github.com/auro-ai/auro/server/internal/service"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/go-chi/chi/v5"
+	"github.com/auro-ai/auro/server/internal/service"
+
 	"github.com/auro-ai/auro/server/internal/featureflags"
 	"github.com/auro-ai/auro/server/pkg/featureflag"
 	"github.com/auro-ai/auro/server/pkg/plugincontract"
+	"github.com/go-chi/chi/v5"
 )
 
 // hookHandlerTestManifest declares the three host-driven triggers. Its endpoint

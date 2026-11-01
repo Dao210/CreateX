@@ -6,7 +6,7 @@ import { cn } from "@auro/ui/lib/utils";
 import {
   PropertyPicker,
   PickerEmpty,
-} from "../../../issues/components/pickers/property-picker";
+} from "../../../common/selection-picker";
 import { useT } from "../../../i18n";
 
 export interface TimezonePickerProps {

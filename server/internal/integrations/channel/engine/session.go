@@ -188,9 +188,7 @@ func (a dbSessionQueries) ClaimChannelMediaPendingObjectsForBind(ctx context.Con
 func (a dbSessionQueries) TouchChatSession(ctx context.Context, id pgtype.UUID) error {
 	return a.q.TouchChatSession(ctx, id)
 }
-func (a dbSessionQueries) LockChannelChatSessionBindingForContext(ctx context.Context, chatSessionID pgtype.UUID) (db.ChannelChatSessionBinding, error) {
-	return a.q.LockChannelChatSessionBindingForContext(ctx, chatSessionID)
-}
+
 func (a dbSessionQueries) LockChannelChatContextGenerationByRevision(ctx context.Context, arg db.LockChannelChatContextGenerationByRevisionParams) (db.ChannelChatContextGeneration, error) {
 	return a.q.LockChannelChatContextGenerationByRevision(ctx, arg)
 }
@@ -224,17 +222,6 @@ type SessionTitles struct {
 	Fallback string
 }
 
-func (t SessionTitles) forType(ct channel.ChatType) string {
-	switch ct {
-	case channel.ChatTypeGroup:
-		return t.Group
-	case channel.ChatTypeP2P:
-		return t.Direct
-	default:
-		return t.Fallback
-	}
-}
-
 // ChatSession is the shared chat-session service. One instance is built per
 // channel_type (so the binding rows carry the right discriminator); the logic
 // is otherwise platform-neutral.
@@ -250,12 +237,6 @@ type ChatSession struct {
 // transaction so the durable write and the Mark commit (or roll back) together.
 func NewChatSession(q *db.Queries, tx TxStarter, channelType channel.Type, titles SessionTitles) *ChatSession {
 	return &ChatSession{q: dbSessionQueries{q: q}, tx: tx, channelType: channelType, titles: titles}
-}
-
-// newChatSessionWith is the test seam: it accepts a SessionQueries directly so
-// an in-memory fake can stand in for *db.Queries.
-func newChatSessionWith(q SessionQueries, tx TxStarter, channelType channel.Type, titles SessionTitles) *ChatSession {
-	return &ChatSession{q: q, tx: tx, channelType: channelType, titles: titles}
 }
 
 // EnsureSessionInput is the channel-agnostic input for EnsureSession.
@@ -1313,4 +1294,8 @@ func textOrNull(s string) pgtype.Text {
 
 func textOrNullIf(valid bool, s string) pgtype.Text {
 	return pgtype.Text{String: s, Valid: valid}
+}
+
+func (a dbSessionQueries) LockChannelChatSessionBindingForContext(ctx context.Context, chatSessionID pgtype.UUID) (db.ChannelChatSessionBinding, error) {
+	return a.q.LockChannelChatSessionBindingForContext(ctx, chatSessionID)
 }

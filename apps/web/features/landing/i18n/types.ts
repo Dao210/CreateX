@@ -71,12 +71,8 @@ export type WorldDict = {
     supply: string; rift: string; remains: string;
     belts: [string, string, string]; names: Record<string, string>;
   };
-  eyebrow: string;
   claim: string;
   sub: string;
-  primaryCta: string;
-  secondaryCta: string;
-  note: string;
   clock: {
     label: string;
     season: string;

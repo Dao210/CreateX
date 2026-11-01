@@ -160,10 +160,3 @@ func (b *pendingBatcher) FlushAll() {
 	}
 	b.inflight.Wait()
 }
-
-// pendingCount reports how many sessions currently have an armed window.
-func (b *pendingBatcher) pendingCount() int {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-	return len(b.pending)
-}

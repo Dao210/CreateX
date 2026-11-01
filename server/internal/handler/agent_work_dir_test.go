@@ -3,9 +3,9 @@ package handler
 import (
 	"testing"
 
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/auro-ai/auro/server/internal/daemon/execenv"
 	db "github.com/auro-ai/auro/server/pkg/db/generated"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // TestRelativeWorkDir covers the privacy-safe display derivation that

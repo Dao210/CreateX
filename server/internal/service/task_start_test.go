@@ -5,8 +5,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/jackc/pgx/v5"
 	db "github.com/auro-ai/auro/server/pkg/db/generated"
+	"github.com/jackc/pgx/v5"
 )
 
 type startReplayDB struct {

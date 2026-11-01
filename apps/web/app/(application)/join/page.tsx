@@ -8,6 +8,7 @@ import { Button } from "@auro/ui/components/ui/button";
 import { Card, CardContent } from "@auro/ui/components/ui/card";
 import { Badge } from "@auro/ui/components/ui/badge";
 import { useAuthStore } from "@auro/core/auth";
+import { paths } from "@auro/core/paths";
 import { workspaceKeys } from "@auro/core/workspace/queries";
 import type { ShareLinkInfo, Workspace } from "@auro/core/types";
 
@@ -61,7 +62,7 @@ function JoinInner() {
         const list = await api.listWorkspaces().catch(() => [] as Workspace[]);
         queryClient.setQueryData(workspaceKeys.list(), list);
         setTimeout(() => {
-          router.push(`/${result.workspace_slug || result.workspace_id}/issues`);
+          router.push(paths.workspace(result.workspace_slug || result.workspace_id).root());
         }, 1200);
       })
       .catch(async (e) => {
@@ -71,7 +72,7 @@ function JoinInner() {
           // Already joined: go straight to the workspace this invite points at
           // rather than the account's first workspace.
           if (info?.workspace_slug) {
-            router.push(`/${info.workspace_slug}/issues`);
+            router.push(paths.workspace(info.workspace_slug).root());
             return;
           }
           try {
@@ -79,7 +80,7 @@ function JoinInner() {
             queryClient.setQueryData(workspaceKeys.list(), workspaces as any);
             const first = workspaces[0];
             if (first) {
-              router.push(`/${first.slug}/issues`);
+              router.push(paths.workspace(first.slug).root());
               return;
             }
           } catch {

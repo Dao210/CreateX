@@ -1,6 +1,6 @@
 import { queryOptions, type QueryClient } from "@tanstack/react-query";
 import { api } from "../api";
-import type { Agent, Squad, Workspace } from "../types";
+import type { Agent, Workspace } from "../types";
 
 export const workspaceKeys = {
   all: (wsId: string) => ["workspaces", wsId] as const,
@@ -94,28 +94,6 @@ export function cacheAgentResponse(
     return current.map((item, index) =>
       index === existingIndex ? agent : item,
     );
-  });
-}
-
-export function squadListOptions(wsId: string) {
-  return queryOptions<Squad[]>({
-    queryKey: workspaceKeys.squads(wsId),
-    queryFn: () => api.listSquads(),
-    enabled: !!wsId,
-  });
-}
-
-// Per-squad members status snapshot. The freshness signal is the WS task /
-// agent / runtime invalidation wired in use-realtime-sync (which broadly
-// invalidates `["workspaces", wsId, "squads"]`); the staleTime is a
-// tab-focus safety net.
-export function squadMemberStatusOptions(wsId: string, squadId: string) {
-  return queryOptions({
-    queryKey: workspaceKeys.squadMemberStatus(wsId, squadId),
-    queryFn: () => api.getSquadMemberStatus(squadId),
-    enabled: !!wsId && !!squadId,
-    staleTime: 30 * 1000,
-    refetchOnWindowFocus: true,
   });
 }
 

@@ -21,9 +21,7 @@ export type TabSubject =
   /** A collection or tool page with no specific resource. */
   | { kind: "page"; page: WorkspacePageKey }
   /** A single issue detail. */
-  | { kind: "issue"; id: string }
   /** A single project detail. */
-  | { kind: "project"; id: string }
   /** A single autopilot detail. */
   | { kind: "autopilot"; id: string }
   /** An agent / member detail (has an avatar identity). */
@@ -131,10 +129,6 @@ export function tabSubjectKey(subject: TabSubject): string {
   switch (subject.kind) {
     case "page":
       return `page:${subject.page}`;
-    case "issue":
-      return `issue:${subject.id}`;
-    case "project":
-      return `project:${subject.id}`;
     case "autopilot":
       return `autopilot:${subject.id}`;
     case "actor":

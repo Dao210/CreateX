@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/auro-ai/auro/server/pkg/plugincontract"
+	"github.com/go-chi/chi/v5"
 )
 
 // Publishing endpoints.

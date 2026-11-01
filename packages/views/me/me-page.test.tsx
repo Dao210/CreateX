@@ -16,7 +16,7 @@ const ids = {
   session: "55555555-5555-4555-8555-555555555555",
 };
 const workspace = { id: ids.workspace, name: "Acme", slug: "acme" };
-const mocks = vi.hoisted(() => ({ list: vi.fn(), progress: vi.fn(), library: vi.fn(), create: vi.fn(), push: vi.fn(), replace: vi.fn(), search: "", hash: "" }));
+const mocks = vi.hoisted(() => ({ list: vi.fn(), games: vi.fn(), progress: vi.fn(), library: vi.fn(), create: vi.fn(), push: vi.fn(), replace: vi.fn(), search: "", hash: "" }));
 
 vi.mock("@auro/core/auth", () => ({
   useAuthStore: (selector: (state: { user: { id: string; name: string; avatar_url: string | null } }) => unknown) => selector({ user: { id: "11111111-1111-4111-8111-111111111111", name: "Ada", avatar_url: null } }),
@@ -28,7 +28,7 @@ vi.mock("@auro/core/paths", async (importOriginal) => ({
 }));
 vi.mock("@auro/core/api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@auro/core/api")>()),
-  api: { listTankCharacters: mocks.list, getGameProgress: mocks.progress, createTankSession: mocks.create },
+  api: { getWorldGames: mocks.games, listTankCharacters: mocks.list, getGameProgress: mocks.progress, createTankSession: mocks.create },
 }));
 vi.mock("@auro/core/siege/queries", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@auro/core/siege/queries")>()),
@@ -84,6 +84,7 @@ function render(ui: ReactElement) {
 }
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.games.mockResolvedValue({workspaceId: ids.workspace, games: [{gameId: "siege", available: true, visible: true}, {gameId: "tanks", available: true, visible: true}]});
   vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(null);
   mocks.search = "";
   mocks.hash = "";

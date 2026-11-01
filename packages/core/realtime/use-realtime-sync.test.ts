@@ -8,7 +8,6 @@ import { setApiInstance } from "../api";
 import type { ApiClient } from "../api/client";
 import { chatKeys } from "../chat/queries";
 import { inboxKeys } from "../inbox/queries";
-import { issueKeys } from "../issues/queries";
 import { notificationPreferenceKeys } from "../notification-preferences/queries";
 import { workspaceKeys } from "../workspace/queries";
 import type {
@@ -21,18 +20,7 @@ import type {
   InboxItem,
   Workspace,
 } from "../types";
-import {
-  applyChatCancelFinalizedToCache,
-  applyChatDoneToCache,
-  applyChatMessageToCache,
-  applyChatQuickActionsToCache,
-  applyChatSessionUpdatedToCache,
-  applyWorkspaceUpdatedToCache,
-  handleInboxNew,
-  invalidateChatMessageQueries,
-  refetchPendingChatAggregate,
-  resolveInboxSourceSlug,
-} from "./use-realtime-sync";
+import { applyChatCancelFinalizedToCache, applyChatDoneToCache, applyChatMessageToCache, applyChatQuickActionsToCache, applyChatSessionUpdatedToCache, handleInboxNew, invalidateChatMessageQueries, refetchPendingChatAggregate, resolveInboxSourceSlug } from "./use-realtime-sync";
 
 const sessionId = "session-1";
 const taskId = "task-1";
@@ -566,91 +554,6 @@ describe("refetchPendingChatAggregate (cross-session pending leak guard)", () =>
     refetchPendingChatAggregate(qc, undefined);
 
     expect(invalidate).not.toHaveBeenCalled();
-  });
-});
-
-describe("applyWorkspaceUpdatedToCache", () => {
-  const wsId = "ws-1";
-
-  function workspace(overrides: Partial<Workspace> = {}): Workspace {
-    return {
-      id: wsId,
-      name: "Test",
-      slug: "test",
-      description: null,
-      context: null,
-      settings: {},
-      repos: [],
-      issue_prefix: "TES",
-      avatar_url: null,
-      created_at: "2026-05-18T00:00:00Z",
-      updated_at: "2026-05-18T00:00:00Z",
-      ...overrides,
-    };
-  }
-
-  it("invalidates issue cache when issue_prefix changes", () => {
-    const qc = createQueryClient();
-    qc.setQueryData<Workspace[]>(workspaceKeys.list(), [
-      workspace({ issue_prefix: "TES" }),
-    ]);
-    const invalidate = vi.spyOn(qc, "invalidateQueries");
-
-    applyWorkspaceUpdatedToCache(qc, {
-      workspace: workspace({ issue_prefix: "NEW" }),
-    });
-
-    expect(invalidate).toHaveBeenCalledWith({
-      queryKey: issueKeys.all(wsId),
-    });
-    expect(invalidate).not.toHaveBeenCalledWith({
-      queryKey: workspaceKeys.list(),
-    });
-    expect(
-      qc.getQueryData<Workspace[]>(workspaceKeys.list())?.[0]?.issue_prefix,
-    ).toBe("NEW");
-  });
-
-  it("does not invalidate issue cache when only non-prefix fields change", () => {
-    const qc = createQueryClient();
-    qc.setQueryData<Workspace[]>(workspaceKeys.list(), [
-      workspace({ issue_prefix: "TES", name: "Old name" }),
-    ]);
-    const invalidate = vi.spyOn(qc, "invalidateQueries");
-
-    applyWorkspaceUpdatedToCache(qc, {
-      workspace: workspace({ issue_prefix: "TES", name: "New name" }),
-    });
-
-    expect(invalidate).not.toHaveBeenCalledWith({
-      queryKey: issueKeys.all(wsId),
-    });
-    expect(invalidate).not.toHaveBeenCalledWith({
-      queryKey: workspaceKeys.list(),
-    });
-    expect(qc.getQueryData<Workspace[]>(workspaceKeys.list())?.[0]?.name).toBe(
-      "New name",
-    );
-  });
-
-  it("invalidates issue cache when the workspace isn't in the cached list yet", () => {
-    // Conservative: a workspace appearing for the first time may correspond
-    // to issue queries that were primed without ever seeing the (possibly
-    // changing) prefix. Erring on the side of refresh keeps identifiers
-    // accurate at minimal cost.
-    const qc = createQueryClient();
-    const invalidate = vi.spyOn(qc, "invalidateQueries");
-
-    applyWorkspaceUpdatedToCache(qc, {
-      workspace: workspace({ issue_prefix: "NEW" }),
-    });
-
-    expect(invalidate).toHaveBeenCalledWith({
-      queryKey: issueKeys.all(wsId),
-    });
-    expect(invalidate).toHaveBeenCalledWith({
-      queryKey: workspaceKeys.list(),
-    });
   });
 });
 

@@ -2,14 +2,9 @@
 
 import { useCallback, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import type { Agent, MemberWithUser, Squad, Workspace } from "../types";
+import type { Agent, MemberWithUser, Workspace } from "../types";
 import { useWorkspaceId } from "../hooks";
-import {
-  memberListOptions,
-  agentListOptions,
-  squadListOptions,
-  workspaceListOptions,
-} from "./queries";
+import { memberListOptions, agentListOptions, workspaceListOptions } from "./queries";
 import { resolvePublicFileUrl } from "./avatar-url";
 import { useFeatureEnabled } from "../config";
 import { PLUGINS_V1_FLAG } from "../feature-flags";
@@ -27,7 +22,6 @@ import { pluginInstallationsOptions } from "../plugins";
 // loading snapshot referentially stable.
 const EMPTY_MEMBERS: MemberWithUser[] = [];
 const EMPTY_AGENTS: Agent[] = [];
-const EMPTY_SQUADS: Squad[] = [];
 const EMPTY_WORKSPACES: Workspace[] = [];
 
 /**
@@ -65,7 +59,6 @@ export function useWorkspaceList({ enabled = true }: { enabled?: boolean } = {})
 export function buildActorNameResolver(directories: {
   members: readonly { user_id: string; name: string }[];
   agents: readonly { id: string; name: string }[];
-  squads: readonly { id: string; name: string }[];
   /**
    * Installed plugins. Optional because most callers have no reason to load
    * them, and an event-written row then falls back to a generic "Plugin" —
@@ -75,12 +68,10 @@ export function buildActorNameResolver(directories: {
 }) {
   const memberNames = new Map(directories.members.map((m) => [m.user_id, m.name]));
   const agentNames = new Map(directories.agents.map((a) => [a.id, a.name]));
-  const squadNames = new Map(directories.squads.map((s) => [s.id, s.name]));
   const pluginNames = new Map((directories.plugins ?? []).map((p) => [p.id, p.name]));
   return (type: string, id: string) => {
     if (type === "member") return memberNames.get(id) ?? "Unknown";
     if (type === "agent") return agentNames.get(id) ?? "Unknown Agent";
-    if (type === "squad") return squadNames.get(id) ?? "Unknown Squad";
     // An event-triggered hook writes as the installation itself: there is no
     // person behind it, and borrowing the last member who touched the issue
     // would be a lie the audit trail cannot undo. An id that no longer
@@ -95,10 +86,8 @@ export function useActorName() {
   const wsId = useWorkspaceId();
   const { data: memberData } = useQuery(memberListOptions(wsId));
   const { data: agentData } = useQuery(agentListOptions(wsId));
-  const { data: squadData } = useQuery(squadListOptions(wsId));
   const members = memberData ?? EMPTY_MEMBERS;
   const agents = agentData ?? EMPTY_AGENTS;
-  const squads = squadData ?? EMPTY_SQUADS;
   // Only for naming a plugin-authored row. Gated on the flag so a workspace
   // without plugins does not fetch a list it can never render an author from.
   const pluginsEnabled = useFeatureEnabled(PLUGINS_V1_FLAG, false);
@@ -117,14 +106,9 @@ export function useActorName() {
     return a?.name ?? "Unknown Agent";
   }, [agents]);
 
-  const getSquadName = useCallback((squadId: string) => {
-    const s = squads.find((s) => s.id === squadId);
-    return s?.name ?? "Unknown Squad";
-  }, [squads]);
-
   const getActorName = useMemo(
-    () => buildActorNameResolver({ members, agents, squads, plugins: pluginData?.plugins }),
-    [agents, members, squads, pluginData],
+    () => buildActorNameResolver({ members, agents, plugins: pluginData?.plugins }),
+    [agents, members, pluginData],
   );
 
   const getActorInitials = useCallback(
@@ -143,9 +127,8 @@ export function useActorName() {
   const getActorAvatarUrl = useCallback((type: string, id: string): string | null => {
     if (type === "member") return resolvePublicFileUrl(members.find((m) => m.user_id === id)?.avatar_url);
     if (type === "agent") return resolvePublicFileUrl(agents.find((a) => a.id === id)?.avatar_url);
-    if (type === "squad") return resolvePublicFileUrl(squads.find((s) => s.id === id)?.avatar_url);
     return null;
-  }, [agents, members, squads]);
+  }, [agents, members]);
 
   const hasActor = useCallback(
     (type: string, id: string): boolean | undefined => {
@@ -161,24 +144,18 @@ export function useActorName() {
           ? undefined
           : agents.some((a) => a.id === id);
       }
-      if (type === "squad") {
-        return squadData === undefined
-          ? undefined
-          : squads.some((s) => s.id === id);
-      }
       if (type === "plugin") {
         return pluginData?.plugins.some((p) => p.id === id);
       }
       return type === "system";
     },
-    [agentData, agents, memberData, members, pluginData, squadData, squads],
+    [agentData, agents, memberData, members, pluginData],
   );
 
   return useMemo(
     () => ({
       getMemberName,
       getAgentName,
-      getSquadName,
       getActorName,
       getActorInitials,
       getActorAvatarUrl,
@@ -190,7 +167,6 @@ export function useActorName() {
       getActorName,
       getAgentName,
       getMemberName,
-      getSquadName,
       hasActor,
     ],
   );

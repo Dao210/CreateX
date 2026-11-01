@@ -3,6 +3,7 @@
 import { useMemo, useRef, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowRight, Bot, Globe2, Play, RefreshCw, Shapes, Shield, Star, Trophy, Wrench } from "lucide-react";
+import { useWorldGames } from "@auro/core/admin";
 import { useAuthStore } from "@auro/core/auth";
 import { useCurrentWorkspace, useWorkspacePaths } from "@auro/core/paths";
 import type { StorageAdapter } from "@auro/core/types";
@@ -57,12 +58,16 @@ function MeContent({ storage, workspace, userId }: {
   userId: string;
 }) {
   const { t } = useT("me");
+  const { t: adminT } = useT("admin");
+  const games = useWorldGames(workspace.id);
+  const siegeAvailable = games.data?.games.find(game => game.gameId === "siege")?.available === true;
+  const tanksAvailable = games.data?.games.find(game => game.gameId === "tanks")?.available === true;
   const locale = useLocale();
   const paths = useWorkspacePaths();
   const navigation = useNavigation();
   const tab = navigation.searchParams.get("tab") === "progress" ? "progress" : "creations";
   const requestedFilter = navigation.searchParams.get("filter");
-  const filter: Filter = requestedFilter === "siege" || requestedFilter === "tanks" || requestedFilter === "mcp" ? requestedFilter : "all";
+  const filter: Filter = requestedFilter === "siege" && siegeAvailable ? "siege" : (requestedFilter === "tanks" || requestedFilter === "mcp") && tanksAvailable ? requestedFilter : "all";
   const setView = (key: "tab" | "filter", value: string) => {
     const params = new URLSearchParams(navigation.searchParams);
     if (value === "creations" || value === "all") params.delete(key);
@@ -71,18 +76,18 @@ function MeContent({ storage, workspace, userId }: {
   };
   const scope = useMemo(() => ({ workspaceId: workspace.id, workspaceSlug: workspace.slug, userId }), [workspace.id, workspace.slug, userId]);
   const siegeClient = useMemo(() => createSiegeClient(scope), [scope]);
-  const tanks = useQuery(myTankCharactersOptions(workspace.id, userId));
-  const library = useQuery(siegeLibraryOptions(siegeClient, scope));
-  const remote = useQuery(gameProgressOptions(workspace.id));
+  const tanks = useQuery({ ...myTankCharactersOptions(workspace.id, userId), enabled: tanksAvailable });
+  const library = useQuery({ ...siegeLibraryOptions(siegeClient, scope), enabled: siegeAvailable });
+  const remote = useQuery({ ...gameProgressOptions(workspace.id), enabled: siegeAvailable || tanksAvailable });
   const local = useMemo(() => readLocalProgress(storage, userId, workspace.id), [storage, userId, workspace.id]);
   const stars = useMemo(() => mergeSiegeStars(local.stars, remote.data?.siege?.stars), [local.stars, remote.data?.siege?.stars]);
   const achievements = useMemo(() => mergeTankAchievements(local.tanks, remote.data?.tanks), [local.tanks, remote.data?.tanks]);
-  const blueprints = library.data?.blueprints ?? [];
-  const characters = tanks.data ?? [];
+  const blueprints = siegeAvailable ? library.data?.blueprints ?? [] : [];
+  const characters = tanksAvailable ? tanks.data ?? [] : [];
   const totalStars = stars.reduce((sum, value) => sum + value, 0);
   const mcpCharacters = characters.filter((character) => character.origin === "mcp");
-  const showSiege = filter === "all" || filter === "siege";
-  const showTanks = filter === "all" || filter === "tanks" || filter === "mcp";
+  const showSiege = siegeAvailable && (filter === "all" || filter === "siege");
+  const showTanks = tanksAvailable && (filter === "all" || filter === "tanks" || filter === "mcp");
   const visibleSiege = showSiege ? blueprints : [];
   const visibleTanks = filter === "mcp" ? mcpCharacters : showTanks ? characters : [];
   const siegeFailed = showSiege && library.isError;
@@ -94,6 +99,8 @@ function MeContent({ storage, workspace, userId }: {
   const completed = totalStars === CAMPAIGN_LEVELS.length * 3;
   const syncState = remote.isError ? t(($) => $.progress.offline) : remote.data?.siege || remote.data?.tanks ? t(($) => $.progress.synced) : t(($) => $.progress.local);
 
+  if (games.isPending) return <p role="status" className="p-6 text-body text-muted-foreground">{t($ => $.loading)}</p>;
+  if (games.isError) return <ErrorCard message={adminT($ => $.game_policy_error)} retry={() => void games.refetch()} retryLabel={t($ => $.retry)} />;
   return <>
     <PageHeader>
       <Shapes className="size-4 text-muted-foreground" aria-hidden />
@@ -107,8 +114,8 @@ function MeContent({ storage, workspace, userId }: {
         </p>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
           <Stat icon={<Shapes />} label={t(($) => $.summary.weapons)} value={blueprints.length + characters.length} />
-          <Stat icon={<Star />} label={t(($) => $.summary.stars)} value={`${totalStars} / ${CAMPAIGN_LEVELS.length * 3}`} />
-          <Stat icon={<Trophy />} label={t(($) => $.summary.best)} value={String(achievements.best).padStart(6, "0")} />
+          {siegeAvailable && <Stat icon={<Star />} label={t(($) => $.summary.stars)} value={`${totalStars} / ${CAMPAIGN_LEVELS.length * 3}`} />}
+          {tanksAvailable && <Stat icon={<Trophy />} label={t(($) => $.summary.best)} value={String(achievements.best).padStart(6, "0")} />}
         </div>
       </section>
 
@@ -121,7 +128,7 @@ function MeContent({ storage, workspace, userId }: {
           <section aria-labelledby="me-weapons-title">
             <div className="mb-3 flex flex-wrap items-center gap-2">
               <h2 id="me-weapons-title" className="mr-auto text-title-sm font-medium">{t(($) => $.weapons.title)}</h2>
-              {(["all", "siege", "tanks", "mcp"] as const).map((value) => <Button key={value} size="xs" variant={filter === value ? "brand" : "outline"} aria-pressed={filter === value} onClick={() => setView("filter", value)}>{t(($) => $.filters[value])}</Button>)}
+              {(["all", "siege", "tanks", "mcp"] as const).filter(value => value === "all" || value === "siege" && siegeAvailable || (value === "tanks" || value === "mcp") && tanksAvailable).map((value) => <Button key={value} size="xs" variant={filter === value ? "brand" : "outline"} aria-pressed={filter === value} onClick={() => setView("filter", value)}>{t(($) => $.filters[value])}</Button>)}
             </div>
             {bothFailed ? <ErrorCard message={t(($) => $.error)} retry={() => { void library.refetch(); void tanks.refetch(); }} retryLabel={t(($) => $.retry)} /> : <>
               {(visibleSiege.length > 0 || visibleTanks.length > 0) && <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -141,7 +148,7 @@ function MeContent({ storage, workspace, userId }: {
           <section aria-labelledby="me-progress-title" className="space-y-3">
             <div className="flex items-center gap-2"><h2 id="me-progress-title" className="mr-auto text-title-sm font-medium">{t(($) => $.progress.title)}</h2><Badge variant="outline">{syncState}</Badge></div>
             <div className="grid gap-4 lg:grid-cols-2">
-              <Card>
+              {siegeAvailable && <Card>
                 <CardHeader>
                   <CardTitle>{t(($) => $.progress.siege_title)}</CardTitle>
                   <CardDescription>{t(($) => $.progress.stars, { earned: totalStars, total: CAMPAIGN_LEVELS.length * 3 })}</CardDescription>
@@ -151,8 +158,8 @@ function MeContent({ storage, workspace, userId }: {
                   <p className="text-caption text-muted-foreground">{completed ? t(($) => $.progress.campaign_complete) : t(($) => $.progress.next_level, { level: nextLevel })}</p>
                   <AppLink href={`${paths.siege()}/campaign?level=${nextLevel}`} className={buttonVariants({ size: "sm", variant: "outline" })}>{t(($) => $.progress.continue_siege)}<ArrowRight /></AppLink>
                 </CardContent>
-              </Card>
-              <Card>
+              </Card>}
+              {tanksAvailable && <Card>
                 <CardHeader>
                   <CardTitle>{t(($) => $.progress.tanks_title)}</CardTitle>
                   <CardDescription>{t(($) => $.progress.best, { score: String(achievements.best).padStart(6, "0") })}</CardDescription>
@@ -162,8 +169,9 @@ function MeContent({ storage, workspace, userId }: {
                   <p className="text-caption text-muted-foreground">{t(($) => $.progress.unlocked, { unlocked: achievements.unlocked, total: TANK_LEVELS.length })}</p>
                   <AppLink href={`${paths.tanks()}?stage=${achievements.unlocked}`} className={buttonVariants({ size: "sm", variant: "outline" })}>{t(($) => $.progress.continue_tanks)}<ArrowRight /></AppLink>
                 </CardContent>
-              </Card>
+              </Card>}
             </div>
+            {!siegeAvailable && !tanksAvailable && <p className="text-body text-muted-foreground">{adminT($ => $.game_not_open)}</p>}
           </section>
         </TabsContent>
       </Tabs>

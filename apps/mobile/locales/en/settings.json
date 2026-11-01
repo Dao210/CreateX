@@ -11,7 +11,8 @@
   },
   "profile": {
     "title": "Profile",
-    "name": "Name",
+    "name": "Nickname",
+    "name_placeholder": "What should we call you?",
     "email": "Email",
     "save": "Save profile",
     "saving": "Saving..."

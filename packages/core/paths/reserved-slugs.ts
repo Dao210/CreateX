@@ -33,11 +33,11 @@ export const RESERVED_SLUGS: ReadonlySet<string> = new Set([
   "onboarding",
 
   // Platform / marketing routes (current + likely-future)
-  // `admin` owns the global MCP administration console at `/admin`. `auro` is
-  // reserved as the brand name to block impersonation workspaces. `www`, `new`,
-  // `home`, `homepage`, `dashboard` are confusables or likely-future global
-  // landing/entry routes; `homepage` matches the existing `/homepage` landing
-  // variant in apps/web.
+  // `admin` owns the global administration console at `/admin`, including games
+  // and MCP modules. `auro` is reserved as the brand name to block impersonation
+  // workspaces. `www`, `new`, `home`, `homepage`, `dashboard` are confusables or
+  // likely-future global landing/entry routes; `homepage` matches the existing
+  // `/homepage` landing variant in apps/web.
   "api",
   "deal",
   "siege",

@@ -8,9 +8,9 @@ import (
 	"strings"
 	"testing"
 
+	db "github.com/auro-ai/auro/server/pkg/db/generated"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
-	db "github.com/auro-ai/auro/server/pkg/db/generated"
 )
 
 // workspaceDeletePathFixture builds the ownership shapes teardown has to handle:

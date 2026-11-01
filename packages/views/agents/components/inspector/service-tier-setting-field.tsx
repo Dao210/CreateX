@@ -8,7 +8,7 @@ import { runtimeModelsOptions } from "@auro/core/runtimes";
 import {
   PickerItem,
   PropertyPicker,
-} from "../../../issues/components/pickers";
+} from "../../../common/selection-picker";
 import { SettingsRow } from "../../../settings/components/settings-layout";
 import { useT } from "../../../i18n";
 import { findModelCapabilityEntry } from "./model-capability";

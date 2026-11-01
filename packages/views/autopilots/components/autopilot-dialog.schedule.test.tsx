@@ -142,11 +142,9 @@ function renderEditDialog(triggers: AutopilotTrigger[]) {
         initial={{
           title: "Issue title sweep",
           description: "",
-          project_id: null,
           assignee_type: "agent",
           assignee_id: "agent-1",
           execution_mode: "run_only",
-          subscriber_user_ids: [],
         }}
         triggers={triggers}
         collaborators={[]}

@@ -6,10 +6,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/auro-ai/auro/server/internal/featureflags"
 	db "github.com/auro-ai/auro/server/pkg/db/generated"
 	"github.com/auro-ai/auro/server/pkg/plugincontract"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // Event-triggered hooks.
@@ -171,13 +171,6 @@ func (d *PluginEventDispatcher) Dispatch(eventType, workspaceID string, payload 
 		d.mu.Unlock()
 		slog.Warn("plugins: event dispatch queue full, dropping event", "event_type", eventType, "dropped_total", dropped)
 	}
-}
-
-// Dropped reports how many events were shed under backpressure.
-func (d *PluginEventDispatcher) Dropped() int {
-	d.mu.Lock()
-	defer d.mu.Unlock()
-	return d.dropped
 }
 
 func (d *PluginEventDispatcher) work() {

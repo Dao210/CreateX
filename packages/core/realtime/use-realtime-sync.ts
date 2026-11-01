@@ -2,8 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { createQueryRefreshScheduler } from "./query-refresh-scheduler";
-import { forgetLocalSearchIndex } from "../search-index/instance";
-import { useQueryClient, type InfiniteData, type QueryClient, type QueryFilters } from "@tanstack/react-query";
+import { useQueryClient, type InfiniteData, type QueryClient } from "@tanstack/react-query";
 import type { WSClient } from "../api/ws-client";
 import type { StoreApi, UseBoundStore } from "zustand";
 import type { AuthState } from "../auth/store";
@@ -11,14 +10,10 @@ import { createLogger } from "../logger";
 import { clearWorkspaceStorage } from "../platform/storage-cleanup";
 import { defaultStorage } from "../platform/storage";
 import { getCurrentWsId, getCurrentSlug } from "../platform/workspace-storage";
-import { issueKeys } from "../issues/queries";
-import { projectKeys } from "../projects/queries";
 import { pinKeys } from "../pins/queries";
 import { autopilotKeys } from "../autopilots/queries";
 import { runtimeKeys } from "../runtimes/queries";
 import { labelKeys } from "../labels/queries";
-import { propertyKeys } from "../properties/queries";
-import { issueStatusKeys } from "../issue-statuses/queries";
 import {
   agentTaskSnapshotKeys,
   workspaceWorkingAgentsKeys,
@@ -32,23 +27,8 @@ import { slackKeys } from "../slack/queries";
 import { dingtalkKeys } from "../dingtalk/queries";
 import { wecomKeys } from "../wecom/queries";
 import { telegramKeys } from "../telegram/queries";
-import {
-  onIssueCreated,
-  onIssueUpdated,
-  onIssueDuplicateMarkChanged,
-  onIssueDeleted,
-  onIssueLabelsChanged,
-  onIssuePropertiesChanged,
-  onIssueMetadataChanged,
-  onIssueAuxiliaryRevision,
-  invalidateIssueOwnerProjections,
-} from "../issues/ws-updaters";
-import {
-  invalidateLastActivitySortedIssueLists,
-  invalidateUpdatedAtSortedIssueLists,
-} from "../issues/cache-coordinator";
 import { isSystemInboxItem } from "../inbox/system-notifications";
-import { onInboxNew, onInboxInvalidate, onInboxIssueStatusChanged, onInboxIssueDeleted, onInboxSummaryInvalidate } from "../inbox/ws-updaters";
+import { onInboxNew, onInboxInvalidate, onInboxSummaryInvalidate } from "../inbox/ws-updaters";
 import {
   notificationPreferenceOptions,
   notificationPreferenceKeys,
@@ -74,56 +54,7 @@ import {
   removePendingChatTask,
 } from "../chat/pending";
 import { resolvePostAuthDestination, useHasOnboarded } from "../paths";
-import type {
-  IssueTableFacetsRequest,
-  IssueTableQuerySpec,
-  MemberAddedPayload,
-  WorkspaceDeletedPayload,
-  WorkspaceUpdatedPayload,
-  MemberRemovedPayload,
-  IssueUpdatedPayload,
-  IssueCreatedPayload,
-  IssueDeletedPayload,
-  IssueAttachmentsChangedPayload,
-  IssueLabelsChangedPayload,
-  IssueMetadataChangedPayload,
-  IssuePropertiesChangedPayload,
-  InboxNewPayload,
-  InboxItem,
-  NotificationPreferenceResponse,
-  CommentCreatedPayload,
-  CommentUpdatedPayload,
-  CommentDeletedPayload,
-  CommentResolvedPayload,
-  CommentUnresolvedPayload,
-  ActivityCreatedPayload,
-  ReactionAddedPayload,
-  ReactionRemovedPayload,
-  IssueReactionAddedPayload,
-  IssueReactionRemovedPayload,
-  SubscriberAddedPayload,
-  SubscriberRemovedPayload,
-  TaskMessagePayload,
-  TaskQueuedPayload,
-  TaskDispatchPayload,
-  TaskRunningPayload,
-  TaskWaitingLocalDirectoryPayload,
-  TaskCompletedPayload,
-  TaskFailedPayload,
-  TaskCancelledPayload,
-  ChatDonePayload,
-  ChatQuickActionsPayload,
-  ChatQuickActionsPendingState,
-  ChatQuickActionsFailureState,
-  ChatCancelFinalizedPayload,
-  ChatMessage,
-  ChatMessageEventPayload,
-  ChatPendingTask,
-  ChatMessagesPage,
-  ChatSession,
-  ChatSessionCreatedPayload,
-  InvitationCreatedPayload,
-} from "../types";
+import type { MemberAddedPayload, WorkspaceDeletedPayload, WorkspaceUpdatedPayload, MemberRemovedPayload, InboxNewPayload, InboxItem, NotificationPreferenceResponse, TaskMessagePayload, TaskQueuedPayload, TaskDispatchPayload, TaskRunningPayload, TaskWaitingLocalDirectoryPayload, TaskCompletedPayload, TaskFailedPayload, TaskCancelledPayload, ChatDonePayload, ChatQuickActionsPayload, ChatQuickActionsPendingState, ChatQuickActionsFailureState, ChatCancelFinalizedPayload, ChatMessage, ChatMessageEventPayload, ChatPendingTask, ChatMessagesPage, ChatSession, ChatSessionCreatedPayload, InvitationCreatedPayload } from "../types";
 
 const chatWsLogger = createLogger("chat.ws");
 
@@ -513,7 +444,6 @@ export function applyWorkspaceUpdatedToCache(
     const list = qc.getQueryData<Workspace[]>(workspaceKeys.list());
     const cached = list?.find((w) => w.id === next.id) ?? null;
     if (cached && cached.issue_prefix !== next.issue_prefix) {
-      qc.invalidateQueries({ queryKey: issueKeys.all(next.id) });
     }
     if (cached && list) {
       qc.setQueryData<Workspace[]>(
@@ -522,9 +452,6 @@ export function applyWorkspaceUpdatedToCache(
       );
       return;
     }
-    // Do not seed an absent list with one workspace: staleTime is Infinity,
-    // so doing so would hide every other membership until a hard refresh.
-    qc.invalidateQueries({ queryKey: issueKeys.all(next.id) });
   }
   qc.invalidateQueries({ queryKey: workspaceKeys.list() });
 }
@@ -651,17 +578,14 @@ export async function handleInboxNew(
 function invalidateWorkspaceScopedQueries(qc: QueryClient): void {
   const wsId = getCurrentWsId();
   if (wsId) {
-    qc.invalidateQueries({ queryKey: issueKeys.all(wsId) });
     // Through the inbox's own entry point, not a plain invalidate: a reconnect
     // can land during the list's first load, and a plain invalidate would be
     // answered by the request already on the wire (see refreshInboxQuery).
     void onInboxInvalidate(qc, wsId);
     qc.invalidateQueries({ queryKey: workspaceKeys.agents(wsId) });
     qc.invalidateQueries({ queryKey: workspaceKeys.members(wsId) });
-    qc.invalidateQueries({ queryKey: workspaceKeys.squads(wsId) });
     qc.invalidateQueries({ queryKey: workspaceKeys.skills(wsId) });
     qc.invalidateQueries({ queryKey: workspaceKeys.invitations(wsId) });
-    qc.invalidateQueries({ queryKey: projectKeys.all(wsId) });
     qc.invalidateQueries({ queryKey: runtimeKeys.all(wsId) });
     qc.invalidateQueries({ queryKey: autopilotKeys.all(wsId) });
     qc.invalidateQueries({ queryKey: agentTaskSnapshotKeys.all(wsId) });
@@ -670,28 +594,10 @@ function invalidateWorkspaceScopedQueries(qc: QueryClient): void {
     qc.invalidateQueries({ queryKey: agentRunCountsKeys.all(wsId) });
     qc.invalidateQueries({ queryKey: chatKeys.all(wsId) });
     qc.invalidateQueries({ queryKey: labelKeys.all(wsId) });
-    qc.invalidateQueries({ queryKey: propertyKeys.all(wsId) });
-    // A catalog edit missed while disconnected would otherwise sit behind the
-    // 5-minute staleTime — long enough to offer a status the server already
-    // archived, or to keep painting its old name.
-    qc.invalidateQueries({ queryKey: issueStatusKeys.all(wsId) });
   }
   // Cross-workspace, so outside the wsId guard: a reconnect may have missed
   // inbox events from any workspace, so re-pull the switcher-dot summary.
   void onInboxSummaryInvalidate(qc);
-  // Per-issue caches are keyed without wsId, so the issueKeys.all(wsId)
-  // prefix above does not reach them. They rely entirely on WS events for
-  // freshness (staleTime: Infinity), so events missed while disconnected
-  // left them stale until a full reload — the inbox showed an agent's new
-  // comment while the issue timeline didn't (#3953). Inactive caches only
-  // get marked stale here and refetch on next mount; the one mounted issue
-  // refetches immediately, same as its own useWSReconnect already does.
-  qc.invalidateQueries({ queryKey: issueKeys.timelineAll() });
-  qc.invalidateQueries({ queryKey: issueKeys.reactionsAll() });
-  qc.invalidateQueries({ queryKey: issueKeys.subscribersAll() });
-  qc.invalidateQueries({ queryKey: issueKeys.usageAll() });
-  qc.invalidateQueries({ queryKey: issueKeys.attachmentsAll() });
-  qc.invalidateQueries({ queryKey: issueKeys.tasksAll() });
   // Per-chat-session caches are also keyed without wsId, so the
   // chatKeys.all(wsId) prefix above only reaches session lists / aggregates.
   // Message streams rely on WS invalidation with staleTime: Infinity; recover
@@ -706,50 +612,12 @@ function invalidateWorkspaceScopedQueries(qc: QueryClient): void {
   qc.invalidateQueries({ queryKey: chatKeys.draftRestoresAll() });
   qc.invalidateQueries({ queryKey: workspaceKeys.list() });
 }
-
 async function refreshWorkingAgentQueries(qc: QueryClient, wsId: string): Promise<void> {
-  const filters: QueryFilters[] = [
-    { queryKey: workspaceWorkingAgentsKeys.all(wsId) },
-    {
-      queryKey: issueKeys.tableAll(wsId),
-      predicate: ({ queryKey }) => {
-        const kind = queryKey[3];
-        let spec: IssueTableQuerySpec | undefined;
-        if (kind === "facets") {
-          const request = queryKey[4] as IssueTableFacetsRequest;
-          if (request.facets.some((facet) => facet.kind === "working_agents")) return true;
-          spec = request.query;
-        } else if (kind === "rows" || kind === "groups") {
-          spec = queryKey[4] as IssueTableQuerySpec;
-        }
-        // An explicit empty id list is still a working filter: its next
-        // projection may contain newly started work. Other facets also
-        // depend on this membership, not only rows and group descriptors.
-        return spec?.filters.working_only === true ||
-          spec?.filters.working_issue_ids !== undefined;
-      },
-    },
-  ];
-  // A lifecycle event during the FIRST fetch must not dedupe onto a response
-  // captured before that event. With staleTime=Infinity it could otherwise
-  // leave a completed run visible until another event happens to arrive.
-  await Promise.all(filters.map((filter) => qc.cancelQueries(filter)));
-  await Promise.all(filters.map((filter) => qc.invalidateQueries(filter)));
+  const filter = { queryKey: workspaceWorkingAgentsKeys.all(wsId) };
+  await qc.cancelQueries(filter);
+  await qc.invalidateQueries(filter);
 }
 
-function invalidateSquadMemberStatusQueries(qc: QueryClient, wsId: string): void {
-  qc.invalidateQueries({
-    predicate: (query) => {
-      const key = query.queryKey;
-      return (
-        key[0] === "workspaces" &&
-        key[1] === wsId &&
-        key[2] === "squads" &&
-        key[4] === "members-status"
-      );
-    },
-  });
-}
 
 export interface RealtimeSyncStores {
   authStore: UseBoundStore<StoreApi<AuthState>>;
@@ -807,11 +675,6 @@ export function useRealtimeSync(
         const wsId = getCurrentWsId();
         if (wsId) {
           qc.invalidateQueries({ queryKey: workspaceKeys.agents(wsId) });
-          // Squad members status is derived per agent, so any agent
-          // change (status flip, archive, runtime swap) needs to refresh the
-          // per-squad members-status cache without refetching the static squad
-          // list summary.
-          invalidateSquadMemberStatusQueries(qc, wsId);
         }
       },
       member: () => {
@@ -830,26 +693,6 @@ export function useRealtimeSync(
         const wsId = getCurrentWsId();
         if (wsId) qc.invalidateQueries({ queryKey: workspaceKeys.skills(wsId) });
       },
-      project: () => {
-        const wsId = getCurrentWsId();
-        if (wsId) {
-          qc.invalidateQueries({ queryKey: projectKeys.all(wsId) });
-          // The issue table can filter on a project's status, so a
-          // project create/update/delete changes which issues a filtered
-          // window holds. The payload carries no previous status to compare
-          // against, and project writes are rare, so refresh the table
-          // queries unconditionally rather than guess.
-          qc.invalidateQueries({ queryKey: issueKeys.tableAll(wsId) });
-        }
-      },
-      squad: () => {
-        const wsId = getCurrentWsId();
-        if (wsId) {
-          qc.invalidateQueries({ queryKey: workspaceKeys.squads(wsId) });
-          // squad:deleted triggers assignee transfer — refresh issues too.
-          qc.invalidateQueries({ queryKey: issueKeys.all(wsId) });
-        }
-      },
       label: () => {
         // Label catalogs are independently scoped to issues, agents, and
         // skills. The generic event prefix does not carry the scope into this
@@ -859,34 +702,8 @@ export function useRealtimeSync(
         const wsId = getCurrentWsId();
         if (wsId) {
           qc.invalidateQueries({ queryKey: ["labels", wsId] });
-          qc.invalidateQueries({ queryKey: issueKeys.all(wsId) });
           qc.invalidateQueries({ queryKey: workspaceKeys.agents(wsId) });
           qc.invalidateQueries({ queryKey: workspaceKeys.skills(wsId) });
-        }
-      },
-      // The issue status catalog (MUL-6243). An admin edits it in the settings
-      // page; every other tab and device is rendering statuses out of it.
-      //
-      // Invalidate only — the event carries no entry to merge. Issue caches are
-      // deliberately NOT dragged along: a row stores the status KEY, and its
-      // name, color and category are resolved from this catalog at render time
-      // (`useStatusLabel`, `colorOf`), so refetching the catalog is what makes a
-      // rename repaint. Pulling every board and list with it would turn one
-      // admin rename into a workspace-wide refetch storm on every connected
-      // client. (MUL-6458)
-      issue_status: () => {
-        const wsId = getCurrentWsId();
-        if (wsId) {
-          qc.invalidateQueries({ queryKey: issueStatusKeys.all(wsId) });
-          // Status-group order is server-owned and depends on catalog positions.
-          // Rows/facets and unrelated groupings do not change on catalog edits.
-          qc.invalidateQueries({
-            queryKey: [...issueKeys.tableAll(wsId), "groups"],
-            predicate: (query) => {
-              const group = query.queryKey[5];
-              return !!group && typeof group === "object" && "kind" in group && group.kind === "status";
-            },
-          });
         }
       },
       pin: () => {
@@ -902,10 +719,6 @@ export function useRealtimeSync(
           // refetch it when a daemon changes state even if its private runtime
           // is absent from this member's runtime list.
           qc.invalidateQueries({ queryKey: workspaceKeys.agents(wsId) });
-          // Runtime online/offline transitions move the derived status
-          // for every agent that hosts on this runtime, which shifts the
-          // working/idle/offline pill on the squad page.
-          invalidateSquadMemberStatusQueries(qc, wsId);
         }
       },
       autopilot: () => {
@@ -940,11 +753,6 @@ export function useRealtimeSync(
         const wsId = getCurrentWsId();
         if (wsId) qc.invalidateQueries({ queryKey: telegramKeys.installations(wsId) });
       },
-      pull_request: () => {
-        // PR list is keyed by issue id, not workspace, so we invalidate all
-        // PR queries — the open issue detail page will refetch its own list.
-        qc.invalidateQueries({ queryKey: ["github", "pull-requests"] });
-      },
       // Powers the agent presence cache: any task lifecycle change
       // (dispatch / completed / failed / cancelled) refreshes the
       // workspace-wide agent-task-snapshot query so per-agent presence
@@ -968,24 +776,6 @@ export function useRealtimeSync(
         // catches every agent's list — the per-agent detail key sits
         // under agentTasks/<wsId>/<agentId>.
         qc.invalidateQueries({ queryKey: agentTasksKeys.all(wsId) });
-        // Per-issue task list (issue-detail Execution log). Prefix match
-        // across all issues — keeps the contract "any task: event makes
-        // every list-of-tasks query stale" so cache stays fresh even
-        // when the relevant component isn't currently mounted.
-        qc.invalidateQueries({ queryKey: ["issues", "tasks"] });
-        // Per-issue token usage card (issue-detail right rail). Same
-        // shape as the tasks invalidation above — any task lifecycle
-        // event shifts the aggregated usage numbers.
-        qc.invalidateQueries({ queryKey: ["issues", "usage"] });
-        // Squad members-status reads the same task lifecycle to flip
-        // working ↔ idle for each agent member.
-        invalidateSquadMemberStatusQueries(qc, wsId);
-        // Comment trigger previews answer "who would a send wake right
-        // now" — the pending-task dedup guard makes that answer
-        // queue-dependent, so any task lifecycle change must refresh an
-        // open composer's chips (e.g. an agent finishing its run becomes
-        // triggerable again mid-typing).
-        qc.invalidateQueries({ queryKey: issueKeys.commentTriggerPreviewAll() });
         // Issue-trigger previews (assign/status/create/batch) are deliberately
         // NOT invalidated here. Unlike comment triggers, the assign source
         // (create / assignee change) cancels existing tasks before enqueuing, so
@@ -1075,237 +865,10 @@ export function useRealtimeSync(
       if (refresh) debouncedRefresh(prefix, refresh);
     });
 
-    // --- Specific event handlers (granular cache updates) ---
-    // No self-event filtering: actor_id identifies the USER, not the TAB.
-    // Filtering by actor_id would block other tabs of the same user.
-    // Instead, both mutations and WS handlers use dedup checks to be idempotent.
-
-    const unsubIssueUpdated = ws.on("issue:updated", (p) => {
-      const payload = p as IssueUpdatedPayload;
-      const { issue } = payload;
-      if (!issue?.id) return;
-      const wsId = getCurrentWsId();
-      if (wsId) {
-        onIssueUpdated(qc, wsId, issue, {
-          assigneeChanged: payload.assignee_changed,
-          statusChanged: payload.status_changed,
-          projectChanged: payload.project_changed,
-        });
-        onIssueDuplicateMarkChanged(
-          qc,
-          wsId,
-          issue.id,
-          payload.duplicate_of_issue_id,
-          payload.prev_duplicate_of_issue_id,
-        );
-        if (issue.status) {
-          onInboxIssueStatusChanged(qc, wsId, issue.id, issue.status);
-        }
-      }
-    });
-
-    const unsubIssueCreated = ws.on("issue:created", (p) => {
-      const { issue } = p as IssueCreatedPayload;
-      if (!issue) return;
-      const wsId = getCurrentWsId();
-      if (wsId) onIssueCreated(qc, wsId, issue);
-    });
-
-    const unsubIssueDeleted = ws.on("issue:deleted", (p) => {
-      const { issue_id } = p as IssueDeletedPayload;
-      if (!issue_id) return;
-      const wsId = getCurrentWsId();
-      if (wsId) {
-        onIssueDeleted(qc, wsId, issue_id);
-        void onInboxIssueDeleted(qc, wsId, issue_id);
-      }
-    });
-
-    const unsubIssueLabelsChanged = ws.on("issue_labels:changed", (p) => {
-      const { issue_id, labels, issue_revision } = p as IssueLabelsChangedPayload;
-      if (!issue_id) return;
-      const wsId = getCurrentWsId();
-      if (wsId) onIssueLabelsChanged(qc, wsId, issue_id, labels ?? [], issue_revision);
-    });
-
-    const unsubIssueAttachmentsChanged = ws.on("issue_attachments:changed", (p) => {
-      const { issue_id, issue_revision } = p as IssueAttachmentsChangedPayload;
-      if (!issue_id) return;
-      qc.invalidateQueries({ queryKey: issueKeys.attachments(issue_id) });
-      const wsId = getCurrentWsId();
-      if (wsId) onIssueAuxiliaryRevision(qc, wsId, issue_id, issue_revision);
-    });
-
-    const unsubIssueMetadataChanged = ws.on("issue_metadata:changed", (p) => {
-      const { issue_id, metadata, issue_revision } = p as IssueMetadataChangedPayload;
-      if (!issue_id) return;
-      const wsId = getCurrentWsId();
-      if (wsId) onIssueMetadataChanged(qc, wsId, issue_id, metadata ?? {}, issue_revision);
-    });
-
-    const unsubIssuePropertiesChanged = ws.on("issue_properties:changed", (p) => {
-      const { issue_id, properties, issue_revision } = p as IssuePropertiesChangedPayload;
-      if (!issue_id) return;
-      const wsId = getCurrentWsId();
-      if (wsId) {
-        onIssuePropertiesChanged(qc, wsId, issue_id, properties ?? {}, issue_revision);
-        // The catalog embeds per-definition usage counts; every value
-        // set/unset shifts them. The list is tiny, so a refetch beats
-        // trying to patch counts client-side.
-        qc.invalidateQueries({ queryKey: propertyKeys.all(wsId) });
-      }
-    });
-
-    // Definition changes (create / rename / options / archive) — refetch the
-    // catalog; issue caches keep raw value bags so they stay valid.
-    const unsubPropertyChanged = ["property:created", "property:updated"].map((event) =>
-      ws.on(event as "property:created" | "property:updated", () => {
-        const wsId = getCurrentWsId();
-        if (wsId) {
-          qc.invalidateQueries({ queryKey: propertyKeys.all(wsId) });
-          // Group order, supported group types, and unavailable option values
-          // are derived from the property definition, not just issue rows.
-          qc.invalidateQueries({ queryKey: issueKeys.tableAll(wsId) });
-        }
-      }),
-    );
-
     const unsubInboxNew = ws.on("inbox:new", async (p) => {
       const { item } = p as InboxNewPayload;
       if (!item) return;
       await handleInboxNew(qc, item);
-    });
-
-    // --- Timeline event handlers (global fallback) ---
-    // These events are also handled granularly by useIssueTimeline when
-    // IssueDetail is mounted. This global handler exists to mark the
-    // timeline cache stale for issues whose IssueDetail is *not* mounted,
-    // so stale data isn't served on next mount (staleTime: Infinity, set on
-    // the QueryClient default, relies on this).
-    //
-    // `refetchType: "none"` is the load-bearing detail: without it, an
-    // active IssueDetail observer would refetch the entire timeline on
-    // every comment / activity / reaction event. The refetch replaces
-    // every entry's reference and busts React.memo on every CommentCard
-    // subtree (visible during AI streaming as a flash across all sibling
-    // threads, MUL-1941). Inactive observers don't refetch either way;
-    // when IssueDetail mounts later, the stale flag triggers the refetch
-    // through `refetchOnMount`. Active observers stay fresh via the
-    // granular setQueryData handlers in `useIssueTimeline`.
-    const invalidateTimeline = (issueId: string) => {
-      qc.invalidateQueries({
-        queryKey: issueKeys.timeline(issueId),
-        refetchType: "none",
-      });
-    };
-
-    const unsubCommentCreated = ws.on("comment:created", (p) => {
-      const { comment, issue_revision: issueRevision } = p as CommentCreatedPayload;
-      if (!comment?.issue_id) return;
-      invalidateTimeline(comment.issue_id);
-      // A new comment bumps the parent issue's updated_at server-side
-      // (MUL-5009), so any open board/list sorted by "Updated date" has
-      // drifted. Refetch just those keys to re-sort the commented card into
-      // place; every other sort is untouched. Only comment:created bumps
-      // updated_at, so the other comment events below deliberately do not.
-      const wsId = getCurrentWsId();
-      if (wsId) {
-        invalidateUpdatedAtSortedIssueLists(qc, wsId);
-        invalidateLastActivitySortedIssueLists(qc, wsId);
-        // A comment carries only the aggregate owner revision, not a full
-        // Issue snapshot. Mark stale projections for an authoritative fetch
-        // without making a later full snapshot look older than the cache.
-        if (issueRevision) {
-          onIssueAuxiliaryRevision(qc, wsId, comment.issue_id, issueRevision);
-        } else {
-          invalidateIssueOwnerProjections(qc, wsId, comment.issue_id);
-        }
-      }
-    });
-
-    const unsubCommentUpdated = ws.on("comment:updated", (p) => {
-      const { comment, issue_revision } = p as CommentUpdatedPayload;
-      if (!comment?.issue_id) return;
-      invalidateTimeline(comment.issue_id);
-      const wsId = getCurrentWsId();
-      if (wsId) {
-        invalidateLastActivitySortedIssueLists(qc, wsId);
-        if (issue_revision) {
-          onIssueAuxiliaryRevision(qc, wsId, comment.issue_id, issue_revision);
-        } else {
-          invalidateIssueOwnerProjections(qc, wsId, comment.issue_id);
-        }
-      }
-    });
-
-    const unsubCommentDeleted = ws.on("comment:deleted", (p) => {
-      const { issue_id, issue_revision } = p as CommentDeletedPayload;
-      if (!issue_id) return;
-      invalidateTimeline(issue_id);
-      const wsId = getCurrentWsId();
-      if (wsId) {
-        invalidateLastActivitySortedIssueLists(qc, wsId);
-        if (issue_revision) {
-          onIssueAuxiliaryRevision(qc, wsId, issue_id, issue_revision);
-        } else {
-          invalidateIssueOwnerProjections(qc, wsId, issue_id);
-        }
-      }
-    });
-
-    const unsubCommentResolved = ws.on("comment:resolved", (p) => {
-      const { comment } = p as CommentResolvedPayload;
-      if (comment?.issue_id) invalidateTimeline(comment.issue_id);
-    });
-
-    const unsubCommentUnresolved = ws.on("comment:unresolved", (p) => {
-      const { comment } = p as CommentUnresolvedPayload;
-      if (comment?.issue_id) invalidateTimeline(comment.issue_id);
-    });
-
-    const unsubActivityCreated = ws.on("activity:created", (p) => {
-      const { issue_id } = p as ActivityCreatedPayload;
-      if (issue_id) invalidateTimeline(issue_id);
-    });
-
-    const unsubReactionAdded = ws.on("reaction:added", (p) => {
-      const { issue_id } = p as ReactionAddedPayload;
-      if (issue_id) invalidateTimeline(issue_id);
-    });
-
-    const unsubReactionRemoved = ws.on("reaction:removed", (p) => {
-      const { issue_id } = p as ReactionRemovedPayload;
-      if (issue_id) invalidateTimeline(issue_id);
-    });
-
-    // --- Issue-level reactions & subscribers (global fallback) ---
-
-    const unsubIssueReactionAdded = ws.on("issue_reaction:added", (p) => {
-      const { issue_id, issue_revision } = p as IssueReactionAddedPayload;
-      if (issue_id) {
-        qc.invalidateQueries({ queryKey: issueKeys.reactions(issue_id) });
-        const wsId = getCurrentWsId();
-        if (wsId) onIssueAuxiliaryRevision(qc, wsId, issue_id, issue_revision);
-      }
-    });
-
-    const unsubIssueReactionRemoved = ws.on("issue_reaction:removed", (p) => {
-      const { issue_id, issue_revision } = p as IssueReactionRemovedPayload;
-      if (issue_id) {
-        qc.invalidateQueries({ queryKey: issueKeys.reactions(issue_id) });
-        const wsId = getCurrentWsId();
-        if (wsId) onIssueAuxiliaryRevision(qc, wsId, issue_id, issue_revision);
-      }
-    });
-
-    const unsubSubscriberAdded = ws.on("subscriber:added", (p) => {
-      const { issue_id } = p as SubscriberAddedPayload;
-      if (issue_id) qc.invalidateQueries({ queryKey: issueKeys.subscribers(issue_id) });
-    });
-
-    const unsubSubscriberRemoved = ws.on("subscriber:removed", (p) => {
-      const { issue_id } = p as SubscriberRemovedPayload;
-      if (issue_id) qc.invalidateQueries({ queryKey: issueKeys.subscribers(issue_id) });
     });
 
     // --- Side-effect handlers (toast, navigation) ---
@@ -1345,7 +908,6 @@ export function useRealtimeSync(
       if (isWorkspaceDeletePending(workspace_id)) return;
       // Any deleted workspace, not only the current one: its local search
       // copy must not outlive it.
-      void forgetLocalSearchIndex(workspace_id);
       // Event payload has UUID; look up slug from cached workspace list
       // since clearWorkspaceStorage keys are namespaced by slug.
       const wsList = qc.getQueryData<{ id: string; slug: string }[]>(workspaceKeys.list()) ?? [];
@@ -1359,11 +921,9 @@ export function useRealtimeSync(
     });
 
     const unsubMemberRemoved = ws.on("member:removed", (p) => {
-      const { user_id, workspace_id } = p as MemberRemovedPayload;
+      const { user_id } = p as MemberRemovedPayload;
       const myUserId = authStore.getState().user?.id;
       if (user_id === myUserId) {
-        const lostWsId = workspace_id || getCurrentWsId();
-        if (lostWsId) void forgetLocalSearchIndex(lostWsId);
         const slug = getCurrentSlug();
         const wsId = getCurrentWsId();
         if (slug && wsId) {
@@ -1817,27 +1377,7 @@ export function useRealtimeSync(
 
     return () => {
       unsubAny();
-      unsubIssueUpdated();
-      unsubIssueCreated();
-      unsubIssueDeleted();
-      unsubIssueAttachmentsChanged();
-      unsubIssueLabelsChanged();
-      unsubIssueMetadataChanged();
-      unsubIssuePropertiesChanged();
-      unsubPropertyChanged.forEach((unsub) => unsub());
       unsubInboxNew();
-      unsubCommentCreated();
-      unsubCommentUpdated();
-      unsubCommentDeleted();
-      unsubCommentResolved();
-      unsubCommentUnresolved();
-      unsubActivityCreated();
-      unsubReactionAdded();
-      unsubReactionRemoved();
-      unsubIssueReactionAdded();
-      unsubIssueReactionRemoved();
-      unsubSubscriberAdded();
-      unsubSubscriberRemoved();
       unsubWsUpdated();
       unsubWsDeleted();
       unsubMemberRemoved();

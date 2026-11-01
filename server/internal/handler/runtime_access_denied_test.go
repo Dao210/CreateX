@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/google/uuid"
 	"github.com/auro-ai/auro/server/internal/testutil"
+	"github.com/google/uuid"
 )
 
 func createRuntimeAccessDeniedAgent(t *testing.T, ctx context.Context, runtimeID, name string) string {

@@ -10,15 +10,11 @@ import (
 	"log/slog"
 	"net/http"
 	"regexp"
-	"slices"
 	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
 
-	"github.com/go-chi/chi/v5"
-	"github.com/jackc/pgx/v5/pgconn"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/auro-ai/auro/server/internal/analytics"
 	"github.com/auro-ai/auro/server/internal/attribution"
 	"github.com/auro-ai/auro/server/internal/logger"
@@ -30,6 +26,9 @@ import (
 	db "github.com/auro-ai/auro/server/pkg/db/generated"
 	"github.com/auro-ai/auro/server/pkg/protocol"
 	"github.com/auro-ai/auro/server/pkg/remotemcp"
+	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // Mirrors AGENT_DESCRIPTION_MAX_LENGTH in packages/core/agents/constants.ts
@@ -776,19 +775,6 @@ type TaskAgentData struct {
 	RuntimeConfig json.RawMessage `json:"runtime_config,omitempty"`
 }
 
-// visibleTaskHistory omits unused assignee fallbacks created by older versions.
-// Dispatch only begins preparation, so a fallback cancelled before StartTask
-// is still unused. Keep started fallbacks and ordinary cancellations visible,
-// and retain the underlying scheduling records for audit.
-// Keep this predicate in sync with ListAgentTasks in pkg/db/queries/agent.sql.
-func visibleTaskHistory(tasks []db.AgentTaskQueue) []db.AgentTaskQueue {
-	return slices.DeleteFunc(tasks, func(task db.AgentTaskQueue) bool {
-		return task.EscalationForTaskID.Valid &&
-			!task.StartedAt.Valid &&
-			(task.Status == "deferred" || task.Status == "cancelled")
-	})
-}
-
 // taskToResponse maps a queue row to its wire shape. workspaceID is threaded
 // in because the row itself doesn't carry one (workspace lives on the agent
 // / issue / chat session) — we ask the caller to resolve it once and pass it
@@ -834,33 +820,33 @@ func taskToResponse(t db.AgentTaskQueue, workspaceID string) AgentTaskResponse {
 		CancelledByCommentChange: t.Status == "cancelled" && cancellation.TaskID != "" && cancellation.TaskID == uuidToString(t.ID),
 		CancelledBy:              taskCancellationActorToResponse(t),
 
-		ID:                     uuidToString(t.ID),
-		AgentID:                uuidToString(t.AgentID),
-		RuntimeID:              uuidToString(t.RuntimeID),
-		IssueID:                uuidToString(t.IssueID),
-		WorkspaceID:            workspaceID,
-		Status:                 t.Status,
-		Priority:               t.Priority,
-		DispatchedAt:           timestampToPtr(t.DispatchedAt),
-		StartedAt:              timestampToPtr(t.StartedAt),
-		CompletedAt:            timestampToPtr(t.CompletedAt),
-		Result:                 result,
-		Error:                  textToPtr(t.Error),
-		FailureReason:          failureReason,
-		BranchName:             branchName,
-		Attempt:                t.Attempt,
-		MaxAttempts:            t.MaxAttempts,
-		ParentTaskID:           uuidToPtr(t.ParentTaskID),
-		IsLeaderTask:           t.IsLeaderTask,
-		CreatedAt:              timestampToString(t.CreatedAt),
-		TriggerCommentID:       uuidToPtr(t.TriggerCommentID),
-		CoalescedCommentIDs:    uuidsToStrings(t.CoalescedCommentIds),
-		DeliveredCommentIDs:    uuidStringsOrEmpty(t.DeliveredCommentIds),
-		TriggerSummary:         textToPtr(t.TriggerSummary),
-		HandoffNote:            handoffNote,
-		WakeupID:               wakeupContext.ID,
-		WakeupSystemRule:       wakeupContext.SystemRule,
-		WakeupJoined:           service.JoinedWakeupNotes(t.Context),
+		ID:                  uuidToString(t.ID),
+		AgentID:             uuidToString(t.AgentID),
+		RuntimeID:           uuidToString(t.RuntimeID),
+		IssueID:             uuidToString(t.IssueID),
+		WorkspaceID:         workspaceID,
+		Status:              t.Status,
+		Priority:            t.Priority,
+		DispatchedAt:        timestampToPtr(t.DispatchedAt),
+		StartedAt:           timestampToPtr(t.StartedAt),
+		CompletedAt:         timestampToPtr(t.CompletedAt),
+		Result:              result,
+		Error:               textToPtr(t.Error),
+		FailureReason:       failureReason,
+		BranchName:          branchName,
+		Attempt:             t.Attempt,
+		MaxAttempts:         t.MaxAttempts,
+		ParentTaskID:        uuidToPtr(t.ParentTaskID),
+		IsLeaderTask:        t.IsLeaderTask,
+		CreatedAt:           timestampToString(t.CreatedAt),
+		TriggerCommentID:    uuidToPtr(t.TriggerCommentID),
+		CoalescedCommentIDs: uuidsToStrings(t.CoalescedCommentIds),
+		DeliveredCommentIDs: uuidStringsOrEmpty(t.DeliveredCommentIds),
+		TriggerSummary:      textToPtr(t.TriggerSummary),
+		HandoffNote:         handoffNote,
+		WakeupID:            wakeupContext.ID,
+		WakeupSystemRule:    wakeupContext.SystemRule,
+
 		WorkDir:                workDir,
 		RelativeWorkDir:        relativeWorkDir(workDir, workspaceID, uuidToString(t.ID)),
 		DurableWorkDir:         durableWorkDir,

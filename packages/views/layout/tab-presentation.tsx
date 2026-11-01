@@ -29,8 +29,6 @@ import {
 import { EMPTY_INBOX_FILTERS } from "@auro/core/inbox/filter-store";
 import { isSystemInboxItem } from "@auro/core/inbox/system-notifications";
 import { cn } from "@auro/ui/lib/utils";
-import { StatusIcon } from "../issues/components/status-icon";
-import { ProjectIcon } from "../projects/components/project-icon";
 import { ActorAvatar } from "../common/actor-avatar";
 import { getInboxDisplayTitle } from "../inbox/components/inbox-display";
 import { useT } from "../i18n";
@@ -255,21 +253,6 @@ export function ResourceLeadingVisual({
       inner = <Icon className="size-3.5" />;
       break;
     }
-    case "issue-status":
-      // A null status (loading) renders StatusIcon's neutral fallback glyph.
-      inner = (
-        <StatusIcon
-          status={visual.status ?? ""}
-          category={visual.category}
-          color={visual.color}
-          icon={visual.icon}
-          className="size-3.5"
-        />
-      );
-      break;
-    case "project-icon":
-      inner = <ProjectIcon project={{ icon: visual.icon }} size="sm" />;
-      break;
     case "actor":
       inner = (
         <ActorAvatar

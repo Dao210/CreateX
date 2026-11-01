@@ -12,9 +12,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-chi/chi/v5"
-	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 	"github.com/auro-ai/auro/server/internal/auth"
 	"github.com/auro-ai/auro/server/internal/daemonws"
 	"github.com/auro-ai/auro/server/internal/issuestatus"
@@ -24,6 +21,9 @@ import (
 	db "github.com/auro-ai/auro/server/pkg/db/generated"
 	"github.com/auro-ai/auro/server/pkg/protocol"
 	"github.com/auro-ai/auro/server/pkg/remotemcp"
+	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 )
 
 // slowProbeLocalSkillListStore wraps a LocalSkillListStore but blocks inside

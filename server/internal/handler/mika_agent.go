@@ -6,16 +6,17 @@ import (
 	"strings"
 
 	"encoding/json"
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgtype"
+	"log/slog"
+	"net/http"
+
 	"github.com/auro-ai/auro/server/internal/logger"
 	obsmetrics "github.com/auro-ai/auro/server/internal/metrics"
 	"github.com/auro-ai/auro/server/internal/service"
 	db "github.com/auro-ai/auro/server/pkg/db/generated"
 	"github.com/auro-ai/auro/server/pkg/dbid"
 	"github.com/auro-ai/auro/server/pkg/protocol"
-	"log/slog"
-	"net/http"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // Mika's product-defined identity. These are server constants on purpose: the

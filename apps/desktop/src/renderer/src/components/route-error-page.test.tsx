@@ -186,8 +186,8 @@ describe("DesktopRouteErrorPage", () => {
       // "recovery" button pointing at /Users/issues — a second 404.
       renderUnmatchedRoute("/Users/whoever/Desktop/shot.png");
 
-      fireEvent.click(await screen.findByRole("button", { name: /go to issues/i }));
-      expect(navigateActiveSession).toHaveBeenCalledWith("/acme/issues", {
+      fireEvent.click(await screen.findByRole("button", { name: /go to my creations/i }));
+      expect(navigateActiveSession).toHaveBeenCalledWith("/acme/me", {
         replace: true,
       });
       expect(navigateActiveSession).not.toHaveBeenCalledWith(
@@ -203,7 +203,7 @@ describe("DesktopRouteErrorPage", () => {
 
       await screen.findByRole("alert");
       expect(
-        screen.queryByRole("button", { name: /go to issues/i }),
+        screen.queryByRole("button", { name: /go to my creations/i }),
       ).not.toBeInTheDocument();
       expect(
         screen.getByRole("button", { name: /close tab/i }),

@@ -10,36 +10,7 @@
  * (root CLAUDE.md "API Response Compatibility") for these endpoints.
  */
 import { z } from "zod";
-import type {
-  Agent,
-  AgentInvocationTarget,
-  AgentTask,
-  Attachment,
-  ChatMessage,
-  ChatPendingTask,
-  ChatSession,
-  Comment,
-  InboxItem,
-  InboxWorkspaceUnread,
-  IssueLabelsResponse,
-  Label,
-  ListLabelsResponse,
-  ListProjectResourcesResponse,
-  ListProjectsResponse,
-  MemberWithUser,
-  PinnedItem,
-  Project,
-  ProjectResource,
-  RuntimeDevice,
-  SearchIssuesResponse,
-  SearchProjectsResponse,
-  SendChatMessageResponse,
-  Squad,
-  TaskMessagePayload,
-  User,
-  Workspace,
-} from "@auro/core/types";
-import { IssueSchema } from "@auro/core/api/schemas";
+import type { Agent, AgentInvocationTarget, AgentTask, Attachment, ChatMessage, ChatPendingTask, ChatSession, InboxItem, InboxWorkspaceUnread, Label, ListLabelsResponse, MemberWithUser, PinnedItem, Project, ProjectResource, RuntimeDevice, SendChatMessageResponse, TaskMessagePayload, User, Workspace } from "@auro/core/types";
 
 /** Upload response. Only fields mobile actually consumes — `url` to put
  *  into the markdown link, `filename` for the `[📎 name](url)` form, `id`
@@ -65,53 +36,6 @@ export const AttachmentSchema: z.ZodType<Attachment> = z.object({
   size_bytes: z.number().default(0),
   created_at: z.string().default(""),
 }).loose();
-
-/** GET /api/issues/:id/attachments — array of attachments for the issue.
- *  Empty array fallback so a 5xx or shape mismatch doesn't crash markdown
- *  rendering — image URIs simply fail to resolve and fall back to fetch. */
-export const AttachmentListSchema = z.array(AttachmentSchema).default([]);
-export const EMPTY_ATTACHMENT_LIST: Attachment[] = [];
-
-/** Comment write endpoints all return a full Comment. Used by createComment /
- *  updateComment / resolveComment / unresolveComment via fetchValidatedWith.
- *  Empty fallback yields `id: ""` so downstream code (the mutations'
- *  onSuccess writers) can detect drift and fall back to invalidate. */
-export const CommentSchema = z.object({
-  id: z.string(),
-  issue_id: z.string().default(""),
-  author_type: z.string().default("member"),
-  author_id: z.string().default(""),
-  content: z.string().default(""),
-  type: z.string().default("comment"),
-  parent_id: z.string().nullable().default(null),
-  reactions: z.array(z.unknown()).default([]),
-  attachments: z.array(z.unknown()).default([]),
-  created_at: z.string().default(""),
-  updated_at: z.string().default(""),
-  resolved_at: z.string().nullable().default(null),
-  resolved_by_type: z.string().nullable().default(null),
-  resolved_by_id: z.string().nullable().default(null),
-  source_task_id: z.string().nullable().optional(),
-  // Tombstone marker (#8296); a malformed value reads as a live comment.
-  deleted_at: z.string().nullable().optional().catch(undefined),
-}).loose() as unknown as z.ZodType<Comment>;
-
-export const EMPTY_COMMENT: Comment = {
-  id: "",
-  issue_id: "",
-  author_type: "member",
-  author_id: "",
-  content: "",
-  type: "comment",
-  parent_id: null,
-  reactions: [],
-  attachments: [],
-  created_at: "",
-  updated_at: "",
-  resolved_at: null,
-  resolved_by_type: null,
-  resolved_by_id: null,
-};
 
 /** GET/PUT /api/notification-preferences. Preferences are partial — absent
  *  keys mean "default (= all)", an explicit "muted" turns the group off.
@@ -145,96 +69,6 @@ export const ListLabelsResponseSchema = z.object({
 
 export const EMPTY_LIST_LABELS_RESPONSE: ListLabelsResponse = {
   labels: [],
-  total: 0,
-};
-
-export const IssueLabelsResponseSchema = z.object({
-  labels: z.array(LabelSchema).default([]),
-}).loose();
-
-export const EMPTY_ISSUE_LABELS_RESPONSE: IssueLabelsResponse = {
-  labels: [],
-};
-
-export const ProjectSchema = z.object({
-  id: z.string(),
-  workspace_id: z.string(),
-  title: z.string(),
-  description: z.string().nullable(),
-  icon: z.string().nullable(),
-  status: z.string(),
-  priority: z.string(),
-  lead_type: z.string().nullable(),
-  lead_id: z.string().nullable(),
-  // .default(null) so a project from an older backend that omits these keys
-  // parses to null instead of degrading the batch to the empty fallback.
-  start_date: z.string().nullable().default(null),
-  due_date: z.string().nullable().default(null),
-  created_at: z.string(),
-  updated_at: z.string(),
-  issue_count: z.number().default(0),
-  done_count: z.number().default(0),
-  resource_count: z.number().default(0),
-}).loose();
-
-export const ListProjectsResponseSchema = z.object({
-  projects: z.array(ProjectSchema).default([]),
-  total: z.number().default(0),
-}).loose();
-
-export const EMPTY_LIST_PROJECTS_RESPONSE: ListProjectsResponse = {
-  projects: [],
-  total: 0,
-};
-
-// Fallback for `GET /api/projects/{id}` when the response shape drifts.
-// `id` defaults to empty — caller can detect "not found / drift" by checking
-// `data.id === ""` and rendering an error state instead of pretending the
-// data is valid. Status / priority cast to the enum literals so TS callers
-// downstream still flow correctly; runtime values came from the schema
-// (`z.string()`), which would have already passed.
-export const EMPTY_PROJECT: Project = {
-  id: "",
-  workspace_id: "",
-  title: "",
-  description: null,
-  icon: null,
-  status: "planned",
-  priority: "none",
-  lead_type: null,
-  lead_id: null,
-  start_date: null,
-  due_date: null,
-  created_at: "",
-  updated_at: "",
-  issue_count: 0,
-  done_count: 0,
-  resource_count: 0,
-};
-
-// Project resources are typed pointers to external resources (today: GitHub
-// repos). resource_ref shape varies per resource_type; lenient on both
-// `resource_type` (so a future type doesn't crash the list) and
-// `resource_ref` (passes through unchanged for the renderer to dispatch on).
-const ProjectResourceSchema = z.object({
-  id: z.string(),
-  project_id: z.string(),
-  workspace_id: z.string(),
-  resource_type: z.string(),
-  resource_ref: z.unknown(),
-  label: z.string().nullable(),
-  position: z.number().default(0),
-  created_at: z.string(),
-  created_by: z.string().nullable(),
-}).loose();
-
-export const ListProjectResourcesResponseSchema = z.object({
-  resources: z.array(ProjectResourceSchema).default([]),
-  total: z.number().default(0),
-}).loose();
-
-export const EMPTY_LIST_PROJECT_RESOURCES_RESPONSE: ListProjectResourcesResponse = {
-  resources: [],
   total: 0,
 };
 
@@ -364,44 +198,6 @@ export const TaskMessageListSchema = z.array(TaskMessagePayloadSchema).default([
 export const EMPTY_TASK_MESSAGE_LIST: TaskMessagePayload[] = [];
 
 // =====================================================
-// Search (issues + projects)
-// =====================================================
-// Mirrors SearchIssueResult / SearchProjectResult in packages/core/types/api.ts.
-// Web does not currently route search responses through parseWithFallback, so
-// the schemas live mobile-side. Promote to core when web adopts the same
-// defense.
-//
-// match_source is the server's hint of which field matched. Enum-drift defense
-// (root CLAUDE.md "Enum drift downgrades, not crashes"): unknown values fall
-// back to "title" so the row still renders without a snippet line.
-
-const SearchIssueResultSchema = IssueSchema.safeExtend({
-  match_source: z.enum(["title", "description", "comment"]).catch("title"),
-  matched_snippet: z.string().optional(),
-});
-
-export const SearchIssuesResponseSchema = z.object({
-  issues: z.array(SearchIssueResultSchema).default([]),
-}).loose();
-
-export const EMPTY_SEARCH_ISSUES_RESPONSE: SearchIssuesResponse = {
-  issues: [],
-};
-
-const SearchProjectResultSchema = ProjectSchema.safeExtend({
-  match_source: z.enum(["title", "description"]).catch("title"),
-  matched_snippet: z.string().optional(),
-});
-
-export const SearchProjectsResponseSchema = z.object({
-  projects: z.array(SearchProjectResultSchema).default([]),
-}).loose();
-
-export const EMPTY_SEARCH_PROJECTS_RESPONSE: SearchProjectsResponse = {
-  projects: [],
-};
-
-// =====================================================
 // Agent tasks (per-issue runs, active + history)
 // =====================================================
 // Mirrors AgentTask in packages/core/types/agent.ts. Backend handlers:
@@ -462,16 +258,7 @@ export const AgentTaskSchema: z.ZodType<AgentTask> = z.object({
 
 export const AgentTaskListSchema = z.array(AgentTaskSchema).default([]);
 
-export const ActiveTasksResponseSchema = z.object({
-  tasks: z.array(AgentTaskSchema).default([]),
-}).loose();
-
-export interface ActiveTasksResponse {
-  tasks: AgentTask[];
-}
-
 export const EMPTY_AGENT_TASK_LIST: AgentTask[] = [];
-export const EMPTY_ACTIVE_TASKS_RESPONSE: ActiveTasksResponse = { tasks: [] };
 
 // =====================================================
 // User / Workspace / Inbox / Member / Agent
@@ -729,57 +516,6 @@ export const RuntimeSchema: z.ZodType<RuntimeDevice> = z.object({
 
 export const RuntimeListSchema = z.array(RuntimeSchema).default([]);
 export const EMPTY_RUNTIME_LIST: RuntimeDevice[] = [];
-
-// Squad schema — fields mobile actually consumes for the @mention suggestion
-// bar (id, name, archived_at filter) plus identity/timestamp fields that are
-// safe to default. `.loose()` so the server can add squad fields without
-// breaking the parser.
-export const SquadSchema: z.ZodType<Squad> = z.object({
-  id: z.string(),
-  workspace_id: z.string().default(""),
-  name: z.string().default(""),
-  description: z.string().default(""),
-  instructions: z.string().default(""),
-  avatar_url: z.string().nullable().default(null),
-  leader_id: z.string().default(""),
-  creator_id: z.string().default(""),
-  created_at: z.string().default(""),
-  updated_at: z.string().default(""),
-  archived_at: z.string().nullable().default(null),
-  archived_by: z.string().nullable().default(null),
-}).loose();
-
-export const SquadListSchema = z.array(SquadSchema).default([]);
-export const EMPTY_SQUAD_LIST: Squad[] = [];
-
-// Single-issue fallback used by getIssue. Mobile reuses IssueSchema from core
-// for parsing; this sentinel lets parseWithFallback yield a structurally-
-// valid Issue when the response drifts. `id: ""` flags drift downstream — the
-// detail screen treats it as "issue not found" and shows the empty state.
-export const EMPTY_ISSUE_FALLBACK: import("@auro/core/types").Issue = {
-  id: "",
-  workspace_id: "",
-  number: 0,
-  identifier: "",
-  title: "",
-  description: null,
-  status: "backlog",
-  priority: "none",
-  assignee_type: null,
-  assignee_id: null,
-  creator_type: "member",
-  creator_id: "",
-  parent_issue_id: null,
-  project_id: null,
-  position: 0,
-  stage: null,
-  start_date: null,
-  due_date: null,
-  metadata: {},
-  properties: {},
-  created_at: "",
-  updated_at: "",
-};
 
 // Helpers re-exported for ergonomic single-import at the call site.
 export type { Label, Project, ProjectResource };

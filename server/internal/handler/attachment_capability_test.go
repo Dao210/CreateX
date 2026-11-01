@@ -13,8 +13,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/auro-ai/auro/server/internal/auth"
+	"github.com/go-chi/chi/v5"
 )
 
 const capabilityTestAttachmentID = "11111111-2222-3333-4444-555555555555"

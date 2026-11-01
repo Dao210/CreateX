@@ -1,8 +1,6 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect, useLayoutEffect, useMemo, forwardRef } from "react";
-import { useWorkspaceId } from "@auro/core/hooks";
-import { useTraceIssueLabels } from "./use-trace-issue-labels";
 import { Virtuoso, type VirtuosoHandle, type Components } from "react-virtuoso";
 import {
   Bot,
@@ -42,8 +40,8 @@ import {
   DropdownMenuItem,
 } from "@auro/ui/components/ui/dropdown-menu";
 import { ActorAvatar } from "../actor-avatar";
-import { AttributionBadge } from "../../issues/components/attribution-badge";
-import { plainTriggerSummary } from "../../issues/components/task-run-labels";
+import { AttributionBadge } from "../execution/attribution-badge";
+import { plainTriggerSummary } from "../execution/run-labels";
 import { cancellationActorLabel, cancelReasonLabel, failureReasonLabel } from "../../agents/components/tabs/task-failure";
 import { RichContent } from "../../rich-content";
 import { api } from "@auro/core/api";
@@ -53,7 +51,7 @@ import {
   type TranscriptSortDirection,
 } from "@auro/core/agents/stores";
 import type { AgentTask, Agent, AgentRuntime } from "@auro/core/types/agent";
-import { resolveWorkdirCopyTarget } from "@auro/core/issues";
+import { resolveWorkdirCopyTarget } from "@auro/core/agents/workdir";
 import { runtimeDisplayName, providerDisplayName } from "@auro/core/runtimes";
 import { useCustomPricingStore } from "@auro/core/runtimes/custom-pricing-store";
 import { redactSecrets } from "./redact";
@@ -324,7 +322,7 @@ export function AgentTranscriptDialog({
 }: AgentTranscriptDialogProps) {
   const { t } = useT("agents");
   const locale = useLocale();
-  const formatText = useTraceIssueLabels(useWorkspaceId(), task.issue_id, items, open);
+  const formatText = (text: string) => text;
   const [selectedSeq, setSelectedSeq] = useState<number | null>(null);
   const [expandedGroups, setExpandedGroups] = useState<Set<number>>(() => new Set());
   const [query, setQuery] = useState("");

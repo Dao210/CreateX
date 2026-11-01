@@ -50,10 +50,6 @@ export default function Page() {
             router.push(
               paths.workspace(ws.slug).chatSession(destination.sessionId),
             );
-          } else if (ws && destination?.kind === "issue") {
-            router.push(
-              paths.workspace(ws.slug).issueDetail(destination.issueId),
-            );
           } else if (ws) {
             router.push(paths.workspace(ws.slug).root());
           } else {

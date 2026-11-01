@@ -16,19 +16,18 @@ import (
 	"os"
 	"regexp"
 	"slices"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/go-chi/chi/v5"
-	"github.com/golang-jwt/jwt/v5"
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/auro-ai/auro/server/internal/issuestatus"
 	"github.com/auro-ai/auro/server/internal/middleware"
 	db "github.com/auro-ai/auro/server/pkg/db/generated"
 	"github.com/auro-ai/auro/server/pkg/protocol"
+	"github.com/go-chi/chi/v5"
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // githubAPIBase is the base URL for GitHub's REST API. Mutable so tests can
@@ -223,65 +222,6 @@ func githubPullRequestToResponse(p db.GithubPullRequest, snapshotEnabled bool) G
 	}
 }
 
-// prSnapshotStaleThreshold is how old an open PR's last successful fetch may be
-// before the card greys it out as stale. Healthy pipelines refresh open PRs at
-// least every sweep interval (~10m), so crossing 30m means refreshes are not
-// landing (GitHub outage, revoked key) and the shown data is last-known.
-const prSnapshotStaleThreshold = 30 * time.Minute
-
-func issuePullRequestRowToResponse(p db.ListPullRequestsByIssueRow, snapshotEnabled bool) GitHubPullRequestResponse {
-	snapshotAvailable := currentGitHubSnapshotAvailable(
-		snapshotEnabled, p.HeadSha, p.SnapshotHeadSha, p.SnapshotFetchedAt,
-	)
-	stale := false
-	if snapshotAvailable && (p.State == "open" || p.State == "draft") {
-		stale = time.Since(p.SnapshotFetchedAt.Time) > prSnapshotStaleThreshold
-	}
-	failedNames := p.FailedCheckNames
-	if failedNames == nil {
-		failedNames = []string{}
-	}
-	resp := GitHubPullRequestResponse{
-		ID:                uuidToString(p.ID),
-		Provider:          "github",
-		WorkspaceID:       uuidToString(p.WorkspaceID),
-		RepoOwner:         p.RepoOwner,
-		RepoName:          p.RepoName,
-		Number:            p.PrNumber,
-		Title:             p.Title,
-		State:             p.State,
-		HtmlURL:           p.HtmlUrl,
-		Branch:            textToPtr(p.Branch),
-		AuthorLogin:       textToPtr(p.AuthorLogin),
-		AuthorAvatarURL:   textToPtr(p.AuthorAvatarUrl),
-		MergedAt:          timestampToPtr(p.MergedAt),
-		ClosedAt:          timestampToPtr(p.ClosedAt),
-		PRCreatedAt:       timestampToString(p.PrCreatedAt),
-		PRUpdatedAt:       timestampToString(p.PrUpdatedAt),
-		MergeableState:    textToPtr(p.MergeableState),
-		SnapshotAvailable: &snapshotAvailable,
-		FailedCheckNames:  []string{},
-		SnapshotStale:     stale,
-		Additions:         p.Additions,
-		Deletions:         p.Deletions,
-		ChangedFiles:      p.ChangedFiles,
-	}
-	if snapshotAvailable {
-		resp.Mergeable = lowerTextPtr(p.ApiMergeable)
-		resp.MergeStateStatus = lowerTextPtr(p.ApiMergeStateStatus)
-		resp.ChecksRollup = lowerTextPtr(p.ChecksRollupState)
-		resp.ChecksConclusion = rollupToConclusion(p.ChecksRollupState, p.ChecksFailed, p.ChecksRunning, p.ChecksPassed)
-		resp.ChecksTotal = p.ChecksTotal
-		resp.ChecksPassed = p.ChecksPassed
-		resp.ChecksFailed = p.ChecksFailed
-		resp.ChecksRunning = p.ChecksRunning
-		resp.ChecksPending = p.ChecksRunning
-		resp.FailedCheckNames = failedNames
-		resp.SnapshotFetchedAt = timestampToPtr(p.SnapshotFetchedAt)
-	}
-	return resp
-}
-
 func currentGitHubSnapshotAvailable(
 	enabled bool,
 	headSHA string,
@@ -289,73 +229,6 @@ func currentGitHubSnapshotAvailable(
 	fetchedAt pgtype.Timestamptz,
 ) bool {
 	return enabled && fetchedAt.Valid && snapshotHeadSHA != "" && snapshotHeadSHA == headSHA
-}
-
-// aggregateChecksConclusion collapses per-PR commit-status counts into a
-// single coarse status. Still used by the self-hosted VCS provider path
-// (Forgejo / Gitea / GitLab), which mirrors commit statuses via webhook rather
-// than fetching a GitHub-style API snapshot:
-//   - any failed status wins ("failed");
-//   - any not-yet-completed status makes the PR "pending";
-//   - all completed and passed is "passed";
-//   - no observed status at all is nil (rendered as "no checks" / hidden).
-func aggregateChecksConclusion(failed, passed, pending, total int64) *string {
-	if total == 0 {
-		return nil
-	}
-	var v string
-	switch {
-	case failed > 0:
-		v = "failed"
-	case pending > 0:
-		v = "pending"
-	case passed > 0:
-		v = "passed"
-	default:
-		return nil
-	}
-	return &v
-}
-
-// lowerTextPtr returns a lowercased *string for a non-empty pgtype.Text, else
-// nil. Used to expose GraphQL enums (MERGEABLE / CLEAN / SUCCESS …) to the API
-// in the project's lowercase convention.
-func lowerTextPtr(t pgtype.Text) *string {
-	if !t.Valid || t.String == "" {
-		return nil
-	}
-	v := strings.ToLower(t.String)
-	return &v
-}
-
-// rollupToConclusion derives the coarse compat "checks_conclusion" from the
-// GraphQL rollup, falling back to the run counts when the rollup enum is
-// unfamiliar. A null/empty rollup means "no checks yet" → nil (never "passed").
-func rollupToConclusion(rollup pgtype.Text, failed, running, passed int64) *string {
-	if !rollup.Valid || rollup.String == "" {
-		return nil
-	}
-	var v string
-	switch strings.ToUpper(rollup.String) {
-	case "FAILURE", "ERROR":
-		v = "failed"
-	case "PENDING", "EXPECTED":
-		v = "pending"
-	case "SUCCESS":
-		v = "passed"
-	default:
-		switch {
-		case failed > 0:
-			v = "failed"
-		case running > 0:
-			v = "pending"
-		case passed > 0:
-			v = "passed"
-		default:
-			return nil
-		}
-	}
-	return &v
 }
 
 // ── Connect / state token ───────────────────────────────────────────────────
@@ -383,13 +256,6 @@ func isGitHubRepositoryBrowseConfigured() bool {
 		strings.TrimSpace(os.Getenv("GITHUB_APP_PRIVATE_KEY")) != ""
 }
 
-// signState produces an opaque token that binds a workspace ID to the
-// install flow so the setup callback can recover the workspace without
-// trusting query params alone. Format: "<workspaceID>.<nonce>.<sigHex>".
-func signState(workspaceID string) (string, error) {
-	return signStateForReturn(workspaceID, githubReturnToGitHub)
-}
-
 func signStateForReturn(workspaceID, returnTo string) (string, error) {
 	secret := githubWebhookSecret()
 	if secret == "" {
@@ -411,11 +277,6 @@ func signStateForReturn(workspaceID, returnTo string) (string, error) {
 	mac.Write([]byte(payload))
 	sig := hex.EncodeToString(mac.Sum(nil))
 	return payload + "." + sig, nil
-}
-
-func verifyState(token string) (string, bool) {
-	workspaceID, _, ok := verifyStateWithReturn(token)
-	return workspaceID, ok
 }
 
 func verifyStateWithReturn(token string) (workspaceID, returnTo string, ok bool) {
@@ -963,69 +824,6 @@ func (h *Handler) DeleteGitHubInstallation(w http.ResponseWriter, r *http.Reques
 }
 
 // ── List PRs for an issue ───────────────────────────────────────────────────
-
-func (h *Handler) ListPullRequestsForIssue(w http.ResponseWriter, r *http.Request) {
-	issue, ok := h.loadIssueForUser(w, r, chi.URLParam(r, "id"))
-	if !ok {
-		return
-	}
-	ws, err := h.Queries.GetWorkspace(r.Context(), issue.WorkspaceID)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to list pull requests")
-		return
-	}
-	identifier := fmt.Sprintf("%s-%d", issuePrefixForWorkspace(ws), issue.Number)
-	rows, err := h.Queries.ListPullRequestsByIssue(r.Context(), issue.ID)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to list pull requests")
-		return
-	}
-	out := make([]GitHubPullRequestResponse, 0, len(rows))
-	for _, row := range rows {
-		resp := issuePullRequestRowToResponse(row, h.PRRefresh.Enabled())
-		resp.LinkSource = prLinkSource(row.LinkedByType, identifier, row.Title, row.Branch.String)
-		out = append(out, resp)
-		// Page-visit trigger (MUL-5265): if this card's snapshot is missing or
-		// older than the view TTL, kick an async refresh. Non-blocking — the
-		// current (possibly stale) response is returned immediately and the
-		// fresh snapshot arrives via the pull_request:updated realtime event.
-		h.PRRefresh.MaybeEnqueueOnView(
-			row.InstallationID, row.RepoOwner, row.RepoName, row.PrNumber,
-			row.SnapshotFetchedAt.Time,
-			row.SnapshotFetchedAt.Valid &&
-				row.SnapshotHeadSha != "" &&
-				row.SnapshotHeadSha == row.HeadSha,
-		)
-	}
-	// PRs from token-based providers (Forgejo / Gitea / GitLab) share the same
-	// card list. They live in their own provider-tagged tables, so they merge
-	// in here mapped to the same response shape; the combined list is re-sorted
-	// newest-first.
-	vcsRows, err := h.Queries.ListVCSPullRequestsByIssue(r.Context(), issue.ID)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to list pull requests")
-		return
-	}
-	for _, row := range vcsRows {
-		resp := vcsPullRequestRowToResponse(row)
-		resp.LinkSource = prLinkSource(row.LinkedByType, identifier, row.Title, row.Branch.String)
-		out = append(out, resp)
-	}
-	sort.SliceStable(out, func(i, j int) bool {
-		return out[i].PRCreatedAt > out[j].PRCreatedAt
-	})
-	// The one auto-complete decision the issue page renders, so the UI never
-	// re-derives the rule on its own.
-	decision, err := h.decidePRAutoComplete(r.Context(), ws, issue, nil)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to list pull requests")
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]any{
-		"pull_requests": out,
-		"auto_complete": prAutoCompleteToResponse(decision),
-	})
-}
 
 // broadcastPRSnapshotApplied is the ghsnapshot pipeline's onApplied callback:
 // once an API snapshot is written to a PR row, re-broadcast the PR so every

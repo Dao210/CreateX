@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/auro-ai/auro/server/internal/testutil"
+	"github.com/google/uuid"
 )
 
 // Every write on the autopilot surface is judged as the human it acts FOR — the

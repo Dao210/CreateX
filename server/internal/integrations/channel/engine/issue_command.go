@@ -57,23 +57,6 @@ func ParseIssueCommand(body string) (*IssueCommand, bool) {
 	return &IssueCommand{Title: title, Description: description}, true
 }
 
-// issueDescriptionFromCommandBody removes the /issue directive line from the
-// full normalized message while preserving the layout that follows it. Unlike
-// CommandText, the full body may still contain adapter-generated inline media
-// placeholders. Keeping those placeholders in the initial issue description
-// gives the detached media binder stable positions to materialize later.
-//
-// Content before the directive is deliberately excluded. Some adapters enrich
-// Body with quoted context while keeping CommandText as the user's own command;
-// copying that prefix into the issue would change the existing command contract.
-func issueDescriptionFromCommandBody(body, commandText, fallback string) string {
-	_, end, ok := issueCommandLineBounds(body, commandText)
-	if !ok {
-		return fallback
-	}
-	return strings.TrimSpace(body[end:])
-}
-
 type textLineBounds struct {
 	start int
 	end   int

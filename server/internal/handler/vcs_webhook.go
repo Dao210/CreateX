@@ -7,13 +7,13 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/go-chi/chi/v5"
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/auro-ai/auro/server/internal/integrations/vcs"
 	"github.com/auro-ai/auro/server/internal/issuestatus"
 	db "github.com/auro-ai/auro/server/pkg/db/generated"
 	"github.com/auro-ai/auro/server/pkg/protocol"
+	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // ── Response mappers ────────────────────────────────────────────────────────
@@ -47,39 +47,7 @@ func vcsPullRequestToResponse(p db.VcsPullRequest) GitHubPullRequestResponse {
 	}
 }
 
-// vcsPullRequestRowToResponse maps an issue's PR-list row, which carries the
-// aggregated commit-status counts, onto the shared response shape.
-func vcsPullRequestRowToResponse(p db.ListVCSPullRequestsByIssueRow) GitHubPullRequestResponse {
-	return GitHubPullRequestResponse{
-		ID:               uuidToString(p.ID),
-		Provider:         p.Provider,
-		WorkspaceID:      uuidToString(p.WorkspaceID),
-		RepoOwner:        p.RepoOwner,
-		RepoName:         p.RepoName,
-		Number:           p.PrNumber,
-		Title:            p.Title,
-		State:            p.State,
-		HtmlURL:          p.HtmlUrl,
-		Branch:           textToPtr(p.Branch),
-		AuthorLogin:      textToPtr(p.AuthorLogin),
-		AuthorAvatarURL:  textToPtr(p.AuthorAvatarUrl),
-		MergedAt:         timestampToPtr(p.MergedAt),
-		ClosedAt:         timestampToPtr(p.ClosedAt),
-		PRCreatedAt:      timestampToString(p.PrCreatedAt),
-		PRUpdatedAt:      timestampToString(p.PrUpdatedAt),
-		MergeableState:   nil,
-		ChecksConclusion: aggregateChecksConclusion(p.ChecksFailed, p.ChecksPassed, p.ChecksPending, p.ChecksTotal),
-		ChecksTotal:      p.ChecksTotal,
-		ChecksPassed:     p.ChecksPassed,
-		ChecksFailed:     p.ChecksFailed,
-		ChecksPending:    p.ChecksPending,
-		ChecksRunning:    p.ChecksPending,
-		FailedCheckNames: []string{},
-		Additions:        p.Additions,
-		Deletions:        p.Deletions,
-		ChangedFiles:     p.ChangedFiles,
-	}
-}
+
 
 // ── Webhook ─────────────────────────────────────────────────────────────────
 

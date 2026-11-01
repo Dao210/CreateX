@@ -9,8 +9,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/go-chi/chi/v5"
 	obsmetrics "github.com/auro-ai/auro/server/internal/metrics"
+	"github.com/go-chi/chi/v5"
 )
 
 // ---------------------------------------------------------------------------

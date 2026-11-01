@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"net/url"
 	"sort"
 	"strconv"
@@ -33,25 +32,6 @@ func displayID(id string, full bool) string {
 		return id
 	}
 	return truncateID(id)
-}
-
-func issueDisplayKey(issue map[string]any) string {
-	if key := strVal(issue, "identifier"); key != "" {
-		return key
-	}
-	id := strVal(issue, "id")
-	if id != "" {
-		slog.Warn("issue response missing identifier", "issue_id", id)
-	}
-	return id
-}
-
-func issueCandidate(issue map[string]any) idCandidate {
-	return idCandidate{
-		ID:      strVal(issue, "id"),
-		Display: issueDisplayKey(issue),
-		Detail:  strVal(issue, "title"),
-	}
 }
 
 func normalizeUUIDPrefix(input string) (string, error) {
@@ -129,89 +109,6 @@ func ambiguousIDPrefixError(kind, input string, matches []idCandidate) error {
 	return fmt.Errorf("ambiguous %s id prefix %q; matches:\n%s\nUse more characters or run the list command with --full-id", kind, input, strings.Join(parts, "\n"))
 }
 
-// resolveIssueRef accepts only the two canonical issue references:
-//
-//   - the human-facing issue key, e.g. "MUL-1852" (validated by
-//     looksLikeIssueIdentifier and resolved server-side);
-//   - the full UUID in dashed canonical form (validated by uuidRegexp).
-//
-// Short UUID prefixes (e.g. "1881abcd") were briefly supported but are no
-// longer — on large workspaces the CLI had to page the entire issue list
-// client-side to disambiguate, causing 14–35s timeouts (GH #4701). Since
-// `MUL-123` already covers every human use case for an issue reference, the
-// short-prefix path is removed instead of being moved server-side. Other
-// resources without a human-readable key (autopilots, projects, labels,
-// task runs, workspaces, ...) continue to accept short UUID prefixes; see
-// resolveIDByPrefix.
-func resolveIssueRef(ctx context.Context, client *cli.APIClient, input string) (resolvedID, error) {
-	trimmed := strings.TrimSpace(input)
-	if trimmed == "" {
-		return resolvedID{}, fmt.Errorf("issue id is required")
-	}
-
-	if looksLikeIssueIdentifier(trimmed) {
-		return fetchIssueRef(ctx, client, trimmed)
-	}
-	if uuidRegexp.MatchString(trimmed) {
-		// A full UUID is self-identifying: the resolver GET added a round
-		// trip and no information, and agents pay it several times per run
-		// during bootstrap (GH #7017). Lowercased to the canonical form the
-		// server emits. Messages without an issue response may show this UUID
-		// rather than the issue key, and failures now come from the command's
-		// next issue-aware endpoint. Every write path re-validates server-side
-		// (e.g. parent_issue_id on create), so nothing is stored on the strength
-		// of the ref alone.
-		id := strings.ToLower(trimmed)
-		return resolvedID{ID: id, Display: id}, nil
-	}
-
-	// Detect the common "I copied a truncated UUID" case and give a
-	// tailored hint. normalizeUUIDPrefix succeeds for any input that is
-	// ≥4 hex chars (after stripping dashes), which matches what the old
-	// resolver used to accept as a prefix.
-	if _, err := normalizeUUIDPrefix(trimmed); err == nil {
-		return resolvedID{}, fmt.Errorf(
-			"issue ref %q looks like a short UUID prefix; short prefixes are no longer supported for issues. "+
-				"Use the issue key (e.g. MUL-123) shown by `auro issue list`, or pass the full UUID (run a list command with --full-id to copy it)",
-			input,
-		)
-	}
-	return resolvedID{}, fmt.Errorf(
-		"issue ref %q is not a recognized issue reference; use the issue key (e.g. MUL-123) shown by `auro issue list`, or pass the full UUID",
-		input,
-	)
-}
-
-func fetchIssueRef(ctx context.Context, client *cli.APIClient, ref string) (resolvedID, error) {
-	var issue map[string]any
-	if err := client.GetJSON(ctx, "/api/issues/"+url.PathEscape(ref), &issue); err != nil {
-		return resolvedID{}, err
-	}
-	c := issueCandidate(issue)
-	if c.Display == "" {
-		c.Display = c.ID
-	}
-	return resolvedID{ID: c.ID, Display: c.Display}, nil
-}
-
-func looksLikeIssueIdentifier(input string) bool {
-	if input == "" {
-		return false
-	}
-	dash := strings.LastIndex(input, "-")
-	if dash <= 0 || dash >= len(input)-1 {
-		return false
-	}
-	prefix := input[:dash]
-	for _, r := range prefix {
-		if !((r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9')) {
-			return false
-		}
-	}
-	_, ok := parsePositiveInt(input[dash+1:])
-	return ok
-}
-
 func parsePositiveInt(input string) (int, bool) {
 	n, err := strconv.Atoi(strings.TrimSpace(input))
 	if err != nil || n <= 0 {
@@ -284,39 +181,6 @@ func fetchAutopilotCandidates(ctx context.Context, client *cli.APIClient) ([]idC
 	return candidates, nil
 }
 
-func resolveTaskRunID(ctx context.Context, client *cli.APIClient, issueID, input string) (resolvedID, error) {
-	trimmed := strings.TrimSpace(input)
-	if uuidRegexp.MatchString(trimmed) {
-		return resolvedID{ID: trimmed, Display: trimmed}, nil
-	}
-	if strings.TrimSpace(issueID) == "" {
-		return resolvedID{}, fmt.Errorf("short task run prefixes require --issue <issue-id>; pass a full task UUID or run `auro issue runs <issue-id> --full-id`")
-	}
-	fetch := func(ctx context.Context, client *cli.APIClient) ([]idCandidate, error) {
-		return fetchTaskRunCandidatesForIssue(ctx, client, issueID)
-	}
-	return resolveIDByPrefix(ctx, client, "task run", input, fetch)
-}
-
-func fetchTaskRunCandidatesForIssue(ctx context.Context, client *cli.APIClient, issueID string) ([]idCandidate, error) {
-	var runs []map[string]any
-	if err := client.GetJSON(ctx, "/api/issues/"+url.PathEscape(issueID)+"/task-runs", &runs); err != nil {
-		return nil, err
-	}
-	candidates := make([]idCandidate, 0, len(runs))
-	for _, r := range runs {
-		id := strVal(r, "id")
-		if id == "" {
-			continue
-		}
-		candidates = append(candidates, idCandidate{
-			ID:      id,
-			Display: id,
-		})
-	}
-	return candidates, nil
-}
-
 func resolveAutopilotTriggerID(ctx context.Context, client *cli.APIClient, autopilotID, input string) (resolvedID, error) {
 	trimmed := strings.TrimSpace(input)
 	if uuidRegexp.MatchString(trimmed) {
@@ -347,63 +211,6 @@ func resolveAutopilotTriggerID(ctx context.Context, client *cli.APIClient, autop
 		return candidates, nil
 	}
 	return resolveIDByPrefix(ctx, client, "autopilot trigger", input, fetch)
-}
-
-func resolveProjectID(ctx context.Context, client *cli.APIClient, input string) (resolvedID, error) {
-	return resolveIDByPrefix(ctx, client, "project", input, fetchProjectCandidates)
-}
-
-func fetchProjectCandidates(ctx context.Context, client *cli.APIClient) ([]idCandidate, error) {
-	if client.WorkspaceID == "" {
-		return nil, fmt.Errorf("workspace_id is required to resolve project id prefixes")
-	}
-	params := url.Values{"workspace_id": {client.WorkspaceID}}
-	var result map[string]any
-	if err := client.GetJSON(ctx, "/api/projects?"+params.Encode(), &result); err != nil {
-		return nil, err
-	}
-	projectsRaw, _ := result["projects"].([]any)
-	candidates := make([]idCandidate, 0, len(projectsRaw))
-	for _, raw := range projectsRaw {
-		p, ok := raw.(map[string]any)
-		if !ok {
-			continue
-		}
-		candidates = append(candidates, idCandidate{
-			ID:      strVal(p, "id"),
-			Display: strVal(p, "title"),
-			Detail:  strVal(p, "status"),
-		})
-	}
-	return candidates, nil
-}
-
-func resolveProjectResourceID(ctx context.Context, client *cli.APIClient, projectID, input string) (resolvedID, error) {
-	fetch := func(ctx context.Context, client *cli.APIClient) ([]idCandidate, error) {
-		var result map[string]any
-		if err := client.GetJSON(ctx, "/api/projects/"+url.PathEscape(projectID)+"/resources", &result); err != nil {
-			return nil, err
-		}
-		resourcesRaw, _ := result["resources"].([]any)
-		candidates := make([]idCandidate, 0, len(resourcesRaw))
-		for _, raw := range resourcesRaw {
-			r, ok := raw.(map[string]any)
-			if !ok {
-				continue
-			}
-			display := strVal(r, "label")
-			if display == "" {
-				display = strVal(r, "resource_type")
-			}
-			candidates = append(candidates, idCandidate{
-				ID:      strVal(r, "id"),
-				Display: display,
-				Detail:  summarizeResourceRef(r["resource_ref"]),
-			})
-		}
-		return candidates, nil
-	}
-	return resolveIDByPrefix(ctx, client, "project resource", input, fetch)
 }
 
 func resolveLabelID(ctx context.Context, client *cli.APIClient, input, resourceType string) (resolvedID, error) {
@@ -505,25 +312,6 @@ func (l actorDisplayLookup) loadAgents() {
 	}
 }
 
-func (l actorDisplayLookup) loadSquads() {
-	if l.state == nil || l.state.squadsLoaded {
-		return
-	}
-	l.state.squadsLoaded = true
-	l.state.squads = map[string]string{}
-	if l.client == nil || l.client.WorkspaceID == "" {
-		return
-	}
-	var squads []map[string]any
-	if err := l.client.GetJSON(l.ctx, "/api/squads", &squads); err == nil {
-		for _, s := range squads {
-			if id := strVal(s, "id"); id != "" {
-				l.state.squads[id] = strVal(s, "name")
-			}
-		}
-	}
-}
-
 func (l actorDisplayLookup) actor(actorType, id string) string {
 	if actorType == "" || id == "" {
 		return ""
@@ -543,13 +331,7 @@ func (l actorDisplayLookup) actor(actorType, id string) string {
 				return "agent:" + name
 			}
 		}
-	case "squad":
-		l.loadSquads()
-		if l.state != nil && l.state.squads != nil {
-			if name := l.state.squads[id]; name != "" {
-				return "squad:" + name
-			}
-		}
+
 	}
 	return actorType + ":" + id
 }

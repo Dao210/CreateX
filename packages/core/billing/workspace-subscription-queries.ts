@@ -39,16 +39,6 @@ export function workspaceSubscriptionSummaryOptions(wsId: string) {
   });
 }
 
-export function issueLimitUsageOptions(wsId: string) {
-  return queryOptions({
-    queryKey: workspaceSubscriptionKeys.issueLimitUsage(wsId),
-    queryFn: () => api.getIssueLimitUsage(),
-    enabled: wsId.length > 0,
-    staleTime: 30 * 1000,
-    refetchOnWindowFocus: true,
-  });
-}
-
 /**
  * A validated price snapshot is stable deployment configuration, but a null
  * parse fallback is not a snapshot. Keeping null fresh made one transient

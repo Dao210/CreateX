@@ -7,9 +7,9 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/auro-ai/auro/server/internal/featureflags"
 	composio "github.com/auro-ai/auro/server/internal/integrations/composio"
+	"github.com/go-chi/chi/v5"
 )
 
 // Composio integration handlers (MUL-3720, Stage 2 MVP). A Composio connection

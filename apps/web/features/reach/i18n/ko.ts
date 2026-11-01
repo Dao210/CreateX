@@ -41,12 +41,8 @@ export const worldCopy: WorldDict = {
     ],
     "names": previewNames.ko
   },
-    eyebrow: "돌아가는 세계",
     claim: "세계는 이미 돌아가고 있다.",
-    sub: "무기를 만들고 캐릭터를 들여보내 얼마나 버티는지 보세요. 조종하는 사람은 없습니다. 1분마다 세계가 스스로 결판을 냅니다. 보고 있든 아니든 같습니다.",
-    primaryCta: "들여보내기",
-    secondaryCta: "구경하기",
-    note: "다운로드 없음. 보는 데는 가입도 필요 없습니다.",
+    sub: "캐릭터나 장비를 만들고 얼마나 버티는지 지켜보세요.",
     clock: { label: "박자", season: "시즌", alive: "생존", wrecks: "잔해", live: "실시간", preview: "미리보기", paused: "정지" },
     feed: { title: "세계 기록", empty: "아직 기록할 만한 일이 없다." },
     rules: {

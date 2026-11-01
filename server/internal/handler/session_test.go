@@ -5,9 +5,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/auro-ai/auro/server/internal/auth"
 	"github.com/auro-ai/auro/server/internal/testutil"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 // refreshSessionToken signs a session for the shared test user.

@@ -146,7 +146,7 @@ function CallbackContent() {
           //    first workspace for returning users, /workspaces/new for
           //    onboarded users with zero workspaces). Source-attribution
           //    backfill for onboarded users with no recorded source is
-          //    handled by `<SourceBackfillModal />` inside the dashboard
+          //    handled by `` inside the dashboard
           //    shell — not a route detour, so we route straight to dest.
           router.push(resolvePostAuthDestination(wsList, onboarded));
         })

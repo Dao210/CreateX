@@ -80,7 +80,7 @@ export const paths = {
 
   // Global (pre-workspace) routes
   login: () => "/login",
-  admin: () => "/admin",
+  admin: (module?: "games" | "mcp") => module ? `/admin/${module}` : "/admin",
   newWorkspace: () => "/workspaces/new",
   invite: (id: string) => `/invite/${encode(id)}`,
   invitations: () => "/invitations",

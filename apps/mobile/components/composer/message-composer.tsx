@@ -37,34 +37,22 @@
  * Cleanup: mention draft store cleared on unmount so navigating away
  * from comment-A's draft doesn't leak `@张三` into comment-B's composer.
  */
-import {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-  type ReactNode,
-} from "react";
+import { useCallback, useRef, useState, type ReactNode } from "react";
 import { Alert, Keyboard, Pressable, TextInput, View } from "react-native";
 import { KeyboardStickyView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { router, type Href } from "expo-router";
 import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
 import * as DocumentPicker from "expo-document-picker";
 import { api, MAX_FILE_SIZE } from "@/data/api";
-import { useMentionDraftStore } from "@/data/stores/mention-draft-store";
 import { useColorScheme } from "@/lib/use-color-scheme";
 import { stripMarkdown } from "@/lib/strip-markdown";
 import { THEME } from "@/lib/theme";
 import { continuousCorners } from "@/lib/radius";
 import { Text } from "@/components/ui/text";
 import { IconButton } from "@/components/ui/icon-button";
-import {
-  ComposerAttachmentRow,
-  type ComposerAttachmentItem,
-  type MentionChip,
-} from "@/components/issue/composer-attachment-row";
+import { ComposerAttachmentRow, type ComposerAttachmentItem } from "@/components/composer/composer-attachment-row";
 import { useT } from "@/lib/i18n";
 
 export interface MessageComposerReplyTarget {
@@ -80,12 +68,7 @@ interface Props {
   onSubmit: (args: {
     content: string;
     attachmentIds: string[];
-    mentions: MentionChip[];
   }) => Promise<void>;
-
-  /** Push target for the `@` button. The picker route reads /
-   *  writes `useMentionDraftStore` directly. */
-  mentionPickerPath: Href;
 
   /** Attachment upload context — forwarded to `api.uploadFile`. Comment
    *  passes `issueId`; chat omits both (uploads are session-scoped via
@@ -137,28 +120,8 @@ function makeLocalId(): string {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-/** Serialises mention chips into the markdown link form the backend
- *  regex parser recognises. The string lands at the START of the
- *  outgoing content; mobile can't position mentions inline because the
- *  TextInput is plain. Acceptable semantic difference vs web/desktop's
- *  rich editor (web supports anywhere-in-text). */
-function serializeMentions(chips: MentionChip[]): string {
-  return chips
-    .map((m) => {
-      const label =
-        m.type === "issue"
-          ? m.name
-          : m.type === "all"
-            ? "@all"
-            : `@${m.name}`;
-      return `[${label}](mention://${m.type}/${m.id})`;
-    })
-    .join(" ");
-}
-
 export function MessageComposer({
   onSubmit,
-  mentionPickerPath,
   uploadContext,
   placeholder,
   pillLabel,
@@ -203,18 +166,6 @@ export function MessageComposer({
     [isControlled, controlledOnChange],
   );
 
-  const mentions = useMentionDraftStore((s) => s.mentions);
-  const removeMention = useMentionDraftStore((s) => s.remove);
-  const clearMentions = useMentionDraftStore((s) => s.clear);
-
-  // Drop mention draft on composer unmount so navigating away doesn't
-  // leak chips into the next composer's session.
-  useEffect(() => {
-    return () => {
-      clearMentions();
-    };
-  }, [clearMentions]);
-
   // Auto-expand + focus when an `expandTrigger` changes. Comment uses
   // this to react to the long-press → reply flow setting a reply target.
   const triggerSeen = useRef<string | null>(null);
@@ -234,7 +185,7 @@ export function MessageComposer({
     !isSending &&
     !submitting &&
     !hasInFlightUpload &&
-    (text.trim().length > 0 || mentions.length > 0);
+    (text.trim().length > 0);
 
   const expand = useCallback(() => {
     if (disabled) return;
@@ -250,16 +201,10 @@ export function MessageComposer({
   const handleSubmit = useCallback(async () => {
     if (!canSend) return;
     const textSnap = text;
-    const mentionsSnap = mentions;
     const attachmentsSnap = attachments;
-
-    const mentionMd = serializeMentions(mentionsSnap);
     const trimmed = textSnap.trim();
-    const content = mentionMd
-      ? trimmed
-        ? `${mentionMd} ${trimmed}`
-        : mentionMd
-      : trimmed;
+    const content = textSnap.trim();
+
 
     const activeIds = attachmentsSnap
       .filter((a) => a.status === "completed")
@@ -270,7 +215,6 @@ export function MessageComposer({
     // typing tick doesn't double-include them. Restored on rejection.
     setText("");
     setAttachments([]);
-    clearMentions();
     setSubmitting(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
 
@@ -278,7 +222,6 @@ export function MessageComposer({
       await onSubmit({
         content,
         attachmentIds: activeIds,
-        mentions: mentionsSnap,
       });
       // Success → fully exit composing mode. Explicit triple-step
       // because a missing blur leaves the keyboard up; missing
@@ -290,19 +233,14 @@ export function MessageComposer({
     } catch {
       setText(textSnap);
       setAttachments(attachmentsSnap);
-      mentionsSnap.forEach((m) =>
-        useMentionDraftStore.getState().toggle(m),
-      );
     } finally {
       setSubmitting(false);
     }
   }, [
     canSend,
     text,
-    mentions,
     attachments,
     setText,
-    clearMentions,
     onSubmit,
   ]);
 
@@ -439,11 +377,6 @@ export function MessageComposer({
     [attachments, startUpload],
   );
 
-  const onAtPress = useCallback(() => {
-    Haptics.selectionAsync().catch(() => {});
-    router.push(mentionPickerPath);
-  }, [mentionPickerPath]);
-
   /** Auto-collapse to pill when input loses focus AND nothing's worth
    *  keeping the composer expanded for. Deferred one tick so a toolbar
    *  IconButton tap (which briefly resigns first responder) doesn't
@@ -453,13 +386,13 @@ export function MessageComposer({
       const empty =
         text.trim().length === 0 &&
         attachments.length === 0 &&
-        mentions.length === 0;
+        true;
       if (empty && !inputRef.current?.isFocused()) {
         setExpanded(false);
         onClearReplyTarget?.();
       }
     }, 80);
-  }, [text, attachments.length, mentions.length, onClearReplyTarget]);
+  }, [text, attachments.length, onClearReplyTarget]);
 
   const pillContent = (
     <View
@@ -533,12 +466,10 @@ export function MessageComposer({
         className="rounded-2xl border border-border bg-secondary"
         style={continuousCorners}
       >
-        {(mentions.length > 0 || attachments.length > 0) ? (
+        {(attachments.length > 0) ? (
           <View className="px-2 pt-2 pb-1">
             <ComposerAttachmentRow
-              mentions={mentions}
               attachments={attachments}
-              onRemoveMention={removeMention}
               onRemoveAttachment={onRemoveAttachment}
               onRetryAttachment={onRetryAttachment}
             />
@@ -562,14 +493,7 @@ export function MessageComposer({
           {/* @ leads the toolbar — highest-signal attachment (only one
            *  that drives notifications) and cross-resource (people +
            *  issues), pride-of-place left. */}
-          <IconButton
-            name="at"
-            iconSize={20}
-            color={mentions.length > 0 ? theme.primary : undefined}
-            onPress={onAtPress}
-            accessibilityLabel={t("composer.mention")}
-            className="h-8 w-8"
-          />
+          
           <IconButton
             name="image-outline"
             iconSize={20}

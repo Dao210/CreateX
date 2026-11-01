@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/auro-ai/auro/server/internal/testutil"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 func TestPendingRecoveryConvertedTerminalHistoryDoesNotStarveAnotherWorkspace(t *testing.T) {

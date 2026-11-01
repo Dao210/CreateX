@@ -11,7 +11,7 @@ import { useWorkspaceId } from "@auro/core/hooks";
 import { useAuthStore } from "@auro/core/auth";
 import { getCurrentWsId } from "@auro/core/platform";
 import { agentListOptions, memberListOptions } from "@auro/core/workspace/queries";
-import { canAssignAgent } from "../../issues/components/pickers/assignee-picker";
+import { canChooseChatAgent } from "@auro/core/permissions";
 import { api, dispatchReasonCode } from "@auro/core/api";
 import {
   isAgentRuntimeBound as hasAgentRuntime,
@@ -89,51 +89,6 @@ export function isStillOnComposeTarget(
   sentFromSessionId: string | null,
 ): boolean {
   return liveActiveSessionId === sentFromSessionId;
-}
-
-/**
- * Decide what a project-context change should do, given the open session.
- *
- *  - `awaitSession`: an active session id is set but its row has not loaded
- *    yet. Bail so a persisted selection resolving before its sessions query
- *    cannot misfile a project change into the new-chat draft.
- *  - `detachCurrent`: removing context from the open session — safe in place,
- *    it only changes what future turns receive.
- *  - `startFreshChat`: switching to a DIFFERENT project. A fresh chat is
- *    started so the old project's provider memory / reused workdir cannot
- *    bleed in. It must stay bound to the agent whose session we are leaving
- *    (`agentId`): clearing the active session otherwise drops selection back
- *    to the stored `selectedAgentId`, which can be a stale preference for a
- *    different agent, sending the lazily-created session to the wrong agent.
- *  - `setDraftProject`: no open session, so this only adjusts the new-chat
- *    draft's project.
- *
- * Lives beside the controller so every project-context path applies the same
- * stale-agent rule.
- */
-export type ProjectContextChange =
-  | { kind: "awaitSession" }
-  | { kind: "detachCurrent"; sessionId: string }
-  | { kind: "startFreshChat"; agentId: string; projectId: string }
-  | { kind: "setDraftProject"; projectId: string | null };
-
-export function planProjectContextChange(input: {
-  targetProjectId: string | null;
-  activeSessionId: string | null;
-  currentSession: { id: string; agent_id: string } | null;
-}): ProjectContextChange {
-  if (input.activeSessionId) {
-    if (!input.currentSession) return { kind: "awaitSession" };
-    if (input.targetProjectId === null) {
-      return { kind: "detachCurrent", sessionId: input.currentSession.id };
-    }
-    return {
-      kind: "startFreshChat",
-      agentId: input.currentSession.agent_id,
-      projectId: input.targetProjectId,
-    };
-  }
-  return { kind: "setDraftProject", projectId: input.targetProjectId };
 }
 
 // True when a session has an in-flight pending task in the cache — the signal
@@ -300,7 +255,7 @@ export function useChatController(opts?: { isActive?: boolean }) {
   const currentMember = members.find((m) => m.user_id === user?.id);
   const memberRole = currentMember?.role;
   const availableAgents = agents.filter(
-    (a) => !a.archived_at && canAssignAgent(a, user?.id, memberRole),
+    (a) => !a.archived_at && canChooseChatAgent(a, user?.id, memberRole),
   );
   // `availableAgents` is only trustworthy once BOTH queries above succeeded:
   // the permission filter reads the member role, so agents-without-members
@@ -340,7 +295,7 @@ export function useChatController(opts?: { isActive?: boolean }) {
   // composer goes read-only up front instead of after the user types
   // (MUL-6380). Same rule the server enforces, via the shared predicate.
   const isAgentAccessRevoked =
-    !!activeAgent && !canAssignAgent(activeAgent, user?.id, memberRole);
+    !!activeAgent && !canChooseChatAgent(activeAgent, user?.id, memberRole);
 
   // "Customize" under the starter buttons in the empty state — the only place
   // that admits those buttons are configuration. Resolved here so the empty

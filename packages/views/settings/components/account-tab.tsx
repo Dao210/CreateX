@@ -12,7 +12,6 @@ import {
   SettingsCard,
   SettingsRow,
   SettingsSaveState,
-  SettingsSection,
   SettingsTab,
 } from "./settings-layout";
 import { useAutoSave } from "./use-auto-save";
@@ -88,104 +87,101 @@ export function AccountTab() {
   });
 
   return (
-    <SettingsTab title={t(($) => $.page.tabs.profile)} scope="account">
-      <SettingsSection
-        title={t(($) => $.account.section_profile)}
-        action={
-          <SettingsSaveState
-            status={autoSave.status}
-            savingLabel={t(($) => $.auto_save.saving)}
-            savedLabel={t(($) => $.auto_save.saved)}
-            errorLabel={t(($) => $.auto_save.failed)}
-          />
-        }
-      >
-        <SettingsCard>
-          <SettingsRow
-            anchor="avatar"
-            label={t(($) => $.account.avatar_label)}
-            description={t(($) => $.account.click_avatar_hint)}
-            size="none"
-          >
-            <div className="flex justify-start sm:justify-end">
-              <AvatarUploadControl
-                variant="user"
-                value={user?.avatar_url ?? null}
-                name={user?.name ?? ""}
-                size={64}
-                onUploaded={async (url) => {
-                  try {
-                    const updated = await api.updateMe({ avatar_url: url });
-                    setUser(updated);
-                  } catch (error) {
-                    toast.error(
-                      error instanceof Error
-                        ? error.message
-                        : t(($) => $.account.toast_avatar_failed),
-                    );
-                  }
-                }}
-              />
-            </div>
-          </SettingsRow>
-
-          <SettingsRow
-            anchor="name"
-            label={t(($) => $.account.name_label)}
-            size="text"
-          >
-            <Input
-              type="text"
-              name="profile-name"
-              autoComplete="name"
-              aria-label={t(($) => $.account.name_label)}
-              value={profileName}
-              onChange={(event) => setProfileName(event.target.value)}
-              onBlur={autoSave.flush}
+    <SettingsTab
+      title={t(($) => $.page.tabs.profile)}
+      scope="account"
+      actions={
+        <SettingsSaveState
+          status={autoSave.status}
+          savingLabel={t(($) => $.auto_save.saving)}
+          savedLabel={t(($) => $.auto_save.saved)}
+          errorLabel={t(($) => $.auto_save.failed)}
+        />
+      }
+    >
+      <SettingsCard>
+        <SettingsRow
+          anchor="avatar"
+          label={t(($) => $.account.avatar_label)}
+          size="none"
+        >
+          <div className="flex justify-start sm:justify-end">
+            <AvatarUploadControl
+              variant="user"
+              value={user?.avatar_url ?? null}
+              name={user?.name ?? ""}
+              size={64}
+              onUploaded={async (url) => {
+                try {
+                  const updated = await api.updateMe({ avatar_url: url });
+                  setUser(updated);
+                } catch (error) {
+                  toast.error(
+                    error instanceof Error
+                      ? error.message
+                      : t(($) => $.account.toast_avatar_failed),
+                  );
+                }
+              }}
             />
-          </SettingsRow>
+          </div>
+        </SettingsRow>
 
-          <SettingsRow
-            anchor="about"
-            label={t(($) => $.account.profile_description_label)}
-            description={t(($) => $.account.profile_description_hint)}
-            size="text"
-            align="start"
-          >
-            <div>
-              <Textarea
-                name="profile-description"
-                autoComplete="off"
-                aria-label={t(($) => $.account.profile_description_label)}
-                value={profileDescription}
-                onChange={(event) => setProfileDescription(event.target.value)}
-                onBlur={autoSave.flush}
-                placeholder={t(($) => $.account.profile_description_placeholder)}
-                rows={5}
-                maxLength={MAX_PROFILE_DESCRIPTION_LEN}
-                aria-invalid={descriptionTooLong}
-                className="resize-y"
-              />
-              <div className="mt-1 flex justify-end text-caption text-muted-foreground">
-                <span
-                  className={descriptionTooLong ? "text-destructive shrink-0" : "shrink-0"}
-                  aria-live="polite"
-                >
-                  {profileDescription.length}/{MAX_PROFILE_DESCRIPTION_LEN}
-                </span>
-              </div>
-              {descriptionTooLong ? (
-                <p className="mt-1 text-caption text-destructive">
-                  {t(($) => $.account.profile_description_too_long, {
-                    max: MAX_PROFILE_DESCRIPTION_LEN,
-                    count: profileDescription.length,
-                  })}
-                </p>
-              ) : null}
+        <SettingsRow
+          anchor="name"
+          label={t(($) => $.account.name_label)}
+          size="text"
+        >
+          <Input
+            type="text"
+            name="profile-name"
+            autoComplete="nickname"
+            aria-label={t(($) => $.account.name_label)}
+            placeholder={t(($) => $.account.name_placeholder)}
+            value={profileName}
+            onChange={(event) => setProfileName(event.target.value)}
+            onBlur={autoSave.flush}
+          />
+        </SettingsRow>
+
+        <SettingsRow
+          anchor="about"
+          label={t(($) => $.account.profile_description_label)}
+          size="text"
+          align="start"
+        >
+          <div>
+            <Textarea
+              name="profile-description"
+              autoComplete="off"
+              aria-label={t(($) => $.account.profile_description_label)}
+              value={profileDescription}
+              onChange={(event) => setProfileDescription(event.target.value)}
+              onBlur={autoSave.flush}
+              placeholder={t(($) => $.account.profile_description_placeholder)}
+              rows={5}
+              maxLength={MAX_PROFILE_DESCRIPTION_LEN}
+              aria-invalid={descriptionTooLong}
+              className="resize-y"
+            />
+            <div className="mt-1 flex justify-end text-caption text-muted-foreground">
+              <span
+                className={descriptionTooLong ? "text-destructive shrink-0" : "shrink-0"}
+                aria-live="polite"
+              >
+                {profileDescription.length}/{MAX_PROFILE_DESCRIPTION_LEN}
+              </span>
             </div>
-          </SettingsRow>
-        </SettingsCard>
-      </SettingsSection>
+            {descriptionTooLong ? (
+              <p className="mt-1 text-caption text-destructive">
+                {t(($) => $.account.profile_description_too_long, {
+                  max: MAX_PROFILE_DESCRIPTION_LEN,
+                })}
+              </p>
+            ) : null}
+          </div>
+        </SettingsRow>
+      </SettingsCard>
     </SettingsTab>
   );
 }

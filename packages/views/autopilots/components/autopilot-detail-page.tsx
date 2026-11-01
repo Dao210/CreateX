@@ -8,7 +8,6 @@ import {
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { autopilotDetailOptions, autopilotRunsOptions, autopilotRunOptions } from "@auro/core/autopilots/queries";
-import { projectDetailOptions } from "@auro/core/projects/queries";
 import {
   useUpdateAutopilot,
   useDeleteAutopilot,
@@ -54,12 +53,7 @@ import { useDescribeSchedule } from "./schedule-editor/describe";
 import { formatInTimeZone } from "../../common/format-in-time-zone";
 import { SegmentedToggle } from "../../common/segmented-toggle";
 import { useScheduleSubmitGate } from "./schedule-editor/validate";
-import type {
-  AutopilotExecutionMode,
-  AutopilotRun,
-  AutopilotSubscriber,
-  AutopilotTrigger,
-} from "@auro/core/types";
+import type { AutopilotExecutionMode, AutopilotRun, AutopilotTrigger } from "@auro/core/types";
 import type { AgentTask } from "@auro/core/types/agent";
 import { ReadonlyContent } from "../../editor";
 import { TranscriptButton } from "../../common/task-transcript";
@@ -68,7 +62,6 @@ import { EditScheduleTriggerDialog } from "./edit-schedule-trigger-dialog";
 import { runNowToastKind, runNowBlockedKey } from "./run-now-toast";
 import { WebhookPayloadPreview } from "./webhook-payload-preview";
 import { WebhookDeliveriesSection } from "./webhook-deliveries-section";
-import { ProjectIcon } from "../../projects/components/project-icon";
 import { useT } from "../../i18n";
 import { PageHeader } from "../../layout/page-header";
 
@@ -638,40 +631,6 @@ function AddTriggerDialog({
   );
 }
 
-// Read-only chip row; edits flow through AutopilotDialog → SubscriberMultiSelect
-// so the detail page never holds in-flight selection state.
-function SubscriberChips({
-  subscribers,
-}: {
-  subscribers: AutopilotSubscriber[] | undefined;
-}) {
-  const { t } = useT("autopilots");
-  const { getActorName } = useActorName();
-  const members = (subscribers ?? []).filter((s) => s.user_type === "member");
-  if (members.length === 0) {
-    return (
-      <div className="mt-1 text-body text-muted-foreground">
-        {t(($) => $.detail.field_subscribers_none)}
-      </div>
-    );
-  }
-  return (
-    <div className="mt-1 flex flex-wrap gap-1.5">
-      {members.map((s) => (
-        <span
-          key={`${s.user_type}:${s.user_id}`}
-          className="inline-flex items-center gap-1 rounded-full border bg-background px-2 py-0.5 text-caption"
-        >
-          <ActorAvatar actorType="member" actorId={s.user_id} size="xs" />
-          <span className="max-w-[14rem] truncate">
-            {getActorName("member", s.user_id)}
-          </span>
-        </span>
-      ))}
-    </div>
-  );
-}
-
 export function AutopilotDetailPage({ autopilotId }: { autopilotId: string }) {
   const { t } = useT("autopilots");
   const wsId = useWorkspaceId();
@@ -684,11 +643,6 @@ export function AutopilotDetailPage({ autopilotId }: { autopilotId: string }) {
   const updateAutopilot = useUpdateAutopilot();
   const deleteAutopilot = useDeleteAutopilot();
   const triggerAutopilot = useTriggerAutopilot();
-  const projectId = data?.autopilot.project_id ?? null;
-  const { data: project, isLoading: projectLoading } = useQuery({
-    ...projectDetailOptions(wsId, projectId ?? ""),
-    enabled: Boolean(projectId),
-  });
 
   const [triggerDialogOpen, setTriggerDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -935,35 +889,8 @@ export function AutopilotDetailPage({ autopilotId }: { autopilotId: string }) {
                   project decides its execution environment (repository /
                   local_directory, and therefore worktree isolation), so an
                   operator debugging a run needs to see it here. */}
-              <div>
-                <label className="text-caption text-muted-foreground">{t(($) => $.detail.field_project)}</label>
-                <div className="mt-1 min-w-0">
-                  {!autopilot.project_id ? (
-                    <span className="text-muted-foreground">{t(($) => $.detail.no_project)}</span>
-                  ) : projectLoading ? (
-                    <Skeleton className="h-5 w-32" />
-                  ) : project ? (
-                    <span
-                      className="inline-flex max-w-full items-center gap-1.5 text-foreground hover:underline"
-                    >
-                      <ProjectIcon project={project} size="md" />
-                      <span className="truncate">{project.title}</span>
-                    </span>
-                  ) : (
-                    <span className="text-muted-foreground">{t(($) => $.detail.project_unavailable)}</span>
-                  )}
-                </div>
-              </div>
-              {autopilot.execution_mode === "create_issue" && (
-                <div className="col-span-2">
-                  <label className="text-caption text-muted-foreground">
-                    {t(($) => $.detail.field_subscribers)}
-                  </label>
-                  <SubscriberChips
-                    subscribers={autopilot.subscribers}
-                  />
-                </div>
-              )}
+              
+              
               {autopilot.description && (
                 <div className="col-span-2">
                   <label className="text-caption text-muted-foreground">{t(($) => $.detail.field_prompt)}</label>
@@ -1066,14 +993,9 @@ export function AutopilotDetailPage({ autopilotId }: { autopilotId: string }) {
           initial={{
             title: autopilot.title,
             description: autopilot.description ?? "",
-            project_id: autopilot.project_id ?? null,
             assignee_type: autopilot.assignee_type,
             assignee_id: autopilot.assignee_id,
             execution_mode: autopilot.execution_mode as AutopilotExecutionMode,
-            subscriber_user_ids:
-              autopilot.subscribers
-                ?.filter((s) => s.user_type === "member")
-                .map((s) => s.user_id) ?? [],
           }}
           triggers={triggers}
           collaborators={collaborators}

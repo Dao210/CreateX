@@ -455,7 +455,7 @@ describe("CallbackPage", () => {
 
   it("onboarded users with missing source land in the workspace", async () => {
     // Source attribution backfill is now an in-workspace modal — see
-    // `<SourceBackfillModal />` mounted inside `DashboardLayout`. The
+    // `` mounted inside `DashboardLayout`. The
     // callback page is intentionally agnostic about it.
     mockLoginWithGoogle.mockResolvedValue(
       makeUser({

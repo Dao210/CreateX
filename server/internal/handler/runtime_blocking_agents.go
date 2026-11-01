@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/auro-ai/auro/server/internal/service"
 	db "github.com/auro-ai/auro/server/pkg/db/generated"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // agentBuilderSystemKeyPrefix marks the hidden execution carrier behind an
@@ -48,10 +48,9 @@ const (
 // both the same vocabulary, and TestBlockingAgentClassMatchesSQLClassification
 // pins them to each other.
 const (
-	blockingAgentClassKeyUser        = "user"
-	blockingAgentClassKeyMika        = "mika"
-	blockingAgentClassKeyBuilder     = "agent_builder"
-	blockingAgentClassKeyOtherSystem = "other_system"
+	blockingAgentClassKeyUser    = "user"
+	blockingAgentClassKeyMika    = "mika"
+	blockingAgentClassKeyBuilder = "agent_builder"
 )
 
 // Unknown keys fall to other_system, not user. Only the exact "user" key may

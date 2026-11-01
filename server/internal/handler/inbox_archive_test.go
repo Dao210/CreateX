@@ -1,12 +1,13 @@
 package handler
 
 import (
-	"github.com/auro-ai/auro/server/internal/testutil"
-	"github.com/google/uuid"
 	"net/http"
 	"net/url"
 	"testing"
 	"time"
+
+	"github.com/auro-ai/auro/server/internal/testutil"
+	"github.com/google/uuid"
 )
 
 func TestSystemArchivedInboxPaginationAndIsolation(t *testing.T) {

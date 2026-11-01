@@ -5,12 +5,10 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"math"
-	"net/mail"
-	"strings"
 	"time"
 
+	"github.com/auro-ai/auro/server/internal/adminauth"
 	"github.com/auro-ai/auro/server/internal/util"
 	db "github.com/auro-ai/auro/server/pkg/db/generated"
 	"github.com/google/uuid"
@@ -19,7 +17,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-var ErrForbidden = errors.New("admin_forbidden")
+var ErrForbidden = adminauth.ErrForbidden
 var ErrNotFound = errors.New("mcp_service_not_found")
 var ErrInvalid = errors.New("invalid_admin_request")
 var ErrConflict = errors.New("revision_conflict")
@@ -27,41 +25,15 @@ var ErrConflict = errors.New("revision_conflict")
 type Service struct {
 	Pool        *pgxpool.Pool
 	Definitions []Definition
-	emails      map[string]bool
+	*adminauth.Gate
 }
 
 func New(pool *pgxpool.Pool, rawEmails string, definitions []Definition) (*Service, error) {
-	s := &Service{Pool: pool, Definitions: definitions, emails: map[string]bool{}}
-	for _, value := range strings.FieldsFunc(rawEmails, func(r rune) bool { return r == ',' || r == ';' || r == '\n' }) {
-		value = strings.ToLower(strings.TrimSpace(value))
-		if value == "" {
-			continue
-		}
-		parsed, e := mail.ParseAddress(value)
-		if e != nil || parsed.Address != value {
-			return nil, fmt.Errorf("AURO_ADMIN_EMAILS must contain comma-separated login email addresses")
-		}
-		s.emails[value] = true
+	gate, err := adminauth.New(pool, rawEmails)
+	if err != nil {
+		return nil, err
 	}
-	return s, nil
-}
-func (s *Service) Configured() bool { return len(s.emails) > 0 }
-func (s *Service) IsAdmin(ctx context.Context, userID string) (bool, error) {
-	if !s.Configured() {
-		return false, nil
-	}
-	u, e := util.ParseUUID(userID)
-	if e != nil {
-		return false, ErrForbidden
-	}
-	user, e := db.New(s.Pool).GetUser(ctx, u)
-	if errors.Is(e, pgx.ErrNoRows) {
-		return false, nil
-	}
-	if e != nil {
-		return false, e
-	}
-	return s.emails[strings.ToLower(strings.TrimSpace(user.Email))], nil
+	return &Service{Pool: pool, Definitions: definitions, Gate: gate}, nil
 }
 func (s *Service) definition(id string) (Definition, error) {
 	for _, definition := range s.Definitions {
@@ -173,9 +145,8 @@ func (s *Service) UpdatePolicy(ctx context.Context, userID, id string, input Pol
 	}
 	defer tx.Rollback(ctx)
 	q := db.New(tx)
-	email, e := q.LockMCPAdminUser(ctx, actor)
-	if e != nil || !s.emails[strings.ToLower(strings.TrimSpace(email))] {
-		return Policy{}, ErrForbidden
+	if e = s.LockActor(ctx, q, userID); e != nil {
+		return Policy{}, e
 	}
 	row, e := q.PutMCPServicePolicy(ctx, db.PutMCPServicePolicyParams{ServiceID: id, Enabled: *input.Enabled, DisabledTools: disabled, UpdatedBy: actor, ExpectedRevision: int32(input.ExpectedRevision)})
 	if errors.Is(e, pgx.ErrNoRows) {

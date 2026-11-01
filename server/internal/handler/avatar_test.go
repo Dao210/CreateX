@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/auro-ai/auro/server/internal/storage"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
-	"github.com/auro-ai/auro/server/internal/storage"
 )
 
 // withAvatarStorage swaps the handler's storage/config for one test and

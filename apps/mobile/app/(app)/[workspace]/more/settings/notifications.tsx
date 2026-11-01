@@ -1,11 +1,3 @@
-/**
- * Notification preferences subscreen. 6 inbox groups + system_notifications
- * toggle, each backed by an optimistic PATCH /api/notification-preferences.
- *
- * Copy mirrors packages/views/settings/components/notifications-tab.tsx.
- * Group labels describe the same server-side semantics as web; divergent
- * labels would violate behavioral parity (apps/mobile/CLAUDE.md).
- */
 import { ActivityIndicator, ScrollView, View } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import type {
@@ -14,47 +6,10 @@ import type {
 } from "@auro/core/types";
 import { Text } from "@/components/ui/text";
 import { Switch } from "@/components/ui/switch";
-import { Separator } from "@/components/ui/separator";
 import { useWorkspaceStore } from "@/data/workspace-store";
 import { notificationPreferenceOptions } from "@/data/queries/notification-preferences";
 import { useUpdateNotificationPreferences } from "@/data/mutations/notification-preferences";
 import { useT } from "@/lib/i18n";
-
-const INBOX_GROUPS: {
-  key: Exclude<NotificationGroupKey, "system_notifications">;
-  labelKey: string;
-  descriptionKey?: string;
-}[] = [
-  {
-    key: "assignments",
-    labelKey: "groups.assignments",
-    descriptionKey: "groups.assignments_description",
-  },
-  {
-    key: "status_changes",
-    labelKey: "groups.status_changes",
-  },
-  {
-    key: "comments",
-    labelKey: "groups.comments",
-    descriptionKey: "groups.comments_description",
-  },
-  {
-    key: "mentions",
-    labelKey: "groups.mentions",
-    descriptionKey: "groups.mentions_description",
-  },
-  {
-    key: "updates",
-    labelKey: "groups.updates",
-    descriptionKey: "groups.updates_description",
-  },
-  {
-    key: "agent_activity",
-    labelKey: "groups.agent_activity",
-    descriptionKey: "groups.agent_activity_description",
-  },
-];
 
 export default function NotificationsSettingsScreen() {
   const wsId = useWorkspaceStore((s) => s.currentWorkspaceId);
@@ -102,36 +57,6 @@ export default function NotificationsSettingsScreen() {
       className="flex-1 bg-background"
       contentContainerClassName="px-4 py-4 gap-6"
     >
-      <Section
-        title={t("groups.inbox_notifications")}
-      >
-        {INBOX_GROUPS.map((group, idx) => {
-          const enabled = preferences[group.key] !== "muted";
-          const isLast = idx === INBOX_GROUPS.length - 1;
-          return (
-            <View key={group.key}>
-              <View className="flex-row items-center px-4 py-3 gap-3">
-                <View className="flex-1">
-                  <Text className="text-base font-medium text-foreground">
-                    {t(group.labelKey)}
-                  </Text>
-                  {group.descriptionKey ? (
-                    <Text className="text-xs text-muted-foreground mt-0.5">
-                      {t(group.descriptionKey)}
-                    </Text>
-                  ) : null}
-                </View>
-                <Switch
-                  checked={enabled}
-                  onCheckedChange={(checked) => onToggle(group.key, checked)}
-                />
-              </View>
-              {!isLast ? <Separator /> : null}
-            </View>
-          );
-        })}
-      </Section>
-
       <Section
         title={t("groups.system")}
       >

@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgtype"
 	db "github.com/auro-ai/auro/server/pkg/db/generated"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 func TestProjectResourceLifecycle(t *testing.T) {
@@ -224,12 +224,12 @@ func TestIsValidGitRepoURL(t *testing.T) {
 		"",
 		"not-a-url",
 		"github.com/auro-ai/auro", // no scheme, no scp-style colon
-		"https://",                      // empty host
-		"git@github.com",                // missing :path
-		"git@:foo/bar",                  // missing host
-		"git@github.com:",               // missing path
-		"ftp://example.com/repo",        // unsupported scheme
-		"file:///tmp/repo",              // unsupported scheme
+		"https://",                // empty host
+		"git@github.com",          // missing :path
+		"git@:foo/bar",            // missing host
+		"git@github.com:",         // missing path
+		"ftp://example.com/repo",  // unsupported scheme
+		"file:///tmp/repo",        // unsupported scheme
 		"some random text with spaces",
 		"github.com:org/repo@branch", // '@' after ':' belongs to the path, not user
 		"foo:bar@baz",                // '@' after ':' with no scheme

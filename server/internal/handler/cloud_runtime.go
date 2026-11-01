@@ -10,9 +10,9 @@ import (
 	"net/http"
 	"net/url"
 
-	chimw "github.com/go-chi/chi/v5/middleware"
 	"github.com/auro-ai/auro/server/internal/cloudruntime"
 	"github.com/auro-ai/auro/server/internal/logger"
+	chimw "github.com/go-chi/chi/v5/middleware"
 )
 
 const maxCloudRuntimeRequestBodySize = 1 << 20
