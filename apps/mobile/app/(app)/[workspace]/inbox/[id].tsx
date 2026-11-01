@@ -1,4 +1,4 @@
-import { inboxContent } from "@auro/core/inbox/messages";
+import { autopilotNoticeId, inboxContent } from "@auro/core/inbox/messages";
 import { isVisibleInboxItem } from "@auro/core/inbox/system-notifications";
 import { ActivityIndicator, Linking, ScrollView, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
@@ -106,6 +106,7 @@ export default function InboxNoticeDetail() {
   const billingUrl =
     webUrl && wsSlug ? `${webUrl}/${wsSlug}/settings?tab=billing` : null;
   const content = item ? inboxContent(item) : null;
+  const automationId = item ? autopilotNoticeId(item) : null;
   const time = (value: string) => new Date(value).toLocaleString();
   const body = item ? getAutopilotQuotaBody(item) : null;
 
@@ -159,6 +160,7 @@ export default function InboxNoticeDetail() {
             </Text>
           ) : null}
 
+          {item.type === "autopilot_paused" && webUrl && wsSlug ? <Button variant="outline" onPress={() => void Linking.openURL(`${webUrl}/${encodeURIComponent(wsSlug)}/autopilots${automationId ? `/${encodeURIComponent(automationId)}` : ""}`)}><Text>{t("messages.view_automation")}</Text></Button> : null}
           {isQuotaNotice ? (
             <BillingRecovery recovery={recovery} billingUrl={billingUrl} />
           ) : null}

@@ -1,0 +1,1 @@
+DROP INDEX CONCURRENTLY IF EXISTS agent_mcp_server_pkey;

@@ -126,17 +126,6 @@ describe("WorkspaceTab — automatic updates", () => {
     return userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
   }
 
-  it("keeps the world slug read-only and omits the retired issue prefix", () => {
-    render(<WorkspaceTab />, { wrapper: I18nWrapper });
-
-    expect(screen.queryByText("Issue prefix")).toBeNull();
-    expect(screen.queryByText("TES")).toBeNull();
-    expect(screen.queryByRole("button", { name: "Change prefix..." })).toBeNull();
-    expect(screen.getByText("test-workspace")).toBeInTheDocument();
-    expect(screen.queryByRole("textbox", { name: "Slug" })).toBeNull();
-    expect(screen.queryByRole("button", { name: /^Save$/ })).toBeNull();
-  });
-
   it("auto-saves ordinary workspace fields silently, without invalidating unrelated caches", async () => {
     const user = setupUser();
     render(<WorkspaceTab />, { wrapper: I18nWrapper });

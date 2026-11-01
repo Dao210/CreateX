@@ -1,0 +1,1 @@
+DROP INDEX CONCURRENTLY IF EXISTS notification_preference_workspace_id_user_id_key;

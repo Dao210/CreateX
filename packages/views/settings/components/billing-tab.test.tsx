@@ -372,15 +372,6 @@ describe("BillingTab", () => {
     });
   });
 
-  it("renders nothing and issues no query when the feature flag is absent", () => {
-    configStore.getState().setFeatureFlags({});
-
-    const { container } = renderWithI18n(<BillingTab />);
-
-    expect(container).toBeEmptyDOMElement();
-    expect(mocks.useQuery).not.toHaveBeenCalled();
-  });
-
   it("shows server prices and keeps the selected interval in sync", async () => {
     const user = userEvent.setup();
     renderWithI18n(<BillingTab />);

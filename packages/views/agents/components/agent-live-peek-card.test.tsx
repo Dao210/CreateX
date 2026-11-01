@@ -170,63 +170,6 @@ beforeEach(() => {
 });
 
 describe("AgentLivePeekCard", () => {
-  it("renders Working state with the linked current issue", () => {
-    mockSnapshot.current = [
-      makeTask({
-        id: "task-running",
-        status: "running",
-        issue_id: "issue-42",
-        started_at: "2026-05-14T08:00:00Z",
-      }),
-    ];
-    mockIssue.current = {
-      id: "issue-42",
-      identifier: "MUL-42",
-      title: "Wire up live peek",
-    };
-    mockPresence.current = {
-      availability: "online",
-      workload: "working",
-      runningCount: 1,
-      queuedCount: 0,
-      capacity: 1,
-    };
-
-    renderCard();
-
-    expect(screen.getByText("Working")).toBeInTheDocument();
-    // identifier + title both render under the same link.
-    const link = screen.getByRole("link", { name: /MUL-42/ });
-    expect(link).toHaveAttribute("href", "/test/issues/issue-42");
-    expect(link.textContent).toContain("Wire up live peek");
-  });
-
-  it("renders Idle + empty issue copy when nothing is running", () => {
-    mockPresence.current = {
-      availability: "online",
-      workload: "idle",
-      runningCount: 0,
-      queuedCount: 0,
-      capacity: 1,
-    };
-    mockSnapshot.current = [
-      makeTask({
-        id: "task-done",
-        status: "completed",
-        completed_at: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
-      }),
-    ];
-
-    renderCard();
-
-    expect(screen.getByText("Idle")).toBeInTheDocument();
-    expect(screen.getByText(enAgents.live_peek.no_current_issue)).toBeInTheDocument();
-    // "5m ago" — proves last activity falls back to the most recent terminal
-    // task in the snapshot.
-    expect(screen.getByText(/5m ago/)).toBeInTheDocument();
-    // No failed indicator on a completed terminal state.
-    expect(screen.queryByText(enAgents.live_peek.failed_indicator)).toBeNull();
-  });
 
   it("shows the failed indicator on the last-activity row when the most recent terminal task failed", () => {
     mockPresence.current = {

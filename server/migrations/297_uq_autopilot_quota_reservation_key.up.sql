@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS uq_autopilot_quota_reservation_key ON autopilot_quota_reservation USING btree (workspace_id, period_start, period_end, idempotency_key) WHERE (state <> 'released'::text);

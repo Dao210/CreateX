@@ -61,10 +61,6 @@ const HTML_LANG: Record<SupportedLocale, string> = {
 function useCmdWCloseTab() {
   useEffect(() => {
     return window.desktopAPI.onCloseActiveTab(() => {
-      if (window.desktopAPI.windowContext?.kind === "issue") {
-        window.desktopAPI.closeWindow();
-        return;
-      }
       const store = useTabStore.getState();
       const { activeWorkspaceSlug, byWorkspace } = store;
       if (!activeWorkspaceSlug) {
@@ -361,10 +357,6 @@ export default function App() {
   const { version, os } = window.desktopAPI.appInfo;
   const systemLocale = window.desktopAPI.systemLocale;
   const runtimeConfigResult = window.desktopAPI.runtimeConfig;
-  // The fallback keeps renderer HMR safe while a main/preload rebuild is
-  // restarting Electron; packaged builds always expose windowContext.
-  const windowContext =
-    window.desktopAPI.windowContext ?? { kind: "main" as const };
   useCmdWCloseTab();
   // Mounted at the App root for the same reason as Cmd+W: the chord has to
   // work in every renderer state, not only inside the tab shell.
@@ -441,10 +433,10 @@ export default function App() {
           apiBaseUrl={runtimeConfigResult.config.apiUrl}
           wsUrl={runtimeConfigResult.config.wsUrl}
           onLogout={
-            windowContext.kind === "main" ? handleDaemonLogout : undefined
+            handleDaemonLogout
           }
           onSessionExpired={
-            windowContext.kind === "main" ? handleSessionExpired : undefined
+            handleSessionExpired
           }
           identity={identity}
           locale={locale}
@@ -452,19 +444,18 @@ export default function App() {
           localeAdapter={localeAdapter}
         >
           <DesktopAuthSessionBridge />
-          {windowContext.kind === "main" && <DiagnosticRouteReporter />}
-          {windowContext.kind === "main" && (
+          <DiagnosticRouteReporter />
+          
             <DesktopClientUsageReporter
               apiUrl={runtimeConfigResult.config.apiUrl}
             />
-          )}
           <AppContent />
         </CoreProvider>
       ) : (
         <BlockingRuntimeConfigError message={runtimeConfigResult.error.message} />
       )}
       <Toaster />
-      {windowContext.kind === "main" && <UpdateNotification />}
+      <UpdateNotification />
     </ThemeProvider>
   );
 }

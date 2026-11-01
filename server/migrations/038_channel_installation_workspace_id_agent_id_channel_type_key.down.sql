@@ -1,0 +1,1 @@
+DROP INDEX CONCURRENTLY IF EXISTS channel_installation_workspace_id_agent_id_channel_type_key;

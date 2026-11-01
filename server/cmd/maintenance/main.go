@@ -17,8 +17,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/auro-ai/auro/server/internal/maintenance"
+	"github.com/google/uuid"
 )
 
 var errIncomplete = errors.New("incomplete: run budget exhausted; inspect the persisted job before continuing")

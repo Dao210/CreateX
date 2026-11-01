@@ -148,6 +148,7 @@
     "residents": "達成された住民の目標：{{count}}",
     "view_resident": "住民を見る",
     "view_world": "ワールドを見る",
-    "author": "作者：{{name}}"
+    "author": "作者：{{name}}",
+    "view_automation": "自動化を見る"
   }
 }

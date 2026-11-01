@@ -34,8 +34,15 @@ type archivedInboxFacetsResponse struct {
 	UnreadCount int64            `json:"unread_count"`
 }
 
-func parseArchivedInboxFilters(w http.ResponseWriter, r *http.Request) (db.ArchivedInboxFacetsParams, bool) {
-	var p db.ArchivedInboxFacetsParams
+type archivedInboxFilters struct {
+	WorkspaceID pgtype.UUID
+	RecipientID pgtype.UUID
+	Actors      []string
+	UnreadOnly  bool
+}
+
+func parseArchivedInboxFilters(w http.ResponseWriter, r *http.Request) (archivedInboxFilters, bool) {
+	var p archivedInboxFilters
 	userID, ok := requireUserID(w, r)
 	if !ok {
 		return p, false
@@ -46,7 +53,7 @@ func parseArchivedInboxFilters(w http.ResponseWriter, r *http.Request) (db.Archi
 	}
 	p.RecipientID = parseUUID(userID)
 	q := r.URL.Query()
-	for name, target := range map[string]*[]string{"statuses": &p.Statuses, "priorities": &p.Priorities, "actors": &p.Actors} {
+	for name, target := range map[string]*[]string{"actors": &p.Actors} {
 		*target = []string{}
 		if raw := q.Get(name); raw != "" {
 			if len(raw) > 8192 {
@@ -80,9 +87,9 @@ func parseArchivedInboxFilters(w http.ResponseWriter, r *http.Request) (db.Archi
 
 // A cursor is tied to the recipient and filters, so it cannot accidentally
 // continue a different archive or a changed filter selection.
-func archivedInboxScope(p db.ArchivedInboxFacetsParams, groupID pgtype.UUID) string {
+func archivedInboxScope(p archivedInboxFilters, groupID pgtype.UUID) string {
 	encoded, _ := json.Marshal(struct {
-		Filters db.ArchivedInboxFacetsParams
+		Filters archivedInboxFilters
 		Group   pgtype.UUID
 	}{p, groupID})
 	return fmt.Sprintf("%x", sha256.Sum256(encoded))
@@ -95,7 +102,7 @@ func (h *Handler) ListArchivedInboxPage(w http.ResponseWriter, r *http.Request) 
 	}
 	p := db.ListArchivedInboxPageParams{
 		WorkspaceID: filters.WorkspaceID, RecipientID: filters.RecipientID,
-		Statuses: filters.Statuses, Priorities: filters.Priorities, Actors: filters.Actors, UnreadOnly: filters.UnreadOnly,
+		Actors: filters.Actors, UnreadOnly: filters.UnreadOnly,
 	}
 	limit := 50
 	if raw := r.URL.Query().Get("limit"); raw != "" {
@@ -135,6 +142,10 @@ func (h *Handler) ListArchivedInboxPage(w http.ResponseWriter, r *http.Request) 
 		}
 		p.BeforeTime = pgtype.Timestamptz{Time: before, Valid: true}
 	}
+	if hasRetiredArchiveFilter(r) {
+		writeJSON(w, http.StatusOK, archivedInboxPageResponse{Items: []InboxItemResponse{}})
+		return
+	}
 	p.PageLimit = int32(limit + 1)
 	rows, err := h.Queries.ListArchivedInboxPage(r.Context(), p)
 	if err != nil {
@@ -146,24 +157,11 @@ func (h *Handler) ListArchivedInboxPage(w http.ResponseWriter, r *http.Request) 
 		rows = rows[:limit]
 	}
 	for _, row := range rows {
-		item := inboxToResponse(row.InboxItem)
-		item.Body = inboxListBody(row.InboxItem.Type, row.InboxItem.IssueID, row.InboxItem.Body)
-		item.IssueStatus, item.IssuePriority = textToPtr(row.IssueStatus), textToPtr(row.IssuePriority)
-		if row.CommentID != "" {
-			var details map[string]json.RawMessage
-			if len(item.Details) == 0 || string(item.Details) == "null" {
-				details = map[string]json.RawMessage{}
-			} else if err := json.Unmarshal(item.Details, &details); err != nil {
-				writeError(w, http.StatusInternalServerError, "invalid archived notification details")
-				return
-			}
-			details["comment_id"], _ = json.Marshal(row.CommentID)
-			item.Details, _ = json.Marshal(details)
-		}
-		resp.Items = append(resp.Items, item)
+		resp.Items = append(resp.Items, inboxToResponse(db.InboxItem(row)))
 	}
+
 	if resp.HasMore {
-		last := rows[len(rows)-1].InboxItem
+		last := rows[len(rows)-1]
 		encoded, _ := json.Marshal(archivedInboxCursor{Time: last.CreatedAt.Time.Format(time.RFC3339Nano), ID: uuidToString(last.ID), Scope: scope})
 		cursor := base64.RawURLEncoding.EncodeToString(encoded)
 		resp.NextCursor = &cursor
@@ -176,7 +174,11 @@ func (h *Handler) GetArchivedInboxFacets(w http.ResponseWriter, r *http.Request)
 	if !ok {
 		return
 	}
-	rows, err := h.Queries.ArchivedInboxFacets(r.Context(), p)
+	if hasRetiredArchiveFilter(r) {
+		writeJSON(w, http.StatusOK, archivedInboxFacetsResponse{Statuses: map[string]int64{}, Priorities: map[string]int64{}, Actors: map[string]int64{}})
+		return
+	}
+	rows, err := h.Queries.ArchivedInboxFacets(r.Context(), db.ArchivedInboxFacetsParams{WorkspaceID: p.WorkspaceID, RecipientID: p.RecipientID, Actors: p.Actors, UnreadOnly: p.UnreadOnly})
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to load archived inbox filters")
 		return
@@ -195,4 +197,11 @@ func (h *Handler) GetArchivedInboxFacets(w http.ResponseWriter, r *http.Request)
 		}
 	}
 	writeJSON(w, http.StatusOK, resp)
+}
+
+// Historical filters address projections that are now always null. Returning
+// no matches preserves their API meaning without restoring task business data.
+func hasRetiredArchiveFilter(r *http.Request) bool {
+	q := r.URL.Query()
+	return q.Get("statuses") != "" || q.Get("priorities") != ""
 }

@@ -204,3 +204,10 @@ func TestPendingBatcher_RealTimerFlushes(t *testing.T) {
 		t.Fatal("real-timer flush did not fire within 2s")
 	}
 }
+
+// pendingCount reports how many sessions currently have an armed window.
+func (b *pendingBatcher) pendingCount() int {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return len(b.pending)
+}

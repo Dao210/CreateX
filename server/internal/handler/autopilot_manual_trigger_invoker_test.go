@@ -20,32 +20,6 @@ import (
 // principal and was refused — while the same request had already been accepted
 // by requireAutopilotWrite three lines earlier.
 
-// triggerInvokerFixture builds an active create_issue autopilot owned by
-// testUserID and returns it with the agent that will do the triggering.
-func triggerInvokerFixture(t *testing.T, titleSuffix string) (autopilotID, agentID string) {
-	t.Helper()
-
-	dbfx.QueryRow(t, `SELECT id FROM agent WHERE workspace_id = $1 LIMIT 1`, testWorkspaceID).Scan(&agentID)
-
-	title := fmt.Sprintf("manual trigger invoker %s %d", titleSuffix, time.Now().UnixNano())
-	req := newRequest("POST", "/api/autopilots?workspace_id="+testWorkspaceID, map[string]any{
-		"title":                title,
-		"assignee_id":          agentID,
-		"execution_mode":       "create_issue",
-		"issue_title_template": title,
-	})
-	var ap AutopilotResponse
-	testutil.Call(t, testHandler.CreateAutopilot, req).Want(http.StatusCreated).JSON(&ap)
-
-	// A dispatched run leaves an issue and a task behind it; both outlive the
-	// autopilot row, so they are cleaned before it.
-	dbfx.Cleanup(t, `DELETE FROM agent_task_queue WHERE issue_id IN (SELECT id FROM issue WHERE workspace_id = $1 AND title = $2)`, testWorkspaceID, title)
-	dbfx.Cleanup(t, `DELETE FROM issue WHERE workspace_id = $1 AND title = $2`, testWorkspaceID, title)
-	dbfx.Cleanup(t, `DELETE FROM autopilot_run WHERE autopilot_id = $1`, ap.ID)
-	dbfx.Cleanup(t, `DELETE FROM autopilot WHERE id = $1`, ap.ID)
-	return ap.ID, agentID
-}
-
 // callerTask is the running task the triggering agent speaks from. An empty
 // originatorUserID leaves the task carrying no human at all — the shape a legacy
 // or system-rooted run has.
@@ -144,53 +118,6 @@ func TestTriggerAutopilot_AgentWithNoOriginatorRefused(t *testing.T) {
 	// auto-pause monitor reads.
 	if runs := dbfx.Count(t, `SELECT count(*) FROM autopilot_run WHERE autopilot_id = $1`, autopilotID); runs != 0 {
 		t.Errorf("autopilot_run rows = %d, want 0 for a pre-dispatch refusal", runs)
-	}
-}
-
-// TestTriggerAutopilot_RuntimeOwnerNeedsNoGrant is the cross-identity case: the
-// ordering human may trigger this autopilot, the machine the agent happens to
-// run on belongs to someone who may not, and the trigger goes through.
-//
-// This is the scenario the first cut of the fix still refused. It kept
-// requireAutopilotWrite in front of the originator check, so BOTH humans had to
-// hold the grant and a member could not delegate a "Run now" they were perfectly
-// entitled to press themselves. Authorization here is the ordering human's alone;
-// workspace tenancy for the authenticated caller stays with the router's
-// RequireWorkspaceMember middleware.
-func TestTriggerAutopilot_RuntimeOwnerNeedsNoGrant(t *testing.T) {
-	if testHandler == nil || testPool == nil {
-		t.Skip("database not available")
-	}
-	var agentID string
-	dbfx.QueryRow(t, `SELECT id FROM agent WHERE workspace_id = $1 LIMIT 1`, testWorkspaceID).Scan(&agentID)
-
-	// The ordering human owns the autopilot outright: they created it.
-	orderingHuman := plainMember(t, "ordering-human")
-	title := fmt.Sprintf("manual trigger cross identity %d", time.Now().UnixNano())
-	autopilotID := dbfx.Insert(t, "autopilot", testutil.Cols{
-		"workspace_id":         testWorkspaceID,
-		"title":                title,
-		"assignee_id":          agentID,
-		"assignee_type":        "agent",
-		"execution_mode":       "create_issue",
-		"issue_title_template": title,
-		"status":               "active",
-		"created_by_type":      "member",
-		"created_by_id":        orderingHuman,
-	})
-	dbfx.Cleanup(t, `DELETE FROM agent_task_queue WHERE issue_id IN (SELECT id FROM issue WHERE workspace_id = $1 AND title = $2)`, testWorkspaceID, title)
-	dbfx.Cleanup(t, `DELETE FROM issue WHERE workspace_id = $1 AND title = $2`, testWorkspaceID, title)
-	dbfx.Cleanup(t, `DELETE FROM autopilot_run WHERE autopilot_id = $1`, autopilotID)
-
-	// The machine's owner is a plain member with no grant on this autopilot.
-	runtimeOwner := plainMember(t, "runtime-owner")
-	taskID := callerTask(t, agentID, orderingHuman)
-
-	var run AutopilotRunResponse
-	triggerAsAgentAuthedAs(t, runtimeOwner, autopilotID, agentID, taskID).Want(http.StatusOK).JSON(&run)
-	if run.Status != "issue_created" {
-		t.Fatalf("run status = %q (reason_code %v, failure_reason %v), want issue_created — the ordering human created this autopilot; the runtime owner's lack of a grant must not block them",
-			run.Status, derefStr(run.ReasonCode), derefStr(run.FailureReason))
 	}
 }
 

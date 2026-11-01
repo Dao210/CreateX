@@ -138,21 +138,6 @@ describe("parseWorkspaceEntityLink", () => {
   const PROJECT_ID = "8f14e45f-ceea-4d0e-a1a2-9b1c0d3e4f5a";
   const ISSUE_ID = "1b9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bed";
 
-  it("parses an absolute project URL on the app origin", () => {
-    expect(
-      parseWorkspaceEntityLink(
-        `${APP_ORIGIN}/acme/projects/${PROJECT_ID}`,
-        APP_ORIGIN,
-      ),
-    ).toEqual({ kind: "project", id: PROJECT_ID, slug: "acme" });
-  });
-
-  it("parses an absolute issue URL on the app origin", () => {
-    expect(
-      parseWorkspaceEntityLink(`${APP_ORIGIN}/acme/issues/${ISSUE_ID}`, APP_ORIGIN),
-    ).toEqual({ kind: "issue", id: ISSUE_ID, slug: "acme" });
-  });
-
   it("parses a site-relative path without needing an app origin", () => {
     expect(parseWorkspaceEntityLink(`/acme/projects/${PROJECT_ID}`)).toEqual({
       kind: "project",
@@ -227,23 +212,6 @@ describe("parseWorkspaceEntityLink", () => {
     expect(
       parseWorkspaceEntityLink(`/acme/issues/${ISSUE_ID}#comment-3`),
     ).toBeNull();
-  });
-
-  // `copyLink` / `openInNewTab` build `paths.issueDetail(identifier || id)` and
-  // the issue route rewrites a UUID URL back to the identifier, so this — not
-  // the UUID form — is what a user actually copies out of the app.
-  it("parses an issue addressed by identifier", () => {
-    expect(parseWorkspaceEntityLink("/acme/issues/MUL-1")).toEqual({
-      kind: "issue",
-      id: "MUL-1",
-      slug: "acme",
-    });
-  });
-
-  // A project has no shorthand, so an identifier-shaped id under /projects/
-  // addresses nothing this parser could resolve.
-  it("returns null for an identifier-shaped project id", () => {
-    expect(parseWorkspaceEntityLink("/acme/projects/MUL-1")).toBeNull();
   });
 
   it("returns null for an id that is neither a UUID nor an identifier", () => {

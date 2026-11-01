@@ -226,16 +226,6 @@ describe("SettingsPage information architecture", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("opens old issue bookmarks in preferences", () => {
-    navigationState.search = "tab=issue";
-    renderWithI18n(<SettingsPage />);
-    expect(screen.getByText("PreferencesTab")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Preferences" })).toHaveAttribute(
-      "aria-current",
-      "page",
-    );
-  });
-
   it.each([
     "tab=code",
     "tab=code&section=pr-merge-status",
@@ -337,12 +327,6 @@ describe("SettingsPage search", () => {
     fireEvent.keyDown(input, { key: "Escape" });
     expect(input).toHaveValue("");
     expect(screen.queryByRole("listbox")).toBeNull();
-  });
-
-  it("excludes retired issue preferences from search", () => {
-    renderWithI18n(<SettingsPage />);
-    fireEvent.change(screen.getByRole("searchbox"), { target: { value: "Opening issues" } });
-    expect(screen.queryByRole("option", { name: /Opening issues/ })).toBeNull();
   });
 
   it.each(["GitHub", "Code hosting", "Repositories", "PR merge"])(

@@ -11,10 +11,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/auro-ai/auro/server/internal/testutil"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/auro-ai/auro/server/internal/testutil"
 )
 
 func fixture(t *testing.T) (*pgxpool.Pool, *Service) {

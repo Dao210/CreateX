@@ -161,7 +161,7 @@ func (s *AutopilotService) createAutopilotQuotaInboxItems(
 		item, err := q.CreateInboxItem(ctx, db.CreateInboxItemParams{
 			ID: dbid.NewV7(), WorkspaceID: facts.WorkspaceID,
 			RecipientType: recipient.Type, RecipientID: recipient.ID,
-			Type: "autopilot_quota_exceeded", Severity: "attention", IssueID: pgtype.UUID{},
+			Type: "autopilot_quota_exceeded", Severity: "attention",
 			Title: "Autopilot run limit reached", Body: pgtype.Text{String: body, Valid: true},
 			ActorType: pgtype.Text{String: "system", Valid: true}, ActorID: pgtype.UUID{},
 			Details: details,
@@ -169,7 +169,7 @@ func (s *AutopilotService) createAutopilotQuotaInboxItems(
 		if err != nil {
 			return nil, fmt.Errorf("create autopilot quota inbox item: %w", err)
 		}
-		items = append(items, item)
+		items = append(items, db.InboxItem(item))
 	}
 	return items, nil
 }
@@ -185,8 +185,7 @@ func (s *AutopilotService) publishAutopilotQuotaInboxItems(items []db.InboxItem)
 			Payload: map[string]any{"item": map[string]any{
 				"id": util.UUIDToString(item.ID), "workspace_id": util.UUIDToString(item.WorkspaceID),
 				"recipient_type": item.RecipientType, "recipient_id": util.UUIDToString(item.RecipientID),
-				"type": item.Type, "severity": item.Severity, "issue_id": nil,
-				"issue_status": nil, "issue_priority": nil,
+				"type": item.Type, "severity": item.Severity, "issue_id": nil, "issue_status": nil, "issue_priority": nil,
 				"title": item.Title, "body": util.TextToPtr(item.Body), "read": item.Read,
 				"archived": item.Archived, "created_at": util.TimestampToString(item.CreatedAt),
 				"actor_type": util.TextToPtr(item.ActorType), "actor_id": nil,

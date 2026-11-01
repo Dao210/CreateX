@@ -5,12 +5,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/auro-ai/auro/server/internal/events"
 	"github.com/auro-ai/auro/server/internal/scheduler"
 	"github.com/auro-ai/auro/server/internal/service"
 	"github.com/auro-ai/auro/server/internal/util"
 	db "github.com/auro-ai/auro/server/pkg/db/generated"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // setupAutopilotScheduleJob creates the test fixture for the

@@ -196,10 +196,6 @@ func (b *BatchedHeartbeatScheduler) Stop() {
 	cancel()
 }
 
-
-
-
-
 func (b *BatchedHeartbeatScheduler) flushOnce(ctx context.Context) {
 	b.mu.Lock()
 	if len(b.pending) == 0 {

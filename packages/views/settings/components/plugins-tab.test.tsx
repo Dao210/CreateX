@@ -71,7 +71,7 @@ const INSTALLATION = {
   version: "1.0.0",
   package_version_id: "version-1",
   enabled: true,
-  granted_scopes: ["issues:read", "comments:write", "net:example.com"],
+  granted_scopes: ["execution:read", "comments:write", "net:example.com"],
   config_schema: [
     { key: "repo", type: "string", label: "Repo", required: true, options: [] },
     { key: "token", type: "secret", label: "Token", required: true, options: [] },
@@ -93,7 +93,7 @@ const PREVIEW = {
     version: "1.0.0",
     author: { name: "example" },
   },
-  scopes: ["issues:read", "comments:write", "net:example.com"],
+  scopes: ["execution:read", "comments:write", "net:example.com"],
   config_schema: [],
   version_id: "version-1",
   version: "1.0.0",
@@ -153,7 +153,7 @@ describe("PluginsTab", () => {
     // The raw scope strings are the trust model, so they must be on screen
     // verbatim alongside their plain-language meaning.
     await screen.findByText("This Plugin is asking for the following access");
-    expect(screen.getByText("issues:read")).toBeInTheDocument();
+    expect(screen.getByText("execution:read")).toBeInTheDocument();
     expect(screen.getByText("comments:write")).toBeInTheDocument();
     expect(screen.getByText("net:example.com")).toBeInTheDocument();
     expect(screen.getByText("Send data to example.com")).toBeInTheDocument();
@@ -164,7 +164,7 @@ describe("PluginsTab", () => {
     // the consent screen back to describing one artifact while another runs.
     await waitFor(() => expect(mockInstall).toHaveBeenCalledWith({
       version_id: "version-1",
-      granted_scopes: ["issues:read", "comments:write", "net:example.com"],
+      granted_scopes: ["execution:read", "comments:write", "net:example.com"],
     }));
   });
 

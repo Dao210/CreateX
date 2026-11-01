@@ -24,9 +24,9 @@ const TaskContextMarkerRelPath = ".auro/daemon_task_context.json"
 const TaskContextMarkerManagedBy = "auro-daemon-task"
 
 type taskContextMarkerFile struct {
-	ManagedBy     string `json:"managed_by"`
-	AgentID       string `json:"agent_id,omitempty"`
-	IssueID       string `json:"issue_id,omitempty"`
+	ManagedBy string `json:"managed_by"`
+	AgentID   string `json:"agent_id,omitempty"`
+
 	ChatSessionID string `json:"chat_session_id,omitempty"`
 }
 
@@ -184,10 +184,6 @@ func writeContextFiles(workDir, provider string, ctx TaskContextForEnv, manifest
 	// block task startup. Missing resources surface as the agent simply not
 	// seeing the file, which matches the "scoped, not dumped" design (the
 	// meta skill content always lists what the agent should expect).
-	if err := writeProjectResources(workDir, ctx, manifest); err != nil {
-		// Caller logs warnings; avoid noisy returns for non-fatal context.
-		return fmt.Errorf("write project resources: %w", err)
-	}
 
 	return nil
 }
@@ -201,9 +197,9 @@ func writeTaskContextMarker(workDir string, ctx TaskContextForEnv, manifest *sid
 	// cleanup. If a crash leaves it behind, the CLI intentionally treats it
 	// as daemon context and fails closed instead of using a user PAT.
 	payload := taskContextMarkerFile{
-		ManagedBy:     TaskContextMarkerManagedBy,
-		AgentID:       ctx.AgentID,
-		IssueID:       ctx.IssueID,
+		ManagedBy: TaskContextMarkerManagedBy,
+		AgentID:   ctx.AgentID,
+
 		ChatSessionID: ctx.ChatSessionID,
 	}
 	data, err := json.MarshalIndent(payload, "", "  ")
@@ -238,10 +234,7 @@ func writeTaskContextMarker(workDir string, ctx TaskContextForEnv, manifest *sid
 // directory. Schema is intentionally a thin pass-through of the API response
 // so consumers (skills, future tooling) don't need a separate parser.
 type projectResourceFile struct {
-	ProjectID          string                  `json:"project_id,omitempty"`
-	ProjectTitle       string                  `json:"project_title,omitempty"`
-	ProjectDescription string                  `json:"project_description,omitempty"`
-	Resources          []ProjectResourceForEnv `json:"resources"`
+	Resources []ProjectResourceForEnv `json:"resources"`
 }
 
 // MarshalJSON renders the resource_ref field as raw JSON instead of a base64
@@ -263,49 +256,6 @@ func (p ProjectResourceForEnv) MarshalJSON() ([]byte, error) {
 		ResourceRef:  ref,
 		Label:        p.Label,
 	})
-}
-
-// writeProjectResources writes .auro/project/resources.json into the
-// working directory when the task carries project context. The file is
-// always written when a project is attached (even with zero resources) so
-// agents can rely on its presence as a signal that a project exists.
-//
-// manifest, when non-nil, is populated with the .auro/project chain
-// of created directories and the resources.json file so CleanupSidecars
-// can undo them on local_directory teardown.
-func writeProjectResources(workDir string, ctx TaskContextForEnv, manifest *sidecarManifest) error {
-	if ctx.ProjectID == "" && len(ctx.ProjectResources) == 0 {
-		return nil
-	}
-	dir := filepath.Join(workDir, ".auro", "project")
-	if err := recordMkdirAll(dir, 0o755, manifest); err != nil {
-		return err
-	}
-	resources := ctx.ProjectResources
-	if resources == nil {
-		resources = []ProjectResourceForEnv{}
-	}
-	payload := projectResourceFile{
-		ProjectID:          ctx.ProjectID,
-		ProjectTitle:       ctx.ProjectTitle,
-		ProjectDescription: ctx.ProjectDescription,
-		Resources:          resources,
-	}
-	data, err := json.MarshalIndent(payload, "", "  ")
-	if err != nil {
-		return err
-	}
-	if err := recordWriteFile(filepath.Join(dir, "resources.json"), data, 0o644, manifest); err != nil {
-		// .auro/project/resources.json is Auro-owned and a
-		// pre-existing path is almost certainly user content the
-		// manifest must not destroy. The runtime brief already lists
-		// every project resource so the agent runs fine without the
-		// JSON sidecar — collision degrades to brief-only mode.
-		if !errors.Is(err, errPathPreExists) {
-			return err
-		}
-	}
-	return nil
 }
 
 // resolveSkillsDir returns the directory where skills should be written

@@ -103,30 +103,6 @@ func TestPrepareCodexLocalDirectoryChatKeepsRolloutAcrossTaskIDs(t *testing.T) {
 	}
 }
 
-func TestCodexSessionStoreKeyUsesChatSessionIDWhenIssueAbsent(t *testing.T) {
-	// Given: two direct chats belong to the same agent and have no issue ID.
-	const agentID = "agent-chat-key"
-	const chatA = "chat-session-a"
-	const chatB = "chat-session-b"
-	taskA := TaskContextForEnv{AgentID: agentID, ChatSessionID: chatA}
-
-	// When: their persistent Codex session-store keys are built.
-	keyA := codexSessionStoreKey("", taskA)
-	keyAAgain := codexSessionStoreKey("", taskA)
-	keyB := codexSessionStoreKey("", TaskContextForEnv{AgentID: agentID, ChatSessionID: chatB})
-
-	// Then: the key is stable for one chat and isolated from another chat.
-	if keyA == "" {
-		t.Fatal("direct chat must have a persistent Codex session-store key")
-	}
-	if keyA != keyAAgain {
-		t.Fatalf("same chat produced unstable keys: %q and %q", keyA, keyAAgain)
-	}
-	if keyA == keyB {
-		t.Fatalf("different chats share one Codex session-store key: %q", keyA)
-	}
-}
-
 // TestReuseCodexToleratesLegacyTaskHome covers an env root prepared by an older
 // daemon: its leftover `home/` directory (including the credential symlinks it
 // seeded) must neither break reuse nor be adopted as a HOME again.

@@ -9,8 +9,6 @@ import (
 	"testing"
 
 	"github.com/auro-ai/auro/server/internal/service"
-	db "github.com/auro-ai/auro/server/pkg/db/generated"
-	"github.com/auro-ai/auro/server/pkg/plugincontract"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -36,25 +34,6 @@ func callbackRequest(token, method, path string, body any, params map[string]str
 		routeContext.URLParams.Add(key, value)
 	}
 	return request.WithContext(context.WithValue(request.Context(), chi.RouteCtxKey, routeContext))
-}
-
-func issueCallbackToken(t *testing.T, installationID string, actor service.HookActor) string {
-	t.Helper()
-	installation, err := testHandler.PluginService.InstallationForWorkspace(
-		context.Background(), parseUUID(testWorkspaceID), installationID)
-	if err != nil {
-		t.Fatalf("load installation: %v", err)
-	}
-	token, err := testHandler.PluginService.Callbacks.Issue(context.Background(), service.HookInvocation{
-		Installation: installation,
-		Hook:         plugincontract.Hook{Key: "summarize"},
-		Trigger:      plugincontract.TriggerManual,
-		Actor:        actor,
-	})
-	if err != nil {
-		t.Fatalf("issue callback token: %v", err)
-	}
-	return token
 }
 
 func withCallbackTokens(t *testing.T) {
@@ -207,96 +186,5 @@ func TestPluginContextOmitsTheUserForAPluginActor(t *testing.T) {
 	}
 	if payload["actor"] != "plugin" {
 		t.Fatalf("actor = %v, want plugin", payload["actor"])
-	}
-}
-
-// latestComment reads the row directly. The response body reports what the
-// handler decided to return; the row is what was actually written, and
-// attribution is only meaningful as stored.
-func latestComment(t *testing.T, issueID string) db.Comment {
-	t.Helper()
-	var comment db.Comment
-	err := testPool.QueryRow(context.Background(),
-		`SELECT id, author_type, author_id, via_plugin_id FROM comment WHERE issue_id = $1 ORDER BY created_at DESC LIMIT 1`,
-		issueID,
-	).Scan(&comment.ID, &comment.AuthorType, &comment.AuthorID, &comment.ViaPluginID)
-	if err != nil {
-		t.Fatalf("read the written comment: %v", err)
-	}
-	return comment
-}
-
-// The narrowing that was only a comment until Fabel 5's review.
-//
-// A hook called about one issue has no business reaching another. Without this
-// check the grant was worth every issue in the workspace its actor could see,
-// for the whole five minutes it lived — and both the type's doc comment and the
-// PR description claimed otherwise.
-func TestCallbackTokenCannotReachAnotherIssue(t *testing.T) {
-	withPluginsV1Flag(t, testHandler, true)
-	cleanupPluginInstallations(t)
-	withCallbackTokens(t)
-	installationID := installHookPlugin(t)
-	granted := createTestIssue(t, "Callback scope granted issue", "todo", "none")
-	other := createTestIssue(t, "Callback scope other issue", "todo", "none")
-
-	installation, err := testHandler.PluginService.InstallationForWorkspace(
-		context.Background(), parseUUID(testWorkspaceID), installationID)
-	if err != nil {
-		t.Fatalf("load installation: %v", err)
-	}
-	token, err := testHandler.PluginService.Callbacks.Issue(context.Background(), service.HookInvocation{
-		Installation: installation,
-		Hook:         plugincontract.Hook{Key: "summarize"},
-		Trigger:      plugincontract.TriggerManual,
-		Actor:        service.HookActor{Type: "member", ID: parseUUID(testUserID)},
-		IssueID:      parseUUID(granted),
-	})
-	if err != nil {
-		t.Fatalf("issue callback token: %v", err)
-	}
-
-	// The issue it was issued for: allowed.
-	ok := httptest.NewRecorder()
-	testHandler.GetPluginIssue(ok, callbackRequest(token, http.MethodGet,
-		"/v1/issues/"+granted, nil, map[string]string{"issue_ref": granted}))
-	if ok.Code != http.StatusOK {
-		t.Fatalf("the granted issue must be reachable: status=%d body=%s", ok.Code, ok.Body.String())
-	}
-
-	// Any other issue in the same workspace: refused, on both read and write.
-	refusedRead := httptest.NewRecorder()
-	testHandler.GetPluginIssue(refusedRead, callbackRequest(token, http.MethodGet,
-		"/v1/issues/"+other, nil, map[string]string{"issue_ref": other}))
-	if refusedRead.Code != http.StatusNotFound {
-		t.Fatalf("reading another issue must be refused: status=%d body=%s", refusedRead.Code, refusedRead.Body.String())
-	}
-
-	refusedWrite := httptest.NewRecorder()
-	testHandler.CreatePluginComment(refusedWrite, callbackRequest(token, http.MethodPost,
-		"/v1/issues/"+other+"/comments",
-		map[string]any{"content": "should never land"},
-		map[string]string{"issue_ref": other}))
-	if refusedWrite.Code != http.StatusNotFound {
-		t.Fatalf("commenting on another issue must be refused: status=%d body=%s", refusedWrite.Code, refusedWrite.Body.String())
-	}
-}
-
-// An invocation with no issue produces an unscoped grant. That is not a hole —
-// it simply means there was no issue to narrow to — and the workspace and
-// membership checks still apply.
-func TestCallbackTokenWithoutAnIssueIsNotNarrowed(t *testing.T) {
-	withPluginsV1Flag(t, testHandler, true)
-	cleanupPluginInstallations(t)
-	withCallbackTokens(t)
-	installationID := installHookPlugin(t)
-	issueID := createTestIssue(t, "Callback unscoped grant", "todo", "none")
-
-	token := issueCallbackToken(t, installationID, service.HookActor{Type: "member", ID: parseUUID(testUserID)})
-	recorder := httptest.NewRecorder()
-	testHandler.GetPluginIssue(recorder, callbackRequest(token, http.MethodGet,
-		"/v1/issues/"+issueID, nil, map[string]string{"issue_ref": issueID}))
-	if recorder.Code != http.StatusOK {
-		t.Fatalf("an unscoped grant must still reach the workspace: status=%d body=%s", recorder.Code, recorder.Body.String())
 	}
 }

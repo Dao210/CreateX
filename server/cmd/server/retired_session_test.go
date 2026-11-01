@@ -165,44 +165,6 @@ func TestGetLastChatTaskSessionKeepsSessionOnAuthAdjacentError(t *testing.T) {
 	}
 }
 
-// TestRetiredSessionExcludedFromIssueResume covers the case the poison filters
-// structurally cannot see (GH #6066): a fresh-session retry that SUCCEEDS. The
-// recovered task is 'completed' and carries no failure to classify, so the only
-// trace of the abandoned session is retired_session_id — without it, the older
-// completed row still pointing at that session hands it straight back.
-func TestRetiredSessionExcludedFromIssueResume(t *testing.T) {
-	if testPool == nil {
-		t.Skip("no database connection")
-	}
-
-	issueID, agentID, runtimeID := setupRerunTestFixture(t)
-	t.Cleanup(func() { cleanupRerunFixture(t, issueID) })
-	ctx := context.Background()
-
-	// Task A: an ordinary successful turn on session S.
-	if _, err := testPool.Exec(ctx, `
-		INSERT INTO agent_task_queue (agent_id, runtime_id, issue_id, status, priority, started_at, completed_at, session_id, work_dir)
-		VALUES ($1, $2, $3, 'completed', 0, now() - interval '2 minutes', now() - interval '2 minutes', 'RETIRED-S', '/tmp/wd')
-	`, agentID, runtimeID, issueID); err != nil {
-		t.Fatalf("insert task A: %v", err)
-	}
-	// Task B: resumed S, found it unresumable, retried fresh and succeeded
-	// without the backend emitting a new session id.
-	if _, err := testPool.Exec(ctx, `
-		INSERT INTO agent_task_queue (agent_id, runtime_id, issue_id, status, priority, started_at, completed_at, session_id, work_dir, retired_session_id)
-		VALUES ($1, $2, $3, 'completed', 0, now() - interval '1 minute', now() - interval '1 minute', NULL, '/tmp/wd', 'RETIRED-S')
-	`, agentID, runtimeID, issueID); err != nil {
-		t.Fatalf("insert task B: %v", err)
-	}
-
-	queries := db.New(testPool)
-	prior, err := queries.GetLastTaskSession(ctx, db.GetLastTaskSessionParams{
-		AgentID: pgtype.UUID{Bytes: parseUUIDBytes(agentID), Valid: true},
-		IssueID: pgtype.UUID{Bytes: parseUUIDBytes(issueID), Valid: true},
-	})
-	requireSessionExcluded(t, prior.SessionID, err)
-}
-
 // TestRetiredSessionExcludedFromChatResume is the chat mirror of the above.
 func TestRetiredSessionExcludedFromChatResume(t *testing.T) {
 	if testPool == nil {

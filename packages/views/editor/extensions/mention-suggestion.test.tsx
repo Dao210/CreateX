@@ -2,21 +2,18 @@ import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { createRef, type ReactNode } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { workspaceKeys } from "@auro/core/workspace/queries";
-import { issueKeys, PAGINATED_CATEGORIES } from "@auro/core/issues/queries";
-import { statusCategoryOfKey } from "@auro/core/issues";
 import { I18nProvider } from "@auro/core/i18n/react";
-import type { IssueStatusCategory, ListIssuesCache } from "@auro/core/types";
 import type { QueryClient } from "@tanstack/react-query";
 import enCommon from "../../locales/en/common.json";
 import enAuth from "../../locales/en/auth.json";
 import enSettings from "../../locales/en/settings.json";
 import enEditor from "../../locales/en/editor.json";
-import enIssues from "../../locales/en/issues.json";
+import enIssues from "../../locales/en/execution.json";
 import zhCommon from "../../locales/zh-Hans/common.json";
 import zhAuth from "../../locales/zh-Hans/auth.json";
 import zhSettings from "../../locales/zh-Hans/settings.json";
 import zhEditor from "../../locales/zh-Hans/editor.json";
-import zhIssues from "../../locales/zh-Hans/issues.json";
+import zhIssues from "../../locales/zh-Hans/execution.json";
 
 const TEST_RESOURCES = {
   en: {
@@ -43,25 +40,9 @@ function I18nWrapper({ children }: { children: ReactNode }) {
   );
 }
 
-function ZhI18nWrapper({ children }: { children: ReactNode }) {
-  return (
-    <I18nProvider locale="zh-Hans" resources={TEST_RESOURCES}>
-      {children}
-    </I18nProvider>
-  );
-}
-
 // Mock the workspace id singleton — items() reads it imperatively.
 vi.mock("@auro/core/platform", () => ({
   getCurrentWsId: () => "ws-1",
-}));
-
-vi.mock("@auro/core/issue-statuses/hooks", () => ({
-  useIssueStatuses: () => ({
-    iconOf: () => null,
-    colorOf: (status: string) =>
-      status === "awaiting_response" ? "#f97316" : null,
-  }),
 }));
 
 // Mock the API so we control search responses + observe calls.
@@ -142,18 +123,6 @@ function fakeQc(data: {
         : [{ target_type: "workspace" as const, target_id: null }]),
   }));
   map.set(JSON.stringify(workspaceKeys.agents("ws-1")), agentsWithPermissions);
-  map.set(JSON.stringify(workspaceKeys.squads("ws-1")), data.squads ?? []);
-  const byStatus: ListIssuesCache["byStatus"] = {};
-  for (const status of PAGINATED_CATEGORIES) {
-    const bucket = (data.issues ?? []).filter(
-      (i) => statusCategoryOfKey(i.status) === status,
-    );
-    byStatus[status as IssueStatusCategory] = { issues: bucket as never, total: bucket.length };
-  }
-  map.set(
-    JSON.stringify(issueKeys.list("ws-1")),
-    { byStatus } satisfies ListIssuesCache,
-  );
   return {
     getQueryData: (key: readonly unknown[]) => map.get(JSON.stringify(key)),
     getQueriesData: <T,>(filter: { queryKey: readonly unknown[] }) => {
@@ -302,13 +271,6 @@ describe("createMentionSuggestion", () => {
       PICKER_INTERACTION_KEYS.map(() => true),
     );
     expect(command).not.toHaveBeenCalled();
-  });
-
-  it("does not call searchIssues for an empty query", () => {
-    render(<I18nWrapper><MentionList items={[]} query="" command={vi.fn()} /></I18nWrapper>);
-
-    expect(searchIssuesMock).not.toHaveBeenCalled();
-    expect(searchProjectsMock).not.toHaveBeenCalled();
   });
 
   it("lets picker keys reach the editor while search has no result rows", async () => {
@@ -608,169 +570,6 @@ describe("createMentionSuggestion", () => {
     expect(result.some((item) => item.group === "current" || item.group === "recent")).toBe(false);
     expect(result.map((item) => `${item.type}:${item.id}`)).toContain("member:u1");
     expect(result.map((item) => `${item.type}:${item.id}`)).not.toContain("issue:i1");
-  });
-
-  it("localizes agent and squad badges", () => {
-    render(
-      <ZhI18nWrapper>
-        <MentionList
-          items={[
-            { id: "a1", label: "Aegis", type: "agent" },
-            { id: "s1", label: "Core team", type: "squad" },
-          ]}
-          query=""
-          command={vi.fn()}
-        />
-      </ZhI18nWrapper>,
-    );
-
-    expect(screen.getByText("智能体")).toBeInTheDocument();
-    expect(screen.getByText("小队")).toBeInTheDocument();
-    expect(screen.queryByText("Agent")).not.toBeInTheDocument();
-    expect(screen.queryByText("Squad")).not.toBeInTheDocument();
-  });
-
-  it("includes squads with a runnable leader in the mention list", () => {
-    const qc = fakeQc({
-      members: [{ user_id: "u1", name: "Alice", role: "member" }],
-      agents: [
-        {
-          id: "leader-1",
-          name: "Leader",
-          archived_at: null,
-          visibility: "workspace",
-          owner_id: null,
-        },
-      ],
-      squads: [
-        {
-          id: "s1",
-          name: "Jiayuan's Coding Team",
-          archived_at: null,
-          leader_id: "leader-1",
-        },
-        {
-          id: "s2",
-          name: "独立团",
-          archived_at: null,
-          leader_id: "leader-1",
-        },
-        {
-          id: "s3",
-          name: "Archived Squad",
-          archived_at: "2026-01-01T00:00:00Z",
-          leader_id: "leader-1",
-        },
-      ],
-    });
-    searchIssuesMock.mockReturnValue(new Promise(() => {}));
-
-    const config = createMentionSuggestion(qc);
-    const result = config.items!(itemArgs(""));
-
-    const items = result as MentionItem[];
-    expect(items.filter((i) => i.type === "squad")).toHaveLength(2);
-    expect(items.some((i) => i.type === "squad" && i.label === "Jiayuan's Coding Team")).toBe(true);
-    expect(items.some((i) => i.type === "squad" && i.label === "独立团")).toBe(true);
-    expect(items.some((i) => i.type === "squad" && i.label === "Archived Squad")).toBe(false);
-  });
-
-  it("keeps a squad with an unbound leader discoverable but unselectable", () => {
-    const qc = fakeQc({
-      agents: [
-        {
-          id: "leader-1",
-          name: "Leader",
-          archived_at: null,
-          runtime_id: "",
-          runtime_bound: false,
-          visibility: "workspace",
-          owner_id: null,
-        },
-      ],
-      squads: [
-        {
-          id: "s1",
-          name: "Unrunnable Squad",
-          archived_at: null,
-          leader_id: "leader-1",
-        },
-      ],
-    });
-
-    const config = createMentionSuggestion(qc);
-    const items = config.items!(itemArgs("")) as MentionItem[];
-
-    expect(items).toContainEqual(
-      expect.objectContaining({
-        type: "squad",
-        id: "s1",
-        disabledReason: "agent_runtime_required",
-      }),
-    );
-  });
-
-  it("keeps squads discoverable while the agents cache is not ready", () => {
-    const qc = fakeQc({
-      squads: [
-        {
-          id: "s1",
-          name: "Cold Cache Squad",
-          archived_at: null,
-          leader_id: "leader-not-cached",
-        },
-      ],
-    });
-
-    const config = createMentionSuggestion(qc);
-    const items = config.items!(itemArgs("")) as MentionItem[];
-    const squad = items.find((item) => item.type === "squad" && item.id === "s1");
-
-    expect(squad).toBeDefined();
-    expect(squad?.disabledReason).toBeUndefined();
-  });
-
-  it("keeps a squad with an archived leader discoverable", () => {
-    const qc = fakeQc({
-      agents: [
-        {
-          id: "leader-1",
-          name: "Archived Leader",
-          archived_at: "2026-01-01T00:00:00Z",
-          visibility: "workspace",
-          owner_id: null,
-        },
-      ],
-      squads: [
-        {
-          id: "s1",
-          name: "Archived Leader Squad",
-          archived_at: null,
-          leader_id: "leader-1",
-        },
-      ],
-    });
-
-    const config = createMentionSuggestion(qc);
-    const items = config.items!(itemArgs("")) as MentionItem[];
-    const squad = items.find((item) => item.type === "squad" && item.id === "s1");
-
-    expect(squad).toBeDefined();
-    expect(squad?.disabledReason).toBeUndefined();
-  });
-
-  it("returns no squads when the squads cache is empty (not yet fetched)", () => {
-    const qc = fakeQc({
-      members: [{ user_id: "u1", name: "Alice", role: "member" }],
-      // squads not provided — simulates cache miss
-    });
-    searchIssuesMock.mockReturnValue(new Promise(() => {}));
-
-    const config = createMentionSuggestion(qc);
-    const result = config.items!(itemArgs(""));
-
-    const items = result as MentionItem[];
-    expect(items.filter((i) => i.type === "squad")).toHaveLength(0);
   });
 
   it("matches Chinese names by full pinyin", () => {

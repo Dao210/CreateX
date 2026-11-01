@@ -1,0 +1,1 @@
+DROP INDEX CONCURRENTLY IF EXISTS siege_session_owner;

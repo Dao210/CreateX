@@ -16,7 +16,6 @@ import (
 // with an in-memory fake (no DB required).
 type scopeAuthQuerier interface {
 	GetAgentTask(ctx context.Context, id pgtype.UUID) (db.AgentTaskQueue, error)
-	GetIssue(ctx context.Context, id pgtype.UUID) (db.Issue, error)
 	GetChatSession(ctx context.Context, id pgtype.UUID) (db.ChatSession, error)
 }
 
@@ -62,8 +61,6 @@ func (a *dbScopeAuthorizer) AuthorizeScope(ctx context.Context, userID, workspac
 		if err != nil {
 			return scopeLookupErr(err)
 		}
-		// Issue tasks: visible to any workspace member.
-
 		// Chat tasks: only the chat session's creator may subscribe, mirroring
 		// the HTTP layer's creator-only access on chat resources.
 		if task.ChatSessionID.Valid {

@@ -1,0 +1,74 @@
+{
+  "comment": {
+    "trigger_blocked_invocation_not_allowed": "이 대상을 찾을 수 없거나 사용할 권한이 없습니다",
+    "trigger_blocked_target_unavailable": "이 대상을 사용할 수 없습니다",
+    "trigger_blocked_runtime_offline": "이 대상의 런타임이 오프라인입니다",
+    "trigger_blocked_runtime_unusable": "이 대상의 CLI를 해당 기기에서 실행할 수 없습니다 — 그 기기에서 다시 설치하세요",
+    "trigger_blocked_runtime_profile_missing": "이 대상의 CLI에 해당 기기의 런타임 프로필이 없습니다 — 그 기기에서 설치하세요",
+    "trigger_blocked_agent_runtime_required": "이 대상에 런타임이 없습니다 — 실행하려면 런타임을 연결하세요",
+    "trigger_blocked_runtime_access_denied": "이 대상의 에이전트는 비공개 런타임에서 실행할 수 없습니다 — 런타임을 공개로 변경하거나, 소유자가 사용할 수 있는 런타임으로 에이전트를 다시 연결/복사하세요",
+    "trigger_blocked_generic": "이 대상은 트리거되지 않습니다",
+    "trigger_blocked_short_invocation_not_allowed": "찾을 수 없음 또는 권한 없음",
+    "trigger_blocked_short_target_unavailable": "사용 불가",
+    "trigger_blocked_short_runtime_offline": "런타임 오프라인",
+    "trigger_blocked_short_runtime_unusable": "CLI 실행 불가",
+    "trigger_blocked_short_runtime_profile_missing": "런타임 프로필 없음",
+    "trigger_blocked_short_agent_runtime_required": "런타임 필요",
+    "trigger_blocked_short_runtime_access_denied": "런타임 접근 거부",
+    "trigger_blocked_short_generic": "트리거 안 됨"
+  },
+  "wakeups": {
+    "triggered_by_wakeup": "자동 깨우기로 시작됨"
+  },
+  "agent_activity": {
+    "status_running": "작업 중",
+    "status_queued": "대기 중",
+    "empty_hover": "현재 작업 중인 에이전트가 없습니다"
+  },
+  "execution_log": {
+    "attribution": {
+      "source_direct_human": "멤버 직접 작업",
+      "source_delegation": "다른 실행에서 위임됨",
+      "source_comment_source": "댓글 스레드에서",
+      "source_trigger_owner": "오토파일럿 트리거 작성자",
+      "source_rule_owner": "오토파일럿 규칙 게시자",
+      "source_owner_fallback": "정확한 담당자 없음 — 에이전트 소유자에게 귀속",
+      "source_backfill": "백필된 귀속",
+      "source_unattributed": "책임 멤버를 확인할 수 없음",
+      "someone": "어떤 멤버",
+      "on_behalf_of": "{{name}} 님을 대신하여"
+    },
+    "trigger_retry_attempt_prefix": "{{attempt}}번째 다시 시도 · ",
+    "trigger_retry_prefix": "다시 시도 · ",
+    "trigger_image": "[이미지]",
+    "trigger_retry_attempt": "{{attempt}}번째 다시 시도",
+    "trigger_retry": "다시 시도",
+    "trigger_autopilot": "오토파일럿 실행",
+    "trigger_comment": "댓글 트리거",
+    "trigger_initial": "초기 실행",
+    "status_queued": "대기 중",
+    "status_dispatched": "시작 중",
+    "status_waiting_local_directory": "로컬 디렉터리 대기 중",
+    "status_running": "작업 중",
+    "status_completed": "완료됨",
+    "status_failed": "실패함",
+    "status_cancelled": "취소됨"
+  },
+  "filters": {
+    "placeholder": "필터..."
+  },
+  "pickers": {
+    "filter_options_aria": "필터 옵션",
+    "no_results": "결과 없음"
+  },
+  "plugins": {
+    "hook_succeeded": "{{name}} 완료됨.",
+    "hook_refused": "{{name}}이(가) 실행되지 않았습니다.",
+    "hook_failed": "{{name}} 실패함.",
+    "panels": "Plugins",
+    "surface_failed": "{{name}}의 인터페이스를 불러오지 못했습니다.",
+    "surface_loading": "{{name}} 불러오는 중…",
+    "surface_navigated": "{{name}}이(가) 패널을 외부에서 불러온 페이지로 바꾸려 했습니다. 중지하고 연결을 끊었습니다. 세계 관리자에게 알리세요.",
+    "surface_unavailable": "{{name}}의 인터페이스를 불러올 수 없습니다. 설치된 버전에 포함되어 있지 않을 수 있습니다."
+  }
+}

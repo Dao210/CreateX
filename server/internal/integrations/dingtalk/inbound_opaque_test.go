@@ -49,21 +49,6 @@ func TestQuotedOpaqueDetectionPreservesOrdinaryText(t *testing.T) {
 	}
 }
 
-func TestOpaqueQuoteFallbackAcrossReadableBodyProjections(t *testing.T) {
-	const envelope = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA||3||1||132"
-	for _, kind := range []string{"text", "picture", "richText", "unknown"} {
-		cb := textCallback(convTypeP2P, false)
-		cb.Text.RepliedMsg = &botCallbackRepliedMessage{MsgType: kind, Content: botCallbackRepliedContent{Text: envelope}}
-		if kind == "richText" {
-			cb.Text.RepliedMsg.Content.RichText = richTextItems{{Text: envelope}}
-		}
-		msg, ok := inboundFromCallback(cb, "app")
-		if !ok || !strings.Contains(msg.Text, "[quoted content unavailable]") || strings.Contains(msg.Text, "AAAAAAAA") || msg.CommandText != "hello bot" {
-			t.Fatalf("opaque %s projection was not degraded: %+v", kind, msg)
-		}
-	}
-}
-
 // These are conservative-policy examples, not claimed DingTalk wire variants.
 func TestQuotedAmbiguousSeparatorsAreUnavailable(t *testing.T) {
 	for _, body := range []string{

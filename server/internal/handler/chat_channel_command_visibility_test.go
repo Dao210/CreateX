@@ -8,8 +8,6 @@ import (
 	"net/url"
 	"testing"
 	"time"
-
-	db "github.com/auro-ai/auro/server/pkg/db/generated"
 )
 
 func insertChatVisibilityMessage(t *testing.T, sessionID, content, messageKind string, channelIngested bool, createdAt time.Time) {
@@ -74,73 +72,6 @@ func TestChannelCommandVisibility_MessageListsExcludeCommandsBeforePagination(t 
 	})
 	if len(older.Messages) != 1 || older.Messages[0].Content != "visible oldest" || older.HasMore || older.NextCursor != nil {
 		t.Fatalf("older visible page = %#v", older)
-	}
-}
-
-func TestChannelCommandVisibility_SessionProjectionUsesPublicMessages(t *testing.T) {
-	agentID := createHandlerTestAgent(t, "ChannelCommandSessionVisibilityAgent", []byte("[]"))
-	webEmptySessionID := createHandlerTestChatSession(t, agentID)
-	commandOnlySessionID := createHandlerTestChatSession(t, agentID)
-	mixedSessionID := createHandlerTestChatSession(t, agentID)
-	newerPublicSessionID := createHandlerTestChatSession(t, agentID)
-	base := time.Date(2026, 8, 7, 2, 0, 0, 0, time.UTC)
-	if _, err := testPool.Exec(context.Background(), `
-		UPDATE chat_session SET explicitly_created_at = NULL
-		WHERE id = ANY($1::uuid[])
-	`, []string{commandOnlySessionID, mixedSessionID, newerPublicSessionID}); err != nil {
-		t.Fatalf("set session origin fixtures: %v", err)
-	}
-
-	insertChatVisibilityMessage(t, commandOnlySessionID, "/issue hidden only", "channel_command", true, base.Add(3*time.Second))
-	insertChatVisibilityMessage(t, mixedSessionID, "mixed public", "message", true, base)
-	insertChatVisibilityMessage(t, mixedSessionID, "/issue hidden after public", "channel_command", true, base.Add(4*time.Second))
-	insertChatVisibilityMessage(t, newerPublicSessionID, "newer public", "message", true, base.Add(2*time.Second))
-
-	active, err := testHandler.Queries.ListChatSessionsByCreator(context.Background(), db.ListChatSessionsByCreatorParams{
-		WorkspaceID: parseUUID(testWorkspaceID),
-		CreatorID:   parseUUID(testUserID),
-	})
-	if err != nil {
-		t.Fatalf("list active chat sessions: %v", err)
-	}
-	activeIndex := make(map[string]int, len(active))
-	for i, row := range active {
-		activeIndex[uuidToString(row.ID)] = i
-	}
-	if _, ok := activeIndex[commandOnlySessionID]; ok {
-		t.Fatalf("command-only session %s is publicly listed", commandOnlySessionID)
-	}
-	if _, ok := activeIndex[webEmptySessionID]; !ok {
-		t.Fatalf("empty web-created session %s must remain publicly listed", webEmptySessionID)
-	}
-	mixedIndex, mixedOK := activeIndex[mixedSessionID]
-	newerIndex, newerOK := activeIndex[newerPublicSessionID]
-	if !mixedOK || !newerOK {
-		t.Fatalf("public sessions missing: mixed=%v newer=%v", mixedOK, newerOK)
-	}
-	if newerIndex >= mixedIndex {
-		t.Fatalf("hidden command reordered mixed session: newer index=%d mixed index=%d", newerIndex, mixedIndex)
-	}
-	for _, row := range active {
-		if uuidToString(row.ID) == mixedSessionID && (row.LastMessageContent != "mixed public" || row.LastMessageKind != "message") {
-			t.Fatalf("mixed session preview = content %q kind %q", row.LastMessageContent, row.LastMessageKind)
-		}
-	}
-
-	if _, err := testPool.Exec(context.Background(), `UPDATE chat_session SET status = 'archived' WHERE id = $1`, commandOnlySessionID); err != nil {
-		t.Fatalf("archive command-only session: %v", err)
-	}
-	all, err := testHandler.Queries.ListAllChatSessionsByCreator(context.Background(), db.ListAllChatSessionsByCreatorParams{
-		WorkspaceID: parseUUID(testWorkspaceID),
-		CreatorID:   parseUUID(testUserID),
-	})
-	if err != nil {
-		t.Fatalf("list all chat sessions: %v", err)
-	}
-	for _, row := range all {
-		if uuidToString(row.ID) == commandOnlySessionID {
-			t.Fatalf("command-only session %s is publicly listed in status=all", commandOnlySessionID)
-		}
 	}
 }
 

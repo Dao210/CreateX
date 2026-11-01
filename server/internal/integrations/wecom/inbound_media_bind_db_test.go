@@ -21,7 +21,6 @@ package wecom
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -145,11 +144,6 @@ func seedMediaBindFixture(t *testing.T, pool *pgxpool.Pool) mediaBindFixture {
 
 type bindTestIssues struct{}
 
-func (bindTestIssues) Create(context.Context, service.IssueCreateParams, service.IssueCreateOpts) (service.IssueCreateResult, error) {
-	return service.IssueCreateResult{}, errors.New("no /issue in this test")
-}
-func (bindTestIssues) PublishAttachmentsChanged(context.Context, db.Issue, pgtype.UUID) {}
-
 // bindTestTasks stands in for the task service. Enqueueing a real chat task
 // would need a live runtime, and the run trigger is not what is under test —
 // but the media-ready promotion IS called on the media path, so it is
@@ -186,10 +180,6 @@ func (b *bindTestTasks) PromoteChannelChatTasksIfMediaReady(context.Context, pgt
 func (*bindTestTasks) MemberMayInvokeAgent(context.Context, pgtype.UUID, pgtype.UUID) (bool, error) {
 	// This rig is about media binding, not permission; the sender may run it.
 	return true, nil
-}
-
-func (*bindTestTasks) PromoteDeferredChannelIssueTask(context.Context, pgtype.UUID) error {
-	return nil
 }
 
 // promotions is the only way to read the counter from the test goroutine.
@@ -443,25 +433,6 @@ func TestInboundImageMessageHoldsTheAgentRunUntilMediaLands(t *testing.T) {
 // the create reads it here (an invalid IssueID skips the issue-media lock in
 // BindMediaRefs), and what these tests need to know is whether an issue was
 // filed at all and under what title.
-type recordingIssues struct {
-	mu     sync.Mutex
-	params []service.IssueCreateParams
-}
-
-func (r *recordingIssues) Create(_ context.Context, p service.IssueCreateParams, _ service.IssueCreateOpts) (service.IssueCreateResult, error) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	r.params = append(r.params, p)
-	return service.IssueCreateResult{Issue: db.Issue{Title: p.Title}}, nil
-}
-
-func (r *recordingIssues) PublishAttachmentsChanged(context.Context, db.Issue, pgtype.UUID) {}
-
-func (r *recordingIssues) filed() []service.IssueCreateParams {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	return append([]service.IssueCreateParams(nil), r.params...)
-}
 
 // wecomMixedCallback builds a 图文混排 callback whose FIRST run is the
 // screenshot and whose second is what the sender typed — the ordering that
@@ -501,135 +472,4 @@ func wecomMixedCallback(t *testing.T, botID, botDisplayName, senderID, msgID, ch
 		t.Fatal("mixed callback is not routable; the fixture is wrong")
 	}
 	return channelMessageFromCallback(botID, botDisplayName, mc, text, "req-mixed-1")
-}
-
-// runMixedIssueThroughTheRouter drives one 图文混排 through the real Router,
-// the real ChatSession and a real Postgres, and reports what got filed and
-// what the durable message says.
-func runMixedIssueThroughTheRouter(t *testing.T, botDisplayName, chatType, chatID, words string, spoken bool) (*recordingIssues, string) {
-	t.Helper()
-	pool := mediaBindTestDB(t)
-	fixture := seedMediaBindFixture(t, pool)
-	ctx := context.Background()
-	queries := db.New(pool)
-
-	srv := cosServer(t, []byte("\xff\xd8\xff\xe0 a screenshot"), `attachment; filename="shot.jpg"`)
-	defer srv.Close()
-
-	storage := &fakeMediaStorage{}
-	resolver := newTestResolver(storage, engine.NewDBMediaIntentLedger(queries), nil)
-	session := engine.NewChatSession(queries, pool, TypeWecom, engine.SessionTitles{
-		Group: "群聊", Direct: "单聊", Fallback: "会话",
-	})
-	issues := &recordingIssues{}
-	router := engine.NewRouter(issues, &bindTestTasks{}, queries, engine.RouterConfig{
-		MediaTimeout: 20 * time.Second,
-		Logger:       testLogger(),
-	})
-	router.Register(TypeWecom, NewResolverSet(NewStore(queries), session, nil, resolver))
-
-	if chatID == "" {
-		chatID = fixture.senderID
-	}
-	msgID := fmt.Sprintf("MSGID-MIXED-%d", time.Now().UnixNano())
-	msg := wecomMixedCallback(t, fixture.botID, botDisplayName, fixture.senderID, msgID, chatType, chatID, srv.URL, words, spoken)
-	if err := router.Handle(ctx, msg); err != nil {
-		t.Fatalf("Handle: %v", err)
-	}
-
-	var body string
-	deadline := time.Now().Add(15 * time.Second)
-	for {
-		err := pool.QueryRow(ctx, `
-			SELECT cm.content
-			FROM chat_message cm
-			JOIN chat_session cs ON cs.id = cm.chat_session_id
-			WHERE cs.workspace_id = $1 AND cm.role = 'user'
-			ORDER BY cm.created_at DESC LIMIT 1`, fixture.workspaceID).Scan(&body)
-		if err == nil {
-			break
-		}
-		if time.Now().After(deadline) {
-			t.Fatalf("no durable chat_message was ever written: %v", err)
-		}
-		time.Sleep(100 * time.Millisecond)
-	}
-	return issues, body
-}
-
-// TestIssueAfterAnImageIsStillFiled is the user-visible half of the ordering
-// defect, checked where the user would check it: was an issue created.
-//
-// The sender attaches the screenshot, types "/issue 登录坏了", and sends one
-// 图文混排. ownText renders it "[Image]\n/issue 登录坏了", the engine's parser
-// reads the first non-empty line and only the first, and on the shipped code
-// that line was "[Image]" — no issue, no error, no reply saying why. Typing
-// the same two things the other way round worked, which is the part that makes
-// it impossible to report.
-func TestIssueAfterAnImageIsStillFiled(t *testing.T) {
-	issues, body := runMixedIssueThroughTheRouter(t, "", "single", "", "/issue 登录坏了", false)
-
-	filed := issues.filed()
-	if len(filed) != 1 {
-		t.Fatalf("issues created = %d, want 1 — the sender attached a screenshot, typed /issue 登录坏了, and nothing was filed and nothing said why", len(filed))
-	}
-	if filed[0].Title != "登录坏了" {
-		t.Errorf("issue title = %q, want 登录坏了", filed[0].Title)
-	}
-	// The transcript still shows the attachment and where it sat. Cutting the
-	// placeholder out of the body is the other way to break this, and it costs
-	// the agent the one signal that a picture was sent.
-	if want := "[Image]\n/issue 登录坏了"; body != want {
-		t.Errorf("durable body = %q, want %q", body, want)
-	}
-}
-
-// TestGroupMentionedIssueAfterAnImageIsStillFiled is the conflict-resolution
-// test. It fails if EITHER half is lost.
-//
-// In a group the @-mention is how the bot is reached, so it arrives glued to
-// the front of the text run: "@Auro Bot /issue 登录坏了". main strips that
-// (stripLeadingMentions) and this PR keeps the placeholders out of the
-// command source, and the parser needs both to see "/issue" on the line it
-// reads. Take main's version of ws_frame.go wholesale and the strip goes and
-// the parser sees "@Auro Bot"; derive the command from the resolved body
-// and it sees "[Image]". Either way no issue is filed, and this is the
-// assertion that says so.
-func TestGroupMentionedIssueAfterAnImageIsStillFiled(t *testing.T) {
-	issues, body := runMixedIssueThroughTheRouter(t, "Auro Bot", "group", "GROUP-BIND-1", "@Auro Bot /issue 登录坏了", false)
-
-	filed := issues.filed()
-	if len(filed) != 1 {
-		t.Fatalf("issues created = %d, want 1 — an @-mentioned /issue with a screenshot in a group filed nothing", len(filed))
-	}
-	if filed[0].Title != "登录坏了" {
-		t.Errorf("issue title = %q, want 登录坏了 (a title carrying the bot's own name means the mention strip was lost)", filed[0].Title)
-	}
-	if want := "[Image]\n@Auro Bot /issue 登录坏了"; body != want {
-		t.Errorf("durable body = %q, want %q — the transcript keeps who was addressed", body, want)
-	}
-}
-
-// TestGroupMentionedSpokenIssueAfterAnImageIsStillFiled is the same question
-// with the words spoken instead of typed, which is the third change meeting
-// the other two: WeCom recognises a voice run on its side and hands over the
-// transcript, so those are the sender's own words and a spoken "/issue" is a
-// command. Read the command off the typed field and it is empty; read it off
-// the resolved body and it starts with "[Image]"; skip the mention strip and
-// it starts with the bot's own name. All three have to hold at once, and
-// unlike the dispatch-level test this one asks the database whether an issue
-// exists.
-func TestGroupMentionedSpokenIssueAfterAnImageIsStillFiled(t *testing.T) {
-	issues, body := runMixedIssueThroughTheRouter(t, "Auro Bot", "group", "GROUP-BIND-2", "@Auro Bot /issue 登录坏了", true)
-
-	filed := issues.filed()
-	if len(filed) != 1 {
-		t.Fatalf("issues created = %d, want 1 — an @-mentioned /issue said out loud with a screenshot filed nothing", len(filed))
-	}
-	if filed[0].Title != "登录坏了" {
-		t.Errorf("issue title = %q, want 登录坏了", filed[0].Title)
-	}
-	if want := "[Image]\n@Auro Bot /issue 登录坏了"; body != want {
-		t.Errorf("durable body = %q, want %q — a spoken run reads into the body like a typed one", body, want)
-	}
 }

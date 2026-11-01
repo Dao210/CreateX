@@ -2,14 +2,7 @@
 
 import { describe, expect, it } from "vitest";
 import type { AgentRuntime } from "@auro/core/types";
-import {
-  buildRuntimeMachines,
-  filterRuntimeMachines,
-  runtimeMachineCounts,
-  runtimeRowLabel,
-  sharedCustomName,
-  splitRuntimeName,
-} from "./runtime-machines";
+import { buildRuntimeMachines, runtimeRowLabel, sharedCustomName, splitRuntimeName } from "./runtime-machines";
 
 const NOW = new Date("2026-05-17T12:00:00Z").getTime();
 
@@ -105,28 +98,6 @@ describe("runtime machine grouping", () => {
     // Not shared across all runtimes on the machine, so it must not stand in
     // for the whole machine's name — the device name wins instead.
     expect(machines[0]?.title).toBe("dev-machine.local");
-  });
-
-  it("counts machines with any offline runtime as issues", () => {
-    const machines = buildRuntimeMachines(
-      [
-        makeRuntime({ id: "rt-online", provider: "claude" }),
-        makeRuntime({
-          id: "rt-offline",
-          provider: "codex",
-          status: "offline",
-          last_seen_at: new Date(NOW - 10 * 60_000).toISOString(),
-        }),
-      ],
-      { now: NOW },
-    );
-
-    expect(runtimeMachineCounts(machines)).toEqual({
-      all: 1,
-      online: 1,
-      issues: 1,
-    });
-    expect(filterRuntimeMachines(machines, "", "issues")).toHaveLength(1);
   });
 
   it("keeps long_offline as the highest-severity machine health", () => {

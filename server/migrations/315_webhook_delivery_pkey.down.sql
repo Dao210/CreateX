@@ -1,0 +1,1 @@
+DROP INDEX CONCURRENTLY IF EXISTS webhook_delivery_pkey;

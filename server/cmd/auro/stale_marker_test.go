@@ -33,11 +33,6 @@ func seedMarker(t *testing.T, body string) string {
 	return markerPath
 }
 
-// issueTaskMarker is the marker an issue task writes: agent and issue both set.
-func issueTaskMarker() string {
-	return `{"managed_by":"` + execenv.TaskContextMarkerManagedBy + `","agent_id":"agent-1","issue_id":"issue-1"}`
-}
-
 // chatTaskMarker is the marker a chat task writes. It has no issue, which is
 // why task identity cannot be defined as "agent_id AND issue_id".
 func chatTaskMarker() string {
@@ -48,11 +43,6 @@ func chatTaskMarker() string {
 // else. EnsureWorkspacesRootMarker writes exactly this.
 func workspacesRootMarker() string {
 	return `{"managed_by":"` + execenv.TaskContextMarkerManagedBy + `"}`
-}
-
-func seedDaemonTaskMarker(t *testing.T) string {
-	t.Helper()
-	return seedMarker(t, issueTaskMarker())
 }
 
 // refusalPaths returns every CLI entry point that can refuse because of a
@@ -75,46 +65,6 @@ func clearDaemonEnvSignals(t *testing.T) {
 	t.Setenv("AURO_TASK_ID", "")
 	t.Setenv("AURO_DAEMON_PORT", "")
 	t.Setenv(cli.TaskConfigRootEnv, "")
-}
-
-// TestLeftoverMarkerReportedIdenticallyOnEveryRefusalPath is the regression test
-// for the split the MUL-6132 reviews found: at first only the API path named the
-// marker file, and after that requireTaskLocalConfigRoot was still left out, so
-// whether a user could act on the refusal depended on which command they
-// happened to run first. All three paths must point at the same file with the
-// same remedy.
-func TestLeftoverMarkerReportedIdenticallyOnEveryRefusalPath(t *testing.T) {
-	for _, marker := range []struct{ name, body string }{
-		{name: "issue task", body: issueTaskMarker()},
-		{name: "chat task", body: chatTaskMarker()},
-	} {
-		t.Run(marker.name, func(t *testing.T) {
-			markerPath := seedMarker(t, marker.body)
-			clearDaemonEnvSignals(t)
-			t.Setenv("AURO_TOKEN", "")
-			t.Setenv("AURO_SERVER_URL", "http://127.0.0.1:8080")
-
-			for name, refuse := range refusalPaths() {
-				err := refuse()
-				if err == nil {
-					t.Fatalf("%s: got nil error; want refusal on a leftover marker", name)
-				}
-				if !strings.Contains(err.Error(), markerPath) {
-					t.Fatalf("%s error should name the marker path %q; got %q", name, markerPath, err.Error())
-				}
-				if !strings.Contains(err.Error(), "leftover") {
-					t.Fatalf("%s error should hint it may be a leftover; got %q", name, err.Error())
-				}
-			}
-
-			// The CLI never removes the marker: taking down a fail-closed guard
-			// needs a proof the CLI cannot produce, because the daemon's active
-			// task count only rises after a claim returns.
-			if _, statErr := os.Stat(markerPath); statErr != nil {
-				t.Fatalf("CLI must not delete the marker: %v", statErr)
-			}
-		})
-	}
 }
 
 // TestWorkspacesRootMarkerNeverReportedAsLeftover is the regression test for the
@@ -179,4 +129,9 @@ func TestLeftoverMarkerNotReportedUnderRealTaskIdentity(t *testing.T) {
 			}
 		})
 	}
+}
+
+func seedDaemonTaskMarker(t *testing.T) string {
+	t.Helper()
+	return seedMarker(t, issueTaskMarker())
 }

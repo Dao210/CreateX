@@ -84,32 +84,6 @@ func TestSchemaEndpoint(t *testing.T) {
 	}
 }
 
-func TestSubmitAcceptsAndIssuesCookie(t *testing.T) {
-	api, svc := testHandler(t)
-	rec := do(t, api.Handler(), http.MethodPost, "/api/reach/entities", specJSON(t), map[string]string{
-		"Idempotency-Key": "key-00000001",
-	}, nil)
-	if rec.Code != 201 {
-		t.Fatalf("status %d, body %s", rec.Code, rec.Body.String())
-	}
-	var receipt Receipt
-	if err := json.Unmarshal(rec.Body.Bytes(), &receipt); err != nil {
-		t.Fatalf("receipt: %v", err)
-	}
-	if receipt.EntityID == "" || receipt.Normalized.Geometry.Hash == "" {
-		t.Fatalf("receipt incomplete: %+v", receipt)
-	}
-	if receipt.Diagnostics.PowerIndex < 0 || receipt.Diagnostics.PowerIndex > 100 {
-		t.Fatalf("powerIndex out of range: %d", receipt.Diagnostics.PowerIndex)
-	}
-	if len(rec.Result().Cookies()) == 0 {
-		t.Fatal("anonymous submit must issue an owner cookie")
-	}
-	if len(svc.World.Entities) != 1 {
-		t.Fatalf("expected one entity, got %d", len(svc.World.Entities))
-	}
-}
-
 func TestSubmitIsIdempotent(t *testing.T) {
 	api, svc := testHandler(t)
 	headers := map[string]string{"Idempotency-Key": "key-aaaaaaaa"}

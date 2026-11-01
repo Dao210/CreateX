@@ -309,9 +309,7 @@ func (h *Handler) avatarKeyIsPublishable(ctx context.Context, key string) bool {
 // attachmentIsBound reports whether an upload is attached to workspace content.
 // A bound row is somebody's issue/comment/chat file — never an avatar.
 func attachmentIsBound(att db.Attachment) bool {
-	return att.IssueID.Valid ||
-		att.CommentID.Valid ||
-		att.ChatSessionID.Valid ||
+	return att.ChatSessionID.Valid ||
 		att.ChatMessageID.Valid ||
 		att.TaskID.Valid
 }

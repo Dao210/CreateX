@@ -8,10 +8,10 @@ import (
 	"testing"
 	"time"
 
+	db "github.com/auro-ai/auro/server/pkg/db/generated"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
-	db "github.com/auro-ai/auro/server/pkg/db/generated"
 )
 
 type workerTestExecutor struct {

@@ -299,7 +299,7 @@ func IssueExecuted(actorID, workspaceID, issueID, taskID, agentID, source, runti
 		DistinctID:  actorID,
 		WorkspaceID: workspaceID,
 		Properties: withCoreProperties(map[string]any{
-			"issue_id":         issueID,
+
 			"task_id":          taskID,
 			"agent_id":         agentID,
 			"task_duration_ms": taskDurationMS,
@@ -688,7 +688,7 @@ func SquadCreated(actorID, workspaceID, squadID string, memberCount int) Event {
 		DistinctID:  actorID,
 		WorkspaceID: workspaceID,
 		Properties: withCoreProperties(map[string]any{
-			"squad_id":     squadID,
+
 			"member_count": int64(memberCount),
 		}, CoreProperties{
 			UserID:      nonAgentUserID(actorID),
@@ -741,7 +741,7 @@ func autopilotRunEvent(name, actorID, workspaceID, autopilotID, runID, cadence s
 		props["assignee_type"] = assignee.AssigneeType
 	}
 	if assignee.SquadID != "" {
-		props["squad_id"] = assignee.SquadID
+
 	}
 	return Event{
 		Name:        name,
@@ -765,7 +765,7 @@ func withCoreProperties(props map[string]any, core CoreProperties) map[string]an
 		props["task_id"] = core.TaskID
 	}
 	if core.IssueID != "" {
-		props["issue_id"] = core.IssueID
+
 	}
 	if core.ChatSessionID != "" {
 		props["chat_session_id"] = core.ChatSessionID

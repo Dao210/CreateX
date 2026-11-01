@@ -1,0 +1,1 @@
+DROP INDEX CONCURRENTLY IF EXISTS game_progress_pkey;

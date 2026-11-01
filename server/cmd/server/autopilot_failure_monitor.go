@@ -11,14 +11,14 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/auro-ai/auro/server/internal/events"
 	"github.com/auro-ai/auro/server/internal/service"
 	"github.com/auro-ai/auro/server/internal/util"
 	db "github.com/auro-ai/auro/server/pkg/db/generated"
 	"github.com/auro-ai/auro/server/pkg/dbid"
 	"github.com/auro-ai/auro/server/pkg/protocol"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // failureMonitorConfig is the tunable knob set for the autopilot failure
@@ -222,15 +222,15 @@ func emitAutopilotPausedNotifications(
 		"Auto-paused after %d of %d runs failed (%.1f%%) in the last %s. Investigate the failures, fix the root cause, then re-enable from the autopilot page.",
 		candidate.FailedRuns, candidate.TotalRuns, failPct, formatLookback(cfg.Lookback),
 	)
-	details, _ := json.Marshal(map[string]any{
+	details, _ := json.Marshal(map[string]string{
 		"autopilot_id":         util.UUIDToString(autopilot.ID),
 		"autopilot_title":      autopilot.Title,
-		"failed_runs":          candidate.FailedRuns,
-		"total_runs":           candidate.TotalRuns,
-		"fail_pct":             failPct,
-		"lookback_seconds":     int64(cfg.Lookback.Seconds()),
-		"threshold_min_runs":   cfg.MinRuns,
-		"threshold_fail_ratio": cfg.FailRatio,
+		"failed_runs":          strconv.FormatInt(candidate.FailedRuns, 10),
+		"total_runs":           strconv.FormatInt(candidate.TotalRuns, 10),
+		"fail_pct":             strconv.FormatFloat(failPct, 'f', 1, 64),
+		"lookback_seconds":     strconv.FormatInt(int64(cfg.Lookback.Seconds()), 10),
+		"threshold_min_runs":   strconv.FormatInt(cfg.MinRuns, 10),
+		"threshold_fail_ratio": strconv.FormatFloat(cfg.FailRatio, 'f', -1, 64),
 		"reason":               "auto_paused_high_failure_rate",
 	})
 
@@ -252,7 +252,6 @@ func emitAutopilotPausedNotifications(
 			RecipientID:   r.ID,
 			Type:          "autopilot_paused",
 			Severity:      "attention",
-			IssueID:       pgtype.UUID{},
 			Title:         title,
 			Body:          util.StrToText(body),
 			ActorType:     util.StrToText("system"),
@@ -274,7 +273,7 @@ func emitAutopilotPausedNotifications(
 			WorkspaceID: workspaceID,
 			ActorType:   "system",
 			ActorID:     "",
-			Payload:     map[string]any{"item": inboxItemToResponse(item)},
+			Payload:     map[string]any{"item": inboxItemToResponse(db.InboxItem(item))},
 		})
 	}
 }
@@ -315,19 +314,18 @@ func resolveAutopilotPausedRecipients(
 // service which we're sitting alongside in cmd/server).
 func autopilotEventPayload(a db.Autopilot) map[string]any {
 	return map[string]any{
-		"id":                   util.UUIDToString(a.ID),
-		"workspace_id":         util.UUIDToString(a.WorkspaceID),
-		"title":                a.Title,
-		"description":          util.TextToPtr(a.Description),
-		"assignee_id":          util.UUIDToString(a.AssigneeID),
-		"status":               a.Status,
-		"execution_mode":       a.ExecutionMode,
-		"issue_title_template": util.TextToPtr(a.IssueTitleTemplate),
-		"created_by_type":      a.CreatedByType,
-		"created_by_id":        util.UUIDToString(a.CreatedByID),
-		"last_run_at":          util.TimestampToPtr(a.LastRunAt),
-		"created_at":           util.TimestampToString(a.CreatedAt),
-		"updated_at":           util.TimestampToString(a.UpdatedAt),
+		"id":              util.UUIDToString(a.ID),
+		"workspace_id":    util.UUIDToString(a.WorkspaceID),
+		"title":           a.Title,
+		"description":     util.TextToPtr(a.Description),
+		"assignee_id":     util.UUIDToString(a.AssigneeID),
+		"status":          a.Status,
+		"execution_mode":  a.ExecutionMode,
+		"created_by_type": a.CreatedByType,
+		"created_by_id":   util.UUIDToString(a.CreatedByID),
+		"last_run_at":     util.TimestampToPtr(a.LastRunAt),
+		"created_at":      util.TimestampToString(a.CreatedAt),
+		"updated_at":      util.TimestampToString(a.UpdatedAt),
 	}
 }
 

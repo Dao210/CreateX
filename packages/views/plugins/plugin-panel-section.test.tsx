@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { act, render, screen } from "@testing-library/react";
 import { I18nProvider } from "@auro/core/i18n/react";
 import enCommon from "../locales/en/common.json";
-import enIssues from "../locales/en/issues.json";
+import enIssues from "../locales/en/execution.json";
 
 const data = vi.hoisted(() => ({
   installed: { plugins: [] as Array<Record<string, unknown>> },
@@ -49,7 +49,7 @@ function installation(overrides: Record<string, unknown> = {}) {
     version: "1.0.0",
     package_version_id: "version-1",
     enabled: true,
-    granted_scopes: ["issues:read"],
+    granted_scopes: ["execution:read"],
     config_schema: [],
     config: {},
     configured_secrets: [],
@@ -74,33 +74,10 @@ describe("PluginPanelSection", () => {
     data.flagEnabled = true;
   });
 
-  it("mounts an enabled issue_panel with an opaque nested plugin frame", () => {
-    data.installed.plugins = [installation()];
-    render(<PluginPanelSection issueId="issue-1" />, { wrapper: Wrapper });
-
-    const frame = screen.getByTitle("Hello Panel — Hello");
-    // The visible iframe is trusted host code. Its srcdoc creates the actual
-    // plugin iframe with allow-scripts and deliberately no allow-same-origin.
-    expect(frame).toHaveAttribute("sandbox", "allow-scripts allow-same-origin");
-    expect(frame).toHaveAttribute("srcdoc");
-    expect(frame).not.toHaveAttribute("src");
-    const srcdoc = frame.getAttribute("srcdoc") ?? "";
-    expect(srcdoc).toContain('child.setAttribute("sandbox", "allow-scripts")');
-    expect(srcdoc).not.toContain('child.setAttribute("sandbox", "allow-scripts allow-same-origin")');
-  });
-
   it("does not mount a disabled installation", () => {
     data.installed.plugins = [installation({ enabled: false })];
     render(<PluginPanelSection issueId="issue-1" />, { wrapper: Wrapper });
     expect(screen.queryByTitle("Hello Panel — Hello")).not.toBeInTheDocument();
-  });
-
-  it("ignores surfaces that belong somewhere other than the issue page", () => {
-    data.installed.plugins = [installation({
-      surfaces: [{ key: "side", type: "sidebar_panel", name: "Side", entry: "ui/main.js", platforms: [] }],
-    })];
-    render(<PluginPanelSection issueId="issue-1" />, { wrapper: Wrapper });
-    expect(screen.queryByTitle("Hello Panel — Side")).not.toBeInTheDocument();
   });
 
   it("does not render a surface this platform is excluded from", () => {
@@ -156,21 +133,6 @@ describe("PluginPanelSection", () => {
     act(() => window.dispatchEvent(event));
 
     expect(screen.getByText("Hello Panel could not load its interface.")).toBeInTheDocument();
-  });
-
-  it("clears a previous surface failure when the issue changes", () => {
-    data.installed.plugins = [installation()];
-    const { rerender } = render(<PluginPanelSection issueId="issue-1" />, { wrapper: Wrapper });
-
-    const frame = screen.getByTitle("Hello Panel — Hello") as HTMLIFrameElement;
-    const event = new MessageEvent("message", { data: { type: "auro:plugin-surface-error" } });
-    Object.defineProperty(event, "source", { value: frame.contentWindow, configurable: true });
-    act(() => window.dispatchEvent(event));
-    expect(screen.getByText("Hello Panel could not load its interface.")).toBeInTheDocument();
-
-    rerender(<PluginPanelSection issueId="issue-2" />);
-    expect(screen.queryByText("Hello Panel could not load its interface.")).not.toBeInTheDocument();
-    expect(screen.getByTitle("Hello Panel — Hello")).toBeInTheDocument();
   });
 
   it("clears a previous surface failure when its document changes", () => {

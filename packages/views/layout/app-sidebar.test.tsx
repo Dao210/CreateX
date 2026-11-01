@@ -1,9 +1,4 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { buildIssueStatusCatalog } from "@auro/core/issue-statuses/queries";
-
-vi.mock("@auro/core/issue-statuses/hooks", () => ({
-  useIssueStatuses: () => buildIssueStatusCatalog([]),
-}));
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { PinnedItem } from "@auro/core/types";
 import { renderWithI18n } from "../test/i18n";
@@ -111,12 +106,10 @@ vi.mock("@auro/ui/components/ui/tooltip", () => ({
 }));
 vi.mock("./help-launcher", () => ({ HelpLauncher: () => null }));
 vi.mock("../auth", () => ({ useLogout: () => vi.fn() }));
-vi.mock("../issues/components/status-icon", () => ({ StatusIcon: () => <span /> }));
 vi.mock("../navigation", () => ({
   AppLink: ({ children, href }: { children: React.ReactNode; href: string }) => <a href={href}>{children}</a>,
   useNavigation: () => ({ pathname: navigation.current.pathname, searchParams: new URLSearchParams(navigation.current.search), push: vi.fn() }),
 }));
-vi.mock("../projects/components/project-icon", () => ({ ProjectIcon: () => <span /> }));
 vi.mock("../workspace/workspace-avatar", () => ({ WorkspaceAvatar: () => <span /> }));
 vi.mock("@auro/ui/components/common/actor-avatar", () => ({ ActorAvatar: () => <span /> }));
 
@@ -179,16 +172,9 @@ vi.mock("@auro/core/inbox/queries", () => ({
   unreadWorkspaceIds: (entries: { workspace_id: string; count: number }[]) =>
     new Set(entries.filter((s) => s.count > 0).map((s) => s.workspace_id)),
 }));
-vi.mock("@auro/core/issues/queries", () => ({ issueDetailOptions: () => ({ queryKey: ["issue"] }) }));
-vi.mock("@auro/core/issues/stores/create-mode-store", () => ({
-  useCreateModeStore: { getState: () => ({ lastMode: "agent" }) },
-  openCreateIssueWithPreference: vi.fn(),
-}));
-vi.mock("@auro/core/issues/stores/draft-store", () => ({ useIssueDraftStore: () => false }));
 vi.mock("@auro/core/modals", () => ({ useModalStore: { getState: () => ({ modal: null, open: vi.fn() }) } }));
 vi.mock("@auro/core/pins/mutations", () => ({ useDeletePin: () => ({ mutate: deletePin }), useReorderPins: () => ({ mutate: vi.fn() }) }));
 vi.mock("@auro/core/pins/queries", () => ({ pinListOptions: () => ({ queryKey: ["pins"] }) }));
-vi.mock("@auro/core/projects/queries", () => ({ projectDetailOptions: () => ({ queryKey: ["project"] }) }));
 vi.mock("@auro/core/workspace/queries", () => ({
   agentListOptions: (wsId: string) => ({ queryKey: ["agents", wsId] }),
   myInvitationListOptions: () => ({ queryKey: ["invitations"] }),
@@ -377,11 +363,6 @@ describe("work group agents", () => {
   it("omits the retired chat entry", () => {
     const { container } = render(<AppSidebar />);
     expect(container.querySelector('button[data-href="/acme/chat"]')).toBeNull();
-  });
-
-  it("omits the retired squads entry", () => {
-    const { container } = render(<AppSidebar />);
-    expect(container.querySelector('button[data-href="/acme/squads"]')).toBeNull();
   });
 
   it("keeps agent chat shortcuts while hiding the AI Team group and its entries", () => {

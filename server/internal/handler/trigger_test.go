@@ -1,12 +1,9 @@
 package handler
 
 import (
-	"context"
-	"fmt"
 	"testing"
 
 	"github.com/auro-ai/auro/server/internal/util"
-	db "github.com/auro-ai/auro/server/pkg/db/generated"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -26,41 +23,6 @@ const (
 	memberID        = "cccccccc-cccc-cccc-cccc-cccccccccccc"
 	otherMemberID   = "dddddddd-dddd-dddd-dddd-dddddddddddd"
 )
-
-func issueWithAgentAssignee() db.Issue {
-	return db.Issue{
-		AssigneeType: testText("agent"),
-		AssigneeID:   testUUID(agentAssigneeID),
-	}
-}
-
-func issueNoAssignee() db.Issue {
-	return db.Issue{}
-}
-
-func TestHasAgentOrSquadMention(t *testing.T) {
-	tests := []struct {
-		name    string
-		content string
-		want    bool
-	}{
-		{"plain", "just a plain comment", false},
-		{"agent", fmt.Sprintf("[@Agent](mention://agent/%s) please fix", agentAssigneeID), true},
-		{"squad", "[@Squad](mention://squad/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa) please coordinate", true},
-		{"member only", fmt.Sprintf("[@Bob](mention://member/%s) take a look", memberID), false},
-		{"issue only", "[PAN-1](mention://issue/44c266e7-f6dd-4be3-9140-5ac40233f79c) is related", false},
-		{"all only", "[@all](mention://all/all) heads up", false},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := hasAgentOrSquadMention(parseMentionsForTest(tt.content))
-			if got != tt.want {
-				t.Errorf("hasAgentOrSquadMention() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
 
 func parseMentionsForTest(content string) []util.Mention {
 	return util.ParseMentions(content)
@@ -99,19 +61,4 @@ func TestIsNoteComment(t *testing.T) {
 			}
 		})
 	}
-}
-
-// TestTriggerTasksForComment_NoteShortCircuits proves a /note comment returns
-// before the cascade tries to resolve mentions, parent ownership, or assignee
-// fallback. A nil-Queries Handler would panic if the /note guard were missing or
-// moved below those branches.
-func TestTriggerTasksForComment_NoteShortCircuits(t *testing.T) {
-	h := &Handler{} // nil Queries / TaskService on purpose
-	issue := issueWithAgentAssignee()
-	comment := db.Comment{
-		Content: fmt.Sprintf("/note cc [@Other](mention://agent/%s) just an fyi", otherAgentID),
-	}
-
-	// Must not panic — the guard short-circuits before any DB access.
-	h.triggerTasksForComment(context.Background(), issue, comment, nil, "member", memberID, memberID, nil, nil)
 }

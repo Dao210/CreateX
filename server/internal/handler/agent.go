@@ -354,13 +354,13 @@ type AgentTaskResponse struct {
 	CancelledByCommentChange bool                   `json:"cancelled_by_comment_change,omitempty"`
 	CancelledBy              *TaskCancellationActor `json:"cancelled_by,omitempty"`
 
-	ID                   string                 `json:"id"`
-	AgentID              string                 `json:"agent_id"`
-	RuntimeID            string                 `json:"runtime_id"`
-	IssueID              string                 `json:"issue_id"`
-	WorkspaceID          string                 `json:"workspace_id"`
-	WorkspaceSlug        string                 `json:"workspace_slug,omitempty"`
-	IssueIdentifier      string                 `json:"issue_identifier,omitempty"`
+	ID        string `json:"id"`
+	AgentID   string `json:"agent_id"`
+	RuntimeID string `json:"runtime_id"`
+
+	WorkspaceID   string `json:"workspace_id"`
+	WorkspaceSlug string `json:"workspace_slug,omitempty"`
+
 	RemoteMCPConnections []remotemcp.Connection `json:"remote_mcp_connections,omitempty"`
 	// PluginHookTools are the workspace's agent-trigger plugin hooks, which the
 	// daemon renders as MCP tools for this task. Resolved at claim time so
@@ -385,35 +385,35 @@ type AgentTaskResponse struct {
 	// statuses — the daemon then renders the brief exactly as before, keeping
 	// existing deployments byte-identical. Capped at taskIssueStatusCap
 	// entries; IssueStatusesOmitted carries the overflow count.
-	IssueStatuses []TaskIssueStatusData `json:"issue_statuses,omitempty"`
+
 	// IssueStatusesOmitted is how many active custom statuses were dropped by
 	// the cap, so the brief can say the list is incomplete instead of
 	// presenting a truncated catalog as the whole one.
-	IssueStatusesOmitted int                   `json:"issue_statuses_omitted,omitempty"`
-	ThreadName           string                `json:"thread_name,omitempty"` // semantic title for provider-native session/thread history
-	Status               string                `json:"status"`
-	Priority             int32                 `json:"priority"`
-	DispatchedAt         *string               `json:"dispatched_at"`
-	StartedAt            *string               `json:"started_at"`
-	CompletedAt          *string               `json:"completed_at"`
-	Result               any                   `json:"result"`
-	Error                *string               `json:"error"`
-	FailureReason        string                `json:"failure_reason,omitempty"` // see TaskService.MaybeRetryFailedTask
-	Attempt              int32                 `json:"attempt"`
-	MaxAttempts          int32                 `json:"max_attempts"`
-	ParentTaskID         *string               `json:"parent_task_id,omitempty"`
-	IsLeaderTask         bool                  `json:"is_leader_task,omitempty"`
-	LeaderRoleResolved   bool                  `json:"leader_role_resolved,omitempty"` // claim-only capability, always true here: IsLeaderTask/SquadID authoritatively answer "is this a leader run", so the daemon must not infer the role from briefing text. Servers predating it make no such promise — before #4951 they sent no is_leader_task at all, after it they sent the flag without guaranteeing a briefing — so a daemon seeing no capability keeps the legacy inference. Never rendered into a prompt; see daemon.taskIsSquadLeader (MUL-5811). Mirror field: internal/daemon/types.go, same JSON name
-	Agent                *TaskAgentData        `json:"agent,omitempty"`
-	ConnectedApps        []ConnectedAppData    `json:"connected_apps,omitempty"` // daemon-claim only: per-run app capabilities mounted through runtime MCP overlays
-	Repos                []RepoData            `json:"repos,omitempty"`
-	ProjectID            string                `json:"project_id,omitempty"`          // issue's project, when present
-	ProjectTitle         string                `json:"project_title,omitempty"`       // for surfacing in agent context
-	ProjectDescription   string                `json:"project_description,omitempty"` // durable project-level context injected into the brief
-	ProjectResources     []ProjectResourceData `json:"project_resources,omitempty"`   // resources attached to the project
-	CreatedAt            string                `json:"created_at"`
-	PriorSessionID       string                `json:"prior_session_id,omitempty"` // session ID from a previous task on same issue
-	PriorWorkDir         string                `json:"prior_work_dir,omitempty"`   // work_dir from a previous task on same issue
+
+	ThreadName    string  `json:"thread_name,omitempty"` // semantic title for provider-native session/thread history
+	Status        string  `json:"status"`
+	Priority      int32   `json:"priority"`
+	DispatchedAt  *string `json:"dispatched_at"`
+	StartedAt     *string `json:"started_at"`
+	CompletedAt   *string `json:"completed_at"`
+	Result        any     `json:"result"`
+	Error         *string `json:"error"`
+	FailureReason string  `json:"failure_reason,omitempty"` // see TaskService.MaybeRetryFailedTask
+	Attempt       int32   `json:"attempt"`
+	MaxAttempts   int32   `json:"max_attempts"`
+	ParentTaskID  *string `json:"parent_task_id,omitempty"`
+
+	// claim-only capability, always true here: IsLeaderTask/SquadID authoritatively answer "is this a leader run", so the daemon must not infer the role from briefing text. Servers predating it make no such promise — before #4951 they sent no is_leader_task at all, after it they sent the flag without guaranteeing a briefing — so a daemon seeing no capability keeps the legacy inference. Never rendered into a prompt; see daemon.taskIsSquadLeader (MUL-5811). Mirror field: internal/daemon/types.go, same JSON name
+	Agent         *TaskAgentData     `json:"agent,omitempty"`
+	ConnectedApps []ConnectedAppData `json:"connected_apps,omitempty"` // daemon-claim only: per-run app capabilities mounted through runtime MCP overlays
+	Repos         []RepoData         `json:"repos,omitempty"`
+	// issue's project, when present
+	// for surfacing in agent context
+	// durable project-level context injected into the brief
+	// resources attached to the project
+	CreatedAt      string `json:"created_at"`
+	PriorSessionID string `json:"prior_session_id,omitempty"` // session ID from a previous task on same issue
+	PriorWorkDir   string `json:"prior_work_dir,omitempty"`   // work_dir from a previous task on same issue
 	// PriorSessionResumeUnavailable is set when a more recent Codex session was
 	// withheld because its rollout was missing (MUL-5305); PriorSessionID (if
 	// any) is then an older fallback, and the daemon surfaces the continuity gap
@@ -446,21 +446,21 @@ type AgentTaskResponse struct {
 	// verbatim: it is a ref inside the user's own repo, not a filesystem path.
 	// Populated on both terminal paths — a failed run can still have committed
 	// partial work, and that is when the pointer matters most.
-	BranchName            string                 `json:"branch_name,omitempty"`
-	TriggerCommentID      *string                `json:"trigger_comment_id,omitempty"`    // comment that triggered this task
-	CoalescedCommentIDs   []string               `json:"coalesced_comment_ids,omitempty"` // MUL-4195: earlier comments folded into this run when it had not yet started, so a single run still covers every deliberate comment; trigger_comment_id is the newest. Surfaced so the UI can show which comments a run covered. omitempty so old clients ignore it
-	CoalescedComments     []CoalescedCommentData `json:"coalesced_comments,omitempty"`    // MUL-4195: full detail (thread_id/author/created_at/content) of the folded comments, so the daemon prompt can address each without assuming they share the triggering thread. omitempty so old clients ignore it
-	DeliveredCommentIDs   []string               `json:"delivered_comment_ids"`           // always present: [] is an authoritative empty receipt, while field absence identifies responses from legacy servers
-	SupplementCapability  string                 `json:"supplement_capability,omitempty"`
-	SupplementCommentIDs  []string               `json:"supplement_comment_ids,omitempty"`
-	CanSupplement         bool                   `json:"can_supplement,omitempty"`
-	TriggerThreadID       string                 `json:"trigger_thread_id,omitempty"`       // root comment ID for the triggering thread
-	TriggerCommentContent string                 `json:"trigger_comment_content,omitempty"` // content of the triggering comment
-	TriggerSummary        *string                `json:"trigger_summary,omitempty"`         // canonical short description snapshot — comment text / autopilot title — taken at task creation; survives source edits/deletes
-	TriggerAuthorType     string                 `json:"trigger_author_type,omitempty"`     // "agent" or "member" — author kind of the triggering comment
-	TriggerAuthorName     string                 `json:"trigger_author_name,omitempty"`     // display name of the triggering comment author
-	NewCommentCount       int                    `json:"new_comment_count,omitempty"`       // ISSUE-WIDE comments since this agent's last run — every thread, not just the triggering one (CountNewCommentsSince); excludes the injected trigger and the agent's own comments; omitempty so old daemons ignore it
-	NewCommentsSince      string                 `json:"new_comments_since,omitempty"`      // RFC3339 anchor (last run's started_at) the count is measured from; omitempty so old daemons ignore it. Suppressed with the count when the delta is zero — NewCommentsDeltaKnown, not this field, is what says the server looked
+	BranchName string `json:"branch_name,omitempty"`
+	// comment that triggered this task
+	// MUL-4195: earlier comments folded into this run when it had not yet started, so a single run still covers every deliberate comment; trigger_comment_id is the newest. Surfaced so the UI can show which comments a run covered. omitempty so old clients ignore it
+	// MUL-4195: full detail (thread_id/author/created_at/content) of the folded comments, so the daemon prompt can address each without assuming they share the triggering thread. omitempty so old clients ignore it
+	// always present: [] is an authoritative empty receipt, while field absence identifies responses from legacy servers
+	SupplementCapability string   `json:"supplement_capability,omitempty"`
+	SupplementCommentIDs []string `json:"supplement_comment_ids,omitempty"`
+	CanSupplement        bool     `json:"can_supplement,omitempty"`
+	// root comment ID for the triggering thread
+	// content of the triggering comment
+	TriggerSummary *string `json:"trigger_summary,omitempty"` // canonical short description snapshot — comment text / autopilot title — taken at task creation; survives source edits/deletes
+	// "agent" or "member" — author kind of the triggering comment
+	// display name of the triggering comment author
+	// ISSUE-WIDE comments since this agent's last run — every thread, not just the triggering one (CountNewCommentsSince); excludes the injected trigger and the agent's own comments; omitempty so old daemons ignore it
+	// RFC3339 anchor (last run's started_at) the count is measured from; omitempty so old daemons ignore it. Suppressed with the count when the delta is zero — NewCommentsDeltaKnown, not this field, is what says the server looked
 	// NewCommentsDeltaKnown reports that the issue-wide delta above was
 	// actually COMPUTED this claim — both the anchor lookup and the count
 	// query succeeded. Without it, NewCommentCount == 0 is ambiguous: a true
@@ -469,7 +469,7 @@ type AgentTaskResponse struct {
 	// the same zero. Only the first of those answers "has anything else been
 	// said on this issue", so only the first may waive the workflow's comment
 	// scan. Absent on old servers, which is the safe reading (MUL-6984).
-	NewCommentsDeltaKnown bool `json:"new_comments_delta_known,omitempty"`
+
 	// IssueStateDeltaKnown is the same contract as NewCommentsDeltaKnown, for
 	// the ISSUE record rather than its comments: the server compared this
 	// claim's title / description against the
@@ -479,11 +479,11 @@ type AgentTaskResponse struct {
 	// old server — and a daemon must then keep telling the agent to read the
 	// issue. An empty IssueChangedFields is only "unchanged" alongside this
 	// flag; on its own it is indistinguishable from "nobody looked" (MUL-7344).
-	IssueStateDeltaKnown     bool                 `json:"issue_state_delta_known,omitempty"`
-	IssueChangedFields       []string             `json:"issue_changed_fields,omitempty"`        // subset of title,description in that order; empty alongside IssueStateDeltaKnown means unchanged. Fields outside that set (status, assignee, priority, labels, parent, due date, stage, project, metadata) are NOT compared and must never be reported as checked. Status and assignee are out because IssueStatus / IssueAssigneeType / IssueAssigneeID ship their current values on every claim, so no comparison is needed to learn them; priority is out because it does not change what the agent does
-	IssueStatus              string               `json:"issue_status,omitempty"`                // the issue's status key at claim time. Sent whether or not the delta is known: the agent needs it to decide workflow step 3 ("already in progress?") without a read
-	IssueAssigneeType        string               `json:"issue_assignee_type,omitempty"`         // "agent", "member" or "squad" at claim time; empty when unassigned. With IssueAssigneeID, lets the agent tell "mine" from "someone else's" without a read
-	IssueAssigneeID          string               `json:"issue_assignee_id,omitempty"`           // assignee UUID at claim time; empty when unassigned
+
+	// subset of title,description in that order; empty alongside IssueStateDeltaKnown means unchanged. Fields outside that set (status, assignee, priority, labels, parent, due date, stage, project, metadata) are NOT compared and must never be reported as checked. Status and assignee are out because IssueStatus / IssueAssigneeType / IssueAssigneeID ship their current values on every claim, so no comparison is needed to learn them; priority is out because it does not change what the agent does
+	// the issue's status key at claim time. Sent whether or not the delta is known: the agent needs it to decide workflow step 3 ("already in progress?") without a read
+	// "agent", "member" or "squad" at claim time; empty when unassigned. With IssueAssigneeID, lets the agent tell "mine" from "someone else's" without a read
+	// assignee UUID at claim time; empty when unassigned
 	ChatSessionID            string               `json:"chat_session_id,omitempty"`             // non-empty for chat tasks
 	ChatChannelType          string               `json:"chat_channel_type,omitempty"`           // "slack" when the chat session is backed by an IM channel; empty for a web-only chat. Makes the agent channel-aware (read history from the channel, not Auro)
 	ChatChannelDeliversFiles bool                 `json:"chat_channel_delivers_files,omitempty"` // server capability: THIS deployment can put a file the agent produced into THIS conversation — the adapter goes back for the bound attachment AND object storage exists to go back to. Absent/false on a server predating it, which is the safe reading: the agent is told to describe its file in words. Never inferred daemon-side from chat_channel_type; see handler.Handler.channelDeliversFiles
@@ -498,19 +498,19 @@ type AgentTaskResponse struct {
 	AutopilotDescription     string               `json:"autopilot_description,omitempty"`       // autopilot description used as task prompt
 	AutopilotSource          string               `json:"autopilot_source,omitempty"`            // manual, schedule, webhook, or api
 	AutopilotTriggerPayload  json.RawMessage      `json:"autopilot_trigger_payload,omitempty"`   // optional trigger payload for webhook/api runs
-	QuickCreatePrompt        string               `json:"quick_create_prompt,omitempty"`         // user's natural-language input for quick-create tasks
-	QuickCreatePriority      string               `json:"quick_create_priority,omitempty"`       // explicit priority selected in quick-create
-	QuickCreateDueDate       string               `json:"quick_create_due_date,omitempty"`       // explicit calendar due date selected in quick-create
-	QuickCreateAttachmentIDs []string             `json:"quick_create_attachment_ids,omitempty"` // attachment ids uploaded in the quick-create prompt and bound on issue create
-	QuickCreateSourceContext json.RawMessage      `json:"quick_create_source_context,omitempty"` // immutable historical context for source-context quick-create
-	WakeupID                 string               `json:"wakeup_id,omitempty"`
-	WakeupSystemRule         string               `json:"wakeup_system_rule,omitempty"`      // set when a platform rule (e.g. child_done) started the run
-	WakeupJoined             string               `json:"wakeup_joined,omitempty"`           // wakeups that fired while this run waited to start and joined it instead of queuing their own
-	HandoffNote              string               `json:"handoff_note,omitempty"`            // legacy assignment handoff instruction retained for installed clients; rendered by the daemon only in the per-turn prompt
-	SquadID                  string               `json:"squad_id,omitempty"`                // for quick-create tasks where the picker was a squad; Agent is still the resolved leader
-	SquadName                string               `json:"squad_name,omitempty"`              // display name for the picker squad
-	ParentIssueID            string               `json:"parent_issue_id,omitempty"`         // for quick-create tasks opened from "Add sub issue" — UUID of the parent issue the new issue should be filed under
-	ParentIssueIdentifier    string               `json:"parent_issue_identifier,omitempty"` // human-readable identifier (e.g. MUL-123) of the quick-create parent issue, resolved on claim for prompt context
+	// user's natural-language input for quick-create tasks
+	// explicit priority selected in quick-create
+	// explicit calendar due date selected in quick-create
+	// attachment ids uploaded in the quick-create prompt and bound on issue create
+	// immutable historical context for source-context quick-create
+
+	// set when a platform rule (e.g. child_done) started the run
+	// wakeups that fired while this run waited to start and joined it instead of queuing their own
+	HandoffNote string `json:"handoff_note,omitempty"` // legacy assignment handoff instruction retained for installed clients; rendered by the daemon only in the per-turn prompt
+	// for quick-create tasks where the picker was a squad; Agent is still the resolved leader
+	// display name for the picker squad
+	// for quick-create tasks opened from "Add sub issue" — UUID of the parent issue the new issue should be filed under
+	// human-readable identifier (e.g. MUL-123) of the quick-create parent issue, resolved on claim for prompt context
 	// RequestingUserName + RequestingUserProfileDescription mirror the user
 	// the agent is acting on behalf of (see daemon/types.go). v1 sources them
 	// from the runtime owner so they're populated for daemon runtimes and
@@ -813,32 +813,28 @@ func taskToResponse(t db.AgentTaskQueue, workspaceID string) AgentTaskResponse {
 		CancelledByCommentChange: t.Status == "cancelled" && cancellation.TaskID != "" && cancellation.TaskID == uuidToString(t.ID),
 		CancelledBy:              taskCancellationActorToResponse(t),
 
-		ID:                  uuidToString(t.ID),
-		AgentID:             uuidToString(t.AgentID),
-		RuntimeID:           uuidToString(t.RuntimeID),
-		IssueID:             uuidToString(t.IssueID),
-		WorkspaceID:         workspaceID,
-		Status:              t.Status,
-		Priority:            t.Priority,
-		DispatchedAt:        timestampToPtr(t.DispatchedAt),
-		StartedAt:           timestampToPtr(t.StartedAt),
-		CompletedAt:         timestampToPtr(t.CompletedAt),
-		Result:              result,
-		Error:               textToPtr(t.Error),
-		FailureReason:       failureReason,
-		BranchName:          branchName,
-		Attempt:             t.Attempt,
-		MaxAttempts:         t.MaxAttempts,
-		ParentTaskID:        uuidToPtr(t.ParentTaskID),
-		IsLeaderTask:        t.IsLeaderTask,
-		CreatedAt:           timestampToString(t.CreatedAt),
-		TriggerCommentID:    uuidToPtr(t.TriggerCommentID),
-		CoalescedCommentIDs: uuidsToStrings(t.CoalescedCommentIds),
-		DeliveredCommentIDs: uuidStringsOrEmpty(t.DeliveredCommentIds),
-		TriggerSummary:      textToPtr(t.TriggerSummary),
-		HandoffNote:         handoffNote,
-		WakeupID:            wakeupContext.ID,
-		WakeupSystemRule:    wakeupContext.SystemRule,
+		ID:        uuidToString(t.ID),
+		AgentID:   uuidToString(t.AgentID),
+		RuntimeID: uuidToString(t.RuntimeID),
+
+		WorkspaceID:   workspaceID,
+		Status:        t.Status,
+		Priority:      t.Priority,
+		DispatchedAt:  timestampToPtr(t.DispatchedAt),
+		StartedAt:     timestampToPtr(t.StartedAt),
+		CompletedAt:   timestampToPtr(t.CompletedAt),
+		Result:        result,
+		Error:         textToPtr(t.Error),
+		FailureReason: failureReason,
+		BranchName:    branchName,
+		Attempt:       t.Attempt,
+		MaxAttempts:   t.MaxAttempts,
+		ParentTaskID:  uuidToPtr(t.ParentTaskID),
+
+		CreatedAt: timestampToString(t.CreatedAt),
+
+		TriggerSummary: textToPtr(t.TriggerSummary),
+		HandoffNote:    handoffNote,
 
 		WorkDir:                workDir,
 		RelativeWorkDir:        relativeWorkDir(workDir, workspaceID, uuidToString(t.ID)),
@@ -1011,27 +1007,13 @@ func basename(p string) string {
 // because completion links the newly created issue back onto the task. The
 // remaining issue tasks split into comment-triggered and direct runs.
 func computeTaskKind(t db.AgentTaskQueue) string {
-	if uuidToString(t.ChatSessionID) != "" {
+	if t.ChatSessionID.Valid {
 		return "chat"
 	}
-	if uuidToString(t.AutopilotRunID) != "" {
+	if t.AutopilotRunID.Valid {
 		return "autopilot"
 	}
-	var contextKind struct {
-		Type string `json:"type"`
-	}
-	if json.Unmarshal(t.Context, &contextKind) == nil && contextKind.Type == service.QuickCreateContextType {
-		return "quick_create"
-	}
-	// Preserve the historical classification for issue-less rows from before
-	// quick-create stored a typed context.
-	if uuidToString(t.IssueID) == "" {
-		return "quick_create"
-	}
-	if uuidToString(t.TriggerCommentID) != "" {
-		return "comment"
-	}
-	return "direct"
+	return "execution"
 }
 
 // loadAgentRuntimeAvailability returns only a coarse liveness bucket for
@@ -2773,133 +2755,10 @@ type AgentRunCount struct {
 // full AgentResponse fields include runtime and integration configuration that
 // this chip does not need.
 type WorkspaceWorkingAgent struct {
-	ID               string   `json:"id"`
-	Name             string   `json:"name"`
-	AvatarURL        *string  `json:"avatar_url"`
-	RunningTaskCount int32    `json:"running_task_count"`
-	IssueIDs         []string `json:"issue_ids"`
-}
-
-// ListWorkspaceWorkingAgents returns currently working user-authored agents in
-// the workspace, independent of issue filters or Table pagination. The
-// optional type query selects issue, autopilot, or chat work; omitting it keeps
-// the all-sources projection. scope=mine narrows issue work to the authenticated
-// member's selected My Issues relation. Access filtering mirrors the other
-// workspace-wide agent aggregations so a private/non-allow-listed agent is
-// never exposed by its name, avatar, count, or even presence.
-func (h *Handler) ListWorkspaceWorkingAgents(w http.ResponseWriter, r *http.Request) {
-	workspaceID := h.resolveWorkspaceID(r)
-	member, ok := h.workspaceMember(w, r, workspaceID)
-	if !ok {
-		return
-	}
-
-	workType := strings.TrimSpace(r.URL.Query().Get("type"))
-	switch workType {
-	case "", "issue", "autopilot", "chat":
-	default:
-		writeError(w, http.StatusBadRequest, "invalid type: must be issue, autopilot, or chat")
-		return
-	}
-
-	scope := strings.TrimSpace(r.URL.Query().Get("scope"))
-	mineRelation := strings.TrimSpace(r.URL.Query().Get("relation"))
-	var memberID pgtype.UUID
-	switch scope {
-	case "":
-		if mineRelation != "" {
-			writeError(w, http.StatusBadRequest, "relation requires scope=mine")
-			return
-		}
-	case "mine":
-		if workType != "issue" {
-			writeError(w, http.StatusBadRequest, "scope=mine requires type=issue")
-			return
-		}
-		if mineRelation == "" {
-			mineRelation = "any"
-		}
-		switch mineRelation {
-		case "assigned", "created", "involved", "any":
-		default:
-			writeError(w, http.StatusBadRequest, "invalid relation: must be assigned, created, involved, or any")
-			return
-		}
-		userID, ok := requireUserID(w, r)
-		if !ok {
-			return
-		}
-		var err error
-		memberID, err = util.ParseUUID(userID)
-		if err != nil {
-			writeError(w, http.StatusUnauthorized, "user not authenticated")
-			return
-		}
-	default:
-		writeError(w, http.StatusBadRequest, "invalid scope: must be mine")
-		return
-	}
-
-	// Narrows the projection to one issue's direct children, so an issue
-	// detail's sub-issue header reads this endpoint instead of deriving a
-	// count client-side. Left zero when absent, which the query treats as
-	// NULL and therefore as "no narrowing" — an older client that never
-	// sends it keeps the exact workspace-wide behaviour.
-	var parentIssueID pgtype.UUID
-	if raw := strings.TrimSpace(r.URL.Query().Get("parent")); raw != "" {
-		if workType != "issue" {
-			writeError(w, http.StatusBadRequest, "parent requires type=issue")
-			return
-		}
-		if scope != "" {
-			writeError(w, http.StatusBadRequest, "parent cannot be combined with scope")
-			return
-		}
-		var ok bool
-		parentIssueID, ok = parseUUIDOrBadRequest(w, raw, "parent")
-		if !ok {
-			return
-		}
-	}
-
-	rows, err := h.Queries.ListWorkspaceWorkingAgents(
-		r.Context(),
-		db.ListWorkspaceWorkingAgentsParams{
-			WorkspaceID:   parseUUID(workspaceID),
-			WorkType:      workType,
-			MineRelation:  mineRelation,
-			MemberID:      memberID,
-			ParentIssueID: parentIssueID,
-		},
-	)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to list workspace working agents")
-		return
-	}
-
-	actorType, actorID := h.resolveActor(r, requestUserID(r), workspaceID)
-	allowed, ok := h.accessibleAgentIDs(r.Context(), workspaceID, actorType, actorID, member.Role)
-	if !ok {
-		writeError(w, http.StatusInternalServerError, "failed to resolve agent access")
-		return
-	}
-
-	resp := make([]WorkspaceWorkingAgent, 0, len(rows))
-	for _, row := range rows {
-		agentID := uuidToString(row.ID)
-		if _, ok := allowed[agentID]; !ok {
-			continue
-		}
-		resp = append(resp, WorkspaceWorkingAgent{
-			ID:               agentID,
-			Name:             row.Name,
-			AvatarURL:        h.resolveAvatarURLPtr(textToPtr(row.AvatarUrl)),
-			RunningTaskCount: row.RunningTaskCount,
-			IssueIDs:         uuidStringsOrEmpty(row.IssueIds),
-		})
-	}
-
-	writeJSON(w, http.StatusOK, resp)
+	ID               string  `json:"id"`
+	Name             string  `json:"name"`
+	AvatarURL        *string `json:"avatar_url"`
+	RunningTaskCount int32   `json:"running_task_count"`
 }
 
 // GetWorkspaceAgentRunCounts returns 30-day total run counts for every

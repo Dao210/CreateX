@@ -1,0 +1,1 @@
+DROP INDEX CONCURRENTLY IF EXISTS mcp_activity_pkey;

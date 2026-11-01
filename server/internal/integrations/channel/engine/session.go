@@ -171,8 +171,7 @@ func (a dbSessionQueries) UpdateChatMessageContentForChannelMedia(ctx context.Co
 }
 
 func (a dbSessionQueries) CreateAttachment(ctx context.Context, arg db.CreateAttachmentParams) (db.Attachment, error) {
-	created, err := a.q.CreateAttachment(ctx, arg)
-	return created.Attachment(), err
+	return a.q.CreateAttachment(ctx, arg)
 }
 func (a dbSessionQueries) LinkAttachmentsToChatMessage(ctx context.Context, arg db.LinkAttachmentsToChatMessageParams) ([]pgtype.UUID, error) {
 	return a.q.LinkAttachmentsToChatMessage(ctx, arg)

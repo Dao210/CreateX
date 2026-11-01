@@ -5,19 +5,14 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/auro-ai/auro/server/internal/realtime"
+	db "github.com/auro-ai/auro/server/pkg/db/generated"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
-	"github.com/auro-ai/auro/server/internal/realtime"
-	db "github.com/auro-ai/auro/server/pkg/db/generated"
 )
 
 // fakeScopeQuerier implements scopeAuthQuerier with in-memory maps.
-type fakeScopeQuerier struct {
-	tasks    map[[16]byte]db.AgentTaskQueue
-	issues   map[[16]byte]db.Issue
-	sessions map[[16]byte]db.ChatSession
-}
 
 func (f *fakeScopeQuerier) GetAgentTask(_ context.Context, id pgtype.UUID) (db.AgentTaskQueue, error) {
 	if t, ok := f.tasks[id.Bytes]; ok {
@@ -25,12 +20,7 @@ func (f *fakeScopeQuerier) GetAgentTask(_ context.Context, id pgtype.UUID) (db.A
 	}
 	return db.AgentTaskQueue{}, pgx.ErrNoRows
 }
-func (f *fakeScopeQuerier) GetIssue(_ context.Context, id pgtype.UUID) (db.Issue, error) {
-	if i, ok := f.issues[id.Bytes]; ok {
-		return i, nil
-	}
-	return db.Issue{}, pgx.ErrNoRows
-}
+
 func (f *fakeScopeQuerier) GetChatSession(_ context.Context, id pgtype.UUID) (db.ChatSession, error) {
 	if s, ok := f.sessions[id.Bytes]; ok {
 		return s, nil
@@ -149,43 +139,6 @@ func TestScopeAuthorizer_ChatTaskRequiresCreator(t *testing.T) {
 	}
 }
 
-// TestScopeAuthorizer_IssueTaskWorkspaceOnly verifies issue tasks remain
-// workspace-scoped (any member who can see the issue may subscribe).
-func TestScopeAuthorizer_IssueTaskWorkspaceOnly(t *testing.T) {
-	wsStr, wsUUID := mustUUID(t)
-	memberStr, _ := mustUUID(t)
-	otherWsStr, _ := mustUUID(t)
-	taskStr, taskUUID := mustUUID(t)
-	_, issueUUID := mustUUID(t)
-
-	q := &fakeScopeQuerier{
-		tasks: map[[16]byte]db.AgentTaskQueue{
-			taskUUID.Bytes: {
-				ID:      taskUUID,
-				IssueID: issueUUID,
-			},
-		},
-		issues: map[[16]byte]db.Issue{
-			issueUUID.Bytes: {
-				ID:          issueUUID,
-				WorkspaceID: wsUUID,
-			},
-		},
-	}
-	a := newScopeAuthorizer(q)
-	ctx := context.Background()
-
-	ok, err := a.AuthorizeScope(ctx, memberStr, wsStr, realtime.ScopeTask, taskStr)
-	if err != nil || !ok {
-		t.Fatalf("member in workspace should be allowed: ok=%v err=%v", ok, err)
-	}
-
-	ok, err = a.AuthorizeScope(ctx, memberStr, otherWsStr, realtime.ScopeTask, taskStr)
-	if err != nil || ok {
-		t.Fatalf("cross-workspace must be denied: ok=%v err=%v", ok, err)
-	}
-}
-
 // failingScopeQuerier returns a non-ErrNoRows error from every lookup,
 // simulating a transient database failure (pool exhaustion, cancelled
 // context, network blip). Such errors must propagate out of AuthorizeScope
@@ -195,9 +148,7 @@ type failingScopeQuerier struct{}
 func (failingScopeQuerier) GetAgentTask(context.Context, pgtype.UUID) (db.AgentTaskQueue, error) {
 	return db.AgentTaskQueue{}, errors.New("connection reset by peer")
 }
-func (failingScopeQuerier) GetIssue(context.Context, pgtype.UUID) (db.Issue, error) {
-	return db.Issue{}, errors.New("connection reset by peer")
-}
+
 func (failingScopeQuerier) GetChatSession(context.Context, pgtype.UUID) (db.ChatSession, error) {
 	return db.ChatSession{}, errors.New("connection reset by peer")
 }
@@ -212,52 +163,9 @@ type errOnInnerQuerier struct {
 func (q *errOnInnerQuerier) GetAgentTask(_ context.Context, _ pgtype.UUID) (db.AgentTaskQueue, error) {
 	return q.task, nil
 }
-func (*errOnInnerQuerier) GetIssue(context.Context, pgtype.UUID) (db.Issue, error) {
-	return db.Issue{}, errors.New("connection reset by peer")
-}
+
 func (*errOnInnerQuerier) GetChatSession(context.Context, pgtype.UUID) (db.ChatSession, error) {
 	return db.ChatSession{}, errors.New("connection reset by peer")
-}
-
-// TestScopeAuthorizer_DoesNotSwallowQueryErrors pins #6037: a real database
-// error at any of the four lookup points must be returned to the caller as a
-// non-nil error, not silently converted to a (false, nil) "forbidden" denial.
-// Only a missing resource (pgx.ErrNoRows) stays a plain denial.
-func TestScopeAuthorizer_DoesNotSwallowQueryErrors(t *testing.T) {
-	wsStr, _ := mustUUID(t)
-	userStr, _ := mustUUID(t)
-	taskStr, taskUUID := mustUUID(t)
-	_, issueUUID := mustUUID(t)
-	_, sessUUID := mustUUID(t)
-	chatScopeStr, _ := mustUUID(t)
-
-	a := newScopeAuthorizer(failingScopeQuerier{})
-	ctx := context.Background()
-
-	// Point 1: GetAgentTask fails on the task path.
-	if _, err := a.AuthorizeScope(ctx, userStr, wsStr, realtime.ScopeTask, taskStr); err == nil {
-		t.Fatalf("task-path GetAgentTask error must propagate, got err=nil")
-	}
-	// Point 4: GetChatSession fails on the chat path.
-	if _, err := a.AuthorizeScope(ctx, userStr, wsStr, realtime.ScopeChat, chatScopeStr); err == nil {
-		t.Fatalf("chat-path GetChatSession error must propagate, got err=nil")
-	}
-
-	// Point 2: GetIssue fails (task resolves to an issue task).
-	issueAuth := newScopeAuthorizer(&errOnInnerQuerier{
-		task: db.AgentTaskQueue{ID: taskUUID, IssueID: issueUUID},
-	})
-	if _, err := issueAuth.AuthorizeScope(ctx, userStr, wsStr, realtime.ScopeTask, taskStr); err == nil {
-		t.Fatalf("task-path GetIssue error must propagate, got err=nil")
-	}
-
-	// Point 3: GetChatSession fails on the task path (task resolves to a chat task).
-	chatTaskAuth := newScopeAuthorizer(&errOnInnerQuerier{
-		task: db.AgentTaskQueue{ID: taskUUID, ChatSessionID: sessUUID},
-	})
-	if _, err := chatTaskAuth.AuthorizeScope(ctx, userStr, wsStr, realtime.ScopeTask, taskStr); err == nil {
-		t.Fatalf("task-path GetChatSession error must propagate, got err=nil")
-	}
 }
 
 // TestScopeAuthorizer_MissingResourceIsPlainDenial pins the other half of

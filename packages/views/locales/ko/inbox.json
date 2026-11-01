@@ -148,6 +148,7 @@
     "residents": "달성한 주민 목표: {{count}}",
     "view_resident": "주민 보기",
     "view_world": "세계 보기",
-    "author": "작성자: {{name}}"
+    "author": "작성자: {{name}}",
+    "view_automation": "자동화 보기"
   }
 }

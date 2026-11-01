@@ -1,7 +1,6 @@
 package execenv
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -111,48 +110,6 @@ func sanitizeEmailForBrief(email string) string {
 		}
 	}
 	return email
-}
-
-// formatProjectResource renders a single resource as a human-readable bullet.
-// Unknown resource types fall back to a JSON-encoded ref so the agent can
-// still read what the user attached. New resource types should add a case
-// here AND in the API validator (handler/project_resource.go).
-func formatProjectResource(r ProjectResourceForEnv) string {
-	label := r.Label
-	switch r.ResourceType {
-	case "github_repo":
-		var payload struct {
-			URL               string `json:"url"`
-			DefaultBranchHint string `json:"default_branch_hint,omitempty"`
-			Ref               string `json:"ref,omitempty"`
-		}
-		_ = json.Unmarshal(r.ResourceRef, &payload)
-		out := fmt.Sprintf("**GitHub repo**: %s", payload.URL)
-		details := make([]string, 0, 2)
-		if payload.Ref != "" {
-			details = append(details, fmt.Sprintf("checkout ref: `%s`", payload.Ref))
-		}
-		if payload.DefaultBranchHint != "" {
-			details = append(details, fmt.Sprintf("default branch hint: `%s`", payload.DefaultBranchHint))
-		}
-		if len(details) > 0 {
-			out += " (" + strings.Join(details, ", ") + ")"
-		}
-		if label != "" {
-			out += " — " + label
-		}
-		return out
-	default:
-		ref := string(r.ResourceRef)
-		if ref == "" {
-			ref = "{}"
-		}
-		out := fmt.Sprintf("**%s**: `%s`", r.ResourceType, ref)
-		if label != "" {
-			out += " — " + label
-		}
-		return out
-	}
 }
 
 // InjectRuntimeConfig writes the meta skill content into the runtime-specific

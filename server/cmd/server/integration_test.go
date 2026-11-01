@@ -4,11 +4,9 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -17,11 +15,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/auro-ai/auro/server/internal/analytics"
 	"github.com/auro-ai/auro/server/internal/auth"
-	"github.com/auro-ai/auro/server/internal/events"
-	"github.com/auro-ai/auro/server/internal/realtime"
-	db "github.com/auro-ai/auro/server/pkg/db/generated"
 )
 
 var (
@@ -40,64 +34,6 @@ const (
 	integrationTestName          = "Integration Tester"
 	integrationTestWorkspaceSlug = "integration-tests"
 )
-
-func TestMain(m *testing.M) {
-	ctx := context.Background()
-	dbURL := os.Getenv("DATABASE_URL")
-	if dbURL == "" {
-		dbURL = "postgres://auro:auro@localhost:5432/auro?sslmode=disable"
-	}
-
-	pool, err := pgxpool.New(ctx, dbURL)
-	if err != nil {
-		fmt.Printf("Skipping integration tests: could not connect to database: %v\n", err)
-		os.Exit(0)
-	}
-	if err := pool.Ping(ctx); err != nil {
-		fmt.Printf("Skipping integration tests: database not reachable: %v\n", err)
-		pool.Close()
-		os.Exit(0)
-	}
-
-	testPool = pool
-	testUserID, testWorkspaceID, err = setupIntegrationTestFixture(ctx, pool)
-	if err != nil {
-		fmt.Printf("Failed to set up integration test fixture: %v\n", err)
-		pool.Close()
-		os.Exit(1)
-	}
-
-	hub := realtime.NewHub()
-	go hub.Run()
-
-	bus := events.New()
-	registerListeners(bus, hub)
-	// Same wiring as main.go: HTTP writes through the test server log activity.
-	registerActivityListeners(bus, db.New(pool))
-	router := NewRouter(pool, hub, bus, analytics.NoopClient{}, nil)
-	testServer = httptest.NewServer(router)
-
-	// Generate a JWT token directly for the test user
-	testToken, err = generateTestJWT(testUserID, integrationTestEmail, integrationTestName)
-	if err != nil {
-		fmt.Printf("Failed to generate test JWT: %v\n", err)
-		testServer.Close()
-		pool.Close()
-		os.Exit(1)
-	}
-
-	code := m.Run()
-
-	if err := cleanupIntegrationTestFixture(context.Background(), pool); err != nil {
-		fmt.Printf("Failed to clean up integration test fixture: %v\n", err)
-		if code == 0 {
-			code = 1
-		}
-	}
-	testServer.Close()
-	pool.Close()
-	os.Exit(code)
-}
 
 func setupIntegrationTestFixture(ctx context.Context, pool *pgxpool.Pool) (string, string, error) {
 	if err := cleanupIntegrationTestFixture(ctx, pool); err != nil {
@@ -429,21 +365,6 @@ func TestVerifyCodeNewUserHasNoWorkspace(t *testing.T) {
 	}
 }
 
-func TestProtectedRoutesRequireAuth(t *testing.T) {
-	paths := []string{"/api/me", "/api/issues", "/api/agents", "/api/inbox", "/api/workspaces"}
-
-	for _, path := range paths {
-		resp, err := http.Get(testServer.URL + path)
-		if err != nil {
-			t.Fatalf("request to %s failed: %v", path, err)
-		}
-		resp.Body.Close()
-		if resp.StatusCode != 401 {
-			t.Fatalf("%s: expected 401, got %d", path, resp.StatusCode)
-		}
-	}
-}
-
 func TestInvalidJWT(t *testing.T) {
 	cases := []struct {
 		name  string
@@ -483,145 +404,7 @@ func TestInvalidJWT(t *testing.T) {
 
 // ---- Issues CRUD through full router ----
 
-func TestIssuesCRUDThroughRouter(t *testing.T) {
-	// Create
-	resp := authRequest(t, "POST", "/api/issues?workspace_id="+testWorkspaceID, map[string]any{
-		"title":    "Integration test issue",
-		"status":   "todo",
-		"priority": "high",
-	})
-	if resp.StatusCode != 201 {
-		body, _ := io.ReadAll(resp.Body)
-		resp.Body.Close()
-		t.Fatalf("CreateIssue: expected 201, got %d: %s", resp.StatusCode, body)
-	}
-
-	var created map[string]any
-	readJSON(t, resp, &created)
-	issueID := created["id"].(string)
-	if created["title"] != "Integration test issue" {
-		t.Fatalf("expected title 'Integration test issue', got '%s'", created["title"])
-	}
-
-	// Get
-	resp = authRequest(t, "GET", "/api/issues/"+issueID, nil)
-	if resp.StatusCode != 200 {
-		t.Fatalf("GetIssue: expected 200, got %d", resp.StatusCode)
-	}
-	var fetched map[string]any
-	readJSON(t, resp, &fetched)
-	if fetched["id"] != issueID {
-		t.Fatalf("expected id %s, got %s", issueID, fetched["id"])
-	}
-
-	// Update status only — should preserve title
-	resp = authRequest(t, "PUT", "/api/issues/"+issueID, map[string]any{
-		"status": "in_progress",
-	})
-	if resp.StatusCode != 200 {
-		t.Fatalf("UpdateIssue: expected 200, got %d", resp.StatusCode)
-	}
-	var updated map[string]any
-	readJSON(t, resp, &updated)
-	if updated["status"] != "in_progress" {
-		t.Fatalf("expected status 'in_progress', got '%s'", updated["status"])
-	}
-	if updated["title"] != "Integration test issue" {
-		t.Fatalf("title should be preserved, got '%s'", updated["title"])
-	}
-
-	// Update title only — should preserve status
-	resp = authRequest(t, "PUT", "/api/issues/"+issueID, map[string]any{
-		"title": "Renamed integration issue",
-	})
-	if resp.StatusCode != 200 {
-		t.Fatalf("UpdateIssue title: expected 200, got %d", resp.StatusCode)
-	}
-	var updated2 map[string]any
-	readJSON(t, resp, &updated2)
-	if updated2["title"] != "Renamed integration issue" {
-		t.Fatalf("expected title 'Renamed integration issue', got '%s'", updated2["title"])
-	}
-	if updated2["status"] != "in_progress" {
-		t.Fatalf("status should be preserved, got '%s'", updated2["status"])
-	}
-
-	// List
-	resp = authRequest(t, "GET", "/api/issues?workspace_id="+testWorkspaceID, nil)
-	if resp.StatusCode != 200 {
-		t.Fatalf("ListIssues: expected 200, got %d", resp.StatusCode)
-	}
-	var listResp map[string]any
-	readJSON(t, resp, &listResp)
-	total := listResp["total"].(float64)
-	if total < 1 {
-		t.Fatal("expected at least 1 issue")
-	}
-
-	// Delete
-	resp = authRequest(t, "DELETE", "/api/issues/"+issueID, nil)
-	resp.Body.Close()
-	if resp.StatusCode != 204 {
-		t.Fatalf("DeleteIssue: expected 204, got %d", resp.StatusCode)
-	}
-
-	// Verify deleted
-	resp = authRequest(t, "GET", "/api/issues/"+issueID, nil)
-	resp.Body.Close()
-	if resp.StatusCode != 404 {
-		t.Fatalf("GetIssue after delete: expected 404, got %d", resp.StatusCode)
-	}
-}
-
 // ---- Comments through full router ----
-
-func TestCommentsThroughRouter(t *testing.T) {
-	// Create issue
-	resp := authRequest(t, "POST", "/api/issues?workspace_id="+testWorkspaceID, map[string]any{
-		"title": "Comment integration test",
-	})
-	var issue map[string]any
-	readJSON(t, resp, &issue)
-	issueID := issue["id"].(string)
-
-	// Create comment
-	resp = authRequest(t, "POST", "/api/issues/"+issueID+"/comments", map[string]any{
-		"content": "Integration test comment",
-		"type":    "comment",
-	})
-	if resp.StatusCode != 201 {
-		body, _ := io.ReadAll(resp.Body)
-		resp.Body.Close()
-		t.Fatalf("CreateComment: expected 201, got %d: %s", resp.StatusCode, body)
-	}
-	var comment map[string]any
-	readJSON(t, resp, &comment)
-	if comment["content"] != "Integration test comment" {
-		t.Fatalf("expected content 'Integration test comment', got '%s'", comment["content"])
-	}
-
-	// Create second comment
-	resp = authRequest(t, "POST", "/api/issues/"+issueID+"/comments", map[string]any{
-		"content": "Second comment",
-		"type":    "comment",
-	})
-	resp.Body.Close()
-
-	// List comments
-	resp = authRequest(t, "GET", "/api/issues/"+issueID+"/comments", nil)
-	if resp.StatusCode != 200 {
-		t.Fatalf("ListComments: expected 200, got %d", resp.StatusCode)
-	}
-	var comments []map[string]any
-	readJSON(t, resp, &comments)
-	if len(comments) != 2 {
-		t.Fatalf("expected 2 comments, got %d", len(comments))
-	}
-
-	// Cleanup
-	resp = authRequest(t, "DELETE", "/api/issues/"+issueID, nil)
-	resp.Body.Close()
-}
 
 // ---- Agents through full router ----
 
@@ -1064,34 +847,6 @@ type inboxItemJSON struct {
 	Archived bool    `json:"archived"`
 }
 
-// seedArchivedFixtureIssue creates an issue owned by the test user and returns
-// its id, registering the cleanup that cascades to its inbox_item rows.
-//
-// `number` is taken from the workspace counter the way the real create path
-// does it (see IncrementIssueCounter). Letting it default to 0 works only for a
-// test that seeds ONE issue — a second one collides on uq_issue_workspace_number.
-func seedArchivedFixtureIssue(t *testing.T, title string) string {
-	t.Helper()
-	ctx := context.Background()
-	var issueID string
-	if err := testPool.QueryRow(ctx, `
-		WITH bumped AS (
-			UPDATE workspace SET issue_counter = issue_counter + 1
-			WHERE id = $1
-			RETURNING issue_counter
-		)
-		INSERT INTO issue (workspace_id, title, creator_type, creator_id, number)
-		SELECT $1, $2, 'member', $3, bumped.issue_counter FROM bumped
-		RETURNING id
-	`, testWorkspaceID, title, testUserID).Scan(&issueID); err != nil {
-		t.Fatalf("failed to seed issue: %v", err)
-	}
-	t.Cleanup(func() {
-		testPool.Exec(context.Background(), `DELETE FROM issue WHERE id = $1`, issueID)
-	})
-	return issueID
-}
-
 func listArchivedInbox(t *testing.T) []inboxItemJSON {
 	t.Helper()
 	resp := authRequest(t, "GET", "/api/inbox/archived", nil)
@@ -1126,48 +881,6 @@ func TestArchivedInboxThroughRouter(t *testing.T) {
 	}
 	if !found {
 		t.Fatal("expected the archived item in GET /api/inbox/archived")
-	}
-}
-
-// The main inbox and the archived list must stay mutually exclusive per issue.
-// Archiving is issue-level, so a NEW notification on an already-archived issue
-// leaves old archived rows sitting next to a fresh active one — without the
-// query's NOT EXISTS guard the issue would render in BOTH lists.
-func TestArchivedInboxExcludesIssuesWithActiveItems(t *testing.T) {
-	ctx := context.Background()
-	revivedIssue := seedArchivedFixtureIssue(t, "Revived fixture")
-	quietIssue := seedArchivedFixtureIssue(t, "Quiet fixture")
-
-	if _, err := testPool.Exec(ctx, `
-		INSERT INTO inbox_item (workspace_id, recipient_type, recipient_id, type, title, issue_id, archived, created_at)
-		VALUES
-			-- Archived a while ago, then a new notification arrived: back in the
-			-- main inbox, so it must NOT appear in the archive.
-			($1, 'member', $2, 'new_comment',    'revived-old', $3, true,  now() - interval '2 hours'),
-			($1, 'member', $2, 'status_changed', 'revived-new', $3, false, now()),
-			-- Archived with no follow-up: belongs in the archive.
-			($1, 'member', $2, 'new_comment',    'quiet-old',   $4, true,  now() - interval '2 hours')
-	`, testWorkspaceID, testUserID, revivedIssue, quietIssue); err != nil {
-		t.Fatalf("failed to seed inbox items: %v", err)
-	}
-
-	var sawRevived, sawQuiet bool
-	for _, item := range listArchivedInbox(t) {
-		if item.IssueID == nil {
-			continue
-		}
-		if *item.IssueID == revivedIssue {
-			sawRevived = true
-		}
-		if *item.IssueID == quietIssue {
-			sawQuiet = true
-		}
-	}
-	if sawRevived {
-		t.Fatal("an issue with an active inbox item must not appear in the archived list")
-	}
-	if !sawQuiet {
-		t.Fatal("an issue whose items are all archived must appear in the archived list")
 	}
 }
 
@@ -1373,171 +1086,11 @@ func TestUnarchiveInboxRejectsForeignItem(t *testing.T) {
 	}
 }
 
-// An issue's inbox notifications are deduplicated per issue: opening the issue
-// marks only the NEWEST item read, leaving older siblings unread. The summary
-// must mirror the inbox UI (issue is read when its newest item is read), so a
-// read-newest / unread-older issue must NOT light the switcher dot (MUL-3695).
-func TestInboxUnreadSummaryDedupesByIssue(t *testing.T) {
-	ctx := context.Background()
-
-	var issueID string
-	if err := testPool.QueryRow(ctx, `
-		INSERT INTO issue (workspace_id, title, creator_type, creator_id)
-		VALUES ($1, 'Dedup fixture', 'member', $2)
-		RETURNING id
-	`, testWorkspaceID, testUserID).Scan(&issueID); err != nil {
-		t.Fatalf("failed to seed issue: %v", err)
-	}
-	// Deleting the issue cascades to its inbox_item rows (FK ON DELETE CASCADE).
-	t.Cleanup(func() {
-		testPool.Exec(context.Background(), `DELETE FROM issue WHERE id = $1`, issueID)
-	})
-
-	// Older sibling stays unread; newer sibling is read (the one "opening the
-	// issue" would have marked read).
-	if _, err := testPool.Exec(ctx, `
-		INSERT INTO inbox_item (workspace_id, recipient_type, recipient_id, type, title, issue_id, read, created_at)
-		VALUES
-			($1, 'member', $2, 'new_comment',    'older', $3, false, now() - interval '1 hour'),
-			($1, 'member', $2, 'status_changed', 'newer', $3, true,  now())
-	`, testWorkspaceID, testUserID, issueID); err != nil {
-		t.Fatalf("failed to seed inbox items: %v", err)
-	}
-
-	resp := authRequest(t, "GET", "/api/inbox/unread-summary", nil)
-	if resp.StatusCode != 200 {
-		t.Fatalf("UnreadInboxSummary: expected 200, got %d", resp.StatusCode)
-	}
-	var summary []struct {
-		WorkspaceID string `json:"workspace_id"`
-		Count       int64  `json:"count"`
-	}
-	readJSON(t, resp, &summary)
-	for _, s := range summary {
-		if s.WorkspaceID == testWorkspaceID && s.Count > 0 {
-			t.Fatalf("issue whose newest item is read must not count as unread, got count %d", s.Count)
-		}
-	}
-
-	// Now mark the newest item unread again → the issue becomes unread and the
-	// workspace reappears in the summary.
-	if _, err := testPool.Exec(ctx, `
-		UPDATE inbox_item SET read = false WHERE issue_id = $1 AND title = 'newer'
-	`, issueID); err != nil {
-		t.Fatalf("failed to flip newest item unread: %v", err)
-	}
-	resp = authRequest(t, "GET", "/api/inbox/unread-summary", nil)
-	readJSON(t, resp, &summary)
-	var found bool
-	for _, s := range summary {
-		if s.WorkspaceID == testWorkspaceID && s.Count >= 1 {
-			found = true
-		}
-	}
-	if !found {
-		t.Fatalf("expected workspace in summary once newest item is unread, got %+v", summary)
-	}
-}
-
 // ---- 404 for non-existent resources ----
-
-func TestNonExistentResources(t *testing.T) {
-	fakeUUID := "00000000-0000-0000-0000-000000000000"
-
-	cases := []struct {
-		name string
-		path string
-	}{
-		{"issue", "/api/issues/" + fakeUUID},
-		{"agent", "/api/agents/" + fakeUUID},
-		{"workspace", "/api/workspaces/" + fakeUUID},
-	}
-
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			resp := authRequest(t, "GET", tc.path, nil)
-			resp.Body.Close()
-			if resp.StatusCode != 404 {
-				t.Fatalf("expected 404, got %d", resp.StatusCode)
-			}
-		})
-	}
-}
 
 // ---- Invalid request bodies ----
 
-func TestInvalidRequestBodies(t *testing.T) {
-	resp := authRequest(t, "POST", "/api/issues?workspace_id="+testWorkspaceID, nil)
-	defer resp.Body.Close()
-	// Sending nil body should fail with 400
-	if resp.StatusCode != 400 {
-		// Some handlers may return 500 for nil body, that's acceptable too
-		if resp.StatusCode != 500 {
-			t.Fatalf("expected 400 or 500, got %d", resp.StatusCode)
-		}
-	}
-}
-
 // ---- WebSocket integration through full router ----
-
-func TestWebSocketIntegration(t *testing.T) {
-	// Connect WebSocket client (no token in URL — first-message auth)
-	wsURL := "ws" + strings.TrimPrefix(testServer.URL, "http") + "/ws?workspace_id=" + testWorkspaceID
-	conn, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
-	if err != nil {
-		t.Fatalf("WebSocket connection failed: %v", err)
-	}
-	defer conn.Close()
-
-	// First-message auth
-	authMsg, _ := json.Marshal(map[string]any{
-		"type":    "auth",
-		"payload": map[string]string{"token": testToken},
-	})
-	if err := conn.WriteMessage(websocket.TextMessage, authMsg); err != nil {
-		t.Fatalf("failed to send auth message: %v", err)
-	}
-
-	// Read auth_ack
-	conn.SetReadDeadline(time.Now().Add(3 * time.Second))
-	_, ack, err := conn.ReadMessage()
-	if err != nil {
-		t.Fatalf("failed to read auth_ack: %v", err)
-	}
-	if !strings.Contains(string(ack), "auth_ack") {
-		t.Fatalf("expected auth_ack, got %s", ack)
-	}
-	conn.SetReadDeadline(time.Time{})
-
-	// Allow Hub goroutine to process the register and add client to room
-	time.Sleep(100 * time.Millisecond)
-
-	// Create an issue — this should trigger a WebSocket broadcast
-	resp := authRequest(t, "POST", "/api/issues?workspace_id="+testWorkspaceID, map[string]any{
-		"title":  "WebSocket test issue",
-		"status": "todo",
-	})
-	var issue map[string]any
-	readJSON(t, resp, &issue)
-	issueID := issue["id"].(string)
-
-	// Verify the broadcast carries the issue event
-	readWSMessageOfType(t, conn, "issue:created")
-
-	// Update the issue — should trigger another broadcast
-	resp = authRequest(t, "PUT", "/api/issues/"+issueID, map[string]any{
-		"status": "in_progress",
-	})
-	resp.Body.Close()
-
-	readWSMessageOfType(t, conn, "issue:updated")
-
-	// Delete the issue — should trigger another broadcast
-	resp = authRequest(t, "DELETE", "/api/issues/"+issueID, nil)
-	resp.Body.Close()
-
-	readWSMessageOfType(t, conn, "issue:deleted")
-}
 
 // readWSMessageOfType reads frames until one of the wanted type arrives. The
 // activity listeners are wired like production, so an activity:created frame

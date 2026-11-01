@@ -160,7 +160,6 @@ WHERE r.state = 'reserved'
           AND ar.source IN ('manual', 'api')
           AND (
               ar.status = 'pending'
-              OR (ar.status = 'issue_created' AND ar.issue_id IS NULL)
               OR (ar.status = 'running' AND ar.task_id IS NULL)
           )
           AND NOT EXISTS (

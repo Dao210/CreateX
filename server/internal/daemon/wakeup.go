@@ -13,8 +13,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gorilla/websocket"
 	"github.com/auro-ai/auro/server/pkg/protocol"
+	"github.com/gorilla/websocket"
 )
 
 var errRuntimeSetChanged = errors.New("runtime set changed")
@@ -407,17 +407,7 @@ func (d *Daemon) readTaskWakeupMessagesForConnection(conn *websocket.Conn, taskW
 				d.logger.Debug("task wakeup received", "runtime_id", payload.RuntimeID, "task_id", payload.TaskID)
 			}
 			signalTaskWakeup(taskWakeups, payload.RuntimeID)
-		case protocol.EventDaemonTaskSupplementAvailable:
-			var payload protocol.TaskAvailablePayload
-			if err := json.Unmarshal(msg.Payload, &payload); err != nil {
-				d.logger.Debug("task supplement websocket invalid payload", "error", err)
-				continue
-			}
-			if payload.TaskID == "" {
-				d.logger.Debug("task supplement websocket missing task_id")
-				continue
-			}
-			d.taskSupplementSignals.notify(payload.TaskID)
+
 		case protocol.EventDaemonRuntimeProfilesChanged:
 			var payload protocol.RuntimeProfilesChangedPayload
 			if err := json.Unmarshal(msg.Payload, &payload); err != nil {

@@ -11,7 +11,7 @@ import { InboxContentSchema } from "@auro/core/inbox/messages";
  * (root CLAUDE.md "API Response Compatibility") for these endpoints.
  */
 import { z } from "zod";
-import type { Agent, AgentInvocationTarget, AgentTask, Attachment, ChatMessage, ChatPendingTask, ChatSession, InboxItem, InboxWorkspaceUnread, Label, ListLabelsResponse, MemberWithUser, PinnedItem, Project, ProjectResource, RuntimeDevice, SendChatMessageResponse, TaskMessagePayload, User, Workspace } from "@auro/core/types";
+import type { Agent, AgentInvocationTarget, AgentTask, Attachment, ChatMessage, ChatPendingTask, ChatSession, InboxItem, InboxWorkspaceUnread, Label, ListLabelsResponse, MemberWithUser, RuntimeDevice, SendChatMessageResponse, TaskMessagePayload, User, Workspace } from "@auro/core/types";
 
 /** Upload response. Only fields mobile actually consumes — `url` to put
  *  into the markdown link, `filename` for the `[📎 name](url)` form, `id`
@@ -377,7 +377,7 @@ export const InboxItemSchema: z.ZodType<InboxItem> = z.object({
   read: z.boolean().default(false),
   archived: z.boolean().default(false),
   created_at: z.string().default(""),
-  details: z.record(z.string(), z.string()).nullable().default(null),
+  details: z.record(z.string(), z.string()).nullable().default(null).catch(null),
   content: InboxContentSchema.nullish().catch(null),
 }).loose();
 
@@ -519,4 +519,4 @@ export const RuntimeListSchema = z.array(RuntimeSchema).default([]);
 export const EMPTY_RUNTIME_LIST: RuntimeDevice[] = [];
 
 // Helpers re-exported for ergonomic single-import at the call site.
-export type { Label, Project, ProjectResource };
+export type { Label };

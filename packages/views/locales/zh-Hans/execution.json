@@ -1,0 +1,74 @@
+{
+  "comment": {
+    "trigger_blocked_invocation_not_allowed": "找不到该目标，或你没有它的使用权限",
+    "trigger_blocked_target_unavailable": "该目标不可用",
+    "trigger_blocked_runtime_offline": "该目标的运行时已离线",
+    "trigger_blocked_runtime_unusable": "该目标的 CLI 在它所在的机器上无法运行 —— 需要在那台机器上重装",
+    "trigger_blocked_runtime_profile_missing": "该目标的 CLI 在它所在的机器上缺少运行时 profile —— 需要在那台机器上安装",
+    "trigger_blocked_agent_runtime_required": "该目标未绑定运行时——绑定后才能运行",
+    "trigger_blocked_runtime_access_denied": "该目标的智能体无法在其私有运行时上运行 —— 请将该运行时设为公开，或将智能体重新绑定/复制到其所有者可用的运行时",
+    "trigger_blocked_generic": "该目标不会被触发",
+    "trigger_blocked_short_invocation_not_allowed": "找不到或无权限",
+    "trigger_blocked_short_target_unavailable": "不可用",
+    "trigger_blocked_short_runtime_offline": "运行时离线",
+    "trigger_blocked_short_runtime_unusable": "CLI 无法运行",
+    "trigger_blocked_short_runtime_profile_missing": "缺少运行时 profile",
+    "trigger_blocked_short_agent_runtime_required": "需绑定运行时",
+    "trigger_blocked_short_runtime_access_denied": "无运行时权限",
+    "trigger_blocked_short_generic": "不会触发"
+  },
+  "wakeups": {
+    "triggered_by_wakeup": "由唤醒触发"
+  },
+  "agent_activity": {
+    "status_running": "正在工作",
+    "status_queued": "排队中",
+    "empty_hover": "当前没有智能体在工作"
+  },
+  "execution_log": {
+    "attribution": {
+      "source_direct_human": "成员直接操作",
+      "source_delegation": "由其他运行委托",
+      "source_comment_source": "来自评论线程",
+      "source_trigger_owner": "自动化触发器创建者",
+      "source_rule_owner": "自动化规则发布者",
+      "source_owner_fallback": "无精确责任人——归到智能体所有者",
+      "source_backfill": "回填的归因",
+      "source_unattributed": "未解析到责任成员",
+      "someone": "某位成员",
+      "on_behalf_of": "代表 {{name}}"
+    },
+    "trigger_retry_attempt_prefix": "重试 #{{attempt}} · ",
+    "trigger_retry_prefix": "重试 · ",
+    "trigger_image": "[图片]",
+    "trigger_retry_attempt": "重试 #{{attempt}}",
+    "trigger_retry": "重试",
+    "trigger_autopilot": "自动化运行",
+    "trigger_comment": "评论触发",
+    "trigger_initial": "首次运行",
+    "status_queued": "排队中",
+    "status_dispatched": "启动中",
+    "status_waiting_local_directory": "等待本地目录释放",
+    "status_running": "正在工作",
+    "status_completed": "已完成",
+    "status_failed": "失败",
+    "status_cancelled": "已取消"
+  },
+  "filters": {
+    "placeholder": "筛选..."
+  },
+  "pickers": {
+    "filter_options_aria": "筛选选项",
+    "no_results": "无结果"
+  },
+  "plugins": {
+    "hook_succeeded": "{{name}} 已完成。",
+    "hook_refused": "{{name}} 未被执行。",
+    "hook_failed": "{{name}} 执行失败。",
+    "panels": "Plugins",
+    "surface_failed": "{{name}} 的界面加载失败。",
+    "surface_loading": "正在加载 {{name}}…",
+    "surface_navigated": "{{name}} 试图把面板替换成从别处加载的页面。已经拦下并断开连接，建议告知世界管理员。",
+    "surface_unavailable": "{{name}} 的界面无法加载，已安装的版本可能不包含它。"
+  }
+}

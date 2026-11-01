@@ -143,27 +143,6 @@ describe("AgentActivityHoverContent", () => {
     expect(screen.getByText("1 active run")).toBeInTheDocument();
   });
 
-  it("uses an online agent projection when its runtime row is hidden", () => {
-    activityQueryData.agents = [
-      {
-        id: "agent-1",
-        runtime_id: "private-runtime",
-        runtime_availability: "online",
-      } as Agent,
-    ];
-
-    const { container } = renderWithI18n(
-      <AgentActivityHoverContent tasks={[makeTask({ status: "queued" })]} />,
-    );
-
-    expect(
-      container.querySelector('[class*="bg-muted-foreground/40"]'),
-    ).toBeInTheDocument();
-    expect(
-      container.querySelector('[class*="bg-warning"]'),
-    ).not.toBeInTheDocument();
-  });
-
   it("renders the Chinese run copy", () => {
     renderWithI18n(<AgentActivityHoverContent tasks={threeTasksTwoAgents} />, {
       locale: "zh-Hans",
@@ -178,37 +157,6 @@ describe("AgentActivityHoverContent", () => {
 // by issue. It stays silent about work it excludes — see the component doc.
 // MUL-4884.
 describe("WorkspaceAgentActivityHoverContent", () => {
-  it("carries the two figures the chip does not, and groups rows by issue", () => {
-    renderWithI18n(
-      <WorkspaceAgentActivityHoverContent
-        issues={[
-          makeIssue("i-1", "MUL-4879", "Counting logic looks wrong"),
-          makeIssue("i-2", "MUL-4881", "daemon extra work dir"),
-          makeIssue("i-3", "MUL-4883", "First PR review flow"),
-        ]}
-        tasksByIssueId={
-          new Map([
-            [
-              "i-1",
-              [
-                makeTask({ id: "t1", agent_id: "agent-1", issue_id: "i-1" }),
-                makeTask({ id: "t4", agent_id: "agent-2", issue_id: "i-1" }),
-              ],
-            ],
-            ["i-2", [makeTask({ id: "t2", agent_id: "agent-1", issue_id: "i-2" })]],
-            ["i-3", [makeTask({ id: "t3", agent_id: "agent-2", issue_id: "i-3" })]],
-          ])
-        }
-        taskCount={4}
-        />,
-    );
-
-    expect(screen.getByText("3 issues · 4 runs")).toBeInTheDocument();
-    // Rows group under their issue, mirroring what clicking the chip does.
-    expect(screen.getByText("MUL-4879")).toBeInTheDocument();
-    expect(screen.getByText("Counting logic looks wrong")).toBeInTheDocument();
-    expect(screen.getAllByTestId("actor-avatar")).toHaveLength(4);
-  });
 
   it("says nothing about work it excludes", () => {
     // Chat/autopilot runs and out-of-scope tasks leave no trace on this page,

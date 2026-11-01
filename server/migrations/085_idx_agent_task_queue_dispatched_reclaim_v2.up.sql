@@ -1,0 +1,1 @@
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_agent_task_queue_dispatched_reclaim_v2 ON agent_task_queue USING btree (runtime_id, dispatched_at, priority DESC) WHERE ((status = 'dispatched'::text) AND (started_at IS NULL));

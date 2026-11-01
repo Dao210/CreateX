@@ -1815,7 +1815,7 @@ func runDaemonDiskUsage(cmd *cobra.Command, _ []string) error {
 	// Skipped in a task: the fetcher authenticates with the Owner profile's
 	// stored token, which a task must not borrow, so the column stays blank.
 	if !taskContext && diskUsageNeedsParentStatus(byWorkspace, output) {
-		fillDiskUsageParentStatuses(cmd, profile, &report)
+
 	}
 
 	if top > 0 {
@@ -1888,64 +1888,6 @@ func diskUsageNeedsParentStatus(byWorkspace bool, output string) bool {
 	return !byWorkspace || output == "json"
 }
 
-// fillDiskUsageParentStatuses populates the report's STATUS column in place.
-//
-// This is best-effort and never fails the command: `disk-usage` is a local
-// diagnostic that has to keep working when the machine is offline or logged
-// out. When statuses can't be resolved the column simply stays blank, and the
-// reason goes to stderr so `--output json` stdout stays machine-readable.
-func fillDiskUsageParentStatuses(cmd *cobra.Command, profile string, report *daemon.DiskUsageReport) {
-	fetch := newParentStatusFetcher(cmd, profile)
-	if fetch == nil {
-		return
-	}
-	ctx, cancel := cli.APIContext(cmd.Context())
-	defer cancel()
-	if err := daemon.ResolveParentStatuses(ctx, report, fetch); err != nil {
-		fmt.Fprintf(os.Stderr, "warning: could not resolve issue statuses, STATUS column may be blank: %v\n", err)
-	}
-}
-
-// newParentStatusFetcher builds a fetcher backed by the same batch gc-check
-// endpoint the daemon's GC loop uses, so the STATUS column reports exactly the
-// status the GC would act on. The daemon authenticates with the profile's CLI
-// token (see Daemon.resolveAuth), so reusing it here needs no extra API
-// surface. Returns nil when this profile has no usable credentials — the
-// caller then leaves the column blank rather than erroring.
-func newParentStatusFetcher(cmd *cobra.Command, profile string) daemon.ParentStatusFetcher {
-	cfg, err := cli.LoadCLIConfigForProfile(profile)
-	if err != nil || strings.TrimSpace(cfg.Token) == "" {
-		return nil
-	}
-	rawURL := resolveDaemonServerURL(cmd, profile)
-	if rawURL == "" {
-		rawURL = daemon.DefaultServerURL
-	}
-	baseURL, err := daemon.NormalizeServerBaseURL(rawURL)
-	if err != nil {
-		return nil
-	}
-
-	client := daemon.NewClient(baseURL)
-	client.SetToken(cfg.Token)
-	return func(ctx context.Context, workspaceID string, issueIDs []string) (map[string]string, error) {
-		results, err := client.GetIssueGCChecks(ctx, workspaceID, issueIDs)
-		if err != nil {
-			return nil, err
-		}
-		statuses := make(map[string]string, len(results))
-		for id, result := range results {
-			// Skip per-issue failures and 404s: an unresolved id must stay
-			// blank so it reads as "unknown", not as a status.
-			if result.Err != nil || !result.Found {
-				continue
-			}
-			statuses[id] = result.Status
-		}
-		return statuses, nil
-	}
-}
-
 // runDaemonDiskUsageAggregate scans every workspace root (the default root plus
 // each ~/.auro/profiles/* root) and renders a per-root breakdown with a
 // combined grand total. This is the path that surfaces the Desktop app's
@@ -1959,16 +1901,6 @@ func runDaemonDiskUsageAggregate(cmd *cobra.Command, byWorkspace bool, top int, 
 	if err != nil {
 		return err
 	}
-	// Each root belongs to its own profile, so it needs that profile's token.
-	// Skipping the whole loop when nothing renders task rows matters most
-	// here: an unreachable server would otherwise burn one full timeout per
-	// root, serially.
-	if diskUsageNeedsParentStatus(byWorkspace, output) {
-		for i := range agg.Roots {
-			fillDiskUsageParentStatuses(cmd, agg.Roots[i].Profile, &agg.Roots[i].Report)
-		}
-	}
-
 	// --top trims each root's table independently — the grand total in the
 	// report stays anchored to the full scan, mirroring single-root --top.
 	if top > 0 {

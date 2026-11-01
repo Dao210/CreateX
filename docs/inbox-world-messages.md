@@ -61,7 +61,8 @@ restoring it preserves its current read state. A retry never reopens an existing
 message or rewrites an old digest. Creation updates and world digests are independently enabled by default in each
 world’s notification settings. Muting one skips future delivery of that category;
 existing messages and the other category are preserved. OS banners are a separate
-setting. World digests refresh unread counts quietly
+setting. Paused automation notices link to their automation, or to the automation
+list when optional detail data is unavailable. World digests refresh unread counts quietly
 and do not create OS banners. Personal/system banners follow existing background,
 browser permission and source-world mute rules.
 
@@ -79,7 +80,10 @@ already-published historical messages or stop the simulation Worker.
 
 The existing `/api/inbox` and archive/write routes retain their JSON shape with
 an additive optional `content` field. Both clients validate its bounded schema;
-malformed content falls back to the stored title/body. Retired task messages stay
+malformed content falls back to the stored title/body. Malformed optional details
+fall back to null without discarding other messages. The retired issue fields
+remain explicit null values at the response boundary, and retired status/priority
+archive filters return no matches rather than silently expanding the result. Retired task messages stay
 excluded from listing, unread counts and mutations. The `issue` selection query
 parameter remains for existing notification links; it identifies the inbox row.
 

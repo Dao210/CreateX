@@ -1,0 +1,74 @@
+{
+  "comment": {
+    "trigger_blocked_invocation_not_allowed": "この対象が見つからないか、使用する権限がありません",
+    "trigger_blocked_target_unavailable": "この対象は利用できません",
+    "trigger_blocked_runtime_offline": "この対象のランタイムがオフラインです",
+    "trigger_blocked_runtime_unusable": "この対象の CLI はそのマシンで実行できません — そのマシンで再インストールしてください",
+    "trigger_blocked_runtime_profile_missing": "この対象の CLI はそのマシンでランタイム プロファイルが不足しています — そのマシンでインストールしてください",
+    "trigger_blocked_agent_runtime_required": "この対象にはランタイムがありません — 実行するにはバインドしてください",
+    "trigger_blocked_runtime_access_denied": "この対象のエージェントはプライベートランタイムで実行できません — ランタイムを公開にするか、所有者が利用できるランタイムへエージェントを再設定/コピーしてください",
+    "trigger_blocked_generic": "この対象はトリガーされません",
+    "trigger_blocked_short_invocation_not_allowed": "未検出または権限なし",
+    "trigger_blocked_short_target_unavailable": "利用不可",
+    "trigger_blocked_short_runtime_offline": "ランタイム オフライン",
+    "trigger_blocked_short_runtime_unusable": "CLI を実行できません",
+    "trigger_blocked_short_runtime_profile_missing": "ランタイム プロファイル未導入",
+    "trigger_blocked_short_agent_runtime_required": "ランタイム未設定",
+    "trigger_blocked_short_runtime_access_denied": "ランタイムアクセス拒否",
+    "trigger_blocked_short_generic": "トリガーされません"
+  },
+  "wakeups": {
+    "triggered_by_wakeup": "自動起動による実行"
+  },
+  "agent_activity": {
+    "status_running": "作業中",
+    "status_queued": "待機中",
+    "empty_hover": "現在作業中のエージェントはありません"
+  },
+  "execution_log": {
+    "attribution": {
+      "source_direct_human": "メンバーの直接操作",
+      "source_delegation": "別の実行から委任",
+      "source_comment_source": "コメントスレッドから",
+      "source_trigger_owner": "オートパイロットのトリガー作成者",
+      "source_rule_owner": "オートパイロットのルール公開者",
+      "source_owner_fallback": "正確な責任者なし — エージェント所有者に帰属",
+      "source_backfill": "バックフィルされた帰属",
+      "source_unattributed": "責任メンバーを解決できません",
+      "someone": "あるメンバー",
+      "on_behalf_of": "{{name}} の代理として"
+    },
+    "trigger_retry_attempt_prefix": "再試行 #{{attempt}} · ",
+    "trigger_retry_prefix": "再試行 · ",
+    "trigger_image": "[画像]",
+    "trigger_retry_attempt": "再試行 #{{attempt}}",
+    "trigger_retry": "再試行",
+    "trigger_autopilot": "オートパイロット実行",
+    "trigger_comment": "コメントトリガー",
+    "trigger_initial": "初回実行",
+    "status_queued": "待機中",
+    "status_dispatched": "開始中",
+    "status_waiting_local_directory": "ローカルディレクトリ待機中",
+    "status_running": "作業中",
+    "status_completed": "完了",
+    "status_failed": "失敗",
+    "status_cancelled": "キャンセル済み"
+  },
+  "filters": {
+    "placeholder": "フィルター..."
+  },
+  "pickers": {
+    "filter_options_aria": "フィルターオプション",
+    "no_results": "結果なし"
+  },
+  "plugins": {
+    "hook_succeeded": "{{name}} が完了しました。",
+    "hook_refused": "{{name}} は実行されませんでした。",
+    "hook_failed": "{{name}} が失敗しました。",
+    "panels": "Plugins",
+    "surface_failed": "{{name}} のインターフェースを読み込めませんでした。",
+    "surface_loading": "{{name}} を読み込んでいます…",
+    "surface_navigated": "{{name}} がパネルを外部から読み込んだページに置き換えようとしました。停止して接続を切りました。ワールド管理者に知らせてください。",
+    "surface_unavailable": "{{name}} のインターフェースを読み込めません。インストール済みのバージョンに含まれていない可能性があります。"
+  }
+}

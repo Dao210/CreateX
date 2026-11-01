@@ -1,0 +1,1 @@
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_agent_task_queue_agent_terminal_latest ON agent_task_queue USING btree (agent_id, completed_at DESC NULLS LAST, created_at DESC, id DESC) WHERE (status = ANY (ARRAY['completed'::text, 'failed'::text]));

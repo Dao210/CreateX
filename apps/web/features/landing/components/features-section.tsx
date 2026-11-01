@@ -7,6 +7,8 @@ import {
   Brain,
   Check,
   CheckCircle2,
+  CircleDot,
+  Flag,
   ChevronRight,
   Cloud,
   File,
@@ -22,10 +24,6 @@ import { cn } from "@auro/ui/lib/utils";
 import { ImageIcon } from "./shared";
 import { useLocale } from "../i18n";
 import type { LandingDict } from "../i18n";
-import { StatusIcon, PriorityIcon } from "@auro/views/issues/components";
-import { BUILT_IN_STATUS_LABEL } from "@auro/core/issues/config/status";
-import { PRIORITY_CONFIG } from "@auro/core/issues/config/priority";
-import type { BuiltInIssueStatus, IssuePriority } from "@auro/core/types";
 
 /* ------------------------------------------------------------------ */
 /*  Mock ActorAvatar — mirrors the real ActorAvatar styling exactly     */
@@ -137,7 +135,12 @@ const allAssignees: Assignee[] = [
   { type: "agent", id: "tina", name: "Tina-dev" },
 ];
 
-const statusCycle: BuiltInIssueStatus[] = [
+const demoStatusLabels = { backlog: "Backlog", todo: "Todo", in_progress: "In Progress", in_review: "In Review", blocked: "Blocked", done: "Done", cancelled: "Cancelled" };
+const demoPriorityLabels = { none: "No priority", low: "Low", medium: "Medium", high: "High", urgent: "Urgent" };
+type DemoStatus = keyof typeof demoStatusLabels;
+type DemoPriority = keyof typeof demoPriorityLabels;
+
+const statusCycle: DemoStatus[] = [
   "backlog",
   "todo",
   "in_progress",
@@ -146,11 +149,11 @@ const statusCycle: BuiltInIssueStatus[] = [
   "done",
   "cancelled",
 ];
-const priorityCycle: IssuePriority[] = ["none", "low", "medium", "high", "urgent"];
+const priorityCycle: DemoPriority[] = ["none", "low", "medium", "high", "urgent"];
 
 function TeammatesVisual() {
-  const [status, setStatus] = useState<BuiltInIssueStatus>("in_progress");
-  const [priority, setPriority] = useState<IssuePriority>("medium");
+  const [status, setStatus] = useState<DemoStatus>("in_progress");
+  const [priority, setPriority] = useState<DemoPriority>("medium");
   const [assignee, setAssignee] = useState<Assignee>(allAssignees[3]!); // Claude
   const [pickerOpen, setPickerOpen] = useState(true);
   const [statusOpen, setStatusOpen] = useState(false);
@@ -203,7 +206,7 @@ function TeammatesVisual() {
                   <div key={i} className="px-4 flex items-center text-caption text-muted-foreground">
                     <div className="mr-2 flex w-4 shrink-0 justify-center">
                       {entry.statusIcon ? (
-                        <StatusIcon status={entry.statusIcon} className="h-4 w-4 shrink-0" />
+                        <CircleDot className="h-4 w-4 shrink-0" />
                       ) : (
                         <MockAvatar type={entry.actorType} initials={entry.initials} size={16} />
                       )}
@@ -250,8 +253,8 @@ function TeammatesVisual() {
                       className="flex items-center gap-1.5 cursor-pointer rounded-xs px-1 -mx-1 hover:bg-accent/30 transition-colors"
                       onClick={() => { setStatusOpen(!statusOpen); setPriorityOpen(false); }}
                     >
-                      <StatusIcon status={status} className="h-3.5 w-3.5 shrink-0" />
-                      <span>{BUILT_IN_STATUS_LABEL[status]}</span>
+                      <CircleDot className="h-3.5 w-3.5 shrink-0" />
+                      <span>{demoStatusLabels[status]}</span>
                     </button>
                   </PropRow>
                   {statusOpen && (
@@ -266,8 +269,8 @@ function TeammatesVisual() {
                           )}
                           onClick={() => { setStatus(s); setStatusOpen(false); }}
                         >
-                          <StatusIcon status={s} className="h-3.5 w-3.5 shrink-0" />
-                          {BUILT_IN_STATUS_LABEL[s]}
+                          <CircleDot className="h-3.5 w-3.5 shrink-0" />
+                          {demoStatusLabels[s]}
                           {s === status && <Check className="ml-auto h-3.5 w-3.5" />}
                         </button>
                       ))}
@@ -283,8 +286,8 @@ function TeammatesVisual() {
                       className="flex items-center gap-1.5 cursor-pointer rounded-xs px-1 -mx-1 hover:bg-accent/30 transition-colors"
                       onClick={() => { setPriorityOpen(!priorityOpen); setStatusOpen(false); }}
                     >
-                      <PriorityIcon priority={priority} />
-                      <span>{PRIORITY_CONFIG[priority].label}</span>
+                      <Flag className="size-3.5 shrink-0" />
+                      <span>{demoPriorityLabels[priority]}</span>
                     </button>
                   </PropRow>
                   {priorityOpen && (
@@ -299,8 +302,8 @@ function TeammatesVisual() {
                           )}
                           onClick={() => { setPriority(p); setPriorityOpen(false); }}
                         >
-                          <PriorityIcon priority={p} />
-                          {PRIORITY_CONFIG[p].label}
+                          <Flag className="size-3.5 shrink-0" />
+                          {demoPriorityLabels[p]}
                           {p === priority && <Check className="ml-auto h-3.5 w-3.5" />}
                         </button>
                       ))}

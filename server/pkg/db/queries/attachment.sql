@@ -60,8 +60,7 @@ WHERE workspace_id = sqlc.arg(workspace_id)
   AND task_id = sqlc.arg(task_id)
 
 
-  AND chat_message_id IS NULL
-  AND source_context_id IS NULL;
+  AND chat_message_id IS NULL;
 
 
 

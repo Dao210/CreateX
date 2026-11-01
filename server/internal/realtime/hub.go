@@ -15,9 +15,9 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/auro-ai/auro/server/internal/auth"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/gorilla/websocket"
-	"github.com/auro-ai/auro/server/internal/auth"
 )
 
 // MembershipChecker verifies a user belongs to a workspace.

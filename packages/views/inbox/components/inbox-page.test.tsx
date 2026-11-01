@@ -6,13 +6,13 @@ import { InboxPage } from "./inbox-page";
 
 const state = vi.hoisted(() => ({ items: [] as InboxItem[], archived: [] as InboxItem[], params: new URLSearchParams(), replace: vi.fn(), markRead: vi.fn(), archive: vi.fn(), restore: vi.fn(), available: true, recover: vi.fn() }));
 vi.mock("@auro/core/hooks", () => ({ useWorkspaceId: () => "ws-1" }));
-vi.mock("@auro/core/paths", () => ({ useWorkspacePaths: () => ({ inbox: () => "/acme/inbox", tanks: () => "/acme/tanks", life: () => "/acme/life" }) }));
+vi.mock("@auro/core/paths", () => ({ useWorkspacePaths: () => ({ inbox: () => "/acme/inbox", tanks: () => "/acme/tanks", life: () => "/acme/life", autopilots: () => "/acme/autopilots", autopilotDetail: (id: string) => `/acme/autopilots/${id}` }) }));
 vi.mock("../../navigation", () => ({ useNavigation: () => ({ searchParams: state.params, replace: state.replace }), AppLink: ({ href, children, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement>) => <a href={href} {...props}>{children}</a> }));
 vi.mock("@auro/core/inbox/queries", () => ({ inboxListOptions: () => ({ queryKey: ["inbox"] }), archivedInboxPagesOptions: () => ({ queryKey: ["archive"] }), archivedInboxLookupOptions: () => ({ queryKey: ["lookup"] }) }));
 vi.mock("@auro/core/admin", () => ({ useWorldGames: () => ({ data: { games: [{ gameId: "tanks", available: state.available }, { gameId: "life", available: state.available }] } }) }));
 vi.mock("@tanstack/react-query", () => ({ useQuery: ({ queryKey }: { queryKey: string[] }) => ({ data: queryKey[0] === "lookup" ? { items: [] } : state.items }), useInfiniteQuery: () => ({ data: { pages: [{ items: state.archived }] }, hasNextPage: false }) }));
 vi.mock("@auro/core/inbox/mutations", () => ({ useMarkInboxRead: () => ({ mutate: state.markRead }), useMarkInboxUnread: () => ({ mutate: vi.fn() }), useArchiveInbox: () => ({ mutate: state.archive }), useUnarchiveInbox: () => ({ mutate: state.restore }), useMarkAllInboxRead: () => ({ mutate: vi.fn() }) }));
-vi.mock("../../modals/use-issue-limit-upgrade-prompt", () => ({ useIssueLimitUpgradePrompt: () => state.recover }));
+vi.mock("../../modals/use-autopilot-quota-recovery", () => ({ useAutopilotQuotaRecovery: () => state.recover }));
 
 function item(id: string, type: InboxItem["type"], issue_id: string | null = null): InboxItem {
   return { id, type, issue_id, title: id, body: `${id} body`, workspace_id: "ws-1", recipient_type: "member", recipient_id: "u", actor_type: "system", actor_id: null, severity: "info", issue_status: null, read: false, archived: false, details: null, created_at: "2026-10-25T00:00:00Z" };
@@ -31,10 +31,6 @@ describe("system notification inbox", () => {
     renderWithI18n(<InboxPage />);
     expect(screen.getByText("paused body")).toBeInTheDocument();
     expect(state.markRead).toHaveBeenCalledWith("paused");
-  });
-  it("never redirects an old selection to the removed Issue route", () => {
-    state.params = new URLSearchParams("issue=old-task"); renderWithI18n(<InboxPage />);
-    expect(state.replace).not.toHaveBeenCalled(); expect(state.markRead).not.toHaveBeenCalled();
   });
   it("keeps archived system notices available and excludes archived tasks", () => {
     state.params = new URLSearchParams("view=archived"); state.archived = [item("archived system", "autopilot_paused"), item("archived task", "status_changed", "i-1")];
@@ -81,4 +77,10 @@ it("links an authoritative resident milestone to that resident in the bound worl
   renderWithI18n(<InboxPage />);
   expect(screen.getByText("Ada earned 20 coins")).toBeInTheDocument();
   expect(screen.getByRole("link", { name: "View resident" })).toHaveAttribute("href", "/acme/life?resident=00000000-0000-4000-8000-000000000002");
+});
+
+it("keeps a recovery destination when a paused notice has no optional details", () => {
+  state.items = [item("paused", "autopilot_paused")]; state.params = new URLSearchParams("issue=paused");
+  renderWithI18n(<InboxPage />);
+  expect(screen.getByRole("link", { name: "View automation" })).toHaveAttribute("href", "/acme/autopilots");
 });

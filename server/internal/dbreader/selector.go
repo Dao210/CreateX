@@ -9,8 +9,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgconn"
 	db "github.com/auro-ai/auro/server/pkg/db/generated"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 // A two-second cooldown caps failed replica connection attempts at one per API

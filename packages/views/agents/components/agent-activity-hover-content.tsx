@@ -69,7 +69,7 @@ function AgentActivityTaskRow({
   task: AgentTask;
   now: number;
 } & ActivityLookups) {
-  const { t } = useT("issues");
+  const { t } = useT("execution");
   const { getActorName, getActorInitials, getActorAvatarUrl } = useActorName();
 
   const agent = agentById.get(task.agent_id);
@@ -138,7 +138,7 @@ function AgentActivityTaskRow({
 export function AgentActivityHoverContent({
   tasks,
 }: AgentActivityHoverContentProps) {
-  const { t } = useT("issues");
+  const { t } = useT("execution");
   const now = useActivityNow();
   const { agentById, runtimeById } = useActivityLookups();
 
@@ -198,7 +198,7 @@ export function WorkspaceAgentActivityHoverContent({
   tasksByIssueId,
   taskCount,
 }: WorkspaceAgentActivityHoverContentProps) {
-  const { t } = useT("issues");
+  const { t } = useT("execution");
   const now = useActivityNow();
   const { agentById, runtimeById } = useActivityLookups();
 

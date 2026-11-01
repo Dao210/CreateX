@@ -2795,8 +2795,6 @@ func (q *Queries) ListActiveAgentsByRuntimeForUpdate(ctx context.Context, runtim
 const listAgentTasks = `-- name: ListAgentTasks :many
 SELECT id, agent_id, status, priority, dispatched_at, started_at, completed_at, result, error, created_at, context, runtime_id, session_id, work_dir, chat_session_id, autopilot_run_id, attempt, max_attempts, parent_task_id, failure_reason, trigger_summary, force_fresh_session, wait_reason, initiator_user_id, handoff_note, prepare_lease_expires_at, runtime_mcp_overlay, fire_at, originator_user_id, runtime_connected_apps, chat_input_task_id, chat_finalize_deferred_at, originator_source, delegated_from_task_id, retry_of_task_id, rerun_of_task_id, rule_version_id, trigger_evidence_kind, trigger_evidence_ref_id, accountable_user_id, session_rollout_missing, retired_session_id, quick_actions_disabled, regenerate_quick_actions_for, branch_name, durable_work_dir, channel_context_revision, cancelled_by_type, cancelled_by_id, cancelled_by_name FROM agent_task_queue
 WHERE agent_id = $1
-  AND NOT (escalation_for_task_id IS NOT NULL AND started_at IS NULL
-           AND status IN ('deferred', 'cancelled'))
   AND (created_at, id) < ($2::timestamptz, $3::uuid)
 ORDER BY created_at DESC, id DESC
 LIMIT $4
@@ -3826,23 +3824,33 @@ func (q *Queries) MarkChatFinalizeDeferred(ctx context.Context, id pgtype.UUID) 
 
 const nextDeferredTaskFireAtForRuntimes = `-- name: NextDeferredTaskFireAtForRuntimes :one
 SELECT MIN(fire_at)::timestamptz FROM agent_task_queue t WHERE t.runtime_id=ANY($1::uuid[]) AND t.status='deferred'
-AND EXISTS(SELECT 1 FROM agent_runtime r WHERE r.id=t.runtime_id AND r.status='online' AND COALESCE(r.last_seen_at,r.updated_at)>=now()-make_interval(secs=>@runtime_stale_secs::double precision))
+AND EXISTS(SELECT 1 FROM agent_runtime r WHERE r.id=t.runtime_id AND r.status='online' AND COALESCE(r.last_seen_at,r.updated_at)>=now()-make_interval(secs => $2::double precision))
 `
 
-func (q *Queries) NextDeferredTaskFireAtForRuntimes(ctx context.Context, runtimeIds []pgtype.UUID) (pgtype.Timestamptz, error) {
-	row := q.db.QueryRow(ctx, nextDeferredTaskFireAtForRuntimes, runtimeIds)
+type NextDeferredTaskFireAtForRuntimesParams struct {
+	RuntimeIds       []pgtype.UUID `json:"runtime_ids"`
+	RuntimeStaleSecs float64       `json:"runtime_stale_secs"`
+}
+
+func (q *Queries) NextDeferredTaskFireAtForRuntimes(ctx context.Context, arg NextDeferredTaskFireAtForRuntimesParams) (pgtype.Timestamptz, error) {
+	row := q.db.QueryRow(ctx, nextDeferredTaskFireAtForRuntimes, arg.RuntimeIds, arg.RuntimeStaleSecs)
 	var column_1 pgtype.Timestamptz
 	err := row.Scan(&column_1)
 	return column_1, err
 }
 
 const promoteDueDeferredTasksForRuntime = `-- name: PromoteDueDeferredTasksForRuntime :many
-UPDATE agent_task_queue t SET status='queued' WHERE t.runtime_id=@runtime_id AND t.status='deferred' AND t.fire_at<=now()
-AND EXISTS(SELECT 1 FROM agent_runtime r WHERE r.id=t.runtime_id AND r.status='online' AND COALESCE(r.last_seen_at,r.updated_at)>=now()-make_interval(secs=>@runtime_stale_secs::double precision)) RETURNING t.id, t.agent_id, t.status, t.priority, t.dispatched_at, t.started_at, t.completed_at, t.result, t.error, t.created_at, t.context, t.runtime_id, t.session_id, t.work_dir, t.chat_session_id, t.autopilot_run_id, t.attempt, t.max_attempts, t.parent_task_id, t.failure_reason, t.trigger_summary, t.force_fresh_session, t.wait_reason, t.initiator_user_id, t.handoff_note, t.prepare_lease_expires_at, t.runtime_mcp_overlay, t.fire_at, t.originator_user_id, t.runtime_connected_apps, t.chat_input_task_id, t.chat_finalize_deferred_at, t.originator_source, t.delegated_from_task_id, t.retry_of_task_id, t.rerun_of_task_id, t.rule_version_id, t.trigger_evidence_kind, t.trigger_evidence_ref_id, t.accountable_user_id, t.session_rollout_missing, t.retired_session_id, t.quick_actions_disabled, t.regenerate_quick_actions_for, t.branch_name, t.durable_work_dir, t.channel_context_revision, t.cancelled_by_type, t.cancelled_by_id, t.cancelled_by_name
+UPDATE agent_task_queue t SET status='queued' WHERE t.runtime_id= $1 AND t.status='deferred' AND t.fire_at<=now()
+AND EXISTS(SELECT 1 FROM agent_runtime r WHERE r.id=t.runtime_id AND r.status='online' AND COALESCE(r.last_seen_at,r.updated_at)>=now()-make_interval(secs => $2::double precision)) RETURNING t.id, t.agent_id, t.status, t.priority, t.dispatched_at, t.started_at, t.completed_at, t.result, t.error, t.created_at, t.context, t.runtime_id, t.session_id, t.work_dir, t.chat_session_id, t.autopilot_run_id, t.attempt, t.max_attempts, t.parent_task_id, t.failure_reason, t.trigger_summary, t.force_fresh_session, t.wait_reason, t.initiator_user_id, t.handoff_note, t.prepare_lease_expires_at, t.runtime_mcp_overlay, t.fire_at, t.originator_user_id, t.runtime_connected_apps, t.chat_input_task_id, t.chat_finalize_deferred_at, t.originator_source, t.delegated_from_task_id, t.retry_of_task_id, t.rerun_of_task_id, t.rule_version_id, t.trigger_evidence_kind, t.trigger_evidence_ref_id, t.accountable_user_id, t.session_rollout_missing, t.retired_session_id, t.quick_actions_disabled, t.regenerate_quick_actions_for, t.branch_name, t.durable_work_dir, t.channel_context_revision, t.cancelled_by_type, t.cancelled_by_id, t.cancelled_by_name
 `
 
-func (q *Queries) PromoteDueDeferredTasksForRuntime(ctx context.Context) ([]AgentTaskQueue, error) {
-	rows, err := q.db.Query(ctx, promoteDueDeferredTasksForRuntime)
+type PromoteDueDeferredTasksForRuntimeParams struct {
+	RuntimeID        pgtype.UUID `json:"runtime_id"`
+	RuntimeStaleSecs float64     `json:"runtime_stale_secs"`
+}
+
+func (q *Queries) PromoteDueDeferredTasksForRuntime(ctx context.Context, arg PromoteDueDeferredTasksForRuntimeParams) ([]AgentTaskQueue, error) {
+	rows, err := q.db.Query(ctx, promoteDueDeferredTasksForRuntime, arg.RuntimeID, arg.RuntimeStaleSecs)
 	if err != nil {
 		return nil, err
 	}
@@ -3914,11 +3922,16 @@ func (q *Queries) PromoteDueDeferredTasksForRuntime(ctx context.Context) ([]Agen
 
 const promoteDueDeferredTasksForRuntimes = `-- name: PromoteDueDeferredTasksForRuntimes :many
 UPDATE agent_task_queue t SET status='queued' WHERE t.runtime_id=ANY($1::uuid[]) AND t.status='deferred' AND t.fire_at<=now()
-AND EXISTS(SELECT 1 FROM agent_runtime r WHERE r.id=t.runtime_id AND r.status='online' AND COALESCE(r.last_seen_at,r.updated_at)>=now()-make_interval(secs=>@runtime_stale_secs::double precision)) RETURNING t.id, t.agent_id, t.status, t.priority, t.dispatched_at, t.started_at, t.completed_at, t.result, t.error, t.created_at, t.context, t.runtime_id, t.session_id, t.work_dir, t.chat_session_id, t.autopilot_run_id, t.attempt, t.max_attempts, t.parent_task_id, t.failure_reason, t.trigger_summary, t.force_fresh_session, t.wait_reason, t.initiator_user_id, t.handoff_note, t.prepare_lease_expires_at, t.runtime_mcp_overlay, t.fire_at, t.originator_user_id, t.runtime_connected_apps, t.chat_input_task_id, t.chat_finalize_deferred_at, t.originator_source, t.delegated_from_task_id, t.retry_of_task_id, t.rerun_of_task_id, t.rule_version_id, t.trigger_evidence_kind, t.trigger_evidence_ref_id, t.accountable_user_id, t.session_rollout_missing, t.retired_session_id, t.quick_actions_disabled, t.regenerate_quick_actions_for, t.branch_name, t.durable_work_dir, t.channel_context_revision, t.cancelled_by_type, t.cancelled_by_id, t.cancelled_by_name
+AND EXISTS(SELECT 1 FROM agent_runtime r WHERE r.id=t.runtime_id AND r.status='online' AND COALESCE(r.last_seen_at,r.updated_at)>=now()-make_interval(secs => $2::double precision)) RETURNING t.id, t.agent_id, t.status, t.priority, t.dispatched_at, t.started_at, t.completed_at, t.result, t.error, t.created_at, t.context, t.runtime_id, t.session_id, t.work_dir, t.chat_session_id, t.autopilot_run_id, t.attempt, t.max_attempts, t.parent_task_id, t.failure_reason, t.trigger_summary, t.force_fresh_session, t.wait_reason, t.initiator_user_id, t.handoff_note, t.prepare_lease_expires_at, t.runtime_mcp_overlay, t.fire_at, t.originator_user_id, t.runtime_connected_apps, t.chat_input_task_id, t.chat_finalize_deferred_at, t.originator_source, t.delegated_from_task_id, t.retry_of_task_id, t.rerun_of_task_id, t.rule_version_id, t.trigger_evidence_kind, t.trigger_evidence_ref_id, t.accountable_user_id, t.session_rollout_missing, t.retired_session_id, t.quick_actions_disabled, t.regenerate_quick_actions_for, t.branch_name, t.durable_work_dir, t.channel_context_revision, t.cancelled_by_type, t.cancelled_by_id, t.cancelled_by_name
 `
 
-func (q *Queries) PromoteDueDeferredTasksForRuntimes(ctx context.Context, runtimeIds []pgtype.UUID) ([]AgentTaskQueue, error) {
-	rows, err := q.db.Query(ctx, promoteDueDeferredTasksForRuntimes, runtimeIds)
+type PromoteDueDeferredTasksForRuntimesParams struct {
+	RuntimeIds       []pgtype.UUID `json:"runtime_ids"`
+	RuntimeStaleSecs float64       `json:"runtime_stale_secs"`
+}
+
+func (q *Queries) PromoteDueDeferredTasksForRuntimes(ctx context.Context, arg PromoteDueDeferredTasksForRuntimesParams) ([]AgentTaskQueue, error) {
+	rows, err := q.db.Query(ctx, promoteDueDeferredTasksForRuntimes, arg.RuntimeIds, arg.RuntimeStaleSecs)
 	if err != nil {
 		return nil, err
 	}

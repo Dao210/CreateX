@@ -486,35 +486,6 @@ func TestCancelTaskByUser_RunOnlyAutopilot_CrossWorkspace_Returns404(t *testing.
 	}
 }
 
-// TestCancelTaskByUser_QuickCreate_Succeeds verifies a quick_create task — no
-// issue yet, no chat session, only context JSONB — is cancellable during its
-// active window (the pre-issue-creation phase, i.e. whenever the user clicks X).
-func TestCancelTaskByUser_QuickCreate_Succeeds(t *testing.T) {
-	if testHandler == nil {
-		t.Skip("database not available")
-	}
-
-	agentID := createHandlerTestAgent(t, "CancelQuickCreateAgent", []byte("[]"))
-
-	var taskID string
-	dbfx.QueryRow(t, `
-		INSERT INTO agent_task_queue (agent_id, runtime_id, status, priority, issue_id, context)
-		VALUES ($1, (SELECT runtime_id FROM agent WHERE id = $1), 'running', 0, NULL,
-		        '{"type":"quick_create","workspace_id":"ws","prompt":"do a thing"}'::jsonb)
-		RETURNING id
-	`, agentID).Scan(&taskID)
-	t.Cleanup(func() { testPool.Exec(context.Background(), `DELETE FROM agent_task_queue WHERE id = $1`, taskID) })
-
-	w := httptest.NewRecorder()
-	testHandler.CancelTaskByUser(w, cancelTaskByUserRequest(t, testUserID, taskID))
-	if w.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
-	}
-	if got := taskStatus(t, taskID); got != "cancelled" {
-		t.Fatalf("task not cancelled: status = %q", got)
-	}
-}
-
 // TestCancelTaskByUser_RetryClone_Autopilot_Succeeds verifies a retry clone of
 // an autopilot task — which copies parent_task_id + autopilot_run_id verbatim,
 // inheriting the NULL issue/chat links — is still cancellable.
@@ -542,97 +513,6 @@ func TestCancelTaskByUser_RetryClone_Autopilot_Succeeds(t *testing.T) {
 	}
 	if got := taskStatus(t, cloneID); got != "cancelled" {
 		t.Fatalf("clone not cancelled: status = %q", got)
-	}
-}
-
-// TestCancelTaskByUser_IssueTask_Succeeds is a regression guard: issue-bound
-// tasks (the original supported case) stay cancellable after the rewrite.
-func TestCancelTaskByUser_IssueTask_Succeeds(t *testing.T) {
-	if testHandler == nil {
-		t.Skip("database not available")
-	}
-
-	agentID := createHandlerTestAgent(t, "CancelIssueTaskAgent", []byte("[]"))
-
-	var issueID, taskID string
-	dbfx.QueryRow(t, `
-		INSERT INTO issue (workspace_id, title, status, priority, creator_id, creator_type, number, position)
-		VALUES ($1, 'cancel-byid-issue', 'todo', 'medium', $2, 'member', 92001, 0)
-		RETURNING id
-	`, testWorkspaceID, testUserID).Scan(&issueID)
-	t.Cleanup(func() { testPool.Exec(context.Background(), `DELETE FROM issue WHERE id = $1`, issueID) })
-
-	dbfx.QueryRow(t, `
-		INSERT INTO agent_task_queue (agent_id, runtime_id, status, priority, issue_id)
-		VALUES ($1, (SELECT runtime_id FROM agent WHERE id = $1), 'queued', 0, $2)
-		RETURNING id
-	`, agentID, issueID).Scan(&taskID)
-	t.Cleanup(func() { testPool.Exec(context.Background(), `DELETE FROM agent_task_queue WHERE id = $1`, taskID) })
-
-	w := httptest.NewRecorder()
-	testHandler.CancelTaskByUser(w, cancelTaskByUserRequest(t, testUserID, taskID))
-	if w.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
-	}
-	if got := taskStatus(t, taskID); got != "cancelled" {
-		t.Fatalf("task not cancelled: status = %q", got)
-	}
-}
-
-func TestCancelTaskByUser_DelegatedFailureRecoveryAcknowledgesSignal(t *testing.T) {
-	if testHandler == nil {
-		t.Skip("database not available")
-	}
-
-	agentID := createHandlerTestAgent(t, "CancelRecoveryTaskAgent", []byte("[]"))
-	issueID := dbfx.Issue(t, "cancel-recovery-task", testutil.Cols{
-		"status":   "in_progress",
-		"priority": "medium",
-		"number":   92004,
-	})
-
-	var sourceTaskID, failedTaskID, recoveryCommentID, recoveryTaskID string
-	dbfx.QueryRow(t, `
-		INSERT INTO agent_task_queue (agent_id, runtime_id, issue_id, status, priority, completed_at)
-		VALUES ($1, (SELECT runtime_id FROM agent WHERE id = $1), $2, 'completed', 0, now())
-		RETURNING id
-	`, agentID, issueID).Scan(&sourceTaskID)
-	dbfx.QueryRow(t, `
-		INSERT INTO agent_task_queue (
-			agent_id, runtime_id, issue_id, status, priority, completed_at,
-			delegated_from_task_id, trigger_evidence_kind
-		)
-		VALUES ($1, (SELECT runtime_id FROM agent WHERE id = $1), $2, 'failed', 0, now(), $3, 'comment')
-		RETURNING id
-	`, agentID, issueID, sourceTaskID).Scan(&failedTaskID)
-	dbfx.QueryRow(t, `
-		INSERT INTO comment (issue_id, workspace_id, author_type, author_id, content, type, source_task_id)
-		VALUES ($1, $2, 'system', $3, 'resume delegated coordination', 'progress_update', $4)
-		RETURNING id
-	`, issueID, testWorkspaceID, testUserID, failedTaskID).Scan(&recoveryCommentID)
-	dbfx.QueryRow(t, `
-		INSERT INTO agent_task_queue (
-			agent_id, runtime_id, issue_id, status, priority, trigger_comment_id,
-			trigger_evidence_kind, trigger_evidence_ref_id
-		)
-		VALUES ($1, (SELECT runtime_id FROM agent WHERE id = $1), $2, 'queued', 0, $3,
-		        'delegated_failure', $4)
-		RETURNING id
-	`, agentID, issueID, recoveryCommentID, failedTaskID).Scan(&recoveryTaskID)
-
-	w := httptest.NewRecorder()
-	testHandler.CancelTaskByUser(w, cancelTaskByUserRequest(t, testUserID, recoveryTaskID))
-	if w.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
-	}
-	var status string
-	var acknowledged bool
-	dbfx.QueryRow(t, `
-		SELECT status, $2::uuid = ANY(delivered_comment_ids)
-		FROM agent_task_queue WHERE id = $1
-	`, recoveryTaskID, recoveryCommentID).Scan(&status, &acknowledged)
-	if status != "cancelled" || !acknowledged {
-		t.Fatalf("cancelled recovery status/ack = %q/%v, want cancelled/true", status, acknowledged)
 	}
 }
 

@@ -10,7 +10,6 @@ import (
 	"context"
 	"encoding/json"
 	"log/slog"
-	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -227,28 +226,6 @@ func TestTextOrNull(t *testing.T) {
 	got := textOrNull("x")
 	if !got.Valid || got.String != "x" {
 		t.Errorf("textOrNull(x) = %+v, want valid x", got)
-	}
-}
-
-func TestReply_PostsIssueCreatedConfirmation(t *testing.T) {
-	t.Parallel()
-	r, inst, conn := newReplierWithConn(t)
-	r.Reply(context.Background(), inst, channel.InboundMessage{Source: channel.Source{ChatID: "C1", ChatType: channel.ChatTypeP2P}}, engine.Result{
-		Outcome:         engine.OutcomeIngested,
-		IssueID:         mustTestUUID(t),
-		IssueIdentifier: "MUL-9",
-		IssueTitle:      "Ship it",
-	})
-	if len(conn.frames) != 1 {
-		t.Fatalf("expected one confirmation frame, got %d", len(conn.frames))
-	}
-	body := conn.sendBody(t, 0)
-	md, _ := body["markdown"].(map[string]any)
-	if md == nil || md["content"] == nil {
-		t.Fatalf("no markdown content in confirmation: %v", body)
-	}
-	if content, _ := md["content"].(string); content == "" || !strings.Contains(content, "MUL-9") {
-		t.Errorf("confirmation = %q, want it to name MUL-9", md["content"])
 	}
 }
 

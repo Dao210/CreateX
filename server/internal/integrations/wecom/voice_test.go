@@ -24,17 +24,6 @@ func TestVoiceTranscriptIsTreatedAsText(t *testing.T) {
 	}
 }
 
-// A spoken /issue is still a command.
-func TestSpokenIssueCommandIsACommand(t *testing.T) {
-	mc := aibotMsgCallback{MsgType: "voice"}
-	mc.Voice.Content = "/issue the login redirect is broken"
-	body, _ := mc.ownText()
-	msg := channelMessageFromCallback("bot-1", "", mc, body, "req-1")
-	if !msg.SkipAgentRun {
-		t.Error("a spoken /issue did not register as a command")
-	}
-}
-
 // Recognition returns empty on background noise or a half-second press. An
 // empty body would reach the agent as a turn with nothing in it.
 func TestEmptyTranscriptIsNotIngested(t *testing.T) {

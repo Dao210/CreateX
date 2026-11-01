@@ -125,7 +125,7 @@ function AttachmentChipView({ item, onRemove, onRetry }: AttachmentChipProps) {
   const { colorScheme } = useColorScheme();
   const theme = THEME[colorScheme];
   const { open } = useLightbox();
-  const { t } = useT("issues");
+  const { t } = useT("execution");
 
   const isImage = useMemo(
     () => item.mimeType.startsWith("image/"),

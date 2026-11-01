@@ -4,10 +4,10 @@ import (
 	"context"
 	"errors"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/auro-ai/auro/server/internal/auth"
 	"github.com/auro-ai/auro/server/internal/util"
 	db "github.com/auro-ai/auro/server/pkg/db/generated"
+	"github.com/jackc/pgx/v5"
 )
 
 // ownerLookupFor returns an auth.OwnerLookupFunc that asks the

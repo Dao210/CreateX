@@ -882,8 +882,6 @@ func (h *Handler) finaliseDeliveryTerminal(
 	h.Metrics.RecordWebhookDelivery(h.deliveryProvider(r.Context(), id), status)
 }
 
-
-
 // deliveryProvider best-effort reads the provider for a delivery id so the
 // webhook delivery metric carries useful provenance. On lookup failure we
 // fall back to "generic" — the metric must always be incremented exactly

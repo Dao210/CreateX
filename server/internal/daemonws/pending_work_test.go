@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gorilla/websocket"
 	"github.com/auro-ai/auro/server/pkg/protocol"
+	"github.com/gorilla/websocket"
 )
 
 // TestNotifyPendingWork pins the hint that removes the up-to-one-heartbeat

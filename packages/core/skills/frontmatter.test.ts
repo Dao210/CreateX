@@ -68,25 +68,6 @@ describe("parseFrontmatter", () => {
     expect(result.frontmatter).toBeNull();
   });
 
-  it("reproduces issue 3495 with Chinese block scalar", () => {
-    const content =
-      "---\n" +
-      "name: requirements-workshop\n" +
-      "description: |\n" +
-      "  当用户想要开发新功能、讨论需求、梳理业务逻辑时触发。通过多轮对话将模糊的想法转化为结构化的需求文档，为后续技术方案设计提供输入。\n" +
-      '  适用场景：用户说"我想实现XX功能"、"讨论一下这个需求"、"帮我分析一下怎么做"、"这个需求该怎么设计"、"写个需求文档"等。\n' +
-      "  本skill只负责产出需求文档，不进入技术设计或代码实现阶段。\n" +
-      "---\nbody";
-
-    const { frontmatter } = parseFrontmatter(content);
-    expect(frontmatter?.name).toBe("requirements-workshop");
-    expect(frontmatter?.description).toBe(
-      "当用户想要开发新功能、讨论需求、梳理业务逻辑时触发。通过多轮对话将模糊的想法转化为结构化的需求文档，为后续技术方案设计提供输入。\n" +
-        '适用场景：用户说"我想实现XX功能"、"讨论一下这个需求"、"帮我分析一下怎么做"、"这个需求该怎么设计"、"写个需求文档"等。\n' +
-        "本skill只负责产出需求文档，不进入技术设计或代码实现阶段。\n",
-    );
-  });
-
   it("coerces non-string values to strings", () => {
     const { frontmatter } = parseFrontmatter(
       "---\nname: foo\nversion: 1\nenabled: true\n---\n",

@@ -15,9 +15,6 @@ import {
   NAVIGATION_GESTURE_CHANNEL,
   type NavigationGesture,
 } from "../shared/navigation-gestures";
-import {
-  readDesktopWindowContext,
-} from "../shared/issue-window";
 import { AUTH_SESSION_STATE_CHANNEL } from "../shared/auth-session";
 import type {
   DaemonStatus,
@@ -68,7 +65,6 @@ function fetchRuntimeConfig(): RuntimeConfigResult {
 
 const appInfo = fetchAppInfo();
 const runtimeConfig = fetchRuntimeConfig();
-const windowContext = readDesktopWindowContext(process.argv);
 
 // Read the OS-preferred locale that main injected via additionalArguments.
 // Zero IPC, zero blocking — process.argv is populated before preload runs.
@@ -121,7 +117,6 @@ const desktopAPI = {
   runtimeConfig,
   /** Identifies whether this renderer owns the main tabbed window or a
    *  dedicated issue window, parsed from validated launch arguments. */
-  windowContext,
   /** Read any freeze/crash breadcrumb left by a previous session, so the
    *  renderer can flush it to telemetry on boot. Returns null when there's
    *  nothing pending (the normal case). Reading does not consume it — call

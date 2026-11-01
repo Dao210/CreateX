@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { QueryClient } from "@tanstack/react-query";
 import { api } from "../api";
-import { inboxKeys, mapArchivedInboxCache, patchArchivedInboxCaches, type ArchivedInboxCache } from "./queries";
+import { inboxKeys, patchArchivedInboxCaches } from "./queries";
 import { onInboxInvalidate, onInboxSummaryInvalidate } from "./ws-updaters";
 import { useWorkspaceId } from "../hooks";
 import type { InboxItem } from "../types";
@@ -114,12 +114,9 @@ export function useArchiveInbox() {
     onMutate: async (id) => {
       await qc.cancelQueries({ queryKey: inboxKeys.list(wsId) });
       const prev = qc.getQueryData<InboxItem[]>(inboxKeys.list(wsId));
-      // Archive all items for the same issue (same behavior as store)
-      const target = prev?.find((i) => i.id === id);
-      const issueId = target?.issue_id;
       qc.setQueryData<InboxItem[]>(inboxKeys.list(wsId), (old) =>
         old?.map((item) =>
-          item.id === id || (issueId && item.issue_id === issueId)
+          item.id === id
             ? { ...item, archived: true }
             : item,
         ),
@@ -153,16 +150,8 @@ export function useUnarchiveInbox() {
     mutationFn: (id: string) => api.unarchiveInbox(id),
     onMutate: async (id) => {
       await qc.cancelQueries({ queryKey: inboxKeys.archived(wsId) });
-      // Resolve the group once across every page and deep-link cache.
-      let issueId: string | null | undefined;
-      for (const [, data] of qc.getQueriesData<ArchivedInboxCache>({ queryKey: inboxKeys.archived(wsId) })) {
-        if (data) mapArchivedInboxCache(data, (items) => {
-          issueId ??= items.find((item) => item.id === id)?.issue_id;
-          return items;
-        });
-      }
       const prev = patchArchivedInboxCaches(qc, wsId, (items) => items.map((item) =>
-        item.id === id || (issueId && item.issue_id === issueId) ? { ...item, archived: false } : item));
+        item.id === id ? { ...item, archived: false } : item));
       return { prev };
     },
     onError: (_err, _id, ctx) => {

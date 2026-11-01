@@ -7,8 +7,6 @@ import type { ReactNode } from "react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import type { WSClient } from "../api/ws-client";
 import { chatKeys } from "../chat/queries";
-import { runtimeKeys } from "../runtimes/queries";
-import { workspaceKeys } from "../workspace/queries";
 import { useRealtimeSync, type RealtimeSyncStores } from "./use-realtime-sync";
 
 
@@ -118,7 +116,7 @@ describe("useRealtimeSync — ws instance change", () => {
     // Awaited rather than counted synchronously: the inbox unread summary
     // refresh cancels any in-flight request before invalidating (see
     // onInboxSummaryInvalidate), so that one lands after the synchronous ones.
-    await waitFor(() => expect(invalidateSpy).toHaveBeenCalledTimes(31));
+    await waitFor(() => expect(invalidateSpy).toHaveBeenCalledTimes(20));
   });
 
   it("does not re-invalidate when rerendered with the same ws instance", () => {
@@ -133,56 +131,6 @@ describe("useRealtimeSync — ws instance change", () => {
     rerender({ ws: ws1 });
 
     expect(invalidateSpy).not.toHaveBeenCalled();
-  });
-
-  it("invalidates agent projections when a daemon changes liveness", () => {
-    vi.useFakeTimers();
-    try {
-      const ws = createMockWs();
-      renderHook(() => useRealtimeSync(ws, stores), {
-        wrapper: createWrapper(qc),
-      });
-      const onAny = vi.mocked(ws.onAny).mock.calls[0]?.[0];
-      expect(onAny).toBeDefined();
-
-      invalidateSpy.mockClear();
-      onAny!({ type: "daemon:register", payload: {} } as never);
-      vi.advanceTimersByTime(100);
-
-      expect(invalidateSpy).toHaveBeenCalledWith({
-        queryKey: runtimeKeys.all("ws-1"),
-      });
-      expect(invalidateSpy).toHaveBeenCalledWith({
-        queryKey: workspaceKeys.agents("ws-1"),
-      });
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
-  it("invalidates per-issue caches (no wsId in key) on ws instance change", () => {
-    // These keys are not under the ["issues", wsId] prefix, so they need
-    // their own invalidation on recovery — otherwise events missed while
-    // disconnected leave them stale forever (staleTime: Infinity, #3953).
-    const ws1 = createMockWs();
-    const { rerender } = renderHook(
-      ({ ws }) => useRealtimeSync(ws, stores),
-      { initialProps: { ws: ws1 as WSClient | null }, wrapper: createWrapper(qc) },
-    );
-
-    invalidateSpy.mockClear();
-    rerender({ ws: null });
-
-    const ws2 = createMockWs();
-    rerender({ ws: ws2 });
-
-    const calls = invalidateSpy.mock.calls.map((call: [{ queryKey?: unknown }, ...unknown[]]) => call[0].queryKey);
-    expect(calls).toContainEqual(["issues", "timeline"]);
-    expect(calls).toContainEqual(["issues", "reactions"]);
-    expect(calls).toContainEqual(["issues", "subscribers"]);
-    expect(calls).toContainEqual(["issues", "usage"]);
-    expect(calls).toContainEqual(["issues", "attachments"]);
-    expect(calls).toContainEqual(["issues", "tasks"]);
   });
 
   it("invalidates per-chat-session caches (no wsId in key) on ws instance change", () => {

@@ -18,24 +18,12 @@ vi.mock("../navigation", async (original) => ({ ...(await original<typeof import
 vi.mock("@tanstack/react-query", () => ({ useQuery: (options: { queryKey: readonly unknown[]; enabled?: boolean }) => { state.queries.push(options); return { data: state.members }; } }));
 vi.mock("@auro/core/workspace/queries", () => ({ memberListOptions: () => ({ queryKey: ["members", "ws-test"] }) }));
 vi.mock("@auro/core/workspace/avatar-url", () => ({ resolvePublicFileUrl: (url: string | null) => url }));
-vi.mock("@auro/core/search-index", () => ({ searchIssues: state.searchIssues, searchProjects: state.searchProjects }));
 vi.mock("@auro/ui/components/common/theme-provider", () => ({ useTheme: () => ({ theme: "system", setTheme: state.setTheme }) }));
 vi.mock("@auro/ui/components/common/actor-avatar", () => ({ ActorAvatar: () => <span /> }));
 
 beforeEach(() => { vi.clearAllMocks(); state.queries = []; state.members = []; useSearchStore.setState({ open: true }); });
 
 describe("workspace command search after route retirement", () => {
-  it("offers remaining destinations without task/project actions or eager directory reads", () => {
-    renderWithI18n(<SearchCommand />);
-    expect(screen.queryByText("Issues")).not.toBeInTheDocument();
-    expect(screen.queryByText("Projects")).not.toBeInTheDocument();
-    expect(screen.queryByText("Squads")).not.toBeInTheDocument();
-    expect(screen.queryByText("New Issue")).not.toBeInTheDocument();
-    expect(screen.queryByText("New Project")).not.toBeInTheDocument();
-    expect(state.queries.every((query) => query.enabled === false)).toBe(true);
-    expect(state.searchIssues).not.toHaveBeenCalled();
-    expect(state.searchProjects).not.toHaveBeenCalled();
-  });
   it("filters pages and navigates using the workspace path", async () => {
     renderWithI18n(<SearchCommand />);
     await userEvent.type(screen.getByPlaceholderText("Type a command or search..."), "tank");

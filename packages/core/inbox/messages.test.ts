@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import { InboxContentSchema, inboxCategory, inboxContent, parseInboxCategory } from "./messages";
+import { autopilotNoticeId, InboxContentSchema, inboxCategory, inboxContent, parseInboxCategory } from "./messages";
 import { isVisibleInboxItem } from "./system-notifications";
 import { InboxItemListSchema } from "../api/schemas";
 
@@ -34,4 +34,17 @@ describe("creation and world inbox messages", () => {
     expect(InboxItemListSchema.parse([{ ...row, content: { entries: "bad" } }])[0]?.content).toBeNull();
     expect(InboxItemListSchema.parse([{ ...row, content }])[0]?.content?.totalEntries).toBe(1);
   });
+});
+
+it("keeps malformed optional details from hiding a whole-world message", () => {
+  const row = { id: "n", workspace_id: "w", recipient_type: "member", recipient_id: "u", type: "autopilot_paused", severity: "attention", title: "Paused", body: "Actionable fallback", read: false, archived: false, created_at: "2026-11-01T03:00:00Z", details: { failed_runs: 5 } };
+  const parsed = InboxItemListSchema.parse([row]);
+  expect(parsed[0]?.details).toBeNull();
+  expect(parsed[0]?.body).toBe("Actionable fallback");
+});
+
+it("only constructs an automation detail destination from a valid resource UUID", () => {
+  expect(autopilotNoticeId({ details: { autopilot_id: "00000000-0000-4000-8000-000000000001" } })).toBe("00000000-0000-4000-8000-000000000001");
+  expect(autopilotNoticeId({ details: { autopilot_id: "https://example.com" } })).toBeNull();
+  expect(autopilotNoticeId({ details: null })).toBeNull();
 });

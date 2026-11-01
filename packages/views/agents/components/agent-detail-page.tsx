@@ -1,18 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import {
-  AlertCircle,
-  ArrowLeft,
-  Bot,
-  Clock3,
-  Lock,
-  MessageSquare,
-  MoreHorizontal,
-  Plus,
-  Server,
-  Trash2,
-} from "lucide-react";
+import { AlertCircle, ArrowLeft, Bot, Clock3, Lock, MessageSquare, MoreHorizontal, Server, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
@@ -28,7 +17,6 @@ import {
 import { api, ApiError } from "@auro/core/api";
 import { useAuthStore } from "@auro/core/auth";
 import { useWorkspaceId } from "@auro/core/hooks";
-import { useModalStore } from "@auro/core/modals";
 import { useWorkspacePaths } from "@auro/core/paths";
 import {
   agentDetailOptions,
@@ -329,16 +317,6 @@ export function AgentDetailPage({ agentId }: AgentDetailPageProps) {
       toast.error(t(($) => $.detail.runtime_required_toast));
     }
   };
-  const handleAssign = () => {
-    if (!runtimeBound) {
-      toast.error(t(($) => $.detail.runtime_required_toast));
-      return;
-    }
-    useModalStore
-      .getState()
-      .open("quick-create-issue", { agent_id: agent.id });
-  };
-
   return (
     <div className="flex flex-1 min-h-0 flex-col">
       <DetailHeader
@@ -346,12 +324,10 @@ export function AgentDetailPage({ agentId }: AgentDetailPageProps) {
         runtime={runtime}
         presence={presence}
         backHref={paths.agents()}
-        canAssign={canAssign.allowed}
         canArchive={canEdit.allowed}
         dmPending={permissionsLoading}
         dmHref={`${paths.chat()}?agent=${agent.id}`}
         onDm={handleDm}
-        onAssign={handleAssign}
         onArchive={
           agent.system_key ? undefined : () => setConfirmArchive(true)
         }
@@ -475,26 +451,22 @@ function DetailHeader({
   runtime,
   presence,
   backHref,
-  canAssign,
   canArchive,
   dmPending,
   dmHref,
   onDm,
-  onAssign,
   onArchive,
 }: {
   agent: Agent;
   runtime: AgentRuntime | null;
   presence: AgentPresenceDetail | null;
   backHref: string;
-  canAssign: boolean;
   canArchive: boolean;
   dmPending: boolean;
   dmHref: string;
   /** Runs before the link navigates; calls preventDefault when a gate denies
    *  the chat, which is what stops AppLink from pushing. */
   onDm: (e: React.MouseEvent<HTMLAnchorElement>) => void;
-  onAssign: () => void;
   /** Absent for Auro's built-in agents, which the server refuses to
    *  archive — the menu hides the action rather than offering a failure. */
   onArchive?: () => void;
@@ -577,12 +549,6 @@ function DetailHeader({
               >
                 <MessageSquare className="h-4 w-4" aria-hidden="true" />
                 {t(($) => $.detail.dm)}
-              </Button>
-            )}
-            {!isArchived && canAssign && (
-              <Button type="button" size="sm" onClick={onAssign}>
-                <Plus className="h-4 w-4" aria-hidden="true" />
-                {t(($) => $.detail.assign_work)}
               </Button>
             )}
             {!isArchived && canArchive && hasMoreActions ? (

@@ -1,28 +1,13 @@
 // @vitest-environment node
 import { describe, it, expect } from "vitest";
 import { paths, isGlobalPath } from "./paths";
-import { isReservedSlug } from "./reserved-slugs";
 
 describe("paths.workspace(slug)", () => {
   const ws = paths.workspace("acme");
 
-  it("does not expose the retired personal issue page", () => {
-    expect(ws).not.toHaveProperty("myIssues");
-  });
-
-  it("does not expose retired squad pages", () => {
-    expect(ws).not.toHaveProperty("squads");
-    expect(ws).not.toHaveProperty("squadDetail");
-    expect(isReservedSlug("squads")).toBe(true);
-  });
-
   it("builds workspace paths with slug prefix", () => {
     expect(ws.root()).toBe("/acme/me");
     expect(ws.usage()).toBe("/acme/usage");
-    expect(ws.issues()).toBe("/acme/issues");
-    expect(ws.issueDetail("abc-123")).toBe("/acme/issues/abc-123");
-    expect(ws.projects()).toBe("/acme/projects");
-    expect(ws.projectDetail("p1")).toBe("/acme/projects/p1");
     expect(ws.autopilots()).toBe("/acme/autopilots");
     expect(ws.autopilotDetail("a1")).toBe("/acme/autopilots/a1");
     expect(ws.agents()).toBe("/acme/agents");
@@ -51,7 +36,6 @@ describe("paths.workspace(slug)", () => {
   });
 
   it("URL-encodes special characters in ids", () => {
-    expect(ws.issueDetail("id with space")).toBe("/acme/issues/id%20with%20space");
   });
 });
 

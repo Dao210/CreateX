@@ -152,24 +152,17 @@ describe("useUnarchiveInbox", () => {
     setApiInstance({ unarchiveInbox } as unknown as ApiClient);
   });
 
-  it("drops the whole issue group out of the archived list optimistically", async () => {
-    // Archiving is issue-level, so restoring has to bring every sibling back —
-    // leaving one behind would keep the issue in the archived list.
+  it("restores only the selected message and preserves another window for the same creation", async () => {
     queryClient.setQueryData<InboxItem[]>(inboxKeys.archived(WORKSPACE_ID), [
-      item({ id: "sibling-a", issue_id: "issue-1" }),
-      item({ id: "sibling-b", issue_id: "issue-1" }),
-      item({ id: "other-issue", issue_id: "issue-2" }),
+      item({ id: "selected", type: "world_digest", issue_id: null, details: { character_id: "scout" } }),
+      item({ id: "another-window", type: "world_digest", issue_id: null, read: true, details: { character_id: "scout" } }),
     ]);
-
-    const { result } = renderHook(() => useUnarchiveInbox(), {
-      wrapper: createWrapper(queryClient),
-    });
-    result.current.mutate("sibling-a");
-
+    const { result } = renderHook(() => useUnarchiveInbox(), { wrapper: createWrapper(queryClient) });
+    result.current.mutate("selected");
     await waitFor(() => {
-      const stillArchived = archivedCache(queryClient).filter((i) => i.archived);
-      expect(stillArchived.map((i) => i.id)).toEqual(["other-issue"]);
+      expect(archivedCache(queryClient).filter(message => message.archived).map(message => message.id)).toEqual(["another-window"]);
     });
+    expect(archivedCache(queryClient).find(message => message.id === "another-window")?.read).toBe(true);
   });
 
   it("preserves unread state and refreshes the badge sources, so the badge rises again", async () => {

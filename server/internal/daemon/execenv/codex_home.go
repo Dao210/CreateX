@@ -401,14 +401,11 @@ func codexSessionStoreNamespace(profile string) string {
 // direct chats use a prefixed chat_session_id so the two namespaces cannot
 // collide. Returns "" when neither stable identifier is available.
 func codexSessionStoreKey(profile string, task TaskContextForEnv) string {
-	storeID := sanitizePathSegment(task.IssueID)
-	if storeID == "" {
-		chatID := sanitizePathSegment(task.ChatSessionID)
-		if chatID == "" {
-			return ""
-		}
-		storeID = "chat_" + chatID
+	chatID := sanitizePathSegment(task.ChatSessionID)
+	if chatID == "" {
+		return ""
 	}
+	storeID := "chat_" + chatID
 	agent := sanitizePathSegment(task.AgentID)
 	if agent == "" {
 		agent = "_"

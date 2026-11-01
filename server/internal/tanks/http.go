@@ -3,11 +3,12 @@ package tanks
 import (
 	"encoding/json"
 	"errors"
-	"github.com/auro-ai/auro/server/internal/mcpadmin"
 	"io"
 	"mime"
 	"net/http"
 	"strconv"
+
+	"github.com/auro-ai/auro/server/internal/mcpadmin"
 
 	"github.com/google/uuid"
 )

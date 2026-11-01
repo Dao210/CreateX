@@ -27,7 +27,7 @@ func TestSystemArchivedInboxPaginationAndIsolation(t *testing.T) {
 		var page archivedInboxPageResponse
 		testutil.Call(t, inboxWorkspaceHandler(testHandler.ListArchivedInboxPage), inboxRequest(http.MethodGet, "/api/inbox/archived/page?limit=50&cursor="+url.QueryEscape(cursor), ws)).Want(http.StatusOK).JSON(&page)
 		for _, item := range page.Items {
-			if seen[item.ID] || item.IssueID != nil || item.Type != "autopilot_paused" {
+			if seen[item.ID] || item.LegacyIssueID != nil || item.Type != "autopilot_paused" {
 				t.Fatalf("invalid system notification: %+v", item)
 			}
 			seen[item.ID] = true

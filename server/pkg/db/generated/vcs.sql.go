@@ -12,11 +12,16 @@ import (
 )
 
 const deleteVCSConnection = `-- name: DeleteVCSConnection :exec
-DELETE FROM vcs_connection WHERE id=$1
+DELETE FROM vcs_connection WHERE id = $1 AND workspace_id = $2
 `
 
-func (q *Queries) DeleteVCSConnection(ctx context.Context, id pgtype.UUID) error {
-	_, err := q.db.Exec(ctx, deleteVCSConnection, id)
+type DeleteVCSConnectionParams struct {
+	ID          pgtype.UUID `json:"id"`
+	WorkspaceID pgtype.UUID `json:"workspace_id"`
+}
+
+func (q *Queries) DeleteVCSConnection(ctx context.Context, arg DeleteVCSConnectionParams) error {
+	_, err := q.db.Exec(ctx, deleteVCSConnection, arg.ID, arg.WorkspaceID)
 	return err
 }
 

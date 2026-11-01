@@ -37,12 +37,12 @@ type ProjectResourceForEnv struct {
 
 // PrepareParams holds all inputs needed to set up an execution environment.
 type PrepareParams struct {
-	WorkspacesRoot  string // base path for all envs (e.g., ~/auro_workspaces)
-	WorkspaceID     string // workspace UUID — stable identity and path suffix
-	WorkspaceSlug   string // human-readable workspace path prefix
-	TaskID          string // task UUID — stable identity and path suffix
-	IssueIdentifier string // human-readable issue key (e.g. MUL-6063); empty for non-issue tasks
-	AgentName       string // for git branch naming only
+	WorkspacesRoot string // base path for all envs (e.g., ~/auro_workspaces)
+	WorkspaceID    string // workspace UUID — stable identity and path suffix
+	WorkspaceSlug  string // human-readable workspace path prefix
+	TaskID         string // task UUID — stable identity and path suffix
+	// human-readable issue key (e.g. MUL-6063); empty for non-issue tasks
+	AgentName string // for git branch naming only
 	// EnvRootPreclaimed says the CALLER already holds this env root's claim
 	// (see ClaimEnvRoot) and has already reset it. Prepare then skips claiming.
 	//
@@ -128,9 +128,9 @@ type PrepareParams struct {
 
 // TaskContextForEnv is the subset of task context used for writing context files.
 type TaskContextForEnv struct {
-	IssueID          string
-	TriggerCommentID string // comment that triggered this task (empty for on_assign)
-	TriggerThreadID  string // root comment ID for the triggering thread; falls back to TriggerCommentID when empty
+
+	// comment that triggered this task (empty for on_assign)
+	// root comment ID for the triggering thread; falls back to TriggerCommentID when empty
 	// CommentReplyTargets is set for a comment run that coalesced comments
 	// spanning MORE THAN ONE root thread (MUL-4348). When it has >=2 entries the
 	// workflow's reply step fans out — one reply per thread — instead of the
@@ -139,10 +139,10 @@ type TaskContextForEnv struct {
 	// telling it "one comment" and the other "one per thread". Same-thread
 	// follow-ups collapse to a single group upstream, so this stays empty and
 	// the single-parent path is used (no duplicate replies).
-	CommentReplyTargets []ThreadReplyTarget
-	NewCommentCount     int    // issue-wide comments since this agent's last run (excludes its own and the injected trigger)
-	NewCommentsSince    string // RFC3339 anchor (last run's started_at) the count is measured from; empty on cold start
-	PriorSessionResumed bool   // true when the daemon will resume an existing provider session for this task
+
+	// issue-wide comments since this agent's last run (excludes its own and the injected trigger)
+	// RFC3339 anchor (last run's started_at) the count is measured from; empty on cold start
+	PriorSessionResumed bool // true when the daemon will resume an existing provider session for this task
 	// PriorSessionResumeUnavailable is true when this task carried a prior
 	// session the daemon expected to resume but could NOT (the reused workdir was
 	// gone, or the Codex rollout was not present in the task CODEX_HOME). The
@@ -156,12 +156,12 @@ type TaskContextForEnv struct {
 	AgentInstructions             string // agent identity/persona instructions, injected into CLAUDE.md
 	AgentSkills                   []SkillContextForEnv
 	DisabledRuntimeSkills         []RuntimeSkillRefForEnv
-	Repos                         []RepoContextForEnv     // workspace repos available for checkout
-	ProjectID                     string                  // active project for this task, when present
-	ProjectTitle                  string                  // human-readable project title
-	ProjectDescription            string                  // durable project-level context, rendered into the brief's Project Context section
-	ProjectResources              []ProjectResourceForEnv // resources attached to the project
-	ChatSessionID                 string                  // non-empty for chat tasks
+	Repos                         []RepoContextForEnv // workspace repos available for checkout
+	// active project for this task, when present
+	// human-readable project title
+	// durable project-level context, rendered into the brief's Project Context section
+	// resources attached to the project
+	ChatSessionID string // non-empty for chat tasks
 	// ChatChannelType is the IM platform behind a chat session ("slack",
 	// "feishu", "wecom"); empty for a web/mobile chat. It names the surface in
 	// the brief's copy; what that surface can DELIVER is the separate field
@@ -194,8 +194,8 @@ type TaskContextForEnv struct {
 	AutopilotDescription    string
 	AutopilotSource         string
 	AutopilotTriggerPayload string
-	QuickCreatePrompt       string // non-empty for quick-create tasks
-	IsSquadLeader           bool   // true when THIS TASK runs the agent in the squad-leader role (may exit silently on no_action); derived from the claim's is_leader_task / squad_id, never sniffed from instructions text (MUL-5811)
+	// non-empty for quick-create tasks
+	// true when THIS TASK runs the agent in the squad-leader role (may exit silently on no_action); derived from the claim's is_leader_task / squad_id, never sniffed from instructions text (MUL-5811)
 	// WorkspaceContext is the workspace-level system prompt (workspace.context
 	// in the DB). Rendered into the brief as `## Workspace Context` when
 	// non-empty so every agent in the workspace sees the same shared context,
@@ -209,11 +209,11 @@ type TaskContextForEnv struct {
 	// edits the catalog between runs of a resumed session, exactly as a
 	// Workspace Context edit does. Empty — including on old servers that never
 	// send the field — renders the built-in-only line byte-identical to before.
-	IssueStatuses []IssueStatusForEnv
+
 	// IssueStatusesOmitted is the count of active custom statuses the server's
 	// cap dropped from IssueStatuses, so the brief can disclose truncation
 	// instead of presenting a partial catalog as complete.
-	IssueStatusesOmitted int
+
 	// ConnectedApps lists per-run external app capabilities mounted through
 	// MCP overlays. Rendered briefly so the agent can map app names such as
 	// Notion to the actual MCP server name (`composio`).
@@ -352,11 +352,10 @@ type Environment struct {
 // environment root. IDs provide stable collision-safe suffixes; user-controlled
 // labels are only readable prefixes and never serve as identity.
 type RootDirParams struct {
-	WorkspacesRoot  string
-	WorkspaceID     string
-	WorkspaceSlug   string
-	TaskID          string
-	IssueIdentifier string
+	WorkspacesRoot string
+	WorkspaceID    string
+	WorkspaceSlug  string
+	TaskID         string
 }
 
 // Keep each readable segment within the same aggregate budget as main's
@@ -374,7 +373,7 @@ func PredictRootDir(params RootDirParams) string {
 	return filepath.Join(
 		params.WorkspacesRoot,
 		readablePathSegment(params.WorkspaceSlug, "workspace", params.WorkspaceID),
-		readablePathSegment(params.IssueIdentifier, "task", params.TaskID),
+		readablePathSegment("", "task", params.TaskID),
 	)
 }
 
@@ -418,11 +417,10 @@ func Prepare(params PrepareParams, logger *slog.Logger) (*Environment, error) {
 	}
 
 	envRoot, err := ResolveRootDir(RootDirParams{
-		WorkspacesRoot:  params.WorkspacesRoot,
-		WorkspaceID:     params.WorkspaceID,
-		WorkspaceSlug:   params.WorkspaceSlug,
-		TaskID:          params.TaskID,
-		IssueIdentifier: params.IssueIdentifier,
+		WorkspacesRoot: params.WorkspacesRoot,
+		WorkspaceID:    params.WorkspaceID,
+		WorkspaceSlug:  params.WorkspaceSlug,
+		TaskID:         params.TaskID,
 	})
 	if err != nil {
 		return nil, err
@@ -551,13 +549,13 @@ func Prepare(params PrepareParams, logger *slog.Logger) (*Environment, error) {
 	}
 
 	env := &Environment{
-		RootDir:           envRoot,
-		WorkDir:           workDir,
-		LocalDirectory:    params.LocalWorkDir != "",
-		LocalWorktree:     localWorktree,
+		RootDir:        envRoot,
+		WorkDir:        workDir,
+		LocalDirectory: params.LocalWorkDir != "",
+		LocalWorktree:  localWorktree,
 		AuroConfigRoot: auroConfigRoot,
-		logger:            logger,
-		lockFile:          lockFile,
+		logger:         logger,
+		lockFile:       lockFile,
 	}
 
 	// Write context files into workdir (skills go to provider-native paths).
@@ -615,10 +613,10 @@ func Prepare(params PrepareParams, logger *slog.Logger) (*Environment, error) {
 	// exactly the set with a durable conversation scope. Non-fatal: a write failure
 	// only costs the next follow-up its session reuse (it falls back to a fresh
 	// session), which must never block dispatching this task.
-	if params.LocalWorkDir == "" && (params.Task.IssueID != "" || params.Task.ChatSessionID != "") {
+	if params.LocalWorkDir == "" && params.Task.ChatSessionID != "" {
 		if err := WriteManagedEnvProvenance(envRoot, ManagedEnvProvenance{
-			WorkspaceID:   params.WorkspaceID,
-			IssueID:       params.Task.IssueID,
+			WorkspaceID: params.WorkspaceID,
+
 			ChatSessionID: params.Task.ChatSessionID,
 			AgentID:       params.Task.AgentID,
 		}); err != nil && logger != nil {
@@ -1096,13 +1094,13 @@ const (
 // Kind to GCKindIssue for backward compatibility — only IssueID was written
 // before, and only issue-centric tasks ever produced a meta file.
 type GCMeta struct {
-	Kind           GCMetaKind `json:"kind,omitempty"`
-	IssueID        string     `json:"issue_id,omitempty"`
-	ChatSessionID  string     `json:"chat_session_id,omitempty"`
-	AutopilotRunID string     `json:"autopilot_run_id,omitempty"`
-	TaskID         string     `json:"task_id,omitempty"`
-	WorkspaceID    string     `json:"workspace_id"`
-	CompletedAt    time.Time  `json:"completed_at"`
+	Kind GCMetaKind `json:"kind,omitempty"`
+
+	ChatSessionID  string    `json:"chat_session_id,omitempty"`
+	AutopilotRunID string    `json:"autopilot_run_id,omitempty"`
+	TaskID         string    `json:"task_id,omitempty"`
+	WorkspaceID    string    `json:"workspace_id"`
+	CompletedAt    time.Time `json:"completed_at"`
 	// LocalDirectory marks tasks whose WorkDir pointed at a user-owned
 	// path rather than the synthesised envRoot/workdir. The GC loop honours
 	// this by never falling into the gcActionClean branch (which would
@@ -1177,9 +1175,9 @@ const ManagedEnvProvenanceManagedBy = "auro-daemon-managed-env"
 // chat envs, so its presence is itself the "safe to reuse, not a user
 // local_directory" assertion; see shouldReusePriorWorkdir.
 type ManagedEnvProvenance struct {
-	ManagedBy     string `json:"managed_by"`
-	WorkspaceID   string `json:"workspace_id"`
-	IssueID       string `json:"issue_id,omitempty"`
+	ManagedBy   string `json:"managed_by"`
+	WorkspaceID string `json:"workspace_id"`
+
 	ChatSessionID string `json:"chat_session_id,omitempty"`
 	AgentID       string `json:"agent_id"`
 }

@@ -14,8 +14,8 @@ afterEach(() => {
 
 describe("diagnostic route", () => {
   it("holds the published route", () => {
-    setDiagnosticRoute("/:slug/issues");
-    expect(getDiagnosticRoute()).toBe("/:slug/issues");
+    setDiagnosticRoute("/:slug/skills");
+    expect(getDiagnosticRoute()).toBe("/:slug/skills");
   });
 
   it("treats empty and whitespace values as absent", () => {
@@ -24,7 +24,7 @@ describe("diagnostic route", () => {
   });
 
   it("clears on null, so a window that leaves a route stops claiming it", () => {
-    setDiagnosticRoute("/:slug/issues");
+    setDiagnosticRoute("/:slug/skills");
     setDiagnosticRoute(null);
     expect(getDiagnosticRoute()).toBeNull();
   });
@@ -32,16 +32,16 @@ describe("diagnostic route", () => {
 
 describe("bucketDiagnosticPath", () => {
   it("replaces the workspace slug", () => {
-    expect(bucketDiagnosticPath("/acme/issues")).toBe("/:slug/issues");
+    expect(bucketDiagnosticPath("/acme/skills")).toBe("/:slug/skills");
   });
 
   it("templates every workspace detail route", () => {
-    expect(bucketDiagnosticPath("/acme/issues/MUL-5345")).toBe("/:slug/issues/:id");
-    expect(bucketDiagnosticPath("/acme/projects/p1")).toBe("/:slug/projects/:id");
+    expect(bucketDiagnosticPath("/acme/skills/MUL-5345")).toBe("/:slug/skills/:id");
+    expect(bucketDiagnosticPath("/acme/agents/p1")).toBe("/:slug/agents/:id");
     expect(bucketDiagnosticPath("/acme/autopilots/ap-7")).toBe("/:slug/autopilots/:id");
     expect(bucketDiagnosticPath("/acme/agents/agt_9")).toBe("/:slug/agents/:id");
     expect(bucketDiagnosticPath("/acme/members/m-3")).toBe("/:slug/members/:id");
-    expect(bucketDiagnosticPath("/acme/squads/sq.4")).toBe("/:slug/squads/:id");
+    expect(bucketDiagnosticPath("/acme/autopilots/sq.4")).toBe("/:slug/autopilots/:id");
     expect(bucketDiagnosticPath("/acme/runtimes/machine-1")).toBe("/:slug/runtimes/:id");
     expect(bucketDiagnosticPath("/acme/skills/skl_123")).toBe("/:slug/skills/:id");
     expect(bucketDiagnosticPath("/acme/attachments/att-8/preview")).toBe(
@@ -56,11 +56,11 @@ describe("bucketDiagnosticPath", () => {
   // that was not a UUID, an issue key or digits travelled to telemetry intact.
   it("templates ids that look nothing like ids", () => {
     for (const [path, expected] of [
-      ["/acme/projects/p1", "/:slug/projects/:id"],
+      ["/acme/agents/p1", "/:slug/agents/:id"],
       ["/acme/skills/skl_123", "/:slug/skills/:id"],
       ["/acme/agents/my-favourite-agent", "/:slug/agents/:id"],
-      ["/acme/squads/Platform Team", "/:slug/squads/:id"],
-      ["/acme/issues/new", "/:slug/issues/:id"],
+      ["/acme/autopilots/Platform Team", "/:slug/autopilots/:id"],
+      ["/acme/skills/new", "/:slug/skills/:id"],
     ] as const) {
       expect(bucketDiagnosticPath(path)).toBe(expected);
     }
@@ -100,8 +100,8 @@ describe("bucketDiagnosticPath", () => {
   });
 
   it("drops query string and hash — they can carry resource ids", () => {
-    expect(bucketDiagnosticPath("/acme/issues?issue=MUL-1#comment-3")).toBe(
-      "/:slug/issues",
+    expect(bucketDiagnosticPath("/acme/skills?issue=MUL-1#comment-3")).toBe(
+      "/:slug/skills",
     );
   });
 
@@ -113,8 +113,8 @@ describe("bucketDiagnosticPath", () => {
   // A route we do not know is exactly the case where an id cannot be told from
   // a page name, so nothing from it travels.
   it("masks an unknown route instead of passing segments through", () => {
-    expect(bucketDiagnosticPath("/acme/issues/MUL-1/secret-tab")).toBe(
-      "/:slug/issues/*",
+    expect(bucketDiagnosticPath("/acme/skills/MUL-1/secret-tab")).toBe(
+      "/:slug/skills/*",
     );
     expect(bucketDiagnosticPath("/acme/not-a-section/raw-value")).toBe("/:slug/*");
     expect(bucketDiagnosticPath("/login/raw-value")).toBe("/login/*");

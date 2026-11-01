@@ -28,29 +28,6 @@ func TestDelegatedSubscriber_AgentCreateInheritsHuman(t *testing.T) {
 	}
 }
 
-// TestDelegatedSubscriber_QuickCreateIsDirectIntent locks in the deliberate
-// asymmetry: the quick-create human asked for THAT issue by name, so it keeps
-// the direct 'creator' tier and full notifications. Collapsing it into
-// 'delegated' would quietly downgrade an existing flow.
-func TestDelegatedSubscriber_QuickCreateIsDirectIntent(t *testing.T) {
-	got, reason, ok := DelegatedSubscriber(SubscriptionFacts{
-		CreatorType:      "agent",
-		OriginType:       "quick_create",
-		OriginOriginator: human,
-		OriginRootSource: SourceDirectHuman,
-	})
-
-	if !ok {
-		t.Fatal("expected a quick_create issue to subscribe its requester")
-	}
-	if got != human {
-		t.Fatalf("subscriber = %v, want %v", got, human)
-	}
-	if reason != "creator" {
-		t.Fatalf("reason = %q, want creator — quick create is direct human intent", reason)
-	}
-}
-
 // TestDelegatedSubscriber_AutopilotExcluded: an autopilot has an explicitly
 // configured subscriber template, and THAT list is the intended audience for
 // its issues. Subscribing whoever armed the trigger to every issue the rule
@@ -77,20 +54,6 @@ func TestDelegatedSubscriber_NoHumanNoSubscription(t *testing.T) {
 		OriginRootSource: SourceDirectHuman,
 	}); ok {
 		t.Fatal("an unattributed origin task must not produce a subscriber")
-	}
-}
-
-// TestDelegatedSubscriber_MemberCreatedIssueUnaffected: a human-created issue
-// already subscribes its human through the ordinary 'creator' rule. Firing
-// here too would write a second, wrong-tier row for the same person.
-func TestDelegatedSubscriber_MemberCreatedIssueUnaffected(t *testing.T) {
-	if _, _, ok := DelegatedSubscriber(SubscriptionFacts{
-		CreatorType:      "member",
-		OriginType:       "agent_create",
-		OriginOriginator: human,
-		OriginRootSource: SourceDirectHuman,
-	}); ok {
-		t.Fatal("member-created issues must not take a delegated subscription")
 	}
 }
 

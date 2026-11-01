@@ -12,7 +12,7 @@ import type { LocaleResources, SupportedLocale } from "@auro/core/i18n";
 import enCommon from "./en/common.json";
 import enAuth from "./en/auth.json";
 import enSettings from "./en/settings.json";
-import enIssues from "./en/issues.json";
+import enIssues from "./en/execution.json";
 import enAgents from "./en/agents.json";
 import enEditor from "./en/editor.json";
 import enOnboarding from "./en/onboarding.json";
@@ -22,7 +22,6 @@ import enMembers from "./en/members.json";
 import enSearch from "./en/search.json";
 import enInbox from "./en/inbox.json";
 import enWorkspace from "./en/workspace.json";
-import enProjects from "./en/projects.json";
 import enAutopilots from "./en/autopilots.json";
 import enSkills from "./en/skills.json";
 import enChat from "./en/chat.json";
@@ -37,7 +36,7 @@ import enMe from "./en/me.json";
 import zhHansCommon from "./zh-Hans/common.json";
 import zhHansAuth from "./zh-Hans/auth.json";
 import zhHansSettings from "./zh-Hans/settings.json";
-import zhHansIssues from "./zh-Hans/issues.json";
+import zhHansIssues from "./zh-Hans/execution.json";
 import zhHansAgents from "./zh-Hans/agents.json";
 import zhHansEditor from "./zh-Hans/editor.json";
 import zhHansOnboarding from "./zh-Hans/onboarding.json";
@@ -47,7 +46,6 @@ import zhHansMembers from "./zh-Hans/members.json";
 import zhHansSearch from "./zh-Hans/search.json";
 import zhHansInbox from "./zh-Hans/inbox.json";
 import zhHansWorkspace from "./zh-Hans/workspace.json";
-import zhHansProjects from "./zh-Hans/projects.json";
 import zhHansAutopilots from "./zh-Hans/autopilots.json";
 import zhHansSkills from "./zh-Hans/skills.json";
 import zhHansChat from "./zh-Hans/chat.json";
@@ -62,7 +60,7 @@ import zhHansMe from "./zh-Hans/me.json";
 import koCommon from "./ko/common.json";
 import koAuth from "./ko/auth.json";
 import koSettings from "./ko/settings.json";
-import koIssues from "./ko/issues.json";
+import koIssues from "./ko/execution.json";
 import koAgents from "./ko/agents.json";
 import koEditor from "./ko/editor.json";
 import koOnboarding from "./ko/onboarding.json";
@@ -72,7 +70,6 @@ import koMembers from "./ko/members.json";
 import koSearch from "./ko/search.json";
 import koInbox from "./ko/inbox.json";
 import koWorkspace from "./ko/workspace.json";
-import koProjects from "./ko/projects.json";
 import koAutopilots from "./ko/autopilots.json";
 import koSkills from "./ko/skills.json";
 import koChat from "./ko/chat.json";
@@ -87,7 +84,7 @@ import koMe from "./ko/me.json";
 import jaCommon from "./ja/common.json";
 import jaAuth from "./ja/auth.json";
 import jaSettings from "./ja/settings.json";
-import jaIssues from "./ja/issues.json";
+import jaIssues from "./ja/execution.json";
 import jaAgents from "./ja/agents.json";
 import jaEditor from "./ja/editor.json";
 import jaOnboarding from "./ja/onboarding.json";
@@ -97,7 +94,6 @@ import jaMembers from "./ja/members.json";
 import jaSearch from "./ja/search.json";
 import jaInbox from "./ja/inbox.json";
 import jaWorkspace from "./ja/workspace.json";
-import jaProjects from "./ja/projects.json";
 import jaAutopilots from "./ja/autopilots.json";
 import jaSkills from "./ja/skills.json";
 import jaChat from "./ja/chat.json";
@@ -112,7 +108,7 @@ import jaMe from "./ja/me.json";
 import frCommon from "./fr/common.json";
 import frAuth from "./fr/auth.json";
 import frSettings from "./fr/settings.json";
-import frIssues from "./fr/issues.json";
+import frIssues from "./fr/execution.json";
 import frAgents from "./fr/agents.json";
 import frEditor from "./fr/editor.json";
 import frOnboarding from "./fr/onboarding.json";
@@ -122,7 +118,6 @@ import frMembers from "./fr/members.json";
 import frSearch from "./fr/search.json";
 import frInbox from "./fr/inbox.json";
 import frWorkspace from "./fr/workspace.json";
-import frProjects from "./fr/projects.json";
 import frAutopilots from "./fr/autopilots.json";
 import frSkills from "./fr/skills.json";
 import frChat from "./fr/chat.json";
@@ -152,7 +147,7 @@ export const RESOURCES: Record<SupportedLocale, LocaleResources> = {
     common: enCommon,
     auth: enAuth,
     settings: enSettings,
-    issues: enIssues,
+  execution: enIssues,
     agents: enAgents,
     editor: enEditor,
     onboarding: enOnboarding,
@@ -162,7 +157,6 @@ export const RESOURCES: Record<SupportedLocale, LocaleResources> = {
     search: enSearch,
     inbox: enInbox,
     workspace: enWorkspace,
-    projects: enProjects,
     autopilots: enAutopilots,
     skills: enSkills,
     chat: enChat,
@@ -181,7 +175,7 @@ export const RESOURCES: Record<SupportedLocale, LocaleResources> = {
     common: zhHansCommon,
     auth: zhHansAuth,
     settings: zhHansSettings,
-    issues: zhHansIssues,
+  execution: zhHansIssues,
     agents: zhHansAgents,
     editor: zhHansEditor,
     onboarding: zhHansOnboarding,
@@ -191,7 +185,6 @@ export const RESOURCES: Record<SupportedLocale, LocaleResources> = {
     search: zhHansSearch,
     inbox: zhHansInbox,
     workspace: zhHansWorkspace,
-    projects: zhHansProjects,
     autopilots: zhHansAutopilots,
     skills: zhHansSkills,
     chat: zhHansChat,
@@ -210,7 +203,7 @@ export const RESOURCES: Record<SupportedLocale, LocaleResources> = {
     common: koCommon,
     auth: koAuth,
     settings: koSettings,
-    issues: koIssues,
+  execution: koIssues,
     agents: koAgents,
     editor: koEditor,
     onboarding: koOnboarding,
@@ -220,7 +213,6 @@ export const RESOURCES: Record<SupportedLocale, LocaleResources> = {
     search: koSearch,
     inbox: koInbox,
     workspace: koWorkspace,
-    projects: koProjects,
     autopilots: koAutopilots,
     skills: koSkills,
     chat: koChat,
@@ -239,7 +231,7 @@ export const RESOURCES: Record<SupportedLocale, LocaleResources> = {
     common: jaCommon,
     auth: jaAuth,
     settings: jaSettings,
-    issues: jaIssues,
+  execution: jaIssues,
     agents: jaAgents,
     editor: jaEditor,
     onboarding: jaOnboarding,
@@ -249,7 +241,6 @@ export const RESOURCES: Record<SupportedLocale, LocaleResources> = {
     search: jaSearch,
     inbox: jaInbox,
     workspace: jaWorkspace,
-    projects: jaProjects,
     autopilots: jaAutopilots,
     skills: jaSkills,
     chat: jaChat,
@@ -268,7 +259,7 @@ export const RESOURCES: Record<SupportedLocale, LocaleResources> = {
     common: frCommon,
     auth: frAuth,
     settings: frSettings,
-    issues: frIssues,
+  execution: frIssues,
     agents: frAgents,
     editor: frEditor,
     onboarding: frOnboarding,
@@ -278,7 +269,6 @@ export const RESOURCES: Record<SupportedLocale, LocaleResources> = {
     search: frSearch,
     inbox: frInbox,
     workspace: frWorkspace,
-    projects: frProjects,
     autopilots: frAutopilots,
     skills: frSkills,
     chat: frChat,

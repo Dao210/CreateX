@@ -83,31 +83,31 @@ func TestParsePoolConfigPreservesNativeConnectTimeout(t *testing.T) {
 	tests := []struct {
 		name          string
 		databaseURL   string
-		auroValue  time.Duration
+		auroValue     time.Duration
 		wantPGXNative time.Duration
 	}{
 		{
 			name:          "URL longer than Auro fallback",
 			databaseURL:   "postgres://user:pass@localhost:5432/db?sslmode=disable&connect_timeout=30",
-			auroValue:  5 * time.Second,
+			auroValue:     5 * time.Second,
 			wantPGXNative: 30 * time.Second,
 		},
 		{
 			name:          "URL shorter than explicit Auro value",
 			databaseURL:   "postgres://user:pass@localhost:5432/db?sslmode=disable&connect_timeout=1",
-			auroValue:  30 * time.Second,
+			auroValue:     30 * time.Second,
 			wantPGXNative: time.Second,
 		},
 		{
 			name:          "URL explicitly disables timeout",
 			databaseURL:   "postgres://user:pass@localhost:5432/db?sslmode=disable&connect_timeout=0",
-			auroValue:  5 * time.Second,
+			auroValue:     5 * time.Second,
 			wantPGXNative: 0,
 		},
 		{
 			name:          "keyword value",
 			databaseURL:   "host=localhost port=5432 user=user password=pass dbname=db sslmode=disable connect_timeout=12",
-			auroValue:  5 * time.Second,
+			auroValue:     5 * time.Second,
 			wantPGXNative: 12 * time.Second,
 		},
 	}

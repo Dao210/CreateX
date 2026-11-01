@@ -37,8 +37,7 @@ export function archivedInboxListOptions(wsId: string) {
 }
 
 function normalizedInboxFilters(filters: InboxFilters): InboxFilters {
-  return { statuses: [...filters.statuses].sort(), priorities: [...filters.priorities].sort(),
-    actors: [...filters.actors].sort(), unreadOnly: filters.unreadOnly };
+  return { actors: [...filters.actors].sort(), unreadOnly: filters.unreadOnly };
 }
 
 export function archivedInboxPagesOptions(wsId: string, filters: InboxFilters) {
@@ -142,10 +141,6 @@ export function unreadCountForWorkspace(
  * its own; deriving it from `listInbox()` instead downloaded the entire
  * unbounded inbox on every app start just to render a number (MUL-6967).
  *
- * `GET /api/inbox/unread-count` is deliberately not the source: it counts raw
- * notification rows, while the inbox renders one row per issue. The summary
- * endpoint applies the same newest-per-issue rule `deduplicateInboxItems`
- * applies client-side, so this number matches the list the user sees.
  */
 export function useInboxUnreadCount(wsId: string | null | undefined): number {
   const { data } = useQuery({
@@ -157,58 +152,10 @@ export function useInboxUnreadCount(wsId: string | null | undefined): number {
   return data ?? 0;
 }
 
-/**
- * Deduplicate inbox items by issue_id (one entry per issue, Linear-style).
- * Exported for consumers to use in useMemo — not in queryOptions select
- * (to avoid new array references on every cache update).
- */
+/** Select active messages and keep the server's newest-first order. */
 export function deduplicateInboxItems(items: InboxItem[]): InboxItem[] {
-  return groupInboxItemsByIssue(items.filter((i) => !i.archived));
+  return items.filter((item) => !item.archived);
 }
-
-/**
- * Same grouping for the archived sub-view. The `archived` filter is what makes
- * an optimistic unarchive drop the row out of the archived list immediately —
- * exactly mirroring how `deduplicateInboxItems`' filter drops an optimistically
- * archived row out of the main list.
- */
 export function deduplicateArchivedInboxItems(items: InboxItem[]): InboxItem[] {
-  return groupInboxItemsByIssue(items.filter((i) => i.archived));
-}
-
-function groupInboxItemsByIssue(items: InboxItem[]): InboxItem[] {
-  const groups = new Map<string, InboxItem[]>();
-  for (const item of items) {
-    const key = item.issue_id ?? item.id;
-    const group = groups.get(key) ?? [];
-    group.push(item);
-    groups.set(key, group);
-  }
-  const merged: InboxItem[] = [];
-  for (const group of groups.values()) {
-    group.sort(
-      (a, b) =>
-        new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
-    );
-    const newest = group[0];
-    if (!newest) continue;
-
-    const commentId =
-      newest.details?.comment_id ??
-      group.find((item) => item.details?.comment_id)?.details?.comment_id;
-
-    if (commentId && newest.details?.comment_id !== commentId) {
-      merged.push({
-        ...newest,
-        details: { ...(newest.details ?? {}), comment_id: commentId },
-      });
-      continue;
-    }
-
-    merged.push(newest);
-  }
-  return merged.sort(
-    (a, b) =>
-      new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
-  );
+  return items.filter((item) => item.archived);
 }

@@ -350,7 +350,7 @@ function MentionRow({
   buttonRef: (el: HTMLButtonElement | null) => void;
 }) {
   const { t } = useT("editor");
-  const { t: issuesT } = useT("issues");
+  const { t: issuesT } = useT("execution");
 
   const disabledMessage = item.disabledReason
     ? blockedReasonLabel(item.disabledReason, issuesT)

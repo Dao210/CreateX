@@ -1,4 +1,4 @@
-import { ListTodo, Plus, Zap } from "lucide-react";
+import { Plus, Zap } from "lucide-react";
 import { within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
@@ -51,18 +51,6 @@ describe("PageHeader title alignment", () => {
     const heading = within(header).getByRole("heading");
     expect(heading.textContent).toBe("Autopilot");
     expect(heading.parentElement).toHaveClass("flex-1");
-  });
-
-  it("keeps the issues-style inline title packed against the nav trigger", () => {
-    const header = renderHeader(
-      <PageHeader>
-        <ListTodo className="h-4 w-4 text-muted-foreground" />
-        <h1 className="text-body font-medium">Issues</h1>
-      </PageHeader>,
-    );
-
-    expectTitleLeftOfFreeSpace(header);
-    expect(header.children).toHaveLength(3);
   });
 });
 

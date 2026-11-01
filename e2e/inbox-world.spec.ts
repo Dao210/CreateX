@@ -35,7 +35,7 @@ test.afterAll(async () => {
 });
 
 test("MCP creation arrives live, an immutable whole-world digest includes another member, and archive/read stay independent", async ({ page, request, baseURL }) => {
-  test.setTimeout(90000);
+  test.setTimeout(120000);
   const errors: string[] = [];
   page.on("pageerror", error => errors.push(error.message));
   await page.context().addCookies([{ name: "auro-locale", value: "zh-Hans", url: baseURL! }]);
@@ -76,6 +76,7 @@ test("MCP creation arrives live, an immutable whole-world digest includes anothe
   await expect(digestRow).toBeVisible({ timeout: 20000 });
   await digestRow.click();
   await expect(page.getByText("邻居的侦察者 · 新创作", { exact: true })).toBeVisible();
+  await expect(page.getByText("作者：Inbox neighbor", { exact: true })).toBeVisible();
   await expect(page.getByText("Inbox 赤狐 · 新创作", { exact: true })).toBeVisible();
   await page.screenshot({ path: "test-results/inbox/world-desktop.png", fullPage: true });
   await page.getByRole("button", { name: "全部", exact: true }).click();
@@ -92,5 +93,31 @@ test("MCP creation arrives live, an immutable whole-world digest includes anothe
   await expect(page.getByRole("button").filter({ hasText: "新增创作 2 件" })).toBeVisible();
   const other = await request.get("/api/inbox", { headers: { Authorization: `Bearer ${neighbor.getToken()}`, "X-Workspace-ID": otherWorld.id } });
   expect(await other.json()).toEqual([]);
+  await page.goto(`/${workspace.slug}/settings?tab=notifications`, { waitUntil: "domcontentloaded" });
+  const digestSubscription = page.getByRole("switch", { name: "世界摘要", exact: true });
+  await expect(digestSubscription).toBeChecked();
+  await digestSubscription.click();
+  await expect.poll(async () => (await (await request.get("/api/notification-preferences", { headers })).json()).preferences.world_digests).toBe("muted");
+  const nextSave = await request.post("/api/tanks/mcp", { headers, data: { jsonrpc: "2.0", id: randomUUID(), method: "tools/call", params: { name: "tank_save_character", arguments: { requestId: randomUUID(), draft: { ...draft, name: "订阅验证坦克" } } } } });
+  expect(nextSave.status()).toBe(200);
+  const nextRpc = await nextSave.json();
+  expect(nextRpc.result.isError).toBeFalsy();
+  const nextCharacter = nextRpc.result.structuredContent;
+  await pool.query("UPDATE world_inbox_event SET occurred_at=date_trunc('hour',now())-interval '90 minutes' WHERE workspace_id=$1 AND subject_id=$2", [workspace.id, nextCharacter.id]);
+  await expect.poll(async () => (await pool.query("SELECT summarized_at IS NOT NULL AS done FROM world_inbox_event WHERE workspace_id=$1 AND subject_id=$2", [workspace.id, nextCharacter.id])).rows[0]?.done, { timeout: 20000 }).toBe(true);
+  const notices = await (await request.get("/api/inbox", { headers })).json();
+  expect(notices.filter((item: { type: string }) => item.type === "world_digest")).toHaveLength(1);
+  expect(notices.some((item: { type: string; content?: { entries?: { subjectId: string }[] } }) => item.type === "creation_ready" && item.content?.entries?.[0]?.subjectId === nextCharacter.id)).toBe(true);
+  expect(notices.every((item: Record<string, unknown>) => item.issue_id === null && item.issue_status === null && item.issue_priority === null)).toBe(true);
+  const digestNotice = notices.find((item: { type: string }) => item.type === "world_digest");
+  expect((await request.post(`/api/inbox/${digestNotice.id}/archive`, { headers })).status()).toBe(200);
+  const plainArchive = await (await request.get("/api/inbox/archived/page", { headers })).json();
+  expect(plainArchive.items).toHaveLength(1);
+  for (const dimension of ["statuses=done", "priorities=high"]) {
+    const filtered = await (await request.get(`/api/inbox/archived/page?${dimension}`, { headers })).json();
+    expect(filtered).toMatchObject({ items: [], has_more: false, next_cursor: null });
+    const facets = await (await request.get(`/api/inbox/archived/facets?${dimension}`, { headers })).json();
+    expect(facets).toEqual({ statuses: {}, priorities: {}, actors: {}, unread_count: 0 });
+  }
   expect(errors).toEqual([]);
 });

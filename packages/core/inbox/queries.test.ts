@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { describe, expect, it } from "vitest";
 import type { InboxItem, InboxWorkspaceUnread } from "../types";
 import {
@@ -17,10 +18,10 @@ function item(overrides: Partial<InboxItem>): InboxItem {
     recipient_id: "member-1",
     actor_type: "agent",
     actor_id: "agent-1",
-    type: "new_comment",
+    type: "world_digest",
     severity: "info",
-    issue_id: "issue-1",
-    title: "Issue title",
+    issue_id: null,
+    title: "World digest",
     body: null,
     issue_status: null,
     read: false,
@@ -31,109 +32,46 @@ function item(overrides: Partial<InboxItem>): InboxItem {
   };
 }
 
-describe("deduplicateInboxItems", () => {
-  it("keeps the newest issue row while preserving an older comment anchor", () => {
-    const merged = deduplicateInboxItems([
-      item({
-        id: "comment-notification",
-        type: "new_comment",
-        created_at: "2026-06-15T08:00:00Z",
-        details: { comment_id: "comment-1" },
-      }),
-      item({
-        id: "status-notification",
-        type: "status_changed",
-        created_at: "2026-06-15T08:01:00Z",
-        details: { from: "in_progress", to: "in_review" },
-      }),
+describe("active inbox message history", () => {
+  it("keeps distinct hourly messages for the same creation and does not merge their details", () => {
+    const messages = deduplicateInboxItems([
+      item({ id: "new-window", created_at: "2026-06-15T09:00:00Z", details: { character_id: "scout", window: "new" } }),
+      item({ id: "old-window", created_at: "2026-06-15T08:00:00Z", details: { character_id: "scout", window: "old" } }),
     ]);
-
-    expect(merged).toHaveLength(1);
-    expect(merged[0]).toMatchObject({
-      id: "status-notification",
-      type: "status_changed",
-      details: {
-        from: "in_progress",
-        to: "in_review",
-        comment_id: "comment-1",
-      },
-    });
+    expect(messages.map(message => message.id)).toEqual(["new-window", "old-window"]);
+    expect(messages.map(message => message.details?.window)).toEqual(["new", "old"]);
   });
 
-  it("preserves the newest row's own comment anchor", () => {
-    const merged = deduplicateInboxItems([
-      item({
-        id: "older-comment",
-        created_at: "2026-06-15T08:00:00Z",
-        details: { comment_id: "comment-1" },
-      }),
-      item({
-        id: "newer-comment",
-        created_at: "2026-06-15T08:02:00Z",
-        details: { comment_id: "comment-2" },
-      }),
+  it("keeps each message's read state independent", () => {
+    const messages = deduplicateInboxItems([
+      item({ id: "unread", read: false }), item({ id: "read", read: true }),
     ]);
-
-    expect(merged).toHaveLength(1);
-    expect(merged[0]?.id).toBe("newer-comment");
-    expect(merged[0]?.details?.comment_id).toBe("comment-2");
+    expect(messages).toHaveLength(2);
+    expect(messages.filter(message => !message.read).map(message => message.id)).toEqual(["unread"]);
   });
 
-  it("drops archived rows so an optimistic archive leaves the list at once", () => {
-    const merged = deduplicateInboxItems([
-      item({ id: "active", issue_id: "issue-1" }),
-      item({ id: "filed-away", issue_id: "issue-2", archived: true }),
-    ]);
-
-    expect(merged.map((i) => i.id)).toEqual(["active"]);
+  it("drops an archived message without changing other history", () => {
+    const messages = deduplicateInboxItems([item({ id: "active" }), item({ id: "filed-away", archived: true })]);
+    expect(messages.map(message => message.id)).toEqual(["active"]);
   });
 });
 
-describe("deduplicateArchivedInboxItems", () => {
-  it("keeps only archived rows, one per issue, newest first", () => {
-    const merged = deduplicateArchivedInboxItems([
-      item({
-        id: "archived-older",
-        issue_id: "issue-1",
-        archived: true,
-        created_at: "2026-06-15T08:00:00Z",
-      }),
-      item({
-        id: "archived-newer",
-        issue_id: "issue-1",
-        archived: true,
-        created_at: "2026-06-15T09:00:00Z",
-      }),
-      item({
-        id: "archived-other-issue",
-        issue_id: "issue-2",
-        archived: true,
-        created_at: "2026-06-15T07:00:00Z",
-      }),
-      item({ id: "still-active", issue_id: "issue-3" }),
+describe("archived inbox message history", () => {
+  it("keeps separate archived windows in the server's newest-first order", () => {
+    const messages = deduplicateArchivedInboxItems([
+      item({ id: "new-window", archived: true, created_at: "2026-06-15T09:00:00Z" }),
+      item({ id: "old-window", archived: true, created_at: "2026-06-15T08:00:00Z" }),
+      item({ id: "still-active" }),
     ]);
-
-    expect(merged.map((i) => i.id)).toEqual([
-      "archived-newer",
-      "archived-other-issue",
-    ]);
+    expect(messages.map(message => message.id)).toEqual(["new-window", "old-window"]);
   });
 
-  it("drops a row the moment an optimistic unarchive flips it back", () => {
-    // What useUnarchiveInbox's onMutate does: flip `archived` on the archived
-    // cache. The row must leave this list without waiting for the refetch.
-    const restored = item({ id: "restored", archived: false });
-
-    expect(deduplicateArchivedInboxItems([restored])).toEqual([]);
+  it("drops only a message restored to the active inbox", () => {
+    expect(deduplicateArchivedInboxItems([item({ id: "restored", archived: false }),item({ id: "archived", archived: true })]).map(message => message.id)).toEqual(["archived"]);
   });
 
-  it("groups issue-less notifications on their own id rather than merging them", () => {
-    const merged = deduplicateArchivedInboxItems([
-      item({ id: "standalone-1", issue_id: null, archived: true }),
-      item({ id: "standalone-2", issue_id: null, archived: true }),
-    ]);
-
-    expect(merged).toHaveLength(2);
+  it("preserves archived messages with the same source", () => {
+    expect(deduplicateArchivedInboxItems([item({ id: "one", archived: true }), item({ id: "two", archived: true })])).toHaveLength(2);
   });
 });
 

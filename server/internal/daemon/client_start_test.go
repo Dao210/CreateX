@@ -25,7 +25,7 @@ func TestStartTaskBoundsResponseRead(t *testing.T) {
 	client.client.Transport = startTaskTransport(func(*http.Request) (*http.Response, error) {
 		return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(body)}, nil
 	})
-	_, err := client.StartTask(context.Background(), Task{ID: "task-1"})
+	err := client.StartTask(context.Background(), startTestClaim())
 	if !errors.Is(err, errInvalidResponseBody) || !strings.Contains(err.Error(), "exceeds") {
 		t.Fatalf("StartTask error = %v, want response size error", err)
 	}
@@ -74,7 +74,7 @@ func TestStartTaskRetries(t *testing.T) {
 				}
 				return &http.Response{StatusCode: status, Body: io.NopCloser(strings.NewReader("{}")), Header: make(http.Header)}, nil
 			})
-			_, err := client.StartTask(context.Background(), startTestClaim())
+			err := client.StartTask(context.Background(), startTestClaim())
 			if tc.status == http.StatusConflict && !errors.Is(err, errStartClaimRejected) {
 				t.Fatalf("lost claim rejection: %v", err)
 			}
@@ -100,7 +100,7 @@ func TestStartTaskCancellationStopsRetry(t *testing.T) {
 		calls++
 		return nil, io.ErrUnexpectedEOF
 	})
-	_, err := client.StartTask(ctx, startTestClaim())
+	err := client.StartTask(ctx, startTestClaim())
 	if err == nil || !errors.Is(ctx.Err(), context.Canceled) || calls != 1 {
 		t.Fatalf("error = %v, context = %v, calls = %d; want cancelled backoff and one attempt", err, ctx.Err(), calls)
 	}
@@ -136,24 +136,6 @@ func startTestClaim() Task {
 	return Task{ID: "task-1", RuntimeID: "runtime-1", DispatchedAt: "2026-09-17T09:00:00.123456Z", StartClaimSupported: true}
 }
 
-func TestStartTaskLegacyServerDoesNotRetry(t *testing.T) {
-	calls := 0
-	client := NewClient("https://daemon.test")
-	client.client.Transport = startTaskTransport(func(r *http.Request) (*http.Response, error) {
-		calls++
-		body, _ := io.ReadAll(r.Body)
-		if string(body) != `{"capabilities":null}` {
-			t.Fatalf("legacy body: %s", body)
-		}
-		return nil, io.ErrUnexpectedEOF
-	})
-	claim := startTestClaim()
-	claim.StartClaimSupported = false
-	if _, err := client.StartTask(context.Background(), claim); err == nil || calls != 1 {
-		t.Fatalf("legacy start: err=%v calls=%d", err, calls)
-	}
-}
-
 func TestStartTaskBudgetAndMissingClaim(t *testing.T) {
 	client := NewClient("https://daemon.test")
 	calls := 0
@@ -168,12 +150,12 @@ func TestStartTaskBudgetAndMissingClaim(t *testing.T) {
 	})
 	claim := startTestClaim()
 	claim.DispatchedAt = ""
-	if _, err := client.StartTask(context.Background(), claim); err == nil || calls != 0 {
+	if err := client.StartTask(context.Background(), claim); err == nil || calls != 0 {
 		t.Fatalf("missing claim: %v, calls=%d", err, calls)
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Millisecond)
 	defer cancel()
-	if _, err := client.StartTask(ctx, startTestClaim()); err == nil || calls != 1 {
+	if err := client.StartTask(ctx, startTestClaim()); err == nil || calls != 1 {
 		t.Fatalf("deadline: %v, calls=%d", err, calls)
 	}
 }

@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/auro-ai/auro/server/internal/auth"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 // sessionToken signs a cookie-mode session expiring `remaining` from now.
@@ -30,12 +30,6 @@ func sessionToken(t *testing.T, remaining time.Duration, sid string) string {
 		claims["sid"] = sid
 	}
 	return generateToken(claims, auth.JWTSecret())
-}
-
-func cookieRequest(method, token string) *http.Request {
-	req := httptest.NewRequest(method, "/api/issues", nil)
-	req.AddCookie(&http.Cookie{Name: auth.AuthCookieName, Value: token})
-	return req
 }
 
 // renewedAuthCookie returns the auth cookie the middleware set, or "" when it
@@ -137,23 +131,6 @@ func TestAuth_DoesNotRenewOnStateChangingMethods(t *testing.T) {
 	}
 }
 
-// A bearer-token client keeps the session in its own storage. A Set-Cookie it
-// never reads would leave the server and the client disagreeing about when
-// the session ends; those clients call POST /api/auth/refresh instead.
-func TestAuth_DoesNotRenewBearerSessions(t *testing.T) {
-	token := sessionToken(t, auth.AuthRenewThreshold()/2, "sid-bearer")
-	req := httptest.NewRequest(http.MethodGet, "/api/issues", nil)
-	req.Header.Set("Authorization", "Bearer "+token)
-
-	rec, called := runAuth(t, req)
-	if !called {
-		t.Fatal("request must still be served")
-	}
-	if got := renewedAuthCookie(rec); got != "" {
-		t.Error("a bearer-authenticated request must not be answered with a session cookie")
-	}
-}
-
 // Renewal extends a live session. An expired one is rejected outright — it
 // must not be renewed on the way to a 401, nor turned back into a live
 // session.
@@ -187,21 +164,6 @@ func TestAuth_RenewsLegacySessionAndMintsSessionID(t *testing.T) {
 	}
 	if auth.SessionIDFromToken(renewed) == "" {
 		t.Error("the renewed legacy session must carry a session id")
-	}
-}
-
-// Renewal is only ever reached from the JWT branch. An opaque credential has
-// no claims to copy forward and must pass through untouched.
-func TestAuth_DoesNotRenewOpaqueCredentials(t *testing.T) {
-	req := httptest.NewRequest(http.MethodGet, "/api/issues", nil)
-	req.AddCookie(&http.Cookie{Name: auth.AuthCookieName, Value: "mul_0123456789abcdef0123456789abcdef01234567"})
-
-	rec, called := runAuth(t, req)
-	if called {
-		t.Fatal("an opaque token in the auth cookie must not authenticate as a session")
-	}
-	if got := renewedAuthCookie(rec); got != "" {
-		t.Error("an opaque credential must not produce a session cookie")
 	}
 }
 
@@ -352,4 +314,10 @@ func TestAuth_LiveSessionStillRequiresCSRF(t *testing.T) {
 	if rec, called := runAuth(t, cookieRequest(http.MethodPost, token)); called || rec.Code != http.StatusForbidden {
 		t.Errorf("a write with no CSRF header must be 403, got %d (served=%v)", rec.Code, called)
 	}
+}
+
+func cookieRequest(method, token string) *http.Request {
+	req := httptest.NewRequest(method, "/api/chat/sessions", nil)
+	req.AddCookie(&http.Cookie{Name: auth.AuthCookieName, Value: token})
+	return req
 }

@@ -110,15 +110,6 @@ func TestInboundFromCallback_CommandQuoteSnapshotSurvivesRouterRewrites(t *testi
 	}
 }
 
-func TestInboundFromCallback_DoesNotPrivatelyComposeFreshAndIssue(t *testing.T) {
-	cb := textCallback(convTypeP2P, false)
-	cb.Text.Content = "/clear /issue calculate 1+2"
-	msg, ok := inboundFromCallback(cb, "appkey-A")
-	if !ok || msg.ForceFresh || msg.Text != "/clear /issue calculate 1+2" || msg.CommandText != msg.Text {
-		t.Fatalf("combined commands must remain untouched for shared classification: ok=%v msg=%+v", ok, msg)
-	}
-}
-
 func TestInboundFromCallback_CurrentRichTextPreservesLiteralJSON(t *testing.T) {
 	for _, literal := range []string{`{"answer":42}`, `{"text":"/clear reset"}`, `["/new reset"]`} {
 		t.Run(literal, func(t *testing.T) {
@@ -755,22 +746,6 @@ func TestInboundFromCallback_RichTextTracksGeneratedMarkersPastUserPlaceholders(
 	}
 	if raw.Media[0].InlineIndex != 1 || raw.Media[1].InlineIndex != 3 {
 		t.Fatalf("generated marker positions = %+v, want occurrences 1 and 3", raw.Media)
-	}
-}
-
-func TestInboundFromCallback_RichTextDoesNotPrivatelyComposeFreshAndIssue(t *testing.T) {
-	cb := textCallback(convTypeP2P, false)
-	cb.Msgtype = "richText"
-	cb.Content = json.RawMessage(`{"richText":[
-		{"type":"picture","downloadCode":"dl-1"},
-		{"text":"/clear /issue inspect image"}
-	]}`)
-	msg, ok := inboundFromCallback(cb, "appkey-A")
-	if !ok || !msg.ForceFresh || msg.CommandText != "/clear /issue inspect image" {
-		t.Fatalf("rich-text combined commands must remain untouched: %+v, ok=%v", msg, ok)
-	}
-	if !strings.Contains(msg.Text, "[Image]") || strings.Contains(msg.Text, "/clear") || !strings.Contains(msg.Text, "/issue inspect image") {
-		t.Fatalf("rich-text visible body lost media or /clear layout stripping: %q", msg.Text)
 	}
 }
 

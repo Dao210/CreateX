@@ -1,4 +1,4 @@
-import { cloneElement, forwardRef, useEffect, useRef, useImperativeHandle } from "react";
+import { forwardRef, useEffect, useRef, useImperativeHandle } from "react";
 import { beforeEach, describe, it, expect, vi } from "vitest";
 import { act, render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { I18nProvider } from "@auro/core/i18n/react";
@@ -184,33 +184,6 @@ vi.mock("../../editor", async () => ({
       />
     );
   }),
-}));
-
-vi.mock("../../projects/components/project-picker", () => ({
-  ProjectPicker: ({
-    projectId,
-    onUpdate,
-    triggerRender,
-    disabled,
-  }: {
-    projectId: string;
-    onUpdate: (updates: { project_id: string | null }) => void;
-    triggerRender: React.ReactElement<{
-      onClick?: () => void;
-      children?: React.ReactNode;
-      "data-project-picker-disabled"?: string;
-    }>;
-    disabled?: boolean;
-  }) =>
-    // Surface the `disabled` prop ChatInput passes so a test can assert the
-    // shared picker (and thus its keyboard clear control) is locked mid-send.
-    // The real keyboard-inertness of that control is covered against the real
-    // ProjectPicker in project-picker.test.tsx.
-    cloneElement(triggerRender, {
-      onClick: () => onUpdate({ project_id: null }),
-      children: projectId,
-      "data-project-picker-disabled": disabled ? "true" : "false",
-    }),
 }));
 
 // Mock chat store with an in-memory implementation that supports both

@@ -3,18 +3,6 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
-const { getAttachmentTextContentMock, resolveIssueIdentifierMock } = vi.hoisted(
-  () => ({
-    getAttachmentTextContentMock: vi.fn(),
-    resolveIssueIdentifierMock: vi.fn(),
-  }),
-);
-
-vi.mock("../issues/hooks", () => ({
-  useResolveIssueIdentifier: (identifier: string) =>
-    resolveIssueIdentifierMock(identifier),
-}));
-
 // i18next is not initialized in this suite, so `t()` would resolve every label
 // to "". Resolve against the real EN bundle instead — the editor tree only ever
 // uses the `editor` namespace — so tests can select controls by accessible name.
@@ -25,6 +13,8 @@ vi.mock("../i18n", async () => {
     useTimeAgo: () => "just now",
   };
 });
+
+const getAttachmentTextContentMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@auro/core/api", () => ({
   api: { getAttachmentTextContent: getAttachmentTextContentMock },
@@ -44,12 +34,6 @@ vi.mock("../navigation", () => ({
   useOptionalNavigation: () => ({ push: vi.fn(), openInNewTab: vi.fn() }),
   resolveClickIntent: () => "push",
   useAppOrigin: () => null,
-}));
-
-vi.mock("../issues/components/issue-mention-card", () => ({
-  IssueMentionCard: ({ issueId, fallbackLabel }: { issueId: string; fallbackLabel?: string }) => (
-    <span data-testid="issue-mention-card">{fallbackLabel ?? issueId}</span>
-  ),
 }));
 
 vi.mock("./extensions/image-view", () => ({
@@ -298,52 +282,6 @@ describe("ReadonlyContent highlight Markdown", () => {
   it("does not highlight across a blank line", () => {
     const { container } = render(<ReadonlyContent content={"==a\n\nb=="} />);
     expect(container.querySelector("mark")).toBeNull();
-  });
-});
-
-describe("ReadonlyContent issue mention Markdown", () => {
-  it("renders an issue mention inside a task list as an issue mention card", () => {
-    const { container, getByTestId } = render(
-      <ReadonlyContent content="- [ ] [MUL-123](mention://issue/issue-123)" />,
-    );
-
-    expect(container.querySelector('input[type="checkbox"]')).not.toBeNull();
-    expect(getByTestId("issue-mention-card").textContent).toBe("MUL-123");
-  });
-
-  it("autolinks a resolved bare identifier as an issue mention card", () => {
-    resolveIssueIdentifierMock.mockImplementation((id: string) =>
-      id === "MUL-7" ? { id: "issue-7", identifier: "MUL-7" } : null,
-    );
-
-    const { getByTestId } = render(
-      <ReadonlyContent content="See MUL-7 for context" />,
-    );
-
-    expect(getByTestId("issue-mention-card").textContent).toBe("MUL-7");
-    expect(resolveIssueIdentifierMock).toHaveBeenCalledWith("MUL-7");
-  });
-
-  it("leaves an unresolved bare identifier as plain text", () => {
-    resolveIssueIdentifierMock.mockReturnValue(null);
-
-    const { container, queryByTestId } = render(
-      <ReadonlyContent content="See MUL-999 for context" />,
-    );
-
-    expect(queryByTestId("issue-mention-card")).toBeNull();
-    expect(container.textContent).toContain("MUL-999");
-  });
-
-  it("does not autolink a bare identifier inside inline code", () => {
-    resolveIssueIdentifierMock.mockReturnValue(null);
-
-    const { queryByTestId } = render(
-      <ReadonlyContent content={"use `MUL-7` here"} />,
-    );
-
-    expect(resolveIssueIdentifierMock).not.toHaveBeenCalled();
-    expect(queryByTestId("issue-mention-card")).toBeNull();
   });
 });
 

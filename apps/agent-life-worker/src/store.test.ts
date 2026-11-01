@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { randomUUID } from "node:crypto";
-import { readFile, readdir } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import pg from "pg";
 import { describe, expect, it } from "vitest";
 import { LifeStore } from "./store.ts";
@@ -16,9 +16,9 @@ describe.skipIf(!databaseURL)("PostgreSQL world authority (isolated schema)", ()
     let pool = new pg.Pool(options);
     try {
       await pool.query("CREATE TABLE workspace (id uuid NOT NULL)");
-      await pool.query("CREATE TABLE inbox_item (id uuid)");
-      const migrations = new URL("../../../server/migrations/", import.meta.url);
-      for (const file of (await readdir(migrations)).filter((f) => /^(57[4-9]|58[0-4]|59[4-8])_.*\.up\.sql$/.test(f)).sort()) await pool.query(await readFile(new URL(file, migrations), "utf8"));
+      for (const table of ["inbox_item", "life_world", "life_agent", "life_resource", "life_action", "life_event", "world_inbox_event"]) {
+        await pool.query(`CREATE TABLE ${table} (LIKE public.${table} INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES)`);
+      }
       const workspaceId = randomUUID();
       await pool.query("INSERT INTO workspace VALUES($1)", [workspaceId]);
       const store = new LifeStore(pool);

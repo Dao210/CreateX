@@ -20,10 +20,6 @@ vi.mock("@auro/core/platform", () => ({
   getCurrentWsId: () => "ws-1",
 }));
 
-vi.mock("@auro/core/issue-statuses/hooks", () => ({
-  useIssueStatuses: () => ({ iconOf: () => null, colorOf: () => null }),
-}));
-
 vi.mock("@auro/core/api", () => ({
   api: {
     searchIssues: vi.fn().mockResolvedValue({ issues: [] }),

@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS channel_user_binding_installation_id_channel_user_id_key ON channel_user_binding (installation_id, channel_user_id);

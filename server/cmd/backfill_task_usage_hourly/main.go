@@ -49,9 +49,9 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/auro-ai/auro/server/internal/logger"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/auro-ai/auro/server/internal/logger"
 )
 
 func main() {

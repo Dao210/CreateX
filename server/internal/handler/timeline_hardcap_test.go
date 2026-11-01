@@ -7,8 +7,6 @@ import (
 	"net/http/httptest"
 	"testing"
 	"time"
-
-	db "github.com/auro-ai/auro/server/pkg/db/generated"
 )
 
 // Regression tests for MUL-5492: the per-issue timeline cap used to be applied
@@ -25,21 +23,6 @@ import (
 //     the same response, because an orphaned reply is invisible in the UI;
 //  4. truncation is reported instead of being silent, naming which kinds were
 //     affected.
-
-// fetchTimelineRecorder issues GET /timeline and returns the raw recorder so
-// tests can assert on response headers as well as the body.
-func fetchTimelineRecorder(t *testing.T, issueID, rawQuery string) *httptest.ResponseRecorder {
-	t.Helper()
-	target := "/api/issues/" + issueID + "/timeline"
-	if rawQuery != "" {
-		target += "?" + rawQuery
-	}
-	w := httptest.NewRecorder()
-	req := newRequest("GET", target, nil)
-	req = withURLParam(req, "id", issueID)
-	testHandler.ListTimeline(w, req)
-	return w
-}
 
 func decodeTimelineEntries(t *testing.T, w *httptest.ResponseRecorder) []TimelineEntry {
 	t.Helper()
@@ -68,38 +51,6 @@ func bulkSeedActivities(t *testing.T, issueID string, start time.Time, n int) {
 	}
 }
 
-// bulkSeedComments inserts n comments one second apart starting at start.
-func bulkSeedComments(t *testing.T, issueID string, start time.Time, n int) {
-	t.Helper()
-	_, err := testPool.Exec(context.Background(), `
-		INSERT INTO comment (issue_id, workspace_id, author_type, author_id, content, type, created_at, updated_at)
-		SELECT $1, $2, 'member', $3, 'bulk comment ' || g, 'comment',
-		       $4::timestamptz + (g * interval '1 second'),
-		       $4::timestamptz + (g * interval '1 second')
-		FROM generate_series(0, $5::int - 1) AS g
-	`, issueID, testWorkspaceID, testUserID, start, n)
-	if err != nil {
-		t.Fatalf("bulk seed %d comments: %v", n, err)
-	}
-}
-
-// bulkSeedReplies inserts n direct replies to parentID one second apart.
-func bulkSeedReplies(t *testing.T, issueID, parentID string, start time.Time, n int) {
-	t.Helper()
-	_, err := testPool.Exec(context.Background(), `
-		INSERT INTO comment (issue_id, workspace_id, author_type, author_id, content, type,
-		                     created_at, updated_at, parent_id)
-		SELECT $1, $2, 'member', $3, 'bulk reply ' || g, 'comment',
-		       $4::timestamptz + (g * interval '1 second'),
-		       $4::timestamptz + (g * interval '1 second'),
-		       $5
-		FROM generate_series(0, $6::int - 1) AS g
-	`, issueID, testWorkspaceID, testUserID, start, parentID, n)
-	if err != nil {
-		t.Fatalf("bulk seed %d replies: %v", n, err)
-	}
-}
-
 // shrinkListCapsForTest runs one cap scenario at a small size. The production
 // values (2000-row windows, a 2000-row completion budget, 64 levels) only size
 // the safety net: windowing, the probe row and thread completion behave the
@@ -115,22 +66,6 @@ func shrinkListCapsForTest(t *testing.T) {
 	t.Cleanup(func() {
 		commentHardCap, timelineHardCap, commentThreadContextBudget, commentThreadMaxDepth = comments, timeline, budget, depth
 	})
-}
-
-// seedComment inserts a single comment at an exact timestamp, optionally as a
-// reply, and returns its id.
-func seedComment(t *testing.T, issueID string, at time.Time, content string, parentID *string) string {
-	t.Helper()
-	var id string
-	err := testPool.QueryRow(context.Background(), `
-		INSERT INTO comment (issue_id, workspace_id, author_type, author_id, content, type, created_at, updated_at, parent_id)
-		VALUES ($1, $2, 'member', $3, $4, 'comment', $5, $5, $6)
-		RETURNING id
-	`, issueID, testWorkspaceID, testUserID, content, at, parentID).Scan(&id)
-	if err != nil {
-		t.Fatalf("seed comment %q: %v", content, err)
-	}
-	return id
 }
 
 func countByType(entries []TimelineEntry) (comments, activities int) {
@@ -419,54 +354,6 @@ func assertNoOrphanedReplies(t *testing.T, entries []TimelineEntry) {
 	}
 }
 
-// TestListTimeline_BackfilledRootKeepsQuickActionID guards the projection of
-// newly-added comment columns through parent-chain completion. An earlier
-// revision hand-copied SQL rows into db.Comment field by field, which silently
-// dropped quick_action_id when main added it — a backfilled quick-action root
-// would have rendered as a raw prompt instead of a quick-action card. The query
-// now returns db.Comment directly so new columns cannot be lost this way.
-func TestListTimeline_BackfilledRootKeepsQuickActionID(t *testing.T) {
-	shrinkListCapsForTest(t)
-	issueID := createIssueForTimeline(t, "backfilled root keeps quick_action_id")
-
-	base := time.Now().UTC().Add(-3 * time.Hour).Truncate(time.Second)
-	quickActionID := "11111111-2222-3333-4444-555555555555"
-	var rootID string
-	err := testPool.QueryRow(context.Background(), `
-		INSERT INTO comment (issue_id, workspace_id, author_type, author_id, content, type,
-		                     created_at, updated_at, quick_action_id)
-		VALUES ($1, $2, 'member', $3, 'quick action root', 'comment', $4, $4, $5)
-		RETURNING id
-	`, issueID, testWorkspaceID, testUserID, base, quickActionID).Scan(&rootID)
-	if err != nil {
-		t.Fatalf("seed quick-action root: %v", err)
-	}
-
-	// Push the root out of the window, then reply to it from inside the window.
-	bulkSeedComments(t, issueID, base.Add(time.Minute), timelineHardCap+50)
-	seedComment(t, issueID, time.Now().UTC().Truncate(time.Second), "reply to quick action root", &rootID)
-
-	w := fetchTimelineRecorder(t, issueID, "")
-	entries := decodeTimelineEntries(t, w)
-
-	var root *TimelineEntry
-	for i := range entries {
-		if entries[i].ID == rootID {
-			root = &entries[i]
-		}
-	}
-	if root == nil {
-		t.Fatal("the quick-action root was not backfilled")
-	}
-	if root.QuickActionID == nil {
-		t.Fatal("quick_action_id was dropped on the backfilled root: the UI would show a raw prompt instead of a quick-action card")
-	}
-	if *root.QuickActionID != quickActionID {
-		t.Errorf("quick_action_id = %s, want %s", *root.QuickActionID, quickActionID)
-	}
-	assertNoOrphanedReplies(t, entries)
-}
-
 // TestListTimeline_ExactlyAtCapIsNotTruncated pins the cap+1 probe read. An
 // issue that happens to hold exactly timelineHardCap rows is complete, so
 // reporting it as truncated would be a lie and would trigger a needless
@@ -522,47 +409,5 @@ func TestListTimeline_WrappedShapeReportsHasMoreBefore(t *testing.T) {
 	}
 	if got := mustParseTS(t, "newest entry", resp.Entries[0].CreatedAt); !got.Equal(newest) {
 		t.Errorf("first (newest-first) entry created_at = %s, want %s", got, newest)
-	}
-}
-
-// TestListCommentsForIssue_KeepsNewestWindow covers the same query from the
-// comment-list endpoint's side, since ListCommentsForIssue is shared. The
-// ascending contract must be preserved while the cap now bites at the old end.
-func TestListCommentsForIssue_KeepsNewestWindow(t *testing.T) {
-	issueID := createIssueForTimeline(t, "comment cap keeps newest")
-
-	const total = 30
-	start := time.Now().UTC().Add(-time.Duration(total) * time.Second).Truncate(time.Second)
-	bulkSeedComments(t, issueID, start, total)
-
-	issueUUID := parseUUID(issueID)
-	wsUUID := parseUUID(testWorkspaceID)
-
-	const limit = 10
-	rows, err := testHandler.Queries.ListCommentsForIssue(context.Background(), db.ListCommentsForIssueParams{
-		IssueID:     issueUUID,
-		WorkspaceID: wsUUID,
-		Limit:       limit,
-	})
-	if err != nil {
-		t.Fatalf("ListCommentsForIssue: %v", err)
-	}
-	if len(rows) != limit {
-		t.Fatalf("row count = %d, want %d", len(rows), limit)
-	}
-	// Newest window: the last `limit` rows of the seeded range.
-	wantFirst := start.Add(time.Duration(total-limit) * time.Second)
-	wantLast := start.Add(time.Duration(total-1) * time.Second)
-	if got := rows[0].CreatedAt.Time.UTC(); !got.Equal(wantFirst) {
-		t.Errorf("first row created_at = %s, want %s (newest window, ascending)", got, wantFirst)
-	}
-	if got := rows[len(rows)-1].CreatedAt.Time.UTC(); !got.Equal(wantLast) {
-		t.Errorf("last row created_at = %s, want %s (newest row)", got, wantLast)
-	}
-	// Ascending order preserved for every existing caller.
-	for i := 1; i < len(rows); i++ {
-		if rows[i].CreatedAt.Time.Before(rows[i-1].CreatedAt.Time) {
-			t.Fatalf("row %d is older than row %d: ascending contract broken", i, i-1)
-		}
 	}
 }

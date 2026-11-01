@@ -328,37 +328,6 @@ func TestCodexResumeRolloutPresent(t *testing.T) {
 	}
 }
 
-func TestPrepareCodexSessionsDir_LocalDirectoryUsesPerIssueStore(t *testing.T) {
-	t.Parallel()
-	root := t.TempDir()
-	codexHome := filepath.Join(root, "codex-home")
-	if err := os.MkdirAll(codexHome, 0o755); err != nil {
-		t.Fatalf("mkdir codex-home: %v", err)
-	}
-	sharedHome := filepath.Join(root, "shared")
-	// A machine with accumulated global history that must NOT be exposed to the task.
-	seedFakeRollout(t, filepath.Join(sharedHome, "sessions"), "2026", "07", "13", "other-a", 16)
-	seedFakeRollout(t, filepath.Join(sharedHome, "sessions"), "2026", "07", "12", "other-b", 16)
-
-	key := filepath.Join("agent-1", "issue-1")
-	if err := prepareCodexSessionsDir(codexHome, sharedHome, CodexHomeOptions{IsLocalDirectory: true, SessionStoreKey: key}, testLogger()); err != nil {
-		t.Fatalf("prepareCodexSessionsDir: %v", err)
-	}
-
-	// sessions/ links the per-issue store, not the shared ~/.codex/sessions.
-	sessions := filepath.Join(codexHome, "sessions")
-	assertSessionsLinkedToStore(t, sessions, codexSessionStoreDir(sharedHome, key))
-	// The store holds only this issue's history — the machine's global rollouts
-	// are invisible, so `initialize` never enumerates them (the MUL-4424 stall).
-	entries, _ := os.ReadDir(sessions)
-	if len(entries) != 0 {
-		t.Errorf("per-issue store must start empty, has %d entries (whole-history leak?)", len(entries))
-	}
-	if CodexResumeRolloutPresent(codexHome, "other-a") {
-		t.Error("machine-global history must not be visible to a local_directory task")
-	}
-}
-
 // With no stable per-issue key (e.g. a non-issue task), a local_directory task
 // must NOT collapse back to exposing the whole shared history — it falls back to
 // an empty local dir.

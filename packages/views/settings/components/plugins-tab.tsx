@@ -136,8 +136,8 @@ function scopeDescription(scope: string, t: Translate): string {
     return t(($) => $.plugins.scopes.net, { domain: scope.slice("net:".length) });
   }
   switch (scope) {
-    case "issues:read": return t(($) => $.plugins.scopes.issues_read);
-    case "issues:write": return t(($) => $.plugins.scopes.issues_write);
+    case "execution:read": return t(($) => $.plugins.scopes.issues_read);
+    case "execution:write": return t(($) => $.plugins.scopes.issues_write);
     case "comments:read": return t(($) => $.plugins.scopes.comments_read);
     case "comments:write": return t(($) => $.plugins.scopes.comments_write);
     case "tasks:read": return t(($) => $.plugins.scopes.tasks_read);

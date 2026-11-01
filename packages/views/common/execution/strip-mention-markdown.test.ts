@@ -15,12 +15,6 @@ describe("stripMentionMarkdown", () => {
     ).toBe("@Alice");
   });
 
-  it("strips issue mention (no @ prefix)", () => {
-    expect(
-      stripMentionMarkdown("[MUL-123](mention://issue/some-uuid)"),
-    ).toBe("MUL-123");
-  });
-
   it("handles escaped brackets in names", () => {
     expect(
       stripMentionMarkdown("[@David\\[TF\\]](mention://agent/id-123)"),

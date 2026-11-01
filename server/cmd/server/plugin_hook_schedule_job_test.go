@@ -14,8 +14,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/auro-ai/auro/server/internal/featureflags"
 	"github.com/auro-ai/auro/server/internal/scheduler"
 	"github.com/auro-ai/auro/server/internal/service"
@@ -23,6 +21,8 @@ import (
 	db "github.com/auro-ai/auro/server/pkg/db/generated"
 	"github.com/auro-ai/auro/server/pkg/featureflag"
 	"github.com/auro-ai/auro/server/pkg/plugincontract"
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type receivedScheduledHook struct {

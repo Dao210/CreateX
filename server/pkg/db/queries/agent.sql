@@ -282,8 +282,6 @@ RETURNING *;
 -- name: ListAgentTasks :many
 SELECT * FROM agent_task_queue
 WHERE agent_id = @agent_id
-  AND NOT (escalation_for_task_id IS NOT NULL AND started_at IS NULL
-           AND status IN ('deferred', 'cancelled'))
   AND (created_at, id) < (@before_created_at::timestamptz, @before_id::uuid)
 ORDER BY created_at DESC, id DESC
 LIMIT @page_limit;
@@ -997,8 +995,8 @@ ORDER BY atq.priority DESC, atq.created_at ASC;
 
 
 -- name: PromoteDueDeferredTasksForRuntime :many
-UPDATE agent_task_queue t SET status='queued' WHERE t.runtime_id=@runtime_id AND t.status='deferred' AND t.fire_at<=now()
-AND EXISTS(SELECT 1 FROM agent_runtime r WHERE r.id=t.runtime_id AND r.status='online' AND COALESCE(r.last_seen_at,r.updated_at)>=now()-make_interval(secs=>@runtime_stale_secs::double precision)) RETURNING t.*;
+UPDATE agent_task_queue t SET status='queued' WHERE t.runtime_id= @runtime_id AND t.status='deferred' AND t.fire_at<=now()
+AND EXISTS(SELECT 1 FROM agent_runtime r WHERE r.id=t.runtime_id AND r.status='online' AND COALESCE(r.last_seen_at,r.updated_at)>=now()-make_interval(secs => @runtime_stale_secs::double precision)) RETURNING t.*;
 
 
 -- name: ListQueuedClaimCandidatesByRuntimes :many
@@ -1024,12 +1022,12 @@ ORDER BY atq.priority DESC, atq.created_at ASC;
 
 -- name: NextDeferredTaskFireAtForRuntimes :one
 SELECT MIN(fire_at)::timestamptz FROM agent_task_queue t WHERE t.runtime_id=ANY(@runtime_ids::uuid[]) AND t.status='deferred'
-AND EXISTS(SELECT 1 FROM agent_runtime r WHERE r.id=t.runtime_id AND r.status='online' AND COALESCE(r.last_seen_at,r.updated_at)>=now()-make_interval(secs=>@runtime_stale_secs::double precision));
+AND EXISTS(SELECT 1 FROM agent_runtime r WHERE r.id=t.runtime_id AND r.status='online' AND COALESCE(r.last_seen_at,r.updated_at)>=now()-make_interval(secs => @runtime_stale_secs::double precision));
 
 
 -- name: PromoteDueDeferredTasksForRuntimes :many
 UPDATE agent_task_queue t SET status='queued' WHERE t.runtime_id=ANY(@runtime_ids::uuid[]) AND t.status='deferred' AND t.fire_at<=now()
-AND EXISTS(SELECT 1 FROM agent_runtime r WHERE r.id=t.runtime_id AND r.status='online' AND COALESCE(r.last_seen_at,r.updated_at)>=now()-make_interval(secs=>@runtime_stale_secs::double precision)) RETURNING t.*;
+AND EXISTS(SELECT 1 FROM agent_runtime r WHERE r.id=t.runtime_id AND r.status='online' AND COALESCE(r.last_seen_at,r.updated_at)>=now()-make_interval(secs => @runtime_stale_secs::double precision)) RETURNING t.*;
 
 
 -- name: GetWorkspaceAgentRunCounts :many

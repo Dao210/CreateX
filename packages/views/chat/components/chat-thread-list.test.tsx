@@ -3,7 +3,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { I18nProvider } from "@auro/core/i18n/react";
 import type { Agent, ChatSession } from "@auro/core/types";
 import enChat from "../../locales/en/chat.json";
-import enIssues from "../../locales/en/issues.json";
+import enIssues from "../../locales/en/execution.json";
 
 // --- Mocks ------------------------------------------------------------------
 // The list no longer owns the archive-advance behavior — the parent (ChatPage)

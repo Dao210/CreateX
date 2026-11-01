@@ -725,50 +725,6 @@ func TestAutopilotQuotaObserveToEnforceAndOffFinalization(t *testing.T) {
 	}
 }
 
-func TestAutopilotQuotaConsumedCreateIssueCannotBeRefunded(t *testing.T) {
-	fixture := newAutopilotQuotaFixture(t, entitlement.ActionEnforce, 2)
-	ctx := context.Background()
-
-	cancelled, _, err := fixture.service.createAutopilotRunWithQuota(
-		ctx, fixture.workspaceID, "api", "consumed-then-cancelled", fixture.createRunArgs,
-	)
-	if err != nil {
-		t.Fatalf("admit cancelled run: %v", err)
-	}
-	if _, err := settleAutopilotQuota(ctx, fixture.queries, cancelled.QuotaReservationID, true); err != nil {
-		t.Fatalf("consume cancelled run: %v", err)
-	}
-	if _, err := fixture.service.failAutopilotRun(ctx, db.UpdateAutopilotRunFailedParams{
-		ID: cancelled.ID, FailureReason: pgtype.Text{String: "issue cancelled", Valid: true},
-	}); err != nil {
-		t.Fatalf("fail consumed run: %v", err)
-	}
-
-	deleted, _, err := fixture.service.createAutopilotRunWithQuota(
-		ctx, fixture.workspaceID, "api", "consumed-then-deleted", fixture.createRunArgs,
-	)
-	if err != nil {
-		t.Fatalf("admit deleted run: %v", err)
-	}
-	deleted, err = fixture.queries.UpdateAutopilotRunIssueCreated(ctx, db.UpdateAutopilotRunIssueCreatedParams{
-		ID: deleted.ID, IssueID: fixture.issueID,
-	})
-	if err != nil {
-		t.Fatalf("link issue-created run: %v", err)
-	}
-	if _, err := settleAutopilotQuota(ctx, fixture.queries, deleted.QuotaReservationID, true); err != nil {
-		t.Fatalf("consume deleted run: %v", err)
-	}
-	if err := fixture.service.FailAutopilotRunsByIssue(ctx, fixture.issueID); err != nil {
-		t.Fatalf("fail runs before issue deletion: %v", err)
-	}
-
-	usage, err := fixture.service.AutopilotQuotaUsage(ctx, fixture.workspaceID)
-	if err != nil || *usage.Used != 2 || *usage.Reserved != 0 {
-		t.Fatalf("usage after cancellation/deletion = %+v, %v; want two consumed units", usage, err)
-	}
-}
-
 func TestAutopilotQuotaTerminalUpdateNeedsNoTransactionStarter(t *testing.T) {
 	fixture := newAutopilotQuotaFixture(t, entitlement.ActionOff, 1)
 	ctx := context.Background()

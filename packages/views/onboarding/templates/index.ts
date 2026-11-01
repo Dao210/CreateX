@@ -4,9 +4,9 @@ import {
 } from "@auro/core/i18n";
 
 export {
-  INSTALL_RUNTIME_ISSUE_TITLE,
-  INSTALL_RUNTIME_ISSUE_BODY,
-} from "./install-runtime-issue";
+  INSTALL_RUNTIME_GUIDE_TITLE,
+  INSTALL_RUNTIME_GUIDE_BODY,
+} from "./install-runtime-guide";
 export {
   getMikaOnboarding,
   type MikaContentLang,

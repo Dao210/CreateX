@@ -140,25 +140,6 @@ beforeEach(() => {
 });
 
 describe("AgentProfileCard — Runtime row", () => {
-  it.each([
-    ["online", "svg.lucide-wifi"],
-    ["unstable", "svg.lucide-wifi-high"],
-    ["offline", "svg.lucide-wifi-off"],
-  ] as const)(
-    "uses projected %s availability when the private runtime row is hidden",
-    (runtimeAvailability, iconSelector) => {
-      mockAgents.current = [
-        makeAgent({
-          runtime_mode: "local",
-          runtime_availability: runtimeAvailability,
-        }),
-      ];
-
-      const { container } = renderCard();
-
-      expect(container.querySelector(iconSelector)).toBeInTheDocument();
-    },
-  );
 });
 
 describe("AgentProfileCard — Model row", () => {

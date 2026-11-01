@@ -14,10 +14,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { act, render } from "@testing-library/react";
 import { configStore } from "@auro/core/config";
 
-vi.mock("../issues/hooks", () => ({
-  useResolveIssueIdentifier: () => null,
-}));
-
 vi.mock("../i18n", async () => {
   const editor = (await import("../locales/en/editor.json")).default;
   return {
@@ -50,14 +46,6 @@ vi.mock("../navigation", () => ({
   AppLink: ({ href, children }: { href: string; children: React.ReactNode }) => (
     <a href={href}>{children}</a>
   ),
-}));
-
-vi.mock("../issues/components/issue-mention-card", () => ({
-  IssueMentionCard: ({ issueId }: { issueId: string }) => <span>{issueId}</span>,
-}));
-
-vi.mock("../projects/components/project-chip", () => ({
-  ProjectChip: ({ projectId }: { projectId: string }) => <span>{projectId}</span>,
 }));
 
 vi.mock("../editor/link-hover-card", () => ({

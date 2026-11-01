@@ -8,14 +8,12 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"sort"
 	"strings"
 	"time"
 
 	"github.com/auro-ai/auro/server/internal/daemon/execenv"
 	"github.com/auro-ai/auro/server/internal/daemon/processtree"
 	"github.com/auro-ai/auro/server/internal/daemon/repocache"
-	"github.com/auro-ai/auro/server/internal/issuestatus"
 )
 
 // reposDirName is the bare-repo cache directory inside the workspaces root.
@@ -202,7 +200,6 @@ func (d *Daemon) gcWorkspace(ctx context.Context, wsDir string, stats *gcStats) 
 	}
 
 	cleanedHere := 0
-	issueCandidatesByWorkspace := make(map[string][]issueGCCandidate)
 	for _, entry := range taskEntries {
 		if ctx.Err() != nil {
 			return
@@ -215,26 +212,8 @@ func (d *Daemon) gcWorkspace(ctx context.Context, wsDir string, stats *gcStats) 
 			stats.skipped++
 			continue
 		}
-		meta, metaErr := execenv.ReadGCMeta(taskDir)
-		if metaErr == nil && meta.Kind == execenv.GCKindIssue && strings.TrimSpace(meta.IssueID) != "" {
-			if workspaceID := strings.TrimSpace(meta.WorkspaceID); workspaceID != "" {
-				issueCandidatesByWorkspace[workspaceID] = append(
-					issueCandidatesByWorkspace[workspaceID],
-					issueGCCandidate{taskDir: taskDir, meta: meta},
-				)
-				continue
-			}
-		}
 		action := d.shouldCleanTaskDir(ctx, taskDir)
 		cleanedHere += d.applyGCAction(taskDir, action, stats)
-	}
-	workspaceIDs := make([]string, 0, len(issueCandidatesByWorkspace))
-	for workspaceID := range issueCandidatesByWorkspace {
-		workspaceIDs = append(workspaceIDs, workspaceID)
-	}
-	sort.Strings(workspaceIDs)
-	for _, workspaceID := range workspaceIDs {
-		cleanedHere += d.gcWorkspaceIssues(ctx, workspaceID, issueCandidatesByWorkspace[workspaceID], stats)
 	}
 
 	// Remove the workspace directory itself if it's now empty.
@@ -251,70 +230,6 @@ const issueGCBatchSize = 500
 type issueGCCandidate struct {
 	taskDir string
 	meta    *execenv.GCMeta
-}
-
-// gcWorkspaceIssues resolves all issue-backed task dirs with a bounded number
-// of workspace-level requests. Multiple task dirs for the same issue share one
-// result. The client transparently falls back to the legacy per-issue endpoint
-// when it is connected to an older server.
-func (d *Daemon) gcWorkspaceIssues(ctx context.Context, workspaceID string, candidates []issueGCCandidate, stats *gcStats) int {
-	if len(candidates) == 0 {
-		return 0
-	}
-
-	issueIDs := make([]string, 0, len(candidates))
-	seen := make(map[string]struct{}, len(candidates))
-	for _, candidate := range candidates {
-		issueID := strings.TrimSpace(candidate.meta.IssueID)
-		if _, ok := seen[issueID]; ok {
-			continue
-		}
-		seen[issueID] = struct{}{}
-		issueIDs = append(issueIDs, issueID)
-	}
-
-	results := make(map[string]IssueGCCheckResult, len(issueIDs))
-	for start := 0; start < len(issueIDs); start += issueGCBatchSize {
-		if ctx.Err() != nil {
-			break
-		}
-		end := min(start+issueGCBatchSize, len(issueIDs))
-		chunkResults, err := d.client.GetIssueGCChecks(ctx, workspaceID, issueIDs[start:end])
-		if err != nil {
-			d.logger.Warn("gc: batch issue check failed",
-				"workspace", workspaceID,
-				"count", end-start,
-				"error", err,
-			)
-			continue
-		}
-		for issueID, result := range chunkResults {
-			results[issueID] = result
-		}
-	}
-
-	cleaned := 0
-	for i, candidate := range candidates {
-		if ctx.Err() != nil {
-			stats.skipped += len(candidates) - i
-			break
-		}
-		issueID := strings.TrimSpace(candidate.meta.IssueID)
-		result, ok := results[issueID]
-		if !ok || result.Err != nil {
-			// No usable answer about the parent issue this cycle, so the task
-			// data stays. The regenerable Codex cache is still fair game —
-			// see applyManagedArtifactFallback.
-			action := d.applyManagedArtifactFallback(candidate.taskDir, candidate.meta, gcActionSkip)
-			cleaned += d.applyGCAction(candidate.taskDir, action, stats)
-			continue
-		}
-		action := d.gcDecisionIssueResult(candidate.taskDir, candidate.meta, result)
-		action = d.applyLocalDirectoryGCOverride(candidate.meta, action)
-		action = d.applyManagedArtifactFallback(candidate.taskDir, candidate.meta, action)
-		cleaned += d.applyGCAction(candidate.taskDir, action, stats)
-	}
-	return cleaned
 }
 
 // applyGCAction performs one decision and updates cycle stats. Each mutation
@@ -513,14 +428,10 @@ func (d *Daemon) applyLocalDirectoryGCOverride(meta *execenv.GCMeta, action gcAc
 // the result.
 func (d *Daemon) shouldCleanTaskDirForKind(ctx context.Context, taskDir string, meta *execenv.GCMeta) gcAction {
 	switch meta.Kind {
-	case execenv.GCKindIssue:
-		return d.gcDecisionIssue(ctx, taskDir, meta)
 	case execenv.GCKindChat:
 		return d.gcDecisionChat(ctx, taskDir, meta)
 	case execenv.GCKindAutopilotRun:
 		return d.gcDecisionAutopilotRun(ctx, taskDir, meta)
-	case execenv.GCKindQuickCreate:
-		return d.gcDecisionQuickCreate(ctx, taskDir, meta)
 	default:
 		// Unknown kind: fall back to mtime-based orphan cleanup so a future
 		// daemon writing a kind we don't recognize doesn't get insta-wiped.
@@ -550,148 +461,6 @@ func (d *Daemon) orphanByMTime(taskDir, reason string) gcAction {
 func isAccessNotFound(err error) bool {
 	var reqErr *requestError
 	return errors.As(err, &reqErr) && reqErr.StatusCode == http.StatusNotFound
-}
-
-func (d *Daemon) gcDecisionIssue(ctx context.Context, taskDir string, meta *execenv.GCMeta) gcAction {
-	if strings.TrimSpace(meta.IssueID) == "" {
-		return d.orphanByMTime(taskDir, "empty issue id")
-	}
-
-	status, err := d.client.GetIssueGCCheck(ctx, meta.IssueID)
-	if err != nil {
-		if isAccessNotFound(err) {
-			// 404 is ambiguous: server returns it for both "issue deleted"
-			// and "daemon token has no access to the workspace". Fall back
-			// to the mtime-gated orphan cleanup so a scoped-down token
-			// can't instantly wipe dirs whose issues are still live.
-			return d.orphanByMTime(taskDir, "issue not accessible")
-		}
-		return gcActionSkip
-	}
-
-	return d.gcDecisionIssueResult(taskDir, meta, IssueGCCheckResult{
-		ID:        meta.IssueID,
-		Found:     true,
-		Status:    status.Status,
-		Category:  status.Category,
-		UpdatedAt: status.UpdatedAt,
-	})
-}
-
-func (d *Daemon) gcDecisionIssueResult(taskDir string, meta *execenv.GCMeta, result IssueGCCheckResult) gcAction {
-	if !result.Found {
-		return d.orphanByMTime(taskDir, "issue not accessible")
-	}
-
-	terminal, recognized := issueGCLifecycle(result)
-
-	if terminal && time.Since(result.UpdatedAt) > d.cfg.GCTTL {
-		d.logger.Info("gc: eligible for cleanup",
-			"dir", filepath.Base(taskDir),
-			"kind", "issue",
-			"issue", meta.IssueID,
-			"status", result.Status,
-			"updated_at", result.UpdatedAt.Format(time.RFC3339),
-		)
-		return gcActionClean
-	}
-
-	// Operators may opt into a hard retention bound for completed issue-task
-	// environments even while the parent issue stays open. A successful parent
-	// lookup with a recognized status is intentionally required: transient
-	// network/auth failures and response drift keep data rather than turning an
-	// unavailable or malformed status into a deletion signal.
-	// The active-root guard and reservation protect concurrent reuse. User-owned
-	// local_directory envs stay on the existing artifact-only policy so a shorter
-	// completed-task TTL cannot make artifact cleanup happen early.
-	if d.cfg.GCCompletedTaskTTL > 0 &&
-		!meta.LocalDirectory &&
-		!meta.CompletedAt.IsZero() &&
-		recognized &&
-		time.Since(meta.CompletedAt) > d.cfg.GCCompletedTaskTTL {
-		d.logger.Info("gc: completed task eligible for full cleanup",
-			"dir", filepath.Base(taskDir),
-			"kind", "issue",
-			"issue", meta.IssueID,
-			"status", result.Status,
-			"completed_at", meta.CompletedAt.Format(time.RFC3339),
-			"completed_task_ttl", d.cfg.GCCompletedTaskTTL,
-		)
-		return gcActionClean
-	}
-
-	if d.cfg.GCArtifactTTL > 0 && !meta.CompletedAt.IsZero() && time.Since(meta.CompletedAt) > d.cfg.GCArtifactTTL {
-		d.logger.Info("gc: eligible for artifact cleanup",
-			"dir", filepath.Base(taskDir),
-			"kind", "issue",
-			"issue", meta.IssueID,
-			"status", result.Status,
-			"completed_at", meta.CompletedAt.Format(time.RFC3339),
-		)
-		return gcActionCleanArtifacts
-	}
-
-	// Old metadata may not have completed_at. Keep that case conservative:
-	// after the metadata file itself has been idle for the longer orphan TTL,
-	// reclaim only the exact daemon-managed cache. WriteGCMeta replaces this
-	// file after every completed task, so a recent reuse refreshes the signal
-	// even when activity below taskDir leaves the root directory mtime stale.
-	if d.cfg.GCArtifactTTL > 0 && meta.CompletedAt.IsZero() {
-		if age, ok := gcMetaFileAge(taskDir); ok && age > d.cfg.GCOrphanTTL {
-			d.logger.Info("gc: legacy task eligible for managed artifact cleanup",
-				"dir", filepath.Base(taskDir),
-				"kind", "issue",
-				"issue", meta.IssueID,
-				"status", result.Status,
-				"age", age.Round(time.Hour),
-			)
-			return gcActionCleanManagedArtifacts
-		}
-	}
-
-	return gcActionSkip
-}
-
-// issueGCLifecycle answers the only two questions GC asks about a parent issue:
-// is it terminal, and was the answer well-formed? Everything else about a
-// status — parked, in review, blocked — is execution policy the daemon has no
-// business reading.
-//
-// `category` is the real answer and wins whenever it is one of the four: those
-// values cover a workspace's custom statuses too, so a `closed`-category custom
-// status is terminal here without this binary knowing the key exists.
-//
-// A missing or unrecognized category — a server predating MUL-7364, a
-// malformed response, a lifecycle value newer than this daemon — falls back to
-// the legacy seven-value `status` enum, which the server keeps populated for
-// exactly this reason and which fails closed on its own. Full cleanup is
-// irreversible, so a lookup that did not really answer must not read as one.
-func issueGCLifecycle(result IssueGCCheckResult) (terminal, recognized bool) {
-	if issuestatus.IsCategory(result.Category) {
-		return result.Category == issuestatus.CategoryDone || result.Category == issuestatus.CategoryClosed, true
-	}
-	return result.Status == issuestatus.Done || result.Status == issuestatus.Cancelled,
-		isKnownIssueStatus(result.Status)
-}
-
-// isKnownIssueStatus is the pre-MUL-7364 fallback vocabulary: the seven
-// built-in status keys, which is all the `status` field of a gc-check response
-// may ever contain.
-//
-// Do not teach it about custom statuses or about the four lifecycle categories.
-// An installed daemon has no catalog to resolve a custom key against, so the
-// server projects every status back onto these seven for this field
-// (issueGCWire in handler/daemon.go) precisely so daemons predating custom
-// statuses keep making correct decisions against an upgraded server. A daemon
-// that wants the lifecycle reads `category` instead — see issueGCLifecycle.
-// Pinned by TestIssueGCChecksReportWireStatusNotRawCustomStatus.
-func isKnownIssueStatus(status string) bool {
-	switch status {
-	case "backlog", "todo", "in_progress", "in_review", "done", "blocked", "cancelled":
-		return true
-	default:
-		return false
-	}
 }
 
 func gcMetaFileAge(taskDir string) (time.Duration, bool) {
@@ -813,40 +582,6 @@ func isAutopilotRunTerminal(status string) bool {
 	default:
 		return false
 	}
-}
-
-func (d *Daemon) gcDecisionQuickCreate(ctx context.Context, taskDir string, meta *execenv.GCMeta) gcAction {
-	if strings.TrimSpace(meta.TaskID) == "" {
-		return d.orphanByMTime(taskDir, "empty task id")
-	}
-
-	status, err := d.client.GetTaskGCCheck(ctx, meta.TaskID)
-	if err != nil {
-		if isAccessNotFound(err) {
-			// Task row was hard-deleted, or token can't see it. Either way,
-			// fall back to mtime-gated orphan to stay safe across scoped
-			// tokens — same reasoning as the issue path.
-			return d.orphanByMTime(taskDir, "task not accessible")
-		}
-		return gcActionSkip
-	}
-
-	// Quick-create workdirs are not reused by the issue task that
-	// LinkTaskToIssue eventually attaches — that issue gets its own
-	// envRoot. So as soon as the quick-create task itself reaches a
-	// terminal state we can reclaim the directory immediately, without
-	// waiting for GCTTL. If the user wants to revisit, the linked issue
-	// has the agent's output already.
-	if isAgentTaskTerminal(status.Status) {
-		d.logger.Info("gc: eligible for cleanup",
-			"dir", filepath.Base(taskDir),
-			"kind", "quick_create",
-			"task", meta.TaskID,
-			"status", status.Status,
-		)
-		return gcActionClean
-	}
-	return gcActionSkip
 }
 
 // isAgentTaskTerminal reports whether a value of agent_task_queue.status

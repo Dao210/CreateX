@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS channel_chat_session_binding_chat_session_id_key ON channel_chat_session_binding (chat_session_id);

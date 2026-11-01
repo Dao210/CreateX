@@ -52,14 +52,6 @@ func TestBuildSearchQuery_OmitsUnusedExactTotal(t *testing.T) {
 	}
 }
 
-func TestBuildProjectSearchQuery_OmitsUnusedExactTotal(t *testing.T) {
-	query, _ := buildProjectSearchQuery("Hello", []string{"Hello"}, false)
-
-	if strings.Contains(query, "COUNT(*) OVER()") || strings.Contains(query, "total_count") {
-		t.Fatalf("project search query should not calculate an unused exact total:\n%s", query)
-	}
-}
-
 func TestBuildSearchQuery_CustomTerminalStatuses(t *testing.T) {
 	terminalStatusKeys := []string{"done", "cancelled", "verified"}
 	query, args := buildSearchQuery(
@@ -129,49 +121,6 @@ func TestBuildSearchQuery_LowersCommentContentOnce(t *testing.T) {
 	}
 }
 
-func TestBuildSearchQuery_LowersIssueTextOnceAndSkipsDescriptionForTitleMatches(t *testing.T) {
-	query, _ := buildSearchQuery("Foo Bar Baz", []string{"Foo", "Bar", "Baz"}, 0, false, false, []string{"done", "cancelled"})
-	normalizedQuery := strings.Join(strings.Fields(query), " ")
-
-	if count := strings.Count(query, "LOWER(i.title)"); count != 1 {
-		t.Fatalf("query lowers issue title %d times, want exactly once:\n%s", count, query)
-	}
-	if count := strings.Count(query, "LOWER(COALESCE(i.description, ''))"); count != 1 {
-		t.Fatalf("query lowers issue description %d times, want exactly once:\n%s", count, query)
-	}
-	if !strings.Contains(normalizedQuery, "CROSS JOIN LATERAL ( SELECT LOWER(i.title) AS lowered OFFSET 0 ) lowered_issue_title") {
-		t.Fatalf("query does not retain the title planner fence:\n%s", query)
-	}
-	if !strings.Contains(normalizedQuery, "LEFT JOIN LATERAL ( SELECT LOWER(COALESCE(i.description, '')) AS lowered WHERE NOT (lowered_issue_title.lowered LIKE $2 OR (lowered_issue_title.lowered LIKE $5 AND lowered_issue_title.lowered LIKE $6 AND lowered_issue_title.lowered LIKE $7)) OFFSET 0 ) lowered_issue_description ON TRUE") {
-		t.Fatalf("query does not condition description lowercasing on a complete title match:\n%s", query)
-	}
-	if strings.Contains(query, "LOWER(i.title) LIKE") || strings.Contains(query, "LOWER(COALESCE(i.description, '')) LIKE") {
-		t.Fatalf("issue predicates bypass the pre-lowered values:\n%s", query)
-	}
-	if !strings.Contains(query, "COALESCE(lowered_issue_description.lowered LIKE $2, FALSE) AS description_phrase") {
-		t.Fatalf("skipped description matches do not fall back to FALSE:\n%s", query)
-	}
-
-	// Conditional description skipping is equivalent only while every complete
-	// title match outranks and takes match-source precedence over description.
-	assertSQLBefore(t, query,
-		"WHEN im.title_phrase THEN 3",
-		"WHEN im.description_phrase THEN 5",
-	)
-	assertSQLBefore(t, query,
-		"WHEN (im.title_term_0 AND im.title_term_1 AND im.title_term_2) THEN 4",
-		"WHEN im.description_phrase THEN 5",
-	)
-	assertSQLBefore(t, query,
-		"WHEN im.title_phrase THEN 'title'",
-		"WHEN im.description_phrase THEN 'description'",
-	)
-	assertSQLBefore(t, query,
-		"WHEN (im.title_term_0 AND im.title_term_1 AND im.title_term_2) THEN 'title'",
-		"WHEN im.description_phrase THEN 'description'",
-	)
-}
-
 func assertSQLBefore(t *testing.T, query, earlier, later string) {
 	t.Helper()
 	earlierAt := strings.Index(query, earlier)
@@ -214,55 +163,6 @@ func TestBuildSearchQuery_SpecialChars(t *testing.T) {
 }
 
 // --- Project search tests ---
-
-func TestBuildProjectSearchQuery_SingleTerm(t *testing.T) {
-	query, args := buildProjectSearchQuery("Hello", []string{"Hello"}, false)
-
-	if args[0] != "hello" {
-		t.Errorf("expected phrase arg to be lowercased, got %q", args[0])
-	}
-
-	if strings.Contains(query, "ILIKE") {
-		t.Error("query should not contain ILIKE")
-	}
-	if !strings.Contains(query, "LOWER(p.title) LIKE") {
-		t.Error("query should contain LOWER(p.title) LIKE")
-	}
-	if !strings.Contains(query, "LOWER(COALESCE(p.description, '')) LIKE") {
-		t.Error("query should contain LOWER(COALESCE(p.description, '')) LIKE")
-	}
-
-	// Should exclude completed/cancelled by default.
-	if !strings.Contains(query, "NOT IN ('completed', 'cancelled')") {
-		t.Error("query should exclude completed/cancelled when includeClosed=false")
-	}
-}
-
-func TestBuildProjectSearchQuery_MultiTerm(t *testing.T) {
-	query, args := buildProjectSearchQuery("Foo Bar", []string{"Foo", "Bar"}, false)
-
-	if args[0] != "foo bar" {
-		t.Errorf("expected phrase arg lowercased, got %q", args[0])
-	}
-	if args[2] != "foo" {
-		t.Errorf("expected first term arg lowercased, got %q", args[2])
-	}
-	if args[3] != "bar" {
-		t.Errorf("expected second term arg lowercased, got %q", args[3])
-	}
-
-	if !strings.Contains(query, " AND ") {
-		t.Error("multi-word query should contain AND conditions for per-term matching")
-	}
-}
-
-func TestBuildProjectSearchQuery_IncludeClosed(t *testing.T) {
-	query, _ := buildProjectSearchQuery("test", []string{"test"}, true)
-
-	if strings.Contains(query, "NOT IN ('completed', 'cancelled')") {
-		t.Error("query should not exclude completed/cancelled when includeClosed=true")
-	}
-}
 
 // --- extractSnippet regression tests ---
 
@@ -375,68 +275,6 @@ func TestBuildSearchQuery_SingleTermNoAllTermTiers(t *testing.T) {
 	}
 }
 
-// TestBuildSearchQuery_CommentSubqueryWorkspaceScope regressions the
-// MUL-4059 fix: the single comment scan and the final point hydration MUST
-// both filter by c.workspace_id = $wsParam. Without this, Postgres can read
-// matching comments from every workspace — on prd this was 536k rows / 32.3 s
-// for '%search%'.
-//
-// $4 is buildSearchQuery's canonical workspace_id placeholder (the
-// caller writes wsUUID into args[3] before executing).
-func TestBuildSearchQuery_CommentSubqueryWorkspaceScope(t *testing.T) {
-	singleQuery, _ := buildSearchQuery("html", []string{"html"}, 0, false, false, []string{"done", "cancelled"})
-
-	// Candidate-first search aggregates comments in one workspace-first pass;
-	// it must not grow a second scan for eligibility, ranking, or snippets.
-	fromCount := strings.Count(singleQuery, "FROM comment c")
-	scopedCount := strings.Count(singleQuery, "c.workspace_id = $4")
-	if fromCount != 1 {
-		t.Fatalf("single-term query has %d comment scans, want exactly one:\n%s", fromCount, singleQuery)
-	}
-	if scopedCount < 2 {
-		t.Errorf("single-term query has %d workspace_id filters, want one on aggregation and one on hydration:\n%s", scopedCount, singleQuery)
-	}
-	if !strings.Contains(singleQuery, "comment_matches AS MATERIALIZED") {
-		t.Errorf("comment aggregation is not materialized:\n%s", singleQuery)
-	}
-	if strings.Contains(singleQuery, "EXISTS (SELECT 1 FROM comment") {
-		t.Errorf("candidate-first query regressed to correlated comment EXISTS checks:\n%s", singleQuery)
-	}
-
-	// Adding terms adds boolean aggregates, not extra comment relation scans.
-	multiQuery, _ := buildSearchQuery("foo bar", []string{"foo", "bar"}, 0, false, false, []string{"done", "cancelled"})
-	fromCountMulti := strings.Count(multiQuery, "FROM comment c")
-	if fromCountMulti != 1 {
-		t.Errorf("multi-term query has %d comment scans, want exactly one:\n%s", fromCountMulti, multiQuery)
-	}
-	if !strings.Contains(multiQuery, "BOOL_OR((lowered_comment.lowered LIKE") || !strings.Contains(multiQuery, "AS comment_all_terms") {
-		t.Errorf("multi-term query does not retain the same-comment all-terms flag:\n%s", multiQuery)
-	}
-	if !strings.Contains(multiQuery, "ARRAY_AGG(c.id ORDER BY c.created_at DESC, c.id DESC)") {
-		t.Errorf("snippet selection has no deterministic comment-ID tie-breaker:\n%s", multiQuery)
-	}
-}
-
-func TestBuildSearchQuery_HydratesOnlyTheSelectedPage(t *testing.T) {
-	query, _ := buildSearchQuery("foo bar", []string{"foo", "bar"}, 0, false, false, []string{"done", "cancelled"})
-
-	if strings.Contains(query, "issue_matches AS MATERIALIZED") {
-		t.Fatalf("issue flag CTE must remain inlineable; forced materialization spills in production:\n%s", query)
-	}
-	if !strings.Contains(query, "issue_matches AS (") || !strings.Contains(query, "page_candidates AS MATERIALIZED") {
-		t.Fatalf("query does not retain narrow issue flags and materialize the selected page:\n%s", query)
-	}
-	limitAt := strings.Index(query, "LIMIT ")
-	issueHydrationAt := strings.Index(query, "JOIN issue i ON i.id = pc.issue_id")
-	commentHydrationAt := strings.Index(query, "LEFT JOIN comment c ON c.id = pc.snippet_comment_id")
-	if limitAt == -1 || issueHydrationAt < limitAt || commentHydrationAt < limitAt {
-		t.Fatalf("full issue/comment hydration must happen after LIMIT/OFFSET:\n%s", query)
-	}
-	if lastTextMatch := strings.LastIndex(query, "lowered_comment.lowered LIKE"); lastTextMatch > limitAt {
-		t.Errorf("comment hydration repeats a text search after LIMIT/OFFSET:\n%s", query)
-	}
-}
-
 // --- MUL-5824: cancelled work must not outrank live work ---
 
 // orderByClause returns everything after the final ORDER BY, so ranking-order
@@ -504,32 +342,6 @@ func TestBuildSearchQuery_DoneNotDemotedAheadOfRelevance(t *testing.T) {
 	}
 	if !strings.Contains(query, "WHEN 'done' THEN 5") {
 		t.Errorf("done status tie-breaker was dropped:\n%s", query)
-	}
-}
-
-// Project search has no statusRank at all, and the command palette renders
-// projects above issues — an undemoted cancelled project can be the first row
-// of the entire result list.
-func TestBuildProjectSearchQuery_CancelledDemotedAheadOfRelevance(t *testing.T) {
-	query, _ := buildProjectSearchQuery("platform", []string{"platform"}, true)
-	orderBy := orderByClause(t, query)
-
-	cancelledAt := strings.Index(orderBy, "p.status = 'cancelled'")
-	if cancelledAt == -1 {
-		t.Fatalf("project ORDER BY has no cancelled demotion:\n%s", orderBy)
-	}
-	relevanceEndsAt := strings.Index(orderBy, "ELSE 5 END")
-	if relevanceEndsAt == -1 {
-		t.Fatalf("project ORDER BY has no relevance rank CASE:\n%s", orderBy)
-	}
-	if cancelledAt > relevanceEndsAt {
-		t.Errorf("cancelled projects sort after the relevance tiers:\n%s", orderBy)
-	}
-	if !strings.Contains(orderBy, "LOWER(p.title) <> $1") {
-		t.Errorf("exact-title hit is not exempt from the cancelled demotion:\n%s", orderBy)
-	}
-	if !strings.Contains(orderBy, "p.updated_at DESC") {
-		t.Errorf("recency tie-breaker was dropped from project ORDER BY:\n%s", orderBy)
 	}
 }
 

@@ -34,7 +34,7 @@ type LabelResponse struct {
 	UpdatedAt    string `json:"updated_at"`
 }
 
-func labelToResponse(l db.IssueLabel) LabelResponse {
+func labelToResponse(l db.Label) LabelResponse {
 	return LabelResponse{
 		ID:           uuidToString(l.ID),
 		WorkspaceID:  uuidToString(l.WorkspaceID),
@@ -61,7 +61,7 @@ func labelListRowToResponse(l db.ListLabelsRow) LabelResponse {
 	}
 }
 
-func labelsToResponse(list []db.IssueLabel) []LabelResponse {
+func labelsToResponse(list []db.Label) []LabelResponse {
 	out := make([]LabelResponse, len(list))
 	for i, l := range list {
 		out[i] = labelToResponse(l)
@@ -333,7 +333,6 @@ func (h *Handler) DeleteLabel(w http.ResponseWriter, r *http.Request) {
 	// resource-label junctions intentionally use application-level cleanup
 	// rather than database cascades.
 	for _, cleanup := range []func() error{
-		func() error { return qtx.DeleteIssueLabelAssignmentsByLabel(r.Context(), idUUID) },
 		func() error { return qtx.DeleteAgentLabelAssignmentsByLabel(r.Context(), idUUID) },
 		func() error { return qtx.DeleteSkillLabelAssignmentsByLabel(r.Context(), idUUID) },
 	} {

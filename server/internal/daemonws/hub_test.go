@@ -10,9 +10,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gorilla/websocket"
 	"github.com/auro-ai/auro/server/internal/realtime"
 	"github.com/auro-ai/auro/server/pkg/protocol"
+	"github.com/gorilla/websocket"
 )
 
 func TestNotifyTaskAvailable(t *testing.T) {

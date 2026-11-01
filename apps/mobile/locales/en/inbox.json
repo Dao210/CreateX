@@ -112,6 +112,7 @@
     "residents": "Resident goals reached: {{count}}",
     "view_resident": "View resident",
     "view_world": "View world",
-    "author": "By {{name}}"
+    "author": "By {{name}}",
+    "view_automation": "View automation"
   }
 }

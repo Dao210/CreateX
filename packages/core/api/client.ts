@@ -1792,8 +1792,6 @@ export class ApiClient {
 
   private archivedInboxParams(filters: InboxFilters): URLSearchParams {
     const params = new URLSearchParams();
-    if (filters.statuses.length) params.set("statuses", [...filters.statuses].sort().join(","));
-    if (filters.priorities.length) params.set("priorities", [...filters.priorities].sort().join(","));
     if (filters.actors.length) params.set("actors", [...filters.actors].sort().join(","));
     if (filters.unreadOnly) params.set("unread_only", "true");
     return params;

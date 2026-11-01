@@ -769,29 +769,7 @@ func deleteWorkspaceTasks(ctx context.Context, qtx *db.Queries, workspaceID pgty
 			// own workspace_id points at a neighbour while its agent lives here.
 			sweepAgent: true,
 		},
-		{
-			label: "issue",
-			ownerFirstPage: func(ctx context.Context, limit int32) ([]pgtype.UUID, error) {
-				return qtx.ListWorkspaceIssueIDFirstPage(ctx, db.ListWorkspaceIssueIDFirstPageParams{
-					WorkspaceID: workspaceID, Limit: limit,
-				})
-			},
-			ownerPage: func(ctx context.Context, cursor pgtype.UUID, limit int32) ([]pgtype.UUID, error) {
-				return qtx.ListWorkspaceIssueIDPage(ctx, db.ListWorkspaceIssueIDPageParams{
-					WorkspaceID: workspaceID, ID: cursor, Limit: limit,
-				})
-			},
-			taskFirstPage: func(ctx context.Context, owner pgtype.UUID, limit int32) ([]pgtype.UUID, error) {
-				return qtx.ListTaskIDsByIssueFirstPage(ctx, db.ListTaskIDsByIssueFirstPageParams{
-					IssueID: owner, Limit: limit,
-				})
-			},
-			taskPage: func(ctx context.Context, owner, cursor pgtype.UUID, limit int32) ([]pgtype.UUID, error) {
-				return qtx.ListTaskIDsByIssuePage(ctx, db.ListTaskIDsByIssuePageParams{
-					IssueID: owner, ID: cursor, Limit: limit,
-				})
-			},
-		},
+
 		{
 			label: "runtime",
 			ownerFirstPage: func(ctx context.Context, limit int32) ([]pgtype.UUID, error) {
@@ -915,9 +893,7 @@ func lockWorkspaceTaskOwners(ctx context.Context, qtx *db.Queries, workspaceID p
 	if err := qtx.LockWorkspaceTaskOwnerAgents(ctx, workspaceID); err != nil {
 		return fmt.Errorf("lock workspace agents: %w", err)
 	}
-	if err := qtx.LockWorkspaceTaskOwnerIssues(ctx, workspaceID); err != nil {
-		return fmt.Errorf("lock workspace issues: %w", err)
-	}
+
 	if err := qtx.LockWorkspaceTaskOwnerRuntimes(ctx, workspaceID); err != nil {
 		return fmt.Errorf("lock workspace runtimes: %w", err)
 	}
@@ -976,8 +952,6 @@ func (h *Handler) DeleteWorkspace(w http.ResponseWriter, r *http.Request) {
 	}
 	defer tx.Rollback(r.Context())
 	qtx := h.Queries.WithTx(tx)
-	var sourceContextAttachmentURLs []string
-	var sourceContextIntentURLs []string
 
 	// SET LOCAL is transaction-scoped, so pgxpool hands this connection back
 	// out with the default (unbounded) lock_timeout after COMMIT / ROLLBACK.
@@ -1009,14 +983,6 @@ func (h *Handler) DeleteWorkspace(w http.ResponseWriter, r *http.Request) {
 
 	if _, err := qtx.LockChatSessionsByWorkspace(r.Context(), requester.WorkspaceID); err != nil {
 		failWorkspaceDelete(w, r, workspaceID, "lock chat sessions", err)
-		return
-	}
-	if sourceContextAttachmentURLs, err = qtx.ListSourceContextAttachmentURLsByWorkspace(r.Context(), requester.WorkspaceID); err != nil {
-		failWorkspaceDelete(w, r, workspaceID, "list source context attachment objects", err)
-		return
-	}
-	if sourceContextIntentURLs, err = qtx.ListSourceContextObjectIntentURLsByWorkspace(r.Context(), requester.WorkspaceID); err != nil {
-		failWorkspaceDelete(w, r, workspaceID, "list source context pending objects", err)
 		return
 	}
 
@@ -1112,47 +1078,14 @@ func (h *Handler) DeleteWorkspace(w http.ResponseWriter, r *http.Request) {
 			name: "delete communication roots",
 			run:  func() error { return qtx.DeleteWorkspaceCommunicationRoots(ctx, requester.WorkspaceID) },
 		},
-		{
-			name: "delete comments",
-			run:  func() error { return qtx.DeleteWorkspaceComments(ctx, requester.WorkspaceID) },
-		},
-		{
-			// Teardown mode keeps the triggers from logging the deletes above
-			// and below; this clears what normal writes logged before.
-			name: "delete search index changes",
-			run:  func() error { return qtx.DeleteWorkspaceSearchIndexChanges(ctx, requester.WorkspaceID) },
-		},
+
 		// Keep source-context object intents after the workspace row is gone.
 		// They are the durable retry ledger for an upload that began before the
 		// workspace lock but completed after this transaction's immediate object
 		// deletion pass. With no attachment left, the reconciler will delete the
 		// object and then the intent; deleting the ledger here would make that
 		// crash window permanently leak the late object.
-		{
-			name: "delete source context attachments",
-			run:  func() error { return qtx.DeleteSourceContextAttachmentsByWorkspace(ctx, requester.WorkspaceID) },
-		},
-		{
-			name: "delete source contexts",
-			run: func() error {
-				_, err := qtx.DeleteIssueSourceContextsForWorkspace(ctx, requester.WorkspaceID)
-				return err
-			},
-		},
-		{
-			name: "delete issue roots",
-			run:  func() error { return qtx.DeleteWorkspaceIssueRoots(ctx, requester.WorkspaceID) },
-		},
-		{
-			// issue_status carries no foreign key by project rule, so its rows
-			// are swept explicitly. Placed after the issue deletes so no issue
-			// row outlives the catalog its status key resolves against.
-			// (MUL-6243)
-			name: "delete issue statuses",
-			run: func() error {
-				return qtx.DeleteIssueStatusEntriesForWorkspace(ctx, requester.WorkspaceID)
-			},
-		},
+
 		{
 			name: "delete autopilot children",
 			run:  func() error { return qtx.DeleteWorkspaceAutopilotChildren(ctx, requester.WorkspaceID) },
@@ -1161,17 +1094,14 @@ func (h *Handler) DeleteWorkspace(w http.ResponseWriter, r *http.Request) {
 			name: "delete autopilots",
 			run:  func() error { return qtx.DeleteWorkspaceAutopilots(ctx, requester.WorkspaceID) },
 		},
-		{
-			name: "delete pull requests",
-			run:  func() error { return qtx.DeleteWorkspacePullRequests(ctx, requester.WorkspaceID) },
-		},
+
 		{
 			name: "delete integrations",
 			run:  func() error { return qtx.DeleteWorkspaceConnections(ctx, requester.WorkspaceID) },
 		},
 		{
-			name: "delete squads and skills",
-			run:  func() error { return qtx.DeleteWorkspaceSquadsAndSkills(ctx, requester.WorkspaceID) },
+			name: "delete skills",
+			run:  func() error { return qtx.DeleteWorkspaceSkills(ctx, requester.WorkspaceID) },
 		},
 		{
 			name: "delete plugin data",
@@ -1182,8 +1112,8 @@ func (h *Handler) DeleteWorkspace(w http.ResponseWriter, r *http.Request) {
 			run:  func() error { return qtx.DeleteWorkspaceAgents(ctx, requester.WorkspaceID) },
 		},
 		{
-			name: "delete runtimes and projects",
-			run:  func() error { return qtx.DeleteWorkspaceRuntimesAndProjects(ctx, requester.WorkspaceID) },
+			name: "delete runtimes",
+			run:  func() error { return qtx.DeleteWorkspaceRuntimes(ctx, requester.WorkspaceID) },
 		},
 		{
 			name: "delete administration data",
@@ -1212,7 +1142,6 @@ func (h *Handler) DeleteWorkspace(w http.ResponseWriter, r *http.Request) {
 	for _, runtimeID := range runtimeIDs {
 		h.NotifyRuntimeGone(uuidToString(runtimeID))
 	}
-	h.deleteS3Objects(r.Context(), append(sourceContextAttachmentURLs, sourceContextIntentURLs...))
 
 	slog.Info("workspace deleted", append(logger.RequestAttrs(r), "workspace_id", workspaceID)...)
 	h.publish(protocol.EventWorkspaceDeleted, workspaceID, "member", requestUserID(r), map[string]any{

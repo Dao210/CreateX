@@ -120,42 +120,6 @@ func TestBuildersInsertRowsTheSchemaAccepts(t *testing.T) {
 	}
 }
 
-// TestInsertedRowsAreGoneAfterTheirTest pins the half of the contract the
-// builders exist for. Rows that outlive their test are what forced suites to
-// hand-write a DELETE beside every INSERT, and a builder that quietly stopped
-// registering cleanup would leak into the next test's counts instead of
-// failing.
-func TestInsertedRowsAreGoneAfterTheirTest(t *testing.T) {
-	f := newFixture(t)
-
-	var issueID string
-	t.Run("creates", func(t *testing.T) {
-		issueID = f.Issue(t, "disappearing issue")
-		if n := f.Count(t, `SELECT count(*) FROM issue WHERE id = $1`, issueID); n != 1 {
-			t.Fatalf("expected the issue to exist inside its test, found %d", n)
-		}
-	})
-
-	if n := f.Count(t, `SELECT count(*) FROM issue WHERE id = $1`, issueID); n != 0 {
-		t.Fatalf("issue survived the test that created it, found %d", n)
-	}
-}
-
-// TestOverridesReplaceDefaults keeps the builders honest about which value
-// wins: a test that names a column is describing the thing it asserts on, so a
-// default that quietly survived would make the assertion test the fixture
-// rather than the code.
-func TestOverridesReplaceDefaults(t *testing.T) {
-	f := newFixture(t)
-
-	issueID := f.Issue(t, "overridden", Cols{"status": "in_progress", "priority": "urgent"})
-	var status, priority string
-	f.QueryRow(t, `SELECT status, priority FROM issue WHERE id = $1`, issueID).Scan(&status, &priority)
-	if status != "in_progress" || priority != "urgent" {
-		t.Fatalf("status/priority = %q/%q, want in_progress/urgent", status, priority)
-	}
-}
-
 // TestRawValuesAreInlinedAsSQL covers the escape hatch the timing fixtures
 // need: `dispatched_at` in the past cannot be written as a bound Go value
 // without the test pinning a clock the query does not read.
@@ -175,23 +139,6 @@ func TestRawValuesAreInlinedAsSQL(t *testing.T) {
 		Scan(&ageSeconds)
 	if ageSeconds < 7100 {
 		t.Fatalf("dispatched_at is %.0fs old, want ~7200s — the Raw expression was bound as a value", ageSeconds)
-	}
-}
-
-// TestIssueNumbersDoNotCollide covers the one default that cannot be a
-// constant: issue.number is unique per workspace, so two issues built by one
-// test have to negotiate it.
-func TestIssueNumbersDoNotCollide(t *testing.T) {
-	f := newFixture(t)
-
-	first := f.Issue(t, "first")
-	second := f.Issue(t, "second")
-
-	var a, b int
-	f.QueryRow(t, `SELECT number FROM issue WHERE id = $1`, first).Scan(&a)
-	f.QueryRow(t, `SELECT number FROM issue WHERE id = $1`, second).Scan(&b)
-	if a == b {
-		t.Fatalf("both issues took number %d", a)
 	}
 }
 

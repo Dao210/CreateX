@@ -12,8 +12,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gorilla/websocket"
 	"github.com/auro-ai/auro/server/pkg/protocol"
+	"github.com/gorilla/websocket"
 )
 
 func TestTaskWakeupURL(t *testing.T) {
@@ -121,48 +121,6 @@ func TestRunTaskWakeupConnectionSignalsDisconnect(t *testing.T) {
 	case <-taskWakeups:
 	case <-time.After(time.Second):
 		t.Fatal("disconnect did not wake the claim poller")
-	}
-}
-
-func TestRunTaskWakeupConnectionRoutesTaskSupplementHint(t *testing.T) {
-	upgrader := websocket.Upgrader{}
-	sendHint := make(chan struct{})
-	serverDone := make(chan struct{})
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		conn, err := upgrader.Upgrade(w, r, nil)
-		if err != nil {
-			return
-		}
-		defer conn.Close()
-		<-sendHint
-		payload, _ := json.Marshal(protocol.TaskAvailablePayload{RuntimeID: "runtime-1", TaskID: "task-1"})
-		_ = conn.WriteJSON(protocol.Message{Type: protocol.EventDaemonTaskSupplementAvailable, Payload: payload})
-		<-serverDone
-	}))
-	defer srv.Close()
-
-	d := New(Config{ServerBaseURL: srv.URL, HeartbeatInterval: time.Hour}, slog.Default())
-	supplementWakeup, unsubscribe := d.taskSupplementSignals.subscribe("task-1")
-	defer unsubscribe()
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	errCh := make(chan error, 1)
-	go func() {
-		_, err := d.runTaskWakeupConnection(ctx, []string{"runtime-1"}, make(chan taskWakeup, 2), make(chan struct{}))
-		errCh <- err
-	}()
-	close(sendHint)
-	select {
-	case <-supplementWakeup:
-	case <-time.After(time.Second):
-		t.Fatal("task supplement hint did not wake its exact task")
-	}
-	close(serverDone)
-	cancel()
-	select {
-	case <-errCh:
-	case <-time.After(time.Second):
-		t.Fatal("websocket reader did not release after cancellation")
 	}
 }
 

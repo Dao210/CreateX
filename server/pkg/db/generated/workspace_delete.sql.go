@@ -521,7 +521,7 @@ func (q *Queries) DeleteWorkspacePluginData(ctx context.Context, workspaceID pgt
 	return err
 }
 
-const deleteWorkspaceRuntimesAndProjects = `-- name: DeleteWorkspaceRuntimesAndProjects :exec
+const deleteWorkspaceRuntimes = `-- name: DeleteWorkspaceRuntimes :exec
 WITH deleted_runtimes AS (
     DELETE FROM agent_runtime WHERE agent_runtime.workspace_id = $1
 ),
@@ -532,17 +532,17 @@ deleted_profiles AS (
 SELECT 1
 `
 
-func (q *Queries) DeleteWorkspaceRuntimesAndProjects(ctx context.Context, workspaceID pgtype.UUID) error {
-	_, err := q.db.Exec(ctx, deleteWorkspaceRuntimesAndProjects, workspaceID)
+func (q *Queries) DeleteWorkspaceRuntimes(ctx context.Context, workspaceID pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, deleteWorkspaceRuntimes, workspaceID)
 	return err
 }
 
-const deleteWorkspaceSquadsAndSkills = `-- name: DeleteWorkspaceSquadsAndSkills :exec
+const deleteWorkspaceSkills = `-- name: DeleteWorkspaceSkills :exec
 DELETE FROM skill WHERE skill.workspace_id = $1
 `
 
-func (q *Queries) DeleteWorkspaceSquadsAndSkills(ctx context.Context, workspaceID pgtype.UUID) error {
-	_, err := q.db.Exec(ctx, deleteWorkspaceSquadsAndSkills, workspaceID)
+func (q *Queries) DeleteWorkspaceSkills(ctx context.Context, workspaceID pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, deleteWorkspaceSkills, workspaceID)
 	return err
 }
 

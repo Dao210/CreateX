@@ -8,8 +8,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/auro-ai/auro/server/pkg/protocol"
+	"github.com/google/uuid"
 )
 
 // errWSRPCUnavailable is returned by wsRPCClient.Call when there is no live WS

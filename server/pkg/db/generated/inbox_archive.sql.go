@@ -16,7 +16,7 @@ WITH matched AS(SELECT i.id, i.workspace_id, i.recipient_type, i.recipient_id, i
 CASE WHEN i.actor_type='system' THEN 'system' ELSE i.actor_type||':'||i.actor_id::text END AS actor,
 (cardinality($1::text[])=0 OR CASE WHEN i.actor_type='system' THEN 'system' ELSE i.actor_type||':'||i.actor_id::text END=ANY($1::text[])) AS actor_match,
 (NOT $2::boolean OR NOT i.read) AS read_match
-FROM inbox_item i WHERE i.workspace_id=$3::uuid AND i.recipient_type='member' AND i.recipient_id=$4::uuid AND i.archived)
+FROM inbox_item i WHERE i.type IN ('autopilot_paused', 'autopilot_quota_exceeded', 'creation_ready', 'character_milestone', 'world_digest') AND i.workspace_id=$3::uuid AND i.recipient_type='member' AND i.recipient_id=$4::uuid AND i.archived)
 SELECT 'actors'::text AS dimension,actor::text AS key,count(*) FILTER(WHERE read_match)::bigint AS count FROM matched WHERE actor IS NOT NULL GROUP BY actor
 UNION ALL SELECT 'unread'::text,'unread'::text,count(*) FILTER(WHERE actor_match AND NOT read)::bigint FROM matched
 `
@@ -60,7 +60,7 @@ func (q *Queries) ArchivedInboxFacets(ctx context.Context, arg ArchivedInboxFace
 }
 
 const listArchivedInboxPage = `-- name: ListArchivedInboxPage :many
-SELECT i.id, i.workspace_id, i.recipient_type, i.recipient_id, i.type, i.severity, i.title, i.body, i.read, i.archived, i.created_at, i.actor_type, i.actor_id, i.details, i.content FROM inbox_item i WHERE i.workspace_id=$1::uuid AND i.recipient_type='member' AND i.recipient_id=$2::uuid AND i.archived
+SELECT i.id, i.workspace_id, i.recipient_type, i.recipient_id, i.type, i.severity, i.title, i.body, i.read, i.archived, i.created_at, i.actor_type, i.actor_id, i.details, i.content FROM inbox_item i WHERE i.type IN ('autopilot_paused', 'autopilot_quota_exceeded', 'creation_ready', 'character_milestone', 'world_digest') AND i.workspace_id=$1::uuid AND i.recipient_type='member' AND i.recipient_id=$2::uuid AND i.archived
 AND ($3::uuid IS NULL OR i.id=$3::uuid)
 AND (cardinality($4::text[])=0 OR CASE WHEN i.actor_type='system' THEN 'system' ELSE i.actor_type||':'||i.actor_id::text END=ANY($4::text[]))
 AND (NOT $5::boolean OR NOT i.read)

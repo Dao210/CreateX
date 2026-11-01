@@ -1106,5 +1106,5 @@ func (h *Handler) loadInboxItemForUser(w http.ResponseWriter, r *http.Request, i
 		writeError(w, http.StatusNotFound, "inbox item not found")
 		return db.InboxItem{}, false
 	}
-	return item, true
+	return db.InboxItem(item), true
 }

@@ -19,8 +19,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/auro-ai/auro/server/internal/logger"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 const rollupAdvisoryLockID = 4246

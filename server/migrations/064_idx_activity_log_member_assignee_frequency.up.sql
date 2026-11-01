@@ -1,0 +1,1 @@
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_activity_log_member_assignee_frequency ON activity_log USING btree (workspace_id, actor_id, ((details ->> 'to_type'::text)), ((details ->> 'to_id'::text))) WHERE ((actor_type = 'member'::text) AND (action = 'assignee_changed'::text) AND ((details ->> 'to_type'::text) IS NOT NULL) AND ((details ->> 'to_id'::text) IS NOT NULL));

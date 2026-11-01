@@ -16,12 +16,12 @@ describe("archived inbox API", () => {
     const fetch = respond({ items: [], next_cursor: null, has_more: false });
     const api = new ApiClient("https://api.example.test");
     await expect(api.listArchivedInboxPage({
-      statuses: ["in_review"], priorities: ["high"], actors: ["system"], unreadOnly: true,
+      actors: ["system"], unreadOnly: true,
     }, { cursor: "cursor-value", groupId: "group" })).resolves.toEqual({ items: [], nextCursor: null, hasMore: false });
     const url = new URL(fetch.mock.calls[0]![0]);
     expect(url.pathname).toBe("/api/inbox/archived/page");
     expect(Object.fromEntries(url.searchParams)).toEqual({
-      statuses: "in_review", priorities: "high", actors: "system", unread_only: "true",
+      actors: "system", unread_only: "true",
       limit: "50", cursor: "cursor-value", group_id: "group",
     });
   });

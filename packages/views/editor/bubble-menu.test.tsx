@@ -36,12 +36,6 @@ vi.mock("@tiptap/react", () => ({
   }),
 }));
 
-vi.mock("@auro/core/issues/mutations", () => ({
-  useCreateIssue: () => ({
-    mutateAsync: vi.fn(),
-  }),
-}));
-
 vi.mock("../i18n", async () => {
   const editor = (await import("../locales/en/editor.json")).default;
   return {
@@ -143,7 +137,7 @@ describe("EditorBubbleMenu accessibility", () => {
 
   it("gives every icon-only formatting control an accessible name", () => {
     render(
-      <EditorBubbleMenu editor={createEditor()} currentIssueId="issue-parent" />,
+      <EditorBubbleMenu editor={createEditor()} />,
     );
 
     for (const name of [

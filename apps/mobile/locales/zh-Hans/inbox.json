@@ -120,6 +120,7 @@
     "residents": "居民目标达成 {{count}} 项",
     "view_resident": "查看居民",
     "view_world": "查看世界",
-    "author": "作者：{{name}}"
+    "author": "作者：{{name}}",
+    "view_automation": "查看自动化"
   }
 }

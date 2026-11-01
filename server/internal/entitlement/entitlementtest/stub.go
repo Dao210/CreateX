@@ -6,8 +6,8 @@ import (
 	"context"
 	"sync"
 
-	"github.com/google/uuid"
 	"github.com/auro-ai/auro/server/internal/entitlement"
+	"github.com/google/uuid"
 )
 
 type Call struct {

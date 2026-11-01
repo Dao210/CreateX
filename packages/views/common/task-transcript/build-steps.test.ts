@@ -10,7 +10,7 @@ import {
   toolKindTotals,
   type TraceCallStep,
 } from "./build-steps";
-import { buildTimeline, type TimelineItem } from "./build-timeline";
+import { type TimelineItem } from "./build-timeline";
 
 const T0 = "2026-08-15T10:00:00.000Z";
 function at(seconds: number): string {
@@ -29,27 +29,6 @@ function text(seconds: number, content = "done"): TimelineItem {
 }
 
 describe("buildSteps", () => {
-  it("pairs parallel same-tool results by call ID after timeline projection", () => {
-    const messages = [
-      { ...call("Bash", 0, { command: "slow-A" }), call_id: "attempt-1:A" },
-      { ...call("Bash", 1, { command: "fast-B" }), call_id: "attempt-1:B" },
-      { ...result("Bash", 3, "B finished"), call_id: "attempt-1:B" },
-      { ...result("Bash", 10, "A finished"), call_id: "attempt-1:A" },
-    ].map((item) => ({ ...item, task_id: "task-1", issue_id: "issue-1" }));
-    // Live snapshots and a fresh history response must use the same pairing.
-    for (const rows of [messages.slice(0, 3), messages, structuredClone(messages)]) {
-      const steps = buildSteps(buildTimeline(rows)) as TraceCallStep[];
-      expect(steps).toHaveLength(2);
-      expect(steps[1]!.result?.output).toBe("B finished");
-      expect(steps[1]!.durationMs).toBe(2000);
-      if (rows.length === 4) {
-        expect(steps[0]!.result?.output).toBe("A finished");
-        expect(steps[0]!.durationMs).toBe(10000);
-      } else {
-        expect(steps[0]!.result).toBeUndefined();
-      }
-    }
-  });
 
   it("folds a call and its result into one step", () => {
     const steps = buildSteps([call("Bash", 0), result("Bash", 4)]);

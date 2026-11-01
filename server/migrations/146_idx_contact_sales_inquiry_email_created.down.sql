@@ -1,0 +1,1 @@
+DROP INDEX CONCURRENTLY IF EXISTS idx_contact_sales_inquiry_email_created;

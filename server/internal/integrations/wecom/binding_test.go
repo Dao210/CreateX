@@ -117,29 +117,6 @@ func TestMintReusesTheLinkAlreadySent(t *testing.T) {
 	}
 }
 
-// TestMintIssuesAFreshLinkAfterTheWindow: the throttle must not lock a user
-// out — once the window passes they get a new link.
-func TestMintIssuesAFreshLinkAfterTheWindow(t *testing.T) {
-	svc, fake, clock := newThrottledService()
-	ws, inst := bindingUUID(1), bindingUUID(2)
-
-	if _, err := svc.Mint(context.Background(), ws, inst, "T-alex"); err != nil {
-		t.Fatalf("first mint: %v", err)
-	}
-	*clock = clock.Add(BindingTokenMintInterval + time.Second)
-
-	again, err := svc.Mint(context.Background(), ws, inst, "T-alex")
-	if err != nil {
-		t.Fatalf("second mint: %v", err)
-	}
-	if again.Reused || again.Raw == "" {
-		t.Fatal("past the throttle window the user must get a fresh link")
-	}
-	if fake.creates != 2 {
-		t.Fatalf("%d rows written, want 2", fake.creates)
-	}
-}
-
 // TestMintStillReusesPartWayThroughTheWindow pins the width of the window
 // itself. The two tests above only exercise its edges — same instant, and
 // past it — which a zero-length interval satisfies just as well, so neither

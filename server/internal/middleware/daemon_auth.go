@@ -8,9 +8,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/auro-ai/auro/server/internal/auth"
 	db "github.com/auro-ai/auro/server/pkg/db/generated"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 // Daemon context keys.

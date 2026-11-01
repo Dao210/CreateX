@@ -156,11 +156,11 @@ func (h *Handler) GetAgentEnv(w http.ResponseWriter, r *http.Request) {
 	if _, err := h.Queries.CreateActivity(r.Context(), db.CreateActivityParams{
 		ID:          dbid.NewV7(),
 		WorkspaceID: agent.WorkspaceID,
-		IssueID:     pgtype.UUID{}, // env access is not tied to an issue
-		ActorType:   pgtype.Text{String: "member", Valid: true},
-		ActorID:     parseUUID(uuidToString(member.UserID)),
-		Action:      agentEnvActivityRevealed,
-		Details:     details,
+		// env access is not tied to an issue
+		ActorType: pgtype.Text{String: "member", Valid: true},
+		ActorID:   parseUUID(uuidToString(member.UserID)),
+		Action:    agentEnvActivityRevealed,
+		Details:   details,
 	}); err != nil {
 		slog.Error("agent_env_revealed audit write failed; refusing to serve plaintext",
 			append(logger.RequestAttrs(r), "error", err, "agent_id", uuidToString(agent.ID))...)
@@ -244,11 +244,11 @@ func (h *Handler) UpdateAgentEnv(w http.ResponseWriter, r *http.Request) {
 	if _, err := qtx.CreateActivity(r.Context(), db.CreateActivityParams{
 		ID:          dbid.NewV7(),
 		WorkspaceID: agent.WorkspaceID,
-		IssueID:     pgtype.UUID{},
-		ActorType:   pgtype.Text{String: "member", Valid: true},
-		ActorID:     parseUUID(uuidToString(member.UserID)),
-		Action:      agentEnvActivityUpdated,
-		Details:     details,
+
+		ActorType: pgtype.Text{String: "member", Valid: true},
+		ActorID:   parseUUID(uuidToString(member.UserID)),
+		Action:    agentEnvActivityUpdated,
+		Details:   details,
 	}); err != nil {
 		slog.Error("agent_env_updated audit write failed; rolling back update",
 			append(logger.RequestAttrs(r), "error", err, "agent_id", uuidToString(agent.ID))...)

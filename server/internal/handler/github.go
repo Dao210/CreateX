@@ -187,40 +187,6 @@ func githubInstallationToBroadcast(i db.GithubInstallation) GitHubInstallationRe
 	return resp
 }
 
-func githubPullRequestToResponse(p db.GithubPullRequest, snapshotEnabled bool) GitHubPullRequestResponse {
-	snapshotAvailable := currentGitHubSnapshotAvailable(
-		snapshotEnabled, p.HeadSha, p.SnapshotHeadSha, p.SnapshotFetchedAt,
-	)
-	return GitHubPullRequestResponse{
-		ID:                uuidToString(p.ID),
-		Provider:          "github",
-		WorkspaceID:       uuidToString(p.WorkspaceID),
-		RepoOwner:         p.RepoOwner,
-		RepoName:          p.RepoName,
-		Number:            p.PrNumber,
-		Title:             p.Title,
-		State:             p.State,
-		HtmlURL:           p.HtmlUrl,
-		Branch:            textToPtr(p.Branch),
-		AuthorLogin:       textToPtr(p.AuthorLogin),
-		AuthorAvatarURL:   textToPtr(p.AuthorAvatarUrl),
-		MergedAt:          timestampToPtr(p.MergedAt),
-		ClosedAt:          timestampToPtr(p.ClosedAt),
-		PRCreatedAt:       timestampToString(p.PrCreatedAt),
-		PRUpdatedAt:       timestampToString(p.PrUpdatedAt),
-		MergeableState:    textToPtr(p.MergeableState),
-		SnapshotAvailable: &snapshotAvailable,
-		// A bare PR row has no aggregated check counts — webhook broadcasts of a
-		// single PR fall through here and the frontend re-queries the list for
-		// the full snapshot (mergeable / rollup / counts).
-		ChecksConclusion: nil,
-		FailedCheckNames: []string{},
-		Additions:        p.Additions,
-		Deletions:        p.Deletions,
-		ChangedFiles:     p.ChangedFiles,
-	}
-}
-
 func currentGitHubSnapshotAvailable(
 	enabled bool,
 	headSHA string,

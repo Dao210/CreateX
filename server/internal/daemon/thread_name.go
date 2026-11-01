@@ -8,9 +8,7 @@ func deriveTaskThreadName(task Task) string {
 	candidates := []string{
 		task.ThreadName,
 		task.AutopilotTitle,
-		task.QuickCreatePrompt,
 		task.ChatMessage,
-		task.TriggerCommentContent,
 	}
 	for _, candidate := range candidates {
 		if name := normalizeThreadName(candidate, codexThreadNameMaxRunes); name != "" {

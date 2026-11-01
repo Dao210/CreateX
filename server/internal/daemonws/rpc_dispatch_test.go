@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gorilla/websocket"
 	"github.com/auro-ai/auro/server/pkg/protocol"
+	"github.com/gorilla/websocket"
 )
 
 // dialRPCTestConn spins up a hub-backed WS server and returns a connected

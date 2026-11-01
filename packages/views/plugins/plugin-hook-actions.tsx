@@ -77,7 +77,7 @@ export function usePluginHookActions(): PluginHookAction[] {
  * approved this" sends them to debug the wrong system.
  */
 export function useRunPluginHook() {
-  const { t } = useT("issues");
+  const { t } = useT("execution");
   const invoke = useInvokePluginHook();
   const [running, setRunning] = useState<string | null>(null);
 

@@ -8,9 +8,9 @@ import (
 	"sync"
 	"time"
 
+	db "github.com/auro-ai/auro/server/pkg/db/generated"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
-	db "github.com/auro-ai/auro/server/pkg/db/generated"
 )
 
 const workspaceLockReleaseTimeout = 3 * time.Second

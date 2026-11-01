@@ -34,7 +34,7 @@ import type { useT } from "../i18n";
 // profile (DSH's `auro` profile, which supplies the protocol Auro
 // drives). "Reinstall the CLI" copy sends the user to re-run an install that
 // was never broken; the fix is installing the profile.
-type IssuesT = ReturnType<typeof useT<"issues">>["t"];
+type IssuesT = ReturnType<typeof useT<"execution">>["t"];
 
 // Full sentence — for tooltips and other surfaces with room to explain.
 export function blockedReasonLabel(reasonCode: string, t: IssuesT): string {

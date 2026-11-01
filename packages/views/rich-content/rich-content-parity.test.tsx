@@ -12,18 +12,13 @@
  * regression that reintroduces a Chat-only renderer fails here.
  */
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactElement } from "react";
 
 const { resolveIssueIdentifierMock, mermaidRenderMock } = vi.hoisted(() => ({
   resolveIssueIdentifierMock: vi.fn(),
   mermaidRenderMock: vi.fn(),
-}));
-
-vi.mock("../issues/hooks", () => ({
-  useResolveIssueIdentifier: (identifier: string) =>
-    resolveIssueIdentifierMock(identifier),
 }));
 
 vi.mock("../i18n", async () => {
@@ -59,18 +54,6 @@ vi.mock("../navigation", () => ({
   useAppOrigin: () => null,
   AppLink: ({ href, children }: { href: string; children: React.ReactNode }) => (
     <a href={href}>{children}</a>
-  ),
-}));
-
-vi.mock("../issues/components/issue-mention-card", () => ({
-  IssueMentionCard: ({ issueId, fallbackLabel }: { issueId: string; fallbackLabel?: string }) => (
-    <span data-testid="issue-mention">{fallbackLabel ?? issueId}</span>
-  ),
-}));
-
-vi.mock("../projects/components/project-chip", () => ({
-  ProjectChip: ({ projectId }: { projectId: string }) => (
-    <span data-testid="project-chip">{projectId}</span>
   ),
 }));
 
@@ -215,10 +198,6 @@ async function expectMermaidRendered(container: HTMLElement) {
 }
 
 describe("Mermaid parity across the five surfaces", () => {
-  it("renders a diagram in an Issue description", async () => {
-    const { container } = render(<ReadonlyContent content={MERMAID_FIXTURE} />);
-    await expectMermaidRendered(container);
-  });
 
   it("renders a diagram in a Comment", async () => {
     // Comment and Issue description share ReadonlyContent; asserting both keeps
@@ -453,33 +432,6 @@ describe("semantic parity beyond Mermaid", () => {
       ),
     ).container;
   }
-
-  it("produces the same block set in Issue/Comment and Chat", async () => {
-    resolveIssueIdentifierMock.mockImplementation((id: string) =>
-      id === "MUL-7" ? { id: "issue-7", identifier: "MUL-7" } : null,
-    );
-
-    const readonly = renderReadonly();
-    const chat = renderChatUser();
-
-    for (const container of [readonly, chat]) {
-      // HTML fence -> sandboxed preview iframe (not a code block)
-      await waitFor(() => {
-        expect(container.querySelector("iframe")).not.toBeNull();
-      });
-      expect(container.querySelector("iframe")?.getAttribute("sandbox")).toBe(
-        "allow-scripts",
-      );
-      // Ordinary language -> lowlight static code
-      expect(container.querySelector("code.hljs")).not.toBeNull();
-      // Mention chip
-      expect(within(container).getByTestId("issue-mention")).toBeInTheDocument();
-      // Highlight
-      expect(container.querySelector("mark")?.textContent).toBe("highlighted");
-      // Plain link
-      expect(container.querySelector('a[href="https://example.com"]')).not.toBeNull();
-    }
-  });
 
   it("does not dispatch htmlbars / mermaidx to rich blocks on either surface", async () => {
     const near = "```htmlbars\n<b>x</b>\n```\n\n```mermaidx\ngraph TD\n```";

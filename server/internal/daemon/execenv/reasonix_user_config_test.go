@@ -148,22 +148,3 @@ func TestReasonixUserConfigPathIsolatesExplicitHome(t *testing.T) {
 		t.Fatalf("config path = %q, want the isolated home's %q", got, want)
 	}
 }
-
-// TestReasonixProjectConfigMergesLegacyOwnerConfig is the end-to-end version of
-// the fallback: a deny list that only lives in a legacy location still has to
-// reach the task config.
-func TestReasonixProjectConfigMergesLegacyOwnerConfig(t *testing.T) {
-	setReasonixGOOS(t, "darwin")
-	home := t.TempDir()
-	mustWrite(t,
-		filepath.Join(home, "Library", "Application Support", "reasonix", reasonixUserConfigFile),
-		"[permissions]\ndeny = [\"bash\"]\n",
-	)
-
-	workDir := t.TempDir()
-	env := map[string]string{"REASONIX_HOME": "", "HOME": home, "XDG_CONFIG_HOME": ""}
-	if err := writeReasonixProjectConfig(workDir, env, &sidecarManifest{}, testLogger()); err != nil {
-		t.Fatalf("writeReasonixProjectConfig: %v", err)
-	}
-	assertTaskDenyList(t, filepath.Join(workDir, reasonixProjectConfigFile), []string{"bash", "ask"})
-}

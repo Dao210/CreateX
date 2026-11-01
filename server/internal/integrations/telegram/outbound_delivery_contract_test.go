@@ -12,11 +12,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/auro-ai/auro/server/internal/events"
 	"github.com/auro-ai/auro/server/internal/testutil"
 	db "github.com/auro-ai/auro/server/pkg/db/generated"
 	"github.com/auro-ai/auro/server/pkg/protocol"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // The delivery contract for a task's reply, probe by probe: one user turn

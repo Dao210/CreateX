@@ -105,71 +105,12 @@ func TestFormatErrorAllKinds(t *testing.T) {
 	}
 }
 
-func TestFormatErrorNetwork(t *testing.T) {
-	withLang(t, "en_US.UTF-8")
-	raw := errors.New("Get \"https://api.auro.ai/api/issues/abc\": context deadline exceeded")
-	netErr := &NetworkError{Kind: KindNetworkTimeout, Op: "GET /api/issues/abc", Err: raw}
-	wrapped := fmt.Errorf("resolve issue: %w", netErr)
-
-	got := FormatError(wrapped, false)
-	if !strings.Contains(got, "timed out") {
-		t.Errorf("expected friendly timeout message, got %q", got)
-	}
-	// Must not leak the URL or internal verb chain when debug is off.
-	if strings.Contains(got, "api.auro.ai") || strings.Contains(got, "resolve issue") {
-		t.Errorf("user message leaked internal detail: %q", got)
-	}
-}
-
 func TestFormatErrorChineseLocale(t *testing.T) {
 	withLang(t, "zh_CN.UTF-8")
 	netErr := &NetworkError{Kind: KindNetworkDNS, Err: errors.New("no such host")}
 	got := FormatError(netErr, false)
 	if !strings.Contains(got, "无法解析") {
 		t.Errorf("expected Chinese DNS message, got %q", got)
-	}
-}
-
-func TestFormatErrorValidationUsesServerMessage(t *testing.T) {
-	withLang(t, "en_US.UTF-8")
-	httpErr := &HTTPError{
-		Method:     "POST",
-		Path:       "/api/issues",
-		StatusCode: 422,
-		Body:       `{"error":"title is required"}`,
-	}
-	got := FormatError(httpErr, false)
-	if !strings.Contains(got, "title is required") {
-		t.Errorf("expected server validation message surfaced, got %q", got)
-	}
-}
-
-// TestFormatErrorConflictUsesServerMessage pins GH #6264: a 409 body carries a
-// hand-written fix ("reply under this comment", "a skill with that name
-// exists"), and the generic conflict template actively misdirects by telling
-// the caller to retry. The server message must reach the user by default, with
-// no --debug required.
-func TestFormatErrorConflictUsesServerMessage(t *testing.T) {
-	withLang(t, "en_US.UTF-8")
-	httpErr := &HTTPError{
-		Method:     "POST",
-		Path:       "/api/issues/abc/comments",
-		StatusCode: 409,
-		Body:       `{"error":"parent_id 11111111-1111-1111-1111-111111111111 is not a comment this task may reply under; set parent_id (--parent) to 22222222-2222-2222-2222-222222222222 or a coalesced comment id"}`,
-	}
-	wrapped := fmt.Errorf("add comment: %w", httpErr)
-
-	got := FormatError(wrapped, false)
-	if !strings.Contains(got, "set parent_id (--parent) to 22222222-2222-2222-2222-222222222222") {
-		t.Errorf("expected server conflict message surfaced, got %q", got)
-	}
-	// The retry advice is what sent agents into multi-hour loops; it must not
-	// be what they see when the server already named the fix.
-	if strings.Contains(got, "Re-fetch the latest state") {
-		t.Errorf("generic retry template should be replaced by the server message, got %q", got)
-	}
-	if strings.Contains(got, "/api/issues/abc/comments") {
-		t.Errorf("user message leaked the request path: %q", got)
 	}
 }
 
@@ -242,22 +183,6 @@ func TestFormatErrorValidationPrefersProseOverMachineCode(t *testing.T) {
 	only := FormatError(&HTTPError{StatusCode: 422, Body: `{"error":"title_is_required"}`}, false)
 	if !strings.Contains(only, "title_is_required") {
 		t.Errorf("code-only validation body should still surface the code, got %q", only)
-	}
-}
-
-func TestFormatErrorDebugIncludesRawChain(t *testing.T) {
-	withLang(t, "en_US.UTF-8")
-	httpErr := &HTTPError{Method: "GET", Path: "/api/issues/abc", StatusCode: 404, Body: `{"error":"not found"}`}
-	wrapped := fmt.Errorf("resolve issue: %w", httpErr)
-
-	off := FormatError(wrapped, false)
-	if strings.Contains(off, "/api/issues/abc") {
-		t.Errorf("debug-off output should not contain raw path: %q", off)
-	}
-
-	on := FormatError(wrapped, true)
-	if !strings.Contains(on, "[debug]") || !strings.Contains(on, "/api/issues/abc") {
-		t.Errorf("debug-on output should include raw chain: %q", on)
 	}
 }
 

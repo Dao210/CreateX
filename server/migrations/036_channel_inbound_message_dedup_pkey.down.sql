@@ -1,0 +1,1 @@
+DROP INDEX CONCURRENTLY IF EXISTS channel_inbound_message_dedup_pkey;

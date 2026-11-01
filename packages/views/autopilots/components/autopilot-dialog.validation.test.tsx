@@ -36,13 +36,6 @@ vi.mock("@auro/core/workspace/queries", () => ({
   }),
 }));
 
-vi.mock("@auro/core/projects/queries", () => ({
-  projectListOptions: (wsId: string) => ({
-    queryKey: ["projects", wsId],
-    queryFn: async () => [],
-  }),
-}));
-
 vi.mock("@auro/core/autopilots/queries", () => ({
   cronPreviewOptions: (wsId: string, expr: string, tz: string) => ({
     queryKey: ["cron-preview", wsId, expr, tz],
@@ -96,10 +89,6 @@ vi.mock("../../common/actor-avatar", () => ({
 
 vi.mock("./subscriber-multi-select", () => ({
   SubscriberMultiSelect: () => <div data-testid="subscriber-multi-select" />,
-}));
-
-vi.mock("../../projects/components/project-picker", () => ({
-  ProjectPicker: ({ triggerRender }: { triggerRender: React.ReactElement }) => triggerRender,
 }));
 
 vi.mock("../pickers/timezone-picker", () => ({

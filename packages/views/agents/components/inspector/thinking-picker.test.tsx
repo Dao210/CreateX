@@ -6,7 +6,7 @@ import type { RuntimeModelThinkingLevel } from "@auro/core/types";
 import { I18nProvider } from "@auro/core/i18n/react";
 import enCommon from "../../../locales/en/common.json";
 import enAgents from "../../../locales/en/agents.json";
-import enIssues from "../../../locales/en/issues.json";
+import enIssues from "../../../locales/en/execution.json";
 
 import { ThinkingPicker } from "./thinking-picker";
 

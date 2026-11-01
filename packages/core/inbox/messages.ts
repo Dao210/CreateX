@@ -51,3 +51,8 @@ export function inboxContent(item: Pick<InboxItem, "content">): InboxContent | n
   const parsed = InboxContentSchema.safeParse(item.content);
   return parsed.success ? parsed.data : null;
 }
+
+export function autopilotNoticeId(item: Pick<InboxItem, "details">): string | null {
+  const parsed = z.uuid().safeParse(item.details?.autopilot_id);
+  return parsed.success ? parsed.data : null;
+}

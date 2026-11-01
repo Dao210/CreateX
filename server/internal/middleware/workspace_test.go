@@ -7,8 +7,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/jackc/pgx/v5/pgxpool"
 	db "github.com/auro-ai/auro/server/pkg/db/generated"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 const testResolverSlug = "middleware-resolver-test"

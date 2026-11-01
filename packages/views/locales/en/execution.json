@@ -1,0 +1,74 @@
+{
+  "comment": {
+    "trigger_blocked_invocation_not_allowed": "This target can't be found, or you don't have permission to use it",
+    "trigger_blocked_target_unavailable": "This target is unavailable",
+    "trigger_blocked_runtime_offline": "This target's runtime is offline",
+    "trigger_blocked_runtime_unusable": "This target's agent CLI can't run on its machine — reinstall it there",
+    "trigger_blocked_runtime_profile_missing": "This target's agent CLI is missing a runtime profile on its machine — install it there",
+    "trigger_blocked_agent_runtime_required": "This target has no runtime — bind one to run it",
+    "trigger_blocked_runtime_access_denied": "This target's agent can't run on its private runtime — make the runtime public, or rebind/copy the agent to one its owner can use",
+    "trigger_blocked_generic": "This target won't be triggered",
+    "trigger_blocked_short_invocation_not_allowed": "Not found or no permission",
+    "trigger_blocked_short_target_unavailable": "Unavailable",
+    "trigger_blocked_short_runtime_offline": "Runtime offline",
+    "trigger_blocked_short_runtime_unusable": "CLI can't run",
+    "trigger_blocked_short_runtime_profile_missing": "Runtime profile missing",
+    "trigger_blocked_short_agent_runtime_required": "Needs a runtime",
+    "trigger_blocked_short_runtime_access_denied": "No runtime access",
+    "trigger_blocked_short_generic": "Won't start"
+  },
+  "wakeups": {
+    "triggered_by_wakeup": "Triggered by wakeup"
+  },
+  "agent_activity": {
+    "status_running": "Working",
+    "status_queued": "Queued",
+    "empty_hover": "No agents working right now"
+  },
+  "execution_log": {
+    "attribution": {
+      "source_direct_human": "Direct member action",
+      "source_delegation": "Delegated from another run",
+      "source_comment_source": "From a comment thread",
+      "source_trigger_owner": "Autopilot trigger creator",
+      "source_rule_owner": "Autopilot rule publisher",
+      "source_owner_fallback": "No precise owner — attributed to the agent owner",
+      "source_backfill": "Backfilled attribution",
+      "source_unattributed": "No responsible member resolved",
+      "someone": "someone",
+      "on_behalf_of": "On behalf of {{name}}"
+    },
+    "trigger_retry_attempt_prefix": "Retry #{{attempt}} · ",
+    "trigger_retry_prefix": "Retry · ",
+    "trigger_image": "[Image]",
+    "trigger_retry_attempt": "Retry #{{attempt}}",
+    "trigger_retry": "Retry",
+    "trigger_autopilot": "Autopilot run",
+    "trigger_comment": "Comment trigger",
+    "trigger_initial": "Initial run",
+    "status_queued": "Queued",
+    "status_dispatched": "Starting",
+    "status_waiting_local_directory": "Waiting for local directory",
+    "status_running": "Working",
+    "status_completed": "Completed",
+    "status_failed": "Failed",
+    "status_cancelled": "Cancelled"
+  },
+  "filters": {
+    "placeholder": "Filter..."
+  },
+  "pickers": {
+    "filter_options_aria": "Filter options",
+    "no_results": "No results"
+  },
+  "plugins": {
+    "hook_succeeded": "{{name}} finished.",
+    "hook_refused": "{{name}} was not run.",
+    "hook_failed": "{{name}} failed.",
+    "panels": "Plugins",
+    "surface_failed": "{{name}} could not load its interface.",
+    "surface_loading": "Loading {{name}}…",
+    "surface_navigated": "{{name}} tried to replace its panel with a page loaded from elsewhere. It has been stopped and disconnected — tell your world admin.",
+    "surface_unavailable": "{{name}} could not load its interface. The installed version may not include it."
+  }
+}

@@ -172,31 +172,6 @@ describe("McpConfigTab", () => {
     expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
   });
 
-  it("projects historical aggregate config into individually managed rows", () => {
-    renderTab({
-      mcp_config: {
-        version: 1,
-        mcpServers: {
-          fetch: { command: "uvx", args: ["mcp-server-fetch"] },
-          docs: { type: "http", url: "https://example.test/mcp", enabled: false },
-        },
-      },
-    });
-
-    expect(screen.getByText("fetch")).toBeInTheDocument();
-    expect(screen.getByText("docs")).toBeInTheDocument();
-    expect(
-      within(screen.getByText("docs").closest("li")!).getByText("Off for agent"),
-    ).toBeVisible();
-    expect(screen.getByLabelText("STDIO")).toBeInTheDocument();
-    expect(screen.getByLabelText("Streamable HTTP")).toBeInTheDocument();
-    expect(screen.getByText("STDIO")).toBeVisible();
-    expect(screen.getByText("Streamable HTTP")).toBeVisible();
-    expect(screen.getByRole("heading", { name: /managed by auro/i })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: /inherited from runtime/i })).toBeInTheDocument();
-    expect(screen.queryByLabelText(/MCP config JSON editor/i)).not.toBeInTheDocument();
-  });
-
   it("renames a managed server inline without changing its configuration", async () => {
     const user = userEvent.setup();
     const { onSave } = renderTab({

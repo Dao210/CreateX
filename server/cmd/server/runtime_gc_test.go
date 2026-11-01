@@ -9,12 +9,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/auro-ai/auro/server/internal/service"
 	"github.com/auro-ai/auro/server/internal/util"
 	db "github.com/auro-ai/auro/server/pkg/db/generated"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 func TestRuntimeGC_KeepsTerminalTaskHistory(t *testing.T) {

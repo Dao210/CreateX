@@ -1484,6 +1484,7 @@ export const InboxItemListSchema = z.array(
       archived: z.boolean(),
       created_at: z.string(),
       content: InboxContentSchema.nullish().catch(null),
+      details: z.record(z.string(), z.string()).nullish().catch(null),
     })
     .loose(),
 );

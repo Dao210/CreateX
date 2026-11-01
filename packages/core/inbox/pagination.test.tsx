@@ -9,7 +9,7 @@ import type { ArchivedInboxPage, InboxItem } from "../types";
 import { EMPTY_INBOX_FILTERS } from "./filter-store";
 import { archivedInboxPagesOptions, inboxKeys } from "./queries";
 import { useUnarchiveInbox, useMarkInboxRead } from "./mutations";
-import { onInboxNew, onInboxIssueDeleted, onInboxIssueStatusChanged } from "./ws-updaters";
+import { onInboxNew } from "./ws-updaters";
 
 vi.mock("../hooks", () => ({ useWorkspaceId: () => "ws" }));
 
@@ -61,7 +61,7 @@ describe("archived inbox pagination", () => {
   it("patches and rolls back restore across pages, filters and deep links", async () => {
     const { qc, wrapper } = setup();
     const keys = [archivedInboxPagesOptions("ws", EMPTY_INBOX_FILTERS).queryKey,
-      archivedInboxPagesOptions("ws", { ...EMPTY_INBOX_FILTERS, priorities: ["high"] }).queryKey];
+      archivedInboxPagesOptions("ws", { ...EMPTY_INBOX_FILTERS, actors: ["system"] }).queryKey];
     const initial: InfiniteData<ArchivedInboxPage> = { pages: [page([item("first")], "next"), page([item("target")])], pageParams: [null, "next"] };
     for (const key of keys) qc.setQueryData(key, initial);
     const lookupKey = [...inboxKeys.lookup("ws"), "target"];
@@ -79,7 +79,7 @@ describe("archived inbox pagination", () => {
     unmount(); qc.clear();
   });
 
-  it("updates read state on later pages and invalidates server-owned filter membership on issue events", async () => {
+  it("updates read state on later pages and refreshes server-owned membership", async () => {
     const { qc, wrapper } = setup();
     const key = archivedInboxPagesOptions("ws", EMPTY_INBOX_FILTERS).queryKey;
     qc.setQueryData<InfiniteData<ArchivedInboxPage>>(key, { pages: [page([item("first")], "next"), page([item("target")])], pageParams: [null, "next"] });
@@ -87,11 +87,7 @@ describe("archived inbox pagination", () => {
     const { result, unmount } = renderHook(() => useMarkInboxRead(), { wrapper });
     await act(() => result.current.mutateAsync("target"));
     expect(qc.getQueryData<InfiniteData<ArchivedInboxPage>>(key)?.pages[1]?.items[0]?.read).toBe(true);
-    onInboxIssueStatusChanged(qc, "ws", "target", "todo");
-    expect(qc.getQueryData<InfiniteData<ArchivedInboxPage>>(key)?.pages[1]?.items[0]?.issue_status).toBe("todo");
     expect(qc.getQueryState(key)?.isInvalidated).toBe(true);
-    await onInboxIssueDeleted(qc, "ws", "target");
-    expect(qc.getQueryData<InfiniteData<ArchivedInboxPage>>(key)?.pages[1]?.items).toEqual([]);
     unmount(); qc.clear();
   });
 });

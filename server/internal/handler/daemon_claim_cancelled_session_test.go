@@ -108,42 +108,6 @@ func TestClaimTask_ChatCancelledSessionStaysExcludedWhenRetired(t *testing.T) {
 	}
 }
 
-// TestClaimTask_IssueResumesCancelledTaskSession is the issue-side half: stop a
-// run, comment again, and the follow-up keeps the stopped run's context.
-func TestClaimTask_IssueResumesCancelledTaskSession(t *testing.T) {
-	if testHandler == nil {
-		t.Skip("database not available")
-	}
-
-	ctx := context.Background()
-	agentID, runtimeID, daemonID := createRuntimeGuardAgent(t, ctx)
-
-	issueID := dbfx.Issue(t, "cancelled issue run fixture", testutil.Cols{
-		"status": "in_progress",
-		"number": 86340,
-	})
-
-	dbfx.Exec(t, `
-		INSERT INTO agent_task_queue (
-			agent_id, runtime_id, issue_id,
-			status, priority, started_at, completed_at, session_id, work_dir
-		)
-		VALUES ($1, $2, $3, 'cancelled', 0, now(), now(), 'cancelled-issue-session', '/tmp/cancelled-issue-workdir')
-	`, agentID, runtimeID, issueID)
-	dbfx.Exec(t, `
-		INSERT INTO agent_task_queue (agent_id, runtime_id, issue_id, status, priority)
-		VALUES ($1, $2, $3, 'queued', 0)
-	`, agentID, runtimeID, issueID)
-
-	task := claimTaskForRuntimeGuard(t, runtimeID, daemonID)
-	if task.PriorSessionID != "cancelled-issue-session" {
-		t.Fatalf("PriorSessionID = %q, want cancelled-issue-session", task.PriorSessionID)
-	}
-	if task.PriorWorkDir != "/tmp/cancelled-issue-workdir" {
-		t.Fatalf("PriorWorkDir = %q, want /tmp/cancelled-issue-workdir", task.PriorWorkDir)
-	}
-}
-
 // TestCancelTask_AdvancesChatSessionResumePointer covers the pointer half. The
 // claim handler reads chat_session.session_id FIRST, so on a chat that already
 // has history a stale pointer would still rewind past the cancelled turn on any

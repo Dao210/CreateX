@@ -27,7 +27,7 @@ export function useChatMessageLongPress(
   message: ChatMessage,
 ): { onLongPress: () => void; isPressed: boolean } {
   const [isPressed, setIsPressed] = useState(false);
-  const { t } = useT("issues");
+  const { t } = useT("execution");
 
   const onLongPress = useCallback(() => {
     const hasContent = !!message.content;

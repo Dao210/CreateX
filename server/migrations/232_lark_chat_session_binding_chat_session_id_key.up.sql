@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS lark_chat_session_binding_chat_session_id_key ON lark_chat_session_binding (chat_session_id);

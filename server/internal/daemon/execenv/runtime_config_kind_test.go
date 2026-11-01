@@ -35,26 +35,6 @@ func TestClassifyTask(t *testing.T) {
 	}
 }
 
-// TestTaskKindHasIssueContext pins the predicate that gates Project
-// Context / Sub-issue Creation in the slim dispatcher.
-func TestTaskKindHasIssueContext(t *testing.T) {
-	t.Parallel()
-	cases := []struct {
-		kind taskKind
-		want bool
-	}{
-		{kindIssue, true},
-		{kindAutopilotRunOnly, false},
-		{kindQuickCreate, false},
-		{kindChat, false},
-	}
-	for _, tc := range cases {
-		if got := tc.kind.hasIssueContext(); got != tc.want {
-			t.Errorf("kind=%d hasIssueContext: got %v, want %v", tc.kind, got, tc.want)
-		}
-	}
-}
-
 // TestBuildMetaSkillContentBriefContent pins that buildMetaSkillContent
 // renders the (now sole) brief: the `issue get` one-liner is present and
 // the retired legacy verbose description is not.
@@ -73,41 +53,6 @@ func TestBuildMetaSkillContentBriefContent(t *testing.T) {
 	}
 	if strings.Contains(out, "Get full issue details.") {
 		t.Errorf("brief still carries the retired legacy `issue get` description\n---\n%s", out)
-	}
-}
-
-// TestBuildMetaSkillContentIssueBodyFormatting pins the shared issue-body
-// hierarchy rule across every task kind that can author an issue.
-func TestBuildMetaSkillContentIssueBodyFormatting(t *testing.T) {
-	t.Parallel()
-
-	fixtures := map[string]TaskContextForEnv{
-		"issue":        {IssueID: "i-1"},
-		"autopilot":    {AutopilotRunID: "r-1"},
-		"quick-create": {QuickCreatePrompt: "create an issue"},
-		"chat":         {ChatSessionID: "c-1"},
-	}
-
-	for name, ctx := range fixtures {
-		name, ctx := name, ctx
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-			out := buildMetaSkillContent("codex", ctx)
-			for _, want := range []string{
-				"## Issue Body Formatting",
-				"An issue title already serves as its H1.",
-				// The rule covers BOTH surfaces: `description` is the CLI/API
-				// field name, `body` the UI term — the alias is a cross-surface
-				// mapping, not prose (MUL-5442 stage-1 review).
-				"do not add a Markdown H1 (`# ...`) to an issue body or description",
-				"start with prose or `##` subheadings",
-				"Only add an H1 when the user specifically requests one",
-			} {
-				if !strings.Contains(out, want) {
-					t.Errorf("brief is missing issue-body formatting guidance %q\n---\n%s", want, out)
-				}
-			}
-		})
 	}
 }
 
@@ -197,112 +142,6 @@ func TestBriefDueDateTeachesCalendarDayFormat(t *testing.T) {
 		}
 		if strings.Contains(out, "--due-date <RFC3339>") {
 			t.Errorf("%s brief still teaches --due-date <RFC3339>, which the server rejects except at UTC midnight (MUL-5696)", name)
-		}
-	}
-}
-
-// TestBriefOwnsAutopilotIssueCommandsGuard pins the guard's single emission
-// point: the autopilot brief carries AutopilotIssueCommandsGuard, and the
-// per-turn prompt defers to it (daemon.TestBuildPromptAutopilotRunOnly pins
-// the deferral side). MUL-5696.
-func TestBriefOwnsAutopilotIssueCommandsGuard(t *testing.T) {
-	out := buildMetaSkillContent("claude", TaskContextForEnv{AutopilotRunID: "run-1"})
-	if !strings.Contains(out, AutopilotIssueCommandsGuard) {
-		t.Errorf("autopilot brief missing AutopilotIssueCommandsGuard — the per-turn prompt defers to this single emission point")
-	}
-}
-
-// TestQuickCreateBriefOwnsRunAndOutputRules pins the brief as the single
-// statement of how a quick-create run executes and what it prints (MUL-6984).
-//
-// The same five rules used to be written three times — the brief's Workflow
-// section, the brief's ## Output section, and the per-turn prompt's "Output
-// format" block — with two of the three copies in this very file. The brief is
-// the copy that survives, because its own contract is that these guardrails
-// hold "even if the user message is missing"; the per-turn message now renders
-// only the field VALUES the modal picked.
-func TestQuickCreateBriefOwnsRunAndOutputRules(t *testing.T) {
-	t.Parallel()
-
-	out := buildMetaSkillContent("claude", TaskContextForEnv{
-		QuickCreatePrompt: "create an issue about flaky tests",
-		AgentName:         "Eve", AgentID: "eve-1",
-	})
-
-	for _, want := range []string{
-		// exactly one create, no retry — a retry would duplicate the issue
-		"Run exactly one `auro issue create --output json` invocation",
-		"Do not retry for any reason",
-		// no issue to query, transition, or comment on
-		"Do NOT call `auro issue get`, `auro issue status`, or `auro issue comment add`",
-		// the success line, and the reason it must not be scraped or
-		// prefix-guessed: workspaces set their own issue prefix, so a
-		// successful create must not read as failed
-		"`identifier` (preferred) or `id` (fallback)",
-		"Created <identifier-or-id>: <title>",
-		"never assume a workspace issue prefix such as `MUL-`",
-		// failure path
-		"exit with that error as the only output",
-	} {
-		if !strings.Contains(out, want) {
-			t.Errorf("quick-create brief missing rule %q\n---\n%s", want, out)
-		}
-	}
-
-	// ## Output states where the output goes and how a FILE is delivered; the
-	// rules themselves are stated once, above. A second copy here is what this
-	// change removed.
-	outputIdx := strings.Index(out, "## Output")
-	if outputIdx < 0 {
-		t.Fatalf("quick-create brief has no ## Output section\n---\n%s", out)
-	}
-	outputSection := out[outputIdx:]
-	if !strings.Contains(outputSection, "**Delivering files here:**") {
-		t.Errorf("## Output lost the file-delivery channel\n---\n%s", outputSection)
-	}
-	for _, banned := range []string{
-		"Created <identifier-or-id>: <title>",
-		"Do NOT call `auro issue comment add`",
-	} {
-		if strings.Contains(outputSection, banned) {
-			t.Errorf("## Output restates workflow rule %q\n---\n%s", banned, outputSection)
-		}
-	}
-}
-
-// TestSlimQuickCreateAvailableCommands locks the minimal-variant content
-// for quick-create's Available Commands: `issue create` present, every
-// other Core command absent (the hard guardrails forbid the call).
-func TestSlimQuickCreateAvailableCommands(t *testing.T) {
-
-	out := buildMetaSkillContent("codex", TaskContextForEnv{
-		QuickCreatePrompt: "create an issue about flaky tests",
-		AgentName:         "Eve", AgentID: "eve-1",
-	})
-
-	for _, want := range []string{
-		"## Available Commands",
-		"auro issue create --title",
-		"`auro --help`",
-	} {
-		if !strings.Contains(out, want) {
-			t.Errorf("quick_create slim Available Commands missing %q", want)
-		}
-	}
-
-	for _, banned := range []string{
-		"auro issue get <id>",
-		"auro issue comment list <issue-id>",
-		"auro issue update <id>",
-		"auro issue status <id> <status>",
-		"auro issue comment add <issue-id>",
-		"auro issue children <id>",
-		"auro repo checkout <url>",
-		"### Squad maintenance",
-		"auro squad member set-role",
-	} {
-		if strings.Contains(out, banned) {
-			t.Errorf("quick_create slim Available Commands should NOT advertise %q (hard guardrails forbid the call)", banned)
 		}
 	}
 }

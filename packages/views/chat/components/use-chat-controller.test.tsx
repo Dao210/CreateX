@@ -95,17 +95,9 @@ vi.mock("@auro/core/workspace/queries", () => ({
   agentListOptions: () => ({ queryKey: ["agents"] }),
   memberListOptions: () => ({ queryKey: ["members"] }),
 }));
-vi.mock("@auro/core/projects/queries", () => ({
-  projectListOptions: () => ({ queryKey: ["projects"] }),
-}));
 // Steerable per test: the invoke rule is what decides whether an OPEN session's
 // agent is still runnable. Default true so every existing case is unaffected.
 const invokableAgentIds = vi.hoisted(() => ({ current: null as string[] | null }));
-vi.mock("../../issues/components/pickers/assignee-picker", () => ({
-  canAssignAgent: (agent: { id: string }) =>
-    invokableAgentIds.current === null ||
-    invokableAgentIds.current.includes(agent.id),
-}));
 vi.mock("@auro/core/api", () => ({
   ApiError: class ApiError extends Error {
     constructor(
@@ -253,120 +245,6 @@ function setup(
   h.archivedMutate.mockClear();
   return result;
 }
-
-describe("useChatController project context", () => {
-  const project = {
-    id: "project-a",
-    workspace_id: "ws-1",
-    title: "Project Alpha",
-  } as Project;
-  const otherProject = {
-    id: "project-b",
-    workspace_id: "ws-1",
-    title: "Project Beta",
-  } as Project;
-
-  beforeEach(() => {
-    h.store.setActiveSession.mockClear();
-    h.store.setSelectedProjectId.mockClear();
-    h.createSessionMutate.mockClear();
-    h.setProjectMutate.mockClear();
-    h.createSessionMutate.mockResolvedValue({ id: "new-session" });
-  });
-
-  afterEach(() => {
-    h.store.selectedProjectId = null;
-    h.projects = [];
-  });
-
-  it("ignores a persisted project selection when creating a session", async () => {
-    h.store.activeSessionId = null;
-    h.store.selectedAgentId = agentA.id;
-    h.store.selectedProjectId = project.id;
-    h.sessions = [];
-    h.agents = [agentA];
-    h.projects = [project];
-    vi.mocked(api.sendChatMessage).mockResolvedValue({
-      message_id: "message-1",
-      task_id: "task-1",
-      created_at: new Date(0).toISOString(),
-    } as Awaited<ReturnType<typeof api.sendChatMessage>>);
-
-    const { result } = renderHook(() => useChatController());
-    await act(async () => {
-      await result.current.handleSend("hello", undefined, vi.fn());
-    });
-
-    expect(h.createSessionMutate).toHaveBeenCalled();
-    expect(h.createSessionMutate.mock.calls[0][0]).not.toHaveProperty("project_id");
-  });
-
-  it("does not inherit the current session project when starting a new chat", () => {
-    const projectSession = makeSession({
-      id: "project-session",
-      agent_id: "agent-a",
-      project_id: project.id,
-    });
-    h.store.activeSessionId = projectSession.id;
-    h.store.selectedProjectId = project.id;
-    h.sessions = [projectSession];
-    h.agents = [agentA, agentB];
-    h.projects = [project];
-
-    const { result } = renderHook(() => useChatController());
-    h.store.setActiveSession.mockClear();
-    h.store.setSelectedProjectId.mockClear();
-
-    act(() => result.current.handleStartNewChat(agentB));
-
-    expect(h.store.setSelectedProjectId).toHaveBeenCalledWith(null);
-    expect(h.store.setActiveSession).toHaveBeenCalledWith(null);
-  });
-
-  it("clears the current session project when using the plain new-chat action", () => {
-    const projectSession = makeSession({
-      id: "project-session",
-      agent_id: "agent-a",
-      project_id: project.id,
-    });
-    h.store.activeSessionId = projectSession.id;
-    h.store.selectedProjectId = project.id;
-    h.sessions = [projectSession];
-    h.agents = [agentA];
-    h.projects = [project];
-
-    const { result } = renderHook(() => useChatController());
-    h.store.setActiveSession.mockClear();
-    h.store.setSelectedProjectId.mockClear();
-
-    act(() => result.current.handleNewChat());
-
-    expect(h.store.setSelectedProjectId).toHaveBeenCalledWith(null);
-    expect(h.store.setActiveSession).toHaveBeenCalledWith(null);
-  });
-
-  it("keeps a historical session project out of the next-chat draft state", () => {
-    const projectSession = makeSession({
-      id: "project-session",
-      agent_id: "agent-a",
-      project_id: project.id,
-    });
-    h.store.activeSessionId = null;
-    h.store.selectedProjectId = null;
-    h.sessions = [projectSession];
-    h.agents = [agentA];
-    h.projects = [project];
-
-    const { result } = renderHook(() => useChatController());
-    h.store.setActiveSession.mockClear();
-    h.store.setSelectedProjectId.mockClear();
-
-    act(() => result.current.handleSelectSession(projectSession));
-
-    expect(h.store.setSelectedProjectId).not.toHaveBeenCalled();
-    expect(h.store.setActiveSession).toHaveBeenCalledWith(projectSession.id);
-  });
-});
 
 describe("useChatController.advanceSelectionAfterArchive", () => {
   beforeEach(() => {

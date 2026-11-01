@@ -11,8 +11,9 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/auro-ai/auro/server/pkg/remotemcp"
 	"time"
+
+	"github.com/auro-ai/auro/server/pkg/remotemcp"
 
 	"github.com/auro-ai/auro/server/pkg/protocol"
 )
@@ -356,38 +357,6 @@ func TestIsTransientError(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			if got := isTransientError(tc.err); got != tc.want {
 				t.Fatalf("isTransientError(%v) = %v, want %v", tc.err, got, tc.want)
-			}
-		})
-	}
-}
-
-func TestIsIssueGCBatchUnsupported(t *testing.T) {
-	tests := []struct {
-		name string
-		err  error
-		want bool
-	}{
-		{
-			name: "old server unmatched route",
-			err:  &requestError{StatusCode: http.StatusNotFound, Body: "404 page not found"},
-			want: true,
-		},
-		{
-			name: "workspace access denied",
-			err:  &requestError{StatusCode: http.StatusNotFound, Body: `{"error":"not found"}`},
-			want: false,
-		},
-		{
-			name: "transient server error",
-			err:  &requestError{StatusCode: http.StatusInternalServerError, Body: "failure"},
-			want: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := isIssueGCBatchUnsupported(tt.err); got != tt.want {
-				t.Fatalf("isIssueGCBatchUnsupported() = %v, want %v", got, tt.want)
 			}
 		})
 	}

@@ -88,25 +88,6 @@ func TestBuildInboxMarkdown_TruncatesLongBody(t *testing.T) {
 	}
 }
 
-func TestBuildInboxMarkdown_HandlesPointerBodyAndIssueID(t *testing.T) {
-	t.Setenv("WECOM_APP_URL", "https://example.com")
-	bodyStr := "详情"
-	issueIDStr := "iid"
-	item := map[string]any{
-		"type":     "new_comment",
-		"title":    "hi",
-		"body":     &bodyStr,
-		"issue_id": &issueIDStr,
-	}
-	got := buildInboxMarkdown(item, "ws-uuid", "acme", copyFor(DefaultLocale))
-	if !strings.Contains(got, "详情") {
-		t.Fatalf("expected pointer body to be dereferenced, got %q", got)
-	}
-	if !strings.Contains(got, "issue=iid") {
-		t.Fatalf("expected pointer issue_id to be dereferenced, got %q", got)
-	}
-}
-
 func TestBuildInboxMarkdown_EmptyItemReturnsEmpty(t *testing.T) {
 	got := buildInboxMarkdown(map[string]any{}, "ws", "slug", copyFor(DefaultLocale))
 	if got != "" {

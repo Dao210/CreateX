@@ -158,12 +158,12 @@ type AutopilotTriggerResponse struct {
 }
 
 type AutopilotRunResponse struct {
-	ID            string  `json:"id"`
-	AutopilotID   string  `json:"autopilot_id"`
-	TriggerID     *string `json:"trigger_id"`
-	Source        string  `json:"source"`
-	Status        string  `json:"status"`
-	IssueID       *string `json:"issue_id"`
+	ID          string  `json:"id"`
+	AutopilotID string  `json:"autopilot_id"`
+	TriggerID   *string `json:"trigger_id"`
+	Source      string  `json:"source"`
+	Status      string  `json:"status"`
+
 	TaskID        *string `json:"task_id"`
 	TriggeredAt   string  `json:"triggered_at"`
 	CompletedAt   *string `json:"completed_at"`
@@ -315,12 +315,12 @@ func runToResponse(r db.AutopilotRun) AutopilotRunResponse {
 		json.Unmarshal(r.Result, &result)
 	}
 	return AutopilotRunResponse{
-		ID:             uuidToString(r.ID),
-		AutopilotID:    uuidToString(r.AutopilotID),
-		TriggerID:      uuidToPtr(r.TriggerID),
-		Source:         r.Source,
-		Status:         r.Status,
-		IssueID:        uuidToPtr(r.IssueID),
+		ID:          uuidToString(r.ID),
+		AutopilotID: uuidToString(r.AutopilotID),
+		TriggerID:   uuidToPtr(r.TriggerID),
+		Source:      r.Source,
+		Status:      r.Status,
+
 		TaskID:         uuidToPtr(r.TaskID),
 		TriggeredAt:    timestampToString(r.TriggeredAt),
 		CompletedAt:    timestampToPtr(r.CompletedAt),

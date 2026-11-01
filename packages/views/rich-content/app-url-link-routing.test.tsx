@@ -15,10 +15,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 const APP_ORIGIN = "https://app.example";
 
-vi.mock("../issues/hooks", () => ({
-  useResolveIssueIdentifier: () => null,
-}));
-
 // Only the workspace hooks are stubbed — the real path helpers stay in place so
 // the reserved-slug rule that decides in-app vs external is the shipped one.
 vi.mock("@auro/core/paths", async (importOriginal) => ({

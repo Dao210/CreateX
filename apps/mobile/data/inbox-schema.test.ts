@@ -1,26 +1,8 @@
+// @vitest-environment node
 import { describe, expect, it } from "vitest";
 import { InboxListSchema, InboxUnreadSummarySchema } from "./schemas";
 
-/**
- * Tests for mobile's CLIENT-SIDE parsing of GET /api/inbox.
- *
- * Scope, stated precisely because the name of this file used to overclaim:
- * these are hand-written fixtures run against `InboxListSchema`. They pin how
- * this client REACTS to a given payload. They cannot fail when the Go server
- * starts sending something new — nothing here executes server code.
- *
- * The matching server-side guarantee is structural rather than a test: every
- * `details` map in server/cmd/server/notification_listeners.go is typed
- * `map[string]string`, so a non-string value is a compile error there.
- *
- * Why both halves exist: during MUL-5483 a new inbox type was added and the
- * mobile label map was updated so `tsc` passed — but a NUMBER went into
- * `details.child_count`, and `details` is `z.record(z.string(), z.string())`.
- * Because the endpoint parses an ARRAY, one bad row fails the whole parse and
- * `listInbox` falls back to `EMPTY_INBOX_LIST`: the entire mobile inbox
- * renders empty, not just that row. The blast radius is what these tests
- * document; the compile-time type is what prevents it.
- */
+/** Optional detail drift must not make the whole message list disappear. */
 describe("inbox list schema", () => {
   it("parses a row shaped like the documented server payload", () => {
     const serverRow = {
@@ -38,7 +20,7 @@ describe("inbox list schema", () => {
       read: false,
       archived: false,
       created_at: "2026-07-30T00:00:00Z",
-      // Every value is a string. A number here drops the whole list.
+      // String details retain their typed values.
       details: { from: "in_progress", to: "in_review" },
     };
 
@@ -48,7 +30,7 @@ describe("inbox list schema", () => {
     expect(parsed.success && parsed.data[0]?.details?.to).toBe("in_review");
   });
 
-  it("rejects a numeric details value", () => {
+  it("discards malformed optional details while retaining the message", () => {
     const badRow = {
       id: "inbox-2",
       recipient_type: "member",
@@ -56,12 +38,11 @@ describe("inbox list schema", () => {
       details: { child_count: 3 },
     };
 
-    expect(InboxListSchema.safeParse([badRow]).success).toBe(false);
+    const parsed = InboxListSchema.parse([badRow]);
+    expect(parsed[0]?.details).toBeNull();
   });
 
-  it("keeps one malformed row from emptying the entire list observable", () => {
-    // Documents the blast radius that made this a P1 rather than a cosmetic bug:
-    // the schema is an array, so a single bad row invalidates every good one.
+  it("keeps one malformed detail field from emptying the entire list", () => {
     const good = {
       id: "inbox-3",
       recipient_type: "member",
@@ -76,7 +57,10 @@ describe("inbox list schema", () => {
     };
 
     expect(InboxListSchema.safeParse([good]).success).toBe(true);
-    expect(InboxListSchema.safeParse([good, bad]).success).toBe(false);
+    const parsed = InboxListSchema.parse([good, bad]);
+    expect(parsed).toHaveLength(2);
+    expect(parsed[0]?.details).toEqual(good.details);
+    expect(parsed[1]?.details).toBeNull();
   });
 
   it("renders an unknown server type instead of dropping the row", () => {

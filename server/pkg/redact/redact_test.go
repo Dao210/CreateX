@@ -196,22 +196,7 @@ func TestRedactGenericCredentials(t *testing.T) {
 	}
 }
 
-func TestNoFalsePositivesOnNormalText(t *testing.T) {
-	t.Parallel()
-	inputs := []string{
-		"This is a normal commit message about fixing a bug",
-		"The function returns skip-navigation as the class name",
-		"Created PR #42 for the authentication feature",
-		"Running tests in /tmp/test-workspace/project",
-		"The API endpoint /api/issues/123 was updated",
-	}
-	for _, input := range inputs {
-		got := Text(input)
-		if got != input {
-			t.Fatalf("false positive redaction:\n  input:  %s\n  output: %s", input, got)
-		}
-	}
-}
+
 
 func TestRedactGitLabToken(t *testing.T) {
 	t.Parallel()

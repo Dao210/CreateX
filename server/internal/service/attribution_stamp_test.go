@@ -15,304 +15,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// seedAttributionFixture creates the minimal user/workspace/member/runtime/agent
-// graph plus a member-created issue assigned to the agent, and returns the ids
-// needed to enqueue a run. Everything is cleaned up via t.Cleanup.
-func seedAttributionFixture(t *testing.T, pool *pgxpool.Pool) (workspaceID, userID, agentID, issueID string) {
-	t.Helper()
-	ctx := context.Background()
-	suffix := time.Now().UnixNano()
-
-	if err := pool.QueryRow(ctx, `INSERT INTO "user" (name, email) VALUES ('Attr User', $1) RETURNING id`,
-		fmt.Sprintf("attr-%d@auro.test", suffix)).Scan(&userID); err != nil {
-		t.Fatalf("seed user: %v", err)
-	}
-	t.Cleanup(func() { pool.Exec(context.Background(), `DELETE FROM "user" WHERE id = $1`, userID) })
-
-	if err := pool.QueryRow(ctx, `INSERT INTO workspace (name, slug) VALUES ('attr ws', $1) RETURNING id`,
-		fmt.Sprintf("attr-%d", suffix)).Scan(&workspaceID); err != nil {
-		t.Fatalf("seed workspace: %v", err)
-	}
-	t.Cleanup(func() { pool.Exec(context.Background(), `DELETE FROM workspace WHERE id = $1`, workspaceID) })
-
-	if _, err := pool.Exec(ctx, `INSERT INTO member (workspace_id, user_id, role) VALUES ($1, $2, 'owner')`,
-		workspaceID, userID); err != nil {
-		t.Fatalf("seed member: %v", err)
-	}
-
-	var runtimeID string
-	if err := pool.QueryRow(ctx, `
-		INSERT INTO agent_runtime (workspace_id, name, runtime_mode, provider, status, device_info, metadata, owner_id)
-		VALUES ($1, 'attr-runtime', 'cloud', 'codex', 'online', '', '{}'::jsonb, $2)
-		RETURNING id`, workspaceID, userID).Scan(&runtimeID); err != nil {
-		t.Fatalf("seed runtime: %v", err)
-	}
-	if err := pool.QueryRow(ctx, `
-		INSERT INTO agent (workspace_id, name, runtime_mode, runtime_config, runtime_id, visibility,
-			max_concurrent_tasks, owner_id, instructions, custom_env, custom_args)
-		VALUES ($1, 'attr-agent', 'cloud', '{}'::jsonb, $2, 'workspace', 1, $3, '', '{}'::jsonb, '[]'::jsonb)
-		RETURNING id`, workspaceID, runtimeID, userID).Scan(&agentID); err != nil {
-		t.Fatalf("seed agent: %v", err)
-	}
-	if err := pool.QueryRow(ctx, `
-		INSERT INTO issue (workspace_id, title, creator_type, creator_id, assignee_type, assignee_id, priority)
-		VALUES ($1, 'attr issue', 'member', $2, 'agent', $3, 'medium')
-		RETURNING id`, workspaceID, userID, agentID).Scan(&issueID); err != nil {
-		t.Fatalf("seed issue: %v", err)
-	}
-	return workspaceID, userID, agentID, issueID
-}
-
-// TestEnqueueTaskForIssueStampsDirectHumanAttribution is the acceptance test for
-// the Phase 1 foundation (MUL-4302 §11): a member-assigned run must land with a
-// non-empty, correct attribution — source=direct_human, the accountable human
-// equal to the issue creator, and evidence pointing back at the issue.
-func TestEnqueueTaskForIssueStampsDirectHumanAttribution(t *testing.T) {
-	pool := newResolveOriginatorPool(t)
-	ctx := context.Background()
-	q := db.New(pool)
-	workspaceID, userID, agentID, issueID := seedAttributionFixture(t, pool)
-
-	svc := &TaskService{Queries: q, TxStarter: pool, Bus: events.New()}
-	task, err := svc.EnqueueTaskForIssue(ctx, db.Issue{
-		ID:           util.MustParseUUID(issueID),
-		AssigneeID:   util.MustParseUUID(agentID),
-		Priority:     "medium",
-		CreatorType:  "member",
-		CreatorID:    util.MustParseUUID(userID),
-		WorkspaceID:  util.MustParseUUID(workspaceID),
-		AssigneeType: pgtype.Text{String: "agent", Valid: true},
-	})
-	if err != nil {
-		t.Fatalf("EnqueueTaskForIssue: %v", err)
-	}
-
-	// Read the stored row so we assert what actually persisted, not just the
-	// returned struct.
-	var source pgtype.Text
-	var originator, accountable, evidenceRef pgtype.UUID
-	var evidenceKind pgtype.Text
-	if err := pool.QueryRow(ctx, `
-		SELECT originator_source, originator_user_id, accountable_user_id, trigger_evidence_kind, trigger_evidence_ref_id
-		FROM agent_task_queue WHERE id = $1`, task.ID).Scan(&source, &originator, &accountable, &evidenceKind, &evidenceRef); err != nil {
-		t.Fatalf("read stored attribution: %v", err)
-	}
-
-	if source.String != string(attribution.SourceDirectHuman) {
-		t.Errorf("originator_source = %q, want direct_human", source.String)
-	}
-	if !originator.Valid || originator.Bytes != util.MustParseUUID(userID).Bytes {
-		t.Errorf("originator_user_id = %s, want %s", util.UUIDToString(originator), userID)
-	}
-	// MUL-4302 §11 invariant at the DB layer: a non-NULL originator implies the
-	// accountable human equals it.
-	if !accountable.Valid || accountable.Bytes != originator.Bytes {
-		t.Errorf("accountable_user_id = %s, want == originator %s", util.UUIDToString(accountable), util.UUIDToString(originator))
-	}
-	if evidenceKind.String != string(attribution.EvidenceIssueAssignment) {
-		t.Errorf("trigger_evidence_kind = %q, want issue_assignment", evidenceKind.String)
-	}
-	if !evidenceRef.Valid || evidenceRef.Bytes != util.MustParseUUID(issueID).Bytes {
-		t.Errorf("trigger_evidence_ref_id = %s, want issue %s", util.UUIDToString(evidenceRef), issueID)
-	}
-}
-
-// TestEnqueueTaskForIssueByActorAttributesToActor is the acceptance test for
-// the assign/promote actor fix (MUL-4302 §4): when a member assigns an issue that
-// a DIFFERENT member created, the run's accountable human — and, honoring the
-// invariant, its originator — is the assigning member (the actor), not the issue
-// creator. The evidence still points at the issue.
-func TestEnqueueTaskForIssueByActorAttributesToActor(t *testing.T) {
-	pool := newResolveOriginatorPool(t)
-	ctx := context.Background()
-	q := db.New(pool)
-	workspaceID, creatorID, agentID, issueID := seedAttributionFixture(t, pool)
-
-	// A second member in the same workspace performs the assign.
-	var actorID string
-	suffix := time.Now().UnixNano()
-	if err := pool.QueryRow(ctx, `INSERT INTO "user" (name, email) VALUES ('Actor', $1) RETURNING id`,
-		fmt.Sprintf("actor-%d@auro.test", suffix)).Scan(&actorID); err != nil {
-		t.Fatalf("seed actor user: %v", err)
-	}
-	t.Cleanup(func() { pool.Exec(context.Background(), `DELETE FROM "user" WHERE id = $1`, actorID) })
-	if _, err := pool.Exec(ctx, `INSERT INTO member (workspace_id, user_id, role) VALUES ($1, $2, 'member')`,
-		workspaceID, actorID); err != nil {
-		t.Fatalf("seed actor member: %v", err)
-	}
-
-	svc := &TaskService{Queries: q, TxStarter: pool, Bus: events.New()}
-	task, err := svc.EnqueueTaskForIssueByActor(ctx, db.Issue{
-		ID:           util.MustParseUUID(issueID),
-		AssigneeID:   util.MustParseUUID(agentID),
-		Priority:     "medium",
-		CreatorType:  "member",
-		CreatorID:    util.MustParseUUID(creatorID),
-		WorkspaceID:  util.MustParseUUID(workspaceID),
-		AssigneeType: pgtype.Text{String: "agent", Valid: true},
-	}, util.MustParseUUID(actorID))
-	if err != nil {
-		t.Fatalf("EnqueueTaskForIssueByActor: %v", err)
-	}
-
-	var source pgtype.Text
-	var originator, accountable pgtype.UUID
-	if err := pool.QueryRow(ctx, `
-		SELECT originator_source, originator_user_id, accountable_user_id
-		FROM agent_task_queue WHERE id = $1`, task.ID).Scan(&source, &originator, &accountable); err != nil {
-		t.Fatalf("read stored attribution: %v", err)
-	}
-
-	if source.String != string(attribution.SourceDirectHuman) {
-		t.Errorf("originator_source = %q, want direct_human", source.String)
-	}
-	if !accountable.Valid || accountable.Bytes != util.MustParseUUID(actorID).Bytes {
-		t.Errorf("accountable_user_id = %s, want actor %s (not creator %s)", util.UUIDToString(accountable), actorID, creatorID)
-	}
-	// Invariant: originator mirrors accountable, so it is the actor too — the
-	// assigning member lends the authority, not the issue creator.
-	if !originator.Valid || originator.Bytes != accountable.Bytes {
-		t.Errorf("originator_user_id = %s, want == accountable (actor) %s", util.UUIDToString(originator), util.UUIDToString(accountable))
-	}
-}
-
-// TestMergeCommentIntoPendingTask_KeepsAccountableEqualsOriginator guards the
-// MUL-4302 one-way invariant across the comment-coalescing merge (main #5192 ×
-// attribution): when a coalescing run re-stamps originator_user_id to the newly
-// arrived comment's human, accountable_user_id must mirror it. Otherwise folding
-// member B's comment into member A's queued task leaves originator=B / accountable=A.
-func TestMergeCommentIntoPendingTask_KeepsAccountableEqualsOriginator(t *testing.T) {
-	pool := newResolveOriginatorPool(t)
-	ctx := context.Background()
-	q := db.New(pool)
-	workspaceID, userA, agentID, issueID := seedAttributionFixture(t, pool)
-
-	// A second member B whose comment will be coalesced in.
-	var userB string
-	if err := pool.QueryRow(ctx, `INSERT INTO "user" (name, email) VALUES ('Attr User B', $1) RETURNING id`,
-		fmt.Sprintf("attr-b-%d@auro.test", time.Now().UnixNano())).Scan(&userB); err != nil {
-		t.Fatalf("seed user B: %v", err)
-	}
-	t.Cleanup(func() { pool.Exec(context.Background(), `DELETE FROM "user" WHERE id = $1`, userB) })
-	if _, err := pool.Exec(ctx, `INSERT INTO member (workspace_id, user_id, role) VALUES ($1, $2, 'member')`, workspaceID, userB); err != nil {
-		t.Fatalf("add member B: %v", err)
-	}
-
-	// A queued task attributed to A with a STALE source label + no evidence, so the
-	// merge has something to prove it re-stamped the whole snapshot, not just people.
-	var taskID string
-	if err := pool.QueryRow(ctx, `
-		INSERT INTO agent_task_queue (agent_id, runtime_id, issue_id, status, priority, originator_user_id, accountable_user_id, originator_source)
-		VALUES ($1, (SELECT runtime_id FROM agent WHERE id = $1), $2, 'queued', 0, $3, $3, 'delegation')
-		RETURNING id`, agentID, issueID, userA).Scan(&taskID); err != nil {
-		t.Fatalf("seed queued task: %v", err)
-	}
-	t.Cleanup(func() { pool.Exec(context.Background(), `DELETE FROM agent_task_queue WHERE id = $1`, taskID) })
-
-	// B's newly-arrived comment on the same issue.
-	var commentID string
-	if err := pool.QueryRow(ctx, `
-		INSERT INTO comment (issue_id, workspace_id, author_type, author_id, content)
-		VALUES ($1, $2, 'member', $3, 'B comment') RETURNING id`, issueID, workspaceID, userB).Scan(&commentID); err != nil {
-		t.Fatalf("seed comment: %v", err)
-	}
-
-	// Bind this task's input to the thread whose attribution is being refreshed.
-	if _, err := pool.Exec(ctx, `UPDATE agent_task_queue SET trigger_comment_id=$2 WHERE id=$1`, taskID, commentID); err != nil {
-		t.Fatal(err)
-	}
-	// Re-stamp the FULL snapshot for B's member comment (direct_human + comment
-	// evidence), as the caller does.
-	if _, err := q.MergeCommentIntoPendingTask(ctx, db.MergeCommentIntoPendingTaskParams{
-		IssueID:                 util.MustParseUUID(issueID),
-		AgentID:                 util.MustParseUUID(agentID),
-		NewTriggerCommentID:     util.MustParseUUID(commentID),
-		NewOriginatorUserID:     util.MustParseUUID(userB),
-		NewAccountableUserID:    util.MustParseUUID(userB),
-		NewOriginatorSource:     pgtype.Text{String: "direct_human", Valid: true},
-		NewTriggerEvidenceKind:  pgtype.Text{String: "comment", Valid: true},
-		NewTriggerEvidenceRefID: util.MustParseUUID(commentID),
-	}); err != nil {
-		t.Fatalf("MergeCommentIntoPendingTask: %v", err)
-	}
-
-	var originator, accountable pgtype.UUID
-	var source, evidenceKind pgtype.Text
-	if err := pool.QueryRow(ctx,
-		`SELECT originator_user_id, accountable_user_id, originator_source, trigger_evidence_kind FROM agent_task_queue WHERE id = $1`, taskID,
-	).Scan(&originator, &accountable, &source, &evidenceKind); err != nil {
-		t.Fatalf("read task: %v", err)
-	}
-	if !originator.Valid || originator.Bytes != util.MustParseUUID(userB).Bytes {
-		t.Errorf("originator = %s, want re-stamped to B %s", util.UUIDToString(originator), userB)
-	}
-	if !accountable.Valid || accountable.Bytes != originator.Bytes {
-		t.Errorf("accountable = %s, want == originator (B); one-way invariant violated on merge", util.UUIDToString(accountable))
-	}
-	// Full-snapshot re-stamp: the stale 'delegation' source + NULL evidence must move
-	// to the new comment's 'direct_human' + comment evidence, not linger.
-	if source.String != "direct_human" {
-		t.Errorf("originator_source = %q, want re-stamped to direct_human (stale snapshot left behind)", source.String)
-	}
-	if evidenceKind.String != "comment" {
-		t.Errorf("trigger_evidence_kind = %q, want re-stamped to comment", evidenceKind.String)
-	}
-}
-
-// TestAttributionForMergedComment_HonorsFailClosedPolicy is Elon's must-fix
-// regression: folding a comment that resolves to NO precise human into a queued task
-// re-opens the fail-closed decision. On a fail-closed workspace the merge must be
-// REFUSED (ErrAttributionFailClosed) so the queued task keeps its original precise
-// snapshot instead of being re-stamped to a degraded owner_fallback; on a fail-open
-// workspace the same comment degrades to owner_fallback (accountable = agent owner)
-// with no error, exactly as a fresh enqueue would (MUL-4302).
-func TestAttributionForMergedComment_HonorsFailClosedPolicy(t *testing.T) {
-	pool := newResolveOriginatorPool(t)
-	ctx := context.Background()
-	q := db.New(pool)
-	workspaceID, ownerID, agentID, issueID := seedAttributionFixture(t, pool)
-	svc := &TaskService{Queries: q, TxStarter: pool, Bus: events.New()}
-	agent, err := q.GetAgent(ctx, util.MustParseUUID(agentID))
-	if err != nil {
-		t.Fatalf("get agent: %v", err)
-	}
-
-	// An agent-authored comment with no source-task lineage → no precise human.
-	var commentID string
-	if err := pool.QueryRow(ctx, `
-		INSERT INTO comment (issue_id, workspace_id, author_type, author_id, content)
-		VALUES ($1, $2, 'agent', $3, 'autonomous ping') RETURNING id`,
-		issueID, workspaceID, agentID).Scan(&commentID); err != nil {
-		t.Fatalf("seed comment: %v", err)
-	}
-
-	// Fail-CLOSED: the merge must be refused, not degraded.
-	if _, err := pool.Exec(ctx, `UPDATE workspace SET attribution_fail_closed = true WHERE id = $1`, workspaceID); err != nil {
-		t.Fatalf("set fail-closed: %v", err)
-	}
-	if _, err := svc.AttributionForMergedComment(ctx, util.MustParseUUID(workspaceID), util.MustParseUUID(commentID), false, agent); !errors.Is(err, ErrAttributionFailClosed) {
-		t.Fatalf("fail-closed merge must return ErrAttributionFailClosed, got %v", err)
-	}
-
-	// Fail-OPEN (default): the same comment degrades to owner_fallback, no error.
-	if _, err := pool.Exec(ctx, `UPDATE workspace SET attribution_fail_closed = false WHERE id = $1`, workspaceID); err != nil {
-		t.Fatalf("clear fail-closed: %v", err)
-	}
-	attr, err := svc.AttributionForMergedComment(ctx, util.MustParseUUID(workspaceID), util.MustParseUUID(commentID), false, agent)
-	if err != nil {
-		t.Fatalf("fail-open merge must not error, got %v", err)
-	}
-	if attr.Source != attribution.SourceOwnerFallback {
-		t.Errorf("fail-open unattributable merge source = %q, want owner_fallback", attr.Source)
-	}
-	if !attr.AccountableUserID.Valid || attr.AccountableUserID.Bytes != util.MustParseUUID(ownerID).Bytes {
-		t.Errorf("owner_fallback accountable = %s, want agent owner %s", util.UUIDToString(attr.AccountableUserID), ownerID)
-	}
-	if attr.UserID.Valid {
-		t.Errorf("owner_fallback must not set originator (authorization stays NULL), got %s", util.UUIDToString(attr.UserID))
-	}
-}
-
 // TestAttributionInvariantCheck_RejectsBypass verifies the DB-level cross-column
 // CHECK (MUL-4302): a write in the ENFORCED regime (originator_source non-NULL — every
 // real enqueue / coalesce path stamps it) that sets originator_user_id but leaves
@@ -601,183 +303,6 @@ func TestTriggerOwnerAttribution_StaysWithTriggerCreator(t *testing.T) {
 	_ = editorC
 }
 
-// TestEnqueueTaskForIssueAutopilotOriginStampsRuleOwner is the acceptance test for
-// rule_owner (MUL-4302 §3.4): an autopilot-origin issue's run has NO authorizing
-// human (originator_user_id stays NULL) but IS accountable to the publisher of the
-// autopilot's active rule version, with rule_version_id recording the snapshot.
-// This is the accountable-diverges-from-originator case.
-func TestEnqueueTaskForIssueAutopilotOriginStampsRuleOwner(t *testing.T) {
-	pool := newResolveOriginatorPool(t)
-	ctx := context.Background()
-	q := db.New(pool)
-	workspaceID, publisherID, agentID, _ := seedAttributionFixture(t, pool)
-
-	// A synthetic autopilot id (no FK) with an active rule version published by the
-	// member. gen_random_uuid() gives the autopilot id back so the issue can point
-	// its origin at it.
-	var ruleVersionID, autopilotID string
-	if err := pool.QueryRow(ctx, `
-		INSERT INTO autopilot_rule_version (autopilot_id, workspace_id, published_by_type, published_by_id)
-		VALUES (gen_random_uuid(), $1, 'member', $2) RETURNING id, autopilot_id`,
-		workspaceID, publisherID).Scan(&ruleVersionID, &autopilotID); err != nil {
-		t.Fatalf("seed rule version: %v", err)
-	}
-
-	var issueID string
-	if err := pool.QueryRow(ctx, `
-		INSERT INTO issue (workspace_id, title, creator_type, creator_id, assignee_type, assignee_id, priority, number, origin_type, origin_id)
-		VALUES ($1, 'autopilot issue', 'agent', $2, 'agent', $2, 'medium', 9001, 'autopilot', $3) RETURNING id`,
-		workspaceID, agentID, autopilotID).Scan(&issueID); err != nil {
-		t.Fatalf("seed autopilot-origin issue: %v", err)
-	}
-	t.Cleanup(func() { pool.Exec(context.Background(), `DELETE FROM issue WHERE id = $1`, issueID) })
-
-	svc := &TaskService{Queries: q, TxStarter: pool, Bus: events.New()}
-	task, err := svc.EnqueueTaskForIssue(ctx, db.Issue{
-		ID:           util.MustParseUUID(issueID),
-		AssigneeID:   util.MustParseUUID(agentID),
-		Priority:     "medium",
-		CreatorType:  "agent",
-		CreatorID:    util.MustParseUUID(agentID),
-		WorkspaceID:  util.MustParseUUID(workspaceID),
-		AssigneeType: pgtype.Text{String: "agent", Valid: true},
-		OriginType:   pgtype.Text{String: "autopilot", Valid: true},
-		OriginID:     util.MustParseUUID(autopilotID),
-	})
-	if err != nil {
-		t.Fatalf("EnqueueTaskForIssue: %v", err)
-	}
-
-	var source pgtype.Text
-	var originator, accountable, ruleVersion pgtype.UUID
-	if err := pool.QueryRow(ctx, `
-		SELECT originator_source, originator_user_id, accountable_user_id, rule_version_id
-		FROM agent_task_queue WHERE id = $1`, task.ID).Scan(&source, &originator, &accountable, &ruleVersion); err != nil {
-		t.Fatalf("read stored attribution: %v", err)
-	}
-
-	if source.String != string(attribution.SourceRuleOwner) {
-		t.Errorf("originator_source = %q, want rule_owner", source.String)
-	}
-	// rule_owner stays AUDIT-ONLY (MUL-6951, Elon review): the rule publisher never
-	// armed anything, so promoting that guess to an authorization identity would
-	// hand a legacy trigger somebody's invoke rights. Originator stays NULL and the
-	// invoke gate fails closed.
-	if originator.Valid {
-		t.Errorf("rule_owner must not set originator, got %s", util.UUIDToString(originator))
-	}
-	if !accountable.Valid || accountable.Bytes != util.MustParseUUID(publisherID).Bytes {
-		t.Errorf("accountable_user_id = %s, want rule publisher %s", util.UUIDToString(accountable), publisherID)
-	}
-	if !ruleVersion.Valid || ruleVersion.Bytes != util.MustParseUUID(ruleVersionID).Bytes {
-		t.Errorf("rule_version_id = %s, want %s", util.UUIDToString(ruleVersion), ruleVersionID)
-	}
-}
-
-// TestEnqueueTaskForIssueAutopilotOriginWithoutVersionDegrades verifies that an
-// autopilot-origin issue whose autopilot has NO published rule version degrades to
-// unattributed (never fabricating a human) rather than crashing or bypassing.
-// TestEnqueueTaskForIssueAutopilotOriginWithoutVersionOwnerFallback: an
-// autopilot-origin issue whose autopilot has no published rule version resolves to
-// unattributed, then the default (non-fail-closed) workspace policy degrades it to
-// owner_fallback — accountable = agent owner, originator still NULL — so no run is
-// left without an accountable human (MUL-4302 §3.5).
-func TestEnqueueTaskForIssueAutopilotOriginWithoutVersionOwnerFallback(t *testing.T) {
-	pool := newResolveOriginatorPool(t)
-	ctx := context.Background()
-	q := db.New(pool)
-	workspaceID, ownerID, agentID, _ := seedAttributionFixture(t, pool)
-
-	var issueID, autopilotID string
-	if err := pool.QueryRow(ctx, `
-		INSERT INTO issue (workspace_id, title, creator_type, creator_id, assignee_type, assignee_id, priority, number, origin_type, origin_id)
-		VALUES ($1, 'autopilot issue', 'agent', $2, 'agent', $2, 'medium', 9002, 'autopilot', gen_random_uuid()) RETURNING id, origin_id`,
-		workspaceID, agentID).Scan(&issueID, &autopilotID); err != nil {
-		t.Fatalf("seed autopilot-origin issue: %v", err)
-	}
-	t.Cleanup(func() { pool.Exec(context.Background(), `DELETE FROM issue WHERE id = $1`, issueID) })
-
-	svc := &TaskService{Queries: q, TxStarter: pool, Bus: events.New()}
-	task, err := svc.EnqueueTaskForIssue(ctx, db.Issue{
-		ID:           util.MustParseUUID(issueID),
-		AssigneeID:   util.MustParseUUID(agentID),
-		Priority:     "medium",
-		CreatorType:  "agent",
-		CreatorID:    util.MustParseUUID(agentID),
-		WorkspaceID:  util.MustParseUUID(workspaceID),
-		AssigneeType: pgtype.Text{String: "agent", Valid: true},
-		OriginType:   pgtype.Text{String: "autopilot", Valid: true},
-		OriginID:     util.MustParseUUID(autopilotID),
-	})
-	if err != nil {
-		t.Fatalf("EnqueueTaskForIssue: %v", err)
-	}
-
-	var source pgtype.Text
-	var originator, accountable pgtype.UUID
-	if err := pool.QueryRow(ctx, `
-		SELECT originator_source, originator_user_id, accountable_user_id FROM agent_task_queue WHERE id = $1`,
-		task.ID).Scan(&source, &originator, &accountable); err != nil {
-		t.Fatalf("read stored attribution: %v", err)
-	}
-	if source.String != string(attribution.SourceOwnerFallback) {
-		t.Errorf("originator_source = %q, want owner_fallback", source.String)
-	}
-	if originator.Valid {
-		t.Errorf("owner_fallback is audit-only; originator must stay NULL, got %s", util.UUIDToString(originator))
-	}
-	if !accountable.Valid || accountable.Bytes != util.MustParseUUID(ownerID).Bytes {
-		t.Errorf("accountable_user_id = %s, want agent owner %s", util.UUIDToString(accountable), ownerID)
-	}
-}
-
-// TestEnqueueTaskFailClosedRefusesUnattributed: with the workspace opted into
-// fail-closed, an unattributable run (autopilot-origin issue, no rule version) is
-// REFUSED at enqueue (ErrAttributionFailClosed) rather than degraded to
-// owner_fallback (MUL-4302 §3.5).
-func TestEnqueueTaskFailClosedRefusesUnattributed(t *testing.T) {
-	pool := newResolveOriginatorPool(t)
-	ctx := context.Background()
-	q := db.New(pool)
-	workspaceID, _, agentID, _ := seedAttributionFixture(t, pool)
-	if _, err := pool.Exec(ctx, `UPDATE workspace SET attribution_fail_closed = TRUE WHERE id = $1`, workspaceID); err != nil {
-		t.Fatalf("set fail-closed: %v", err)
-	}
-
-	var issueID, autopilotID string
-	if err := pool.QueryRow(ctx, `
-		INSERT INTO issue (workspace_id, title, creator_type, creator_id, assignee_type, assignee_id, priority, number, origin_type, origin_id)
-		VALUES ($1, 'autopilot issue', 'agent', $2, 'agent', $2, 'medium', 9003, 'autopilot', gen_random_uuid()) RETURNING id, origin_id`,
-		workspaceID, agentID).Scan(&issueID, &autopilotID); err != nil {
-		t.Fatalf("seed autopilot-origin issue: %v", err)
-	}
-	t.Cleanup(func() { pool.Exec(context.Background(), `DELETE FROM issue WHERE id = $1`, issueID) })
-
-	svc := &TaskService{Queries: q, TxStarter: pool, Bus: events.New()}
-	_, err := svc.EnqueueTaskForIssue(ctx, db.Issue{
-		ID:           util.MustParseUUID(issueID),
-		AssigneeID:   util.MustParseUUID(agentID),
-		Priority:     "medium",
-		CreatorType:  "agent",
-		CreatorID:    util.MustParseUUID(agentID),
-		WorkspaceID:  util.MustParseUUID(workspaceID),
-		AssigneeType: pgtype.Text{String: "agent", Valid: true},
-		OriginType:   pgtype.Text{String: "autopilot", Valid: true},
-		OriginID:     util.MustParseUUID(autopilotID),
-	})
-	if !errors.Is(err, ErrAttributionFailClosed) {
-		t.Fatalf("EnqueueTaskForIssue error = %v, want ErrAttributionFailClosed", err)
-	}
-	// No task row should have been created for the issue.
-	var count int
-	if err := pool.QueryRow(ctx, `SELECT count(*) FROM agent_task_queue WHERE issue_id = $1`, issueID).Scan(&count); err != nil {
-		t.Fatalf("count tasks: %v", err)
-	}
-	if count != 0 {
-		t.Errorf("fail-closed must not enqueue any task, found %d", count)
-	}
-}
-
 // seedRunOnlyAutopilot creates an active run_only autopilot (agent-assigned) plus a
 // running autopilot_run for it, and returns their ids. Used to exercise
 // dispatchRunOnly's direct CreateAutopilotTask path.
@@ -1000,78 +525,6 @@ func TestDispatchRunOnlyScheduleStaysWithTriggerCreator(t *testing.T) {
 	}
 }
 
-// TestEnqueueTaskForIssueAutopilotManualStampsDirectHuman verifies the manual fix on
-// the create_issue path: enqueuing an autopilot-origin issue WITH a triggering actor
-// (as dispatchCreateIssue does for a manual trigger) attributes direct_human to that
-// actor, not rule_owner — the actor override wins over the autopilot-origin branch.
-func TestEnqueueTaskForIssueAutopilotManualStampsDirectHuman(t *testing.T) {
-	pool := newResolveOriginatorPool(t)
-	ctx := context.Background()
-	q := db.New(pool)
-	workspaceID, publisherID, agentID, _ := seedAttributionFixture(t, pool)
-
-	var autopilotID string
-	if err := pool.QueryRow(ctx, `
-		INSERT INTO autopilot_rule_version (autopilot_id, workspace_id, published_by_type, published_by_id)
-		VALUES (gen_random_uuid(), $1, 'member', $2) RETURNING autopilot_id`,
-		workspaceID, publisherID).Scan(&autopilotID); err != nil {
-		t.Fatalf("seed rule version: %v", err)
-	}
-	var issueID string
-	if err := pool.QueryRow(ctx, `
-		INSERT INTO issue (workspace_id, title, creator_type, creator_id, assignee_type, assignee_id, priority, number, origin_type, origin_id)
-		VALUES ($1, 'autopilot issue', 'agent', $2, 'agent', $2, 'medium', 9101, 'autopilot', $3) RETURNING id`,
-		workspaceID, agentID, autopilotID).Scan(&issueID); err != nil {
-		t.Fatalf("seed autopilot-origin issue: %v", err)
-	}
-	t.Cleanup(func() { pool.Exec(context.Background(), `DELETE FROM issue WHERE id = $1`, issueID) })
-
-	// A distinct triggering member (not the rule publisher) manually triggers.
-	var actorID string
-	if err := pool.QueryRow(ctx, `INSERT INTO "user" (name, email) VALUES ('Trigger', $1) RETURNING id`,
-		fmt.Sprintf("trig2-%d@auro.test", time.Now().UnixNano())).Scan(&actorID); err != nil {
-		t.Fatalf("seed actor: %v", err)
-	}
-	t.Cleanup(func() { pool.Exec(context.Background(), `DELETE FROM "user" WHERE id = $1`, actorID) })
-
-	svc := &TaskService{Queries: q, TxStarter: pool, Bus: events.New()}
-	// dispatchCreateIssue routes a manual trigger through the actor-carrying enqueue.
-	task, err := svc.EnqueueTaskForIssueByActor(ctx, db.Issue{
-		ID:           util.MustParseUUID(issueID),
-		AssigneeID:   util.MustParseUUID(agentID),
-		Priority:     "medium",
-		CreatorType:  "agent",
-		CreatorID:    util.MustParseUUID(agentID),
-		WorkspaceID:  util.MustParseUUID(workspaceID),
-		AssigneeType: pgtype.Text{String: "agent", Valid: true},
-		OriginType:   pgtype.Text{String: "autopilot", Valid: true},
-		OriginID:     util.MustParseUUID(autopilotID),
-	}, util.MustParseUUID(actorID))
-	if err != nil {
-		t.Fatalf("EnqueueTaskForIssueByActor: %v", err)
-	}
-
-	var source pgtype.Text
-	var originator, accountable, ruleVersion pgtype.UUID
-	if err := pool.QueryRow(ctx, `
-		SELECT originator_source, originator_user_id, accountable_user_id, rule_version_id
-		FROM agent_task_queue WHERE id = $1`, task.ID).Scan(&source, &originator, &accountable, &ruleVersion); err != nil {
-		t.Fatalf("read stored attribution: %v", err)
-	}
-	if source.String != string(attribution.SourceDirectHuman) {
-		t.Errorf("originator_source = %q, want direct_human", source.String)
-	}
-	if !originator.Valid || originator.Bytes != util.MustParseUUID(actorID).Bytes {
-		t.Errorf("originator_user_id = %s, want actor %s", util.UUIDToString(originator), actorID)
-	}
-	if !accountable.Valid || accountable.Bytes != originator.Bytes {
-		t.Errorf("accountable_user_id = %s, want == originator (actor)", util.UUIDToString(accountable))
-	}
-	if ruleVersion.Valid {
-		t.Errorf("manual direct_human must not set rule_version_id, got %s", util.UUIDToString(ruleVersion))
-	}
-}
-
 // TestRecordAutopilotRuleVersionRepublishReattributes verifies the final Phase 1
 // item (MUL-4302 §3.4): republishing a rule (as a trigger edit / archive / system
 // pause does) appends a new version, the LATEST version is the active one, and
@@ -1182,70 +635,6 @@ func TestApplyAttributionFallbackPreciseUntouched(t *testing.T) {
 	}
 	if got.Source != attribution.SourceDirectHuman || got != precise {
 		t.Errorf("precise attribution must pass through unchanged, got %+v", got)
-	}
-}
-
-// TestRerunIssueAttributesToRerunningMember is the §5 acceptance test: a manual
-// rerun is a NEW direct_human trigger attributed to the member who re-ran — not the
-// original run's human — and records rerun_of_task_id lineage back to the source.
-func TestRerunIssueAttributesToRerunningMember(t *testing.T) {
-	pool := newResolveOriginatorPool(t)
-	ctx := context.Background()
-	q := db.New(pool)
-	workspaceID, creatorID, agentID, issueID := seedAttributionFixture(t, pool)
-
-	// A distinct member performs the rerun.
-	var rerunnerID string
-	if err := pool.QueryRow(ctx, `INSERT INTO "user" (name, email) VALUES ('Rerunner', $1) RETURNING id`,
-		fmt.Sprintf("rerunner-%d@auro.test", time.Now().UnixNano())).Scan(&rerunnerID); err != nil {
-		t.Fatalf("seed rerunner: %v", err)
-	}
-	t.Cleanup(func() { pool.Exec(context.Background(), `DELETE FROM "user" WHERE id = $1`, rerunnerID) })
-	if _, err := pool.Exec(ctx, `INSERT INTO member (workspace_id, user_id, role) VALUES ($1, $2, 'member')`,
-		workspaceID, rerunnerID); err != nil {
-		t.Fatalf("seed rerunner member: %v", err)
-	}
-
-	issueStruct := db.Issue{
-		ID:           util.MustParseUUID(issueID),
-		AssigneeID:   util.MustParseUUID(agentID),
-		Priority:     "medium",
-		CreatorType:  "member",
-		CreatorID:    util.MustParseUUID(creatorID),
-		WorkspaceID:  util.MustParseUUID(workspaceID),
-		AssigneeType: pgtype.Text{String: "agent", Valid: true},
-	}
-	svc := &TaskService{Queries: q, TxStarter: pool, Bus: events.New()}
-	// The original run, attributed to the issue creator.
-	orig, err := svc.EnqueueTaskForIssue(ctx, issueStruct)
-	if err != nil {
-		t.Fatalf("EnqueueTaskForIssue (original): %v", err)
-	}
-
-	// The rerun, performed by a different member.
-	task, err := svc.RerunIssue(ctx, util.MustParseUUID(issueID), orig.ID, pgtype.UUID{}, util.MustParseUUID(rerunnerID), nil)
-	if err != nil {
-		t.Fatalf("RerunIssue: %v", err)
-	}
-
-	var source pgtype.Text
-	var originator, accountable, rerunOf pgtype.UUID
-	if err := pool.QueryRow(ctx, `
-		SELECT originator_source, originator_user_id, accountable_user_id, rerun_of_task_id
-		FROM agent_task_queue WHERE id = $1`, task.ID).Scan(&source, &originator, &accountable, &rerunOf); err != nil {
-		t.Fatalf("read stored attribution: %v", err)
-	}
-	if source.String != string(attribution.SourceDirectHuman) {
-		t.Errorf("originator_source = %q, want direct_human", source.String)
-	}
-	if !originator.Valid || originator.Bytes != util.MustParseUUID(rerunnerID).Bytes {
-		t.Errorf("originator_user_id = %s, want rerunner %s (not creator %s)", util.UUIDToString(originator), rerunnerID, creatorID)
-	}
-	if !accountable.Valid || accountable.Bytes != originator.Bytes {
-		t.Errorf("accountable_user_id = %s, want == originator (rerunner)", util.UUIDToString(accountable))
-	}
-	if !rerunOf.Valid || rerunOf.Bytes != orig.ID.Bytes {
-		t.Errorf("rerun_of_task_id = %s, want original task %s", util.UUIDToString(rerunOf), util.UUIDToString(orig.ID))
 	}
 }
 
@@ -1387,4 +776,46 @@ func TestEnqueueChatTaskDefersForChannelMediaAndPromotesWhenReady(t *testing.T) 
 	if status != "queued" || fireAt.Valid {
 		t.Fatalf("promoted task = status %q fire_at %v, want queued with no deadline", status, fireAt)
 	}
+}
+
+// seedAttributionFixture creates the minimal user/workspace/member/runtime/agent
+// graph plus a member-created issue assigned to the agent, and returns the ids
+// needed to enqueue a run. Everything is cleaned up via t.Cleanup.
+func seedAttributionFixture(t *testing.T, pool *pgxpool.Pool) (workspaceID, userID, agentID, unused string) {
+	t.Helper()
+	ctx := context.Background()
+	suffix := time.Now().UnixNano()
+
+	if err := pool.QueryRow(ctx, `INSERT INTO "user" (name, email) VALUES ('Attr User', $1) RETURNING id`,
+		fmt.Sprintf("attr-%d@auro.test", suffix)).Scan(&userID); err != nil {
+		t.Fatalf("seed user: %v", err)
+	}
+	t.Cleanup(func() { pool.Exec(context.Background(), `DELETE FROM "user" WHERE id = $1`, userID) })
+
+	if err := pool.QueryRow(ctx, `INSERT INTO workspace (name, slug) VALUES ('attr ws', $1) RETURNING id`,
+		fmt.Sprintf("attr-%d", suffix)).Scan(&workspaceID); err != nil {
+		t.Fatalf("seed workspace: %v", err)
+	}
+	t.Cleanup(func() { pool.Exec(context.Background(), `DELETE FROM workspace WHERE id = $1`, workspaceID) })
+
+	if _, err := pool.Exec(ctx, `INSERT INTO member (workspace_id, user_id, role) VALUES ($1, $2, 'owner')`,
+		workspaceID, userID); err != nil {
+		t.Fatalf("seed member: %v", err)
+	}
+
+	var runtimeID string
+	if err := pool.QueryRow(ctx, `
+		INSERT INTO agent_runtime (workspace_id, name, runtime_mode, provider, status, device_info, metadata, owner_id)
+		VALUES ($1, 'attr-runtime', 'cloud', 'codex', 'online', '', '{}'::jsonb, $2)
+		RETURNING id`, workspaceID, userID).Scan(&runtimeID); err != nil {
+		t.Fatalf("seed runtime: %v", err)
+	}
+	if err := pool.QueryRow(ctx, `
+		INSERT INTO agent (workspace_id, name, runtime_mode, runtime_config, runtime_id, visibility,
+			max_concurrent_tasks, owner_id, instructions, custom_env, custom_args)
+		VALUES ($1, 'attr-agent', 'cloud', '{}'::jsonb, $2, 'workspace', 1, $3, '', '{}'::jsonb, '[]'::jsonb)
+		RETURNING id`, workspaceID, runtimeID, userID).Scan(&agentID); err != nil {
+		t.Fatalf("seed agent: %v", err)
+	}
+	return workspaceID, userID, agentID, ""
 }

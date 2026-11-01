@@ -1,10 +1,11 @@
 package gameadmin
 
 import (
-	"github.com/auro-ai/auro/server/internal/testutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/auro-ai/auro/server/internal/testutil"
 )
 
 func TestResolve(t *testing.T) {

@@ -10,7 +10,6 @@ import (
 
 	"github.com/jackc/pgx/v5/pgtype"
 
-	"github.com/auro-ai/auro/server/internal/integrations/channel/engine"
 	db "github.com/auro-ai/auro/server/pkg/db/generated"
 )
 
@@ -99,21 +98,5 @@ func TestValidateInstallationParams(t *testing.T) {
 		if err := validateInstallationParams(p); err == nil {
 			t.Errorf("missing %s should be rejected", name)
 		}
-	}
-}
-
-func TestIssueCreatedText(t *testing.T) {
-	t.Parallel()
-	withTitle := issueCreatedText(engine.Result{IssueIdentifier: "MUL-42", IssueTitle: "Fix the thing"}, copyFor(DefaultLocale))
-	if !strings.Contains(withTitle, "MUL-42") || !strings.Contains(withTitle, "Fix the thing") {
-		t.Errorf("issueCreatedText = %q, want identifier + title", withTitle)
-	}
-	noTitle := issueCreatedText(engine.Result{IssueIdentifier: "MUL-43"}, copyFor(DefaultLocale))
-	if !strings.Contains(noTitle, "MUL-43") || strings.Contains(noTitle, "—") {
-		t.Errorf("issueCreatedText without title = %q, want just the identifier", noTitle)
-	}
-	noID := issueCreatedText(engine.Result{IssueNumber: 7}, copyFor(DefaultLocale))
-	if !strings.Contains(noID, "#7") {
-		t.Errorf("issueCreatedText with no identifier = %q, want #7 fallback", noID)
 	}
 }

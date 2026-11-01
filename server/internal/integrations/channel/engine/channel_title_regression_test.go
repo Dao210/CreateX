@@ -2,8 +2,9 @@ package engine
 
 import (
 	"context"
-	"github.com/auro-ai/auro/server/internal/integrations/channel"
 	"testing"
+
+	"github.com/auro-ai/auro/server/internal/integrations/channel"
 )
 
 func TestRouterTitleUsesCurrentInstruction(t *testing.T) {

@@ -9,9 +9,9 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/auro-ai/auro/server/internal/dbstartup"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/auro-ai/auro/server/internal/dbstartup"
 )
 
 const (

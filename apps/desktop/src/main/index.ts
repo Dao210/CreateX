@@ -127,13 +127,7 @@ function freezeBreadcrumbPath(): string {
 }
 
 let mainWindow: BrowserWindow | null = null;
-const issueWindows = new Set<BrowserWindow>();
-const authSessionCoordinator = new AuthSessionCoordinator<BrowserWindow>(
-  (window) => {
-    issueWindows.delete(window);
-    if (!window.isDestroyed()) window.close();
-  },
-);
+const authSessionCoordinator = new AuthSessionCoordinator();
 const notificationGate = new NotificationGate();
 const mainRendererMessages = new MainRendererMessageQueue();
 let desktopInitialized = false;
@@ -632,7 +626,7 @@ if (!gotTheLock) {
     });
 
     // Preload announces each listener only after it has been installed by the
-    // main renderer. Ignore issue-window senders so they can never drain a
+    // main renderer. Ignore other senders so they can never drain a
     // payload intended for the tabbed application window.
     ipcMain.on(
       MAIN_RENDERER_CHANNEL_STATE_CHANNEL,
@@ -649,11 +643,11 @@ if (!gotTheLock) {
     );
 
     // Account identity is the only cross-renderer auth signal. Main remains
-    // authoritative and closes issue windows instead of copying credentials.
+    // authoritative for the main renderer account.
     ipcMain.on(AUTH_SESSION_STATE_CHANNEL, (event, value: unknown) => {
       const sourceWindow = BrowserWindow.fromWebContents(event.sender);
       const userId = parseAuthSessionUserId(value);
-      if (!sourceWindow || userId === undefined) return;
+      if (sourceWindow !== mainWindow || userId === undefined) return;
 
       if (sourceWindow === mainWindow) {
         const accountInvalidated = authSessionCoordinator.reportMain(userId);
@@ -663,9 +657,7 @@ if (!gotTheLock) {
         }
         return;
       }
-      if (issueWindows.has(sourceWindow)) {
-        authSessionCoordinator.reportIssue(sourceWindow, userId);
-      }
+
     });
 
     // IPC: toggle immersive mode — hides the macOS traffic lights so full-screen
@@ -684,14 +676,7 @@ if (!gotTheLock) {
     ipcMain.on("notification:show", (event, value: unknown) => {
       const sourceWindow = BrowserWindow.fromWebContents(event.sender);
       if (!sourceWindow) return;
-      if (sourceWindow === mainWindow) {
-        if (!authSessionCoordinator.hasActiveMainSession()) return;
-      } else if (
-        !issueWindows.has(sourceWindow) ||
-        !authSessionCoordinator.isCurrentIssueSession(sourceWindow)
-      ) {
-        return;
-      }
+      if (sourceWindow !== mainWindow || !authSessionCoordinator.hasActiveMainSession()) return;
 
       const payload = parseNativeNotificationPayload(value);
       if (!payload || !Notification.isSupported()) return;

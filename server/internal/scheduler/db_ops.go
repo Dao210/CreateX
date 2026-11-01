@@ -7,11 +7,11 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/auro-ai/auro/server/pkg/dbid"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/auro-ai/auro/server/pkg/dbid"
 )
 
 // ErrLeaseLost is returned by heartbeat / terminal-update primitives

@@ -126,29 +126,6 @@ describe("useSetChatSessionArchived", () => {
   });
 });
 
-describe("useSetChatSessionProject", () => {
-  let qc: QueryClient;
-  let updateChatSession: ReturnType<
-    typeof vi.fn<
-      (
-        id: string,
-        data: { title: string } | { project_id: string | null },
-      ) => Promise<ChatSession>
-    >
-  >;
-
-  beforeEach(() => {
-    qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    updateChatSession = vi.fn();
-    setApiInstance({ updateChatSession } as unknown as ApiClient);
-  });
-
-  afterEach(() => {
-    qc.clear();
-    vi.restoreAllMocks();
-  });
-});
-
 // The consume DELETE is the last step of a durable draft restore (#5219), and
 // mutations are `retry: false` app-wide — a single dropped request would leave
 // the row behind, to be re-offered later. The endpoint is idempotent, so this

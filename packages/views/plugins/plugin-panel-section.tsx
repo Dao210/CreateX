@@ -19,7 +19,7 @@ import { PluginSurfaceFrame } from "./plugin-surface-frame";
  * re-rendered.
  */
 export function PluginPanelSection({ issueId }: { issueId: string }) {
-  const { t } = useT("issues");
+  const { t } = useT("execution");
   const platform = isDesktopShell() ? "desktop" : "web";
   const workspace = useCurrentWorkspace();
   const wsId = workspace?.id ?? "";

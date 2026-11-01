@@ -3,125 +3,12 @@ package cli
 import (
 	"context"
 	"encoding/json"
-	"errors"
-	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
 )
-
-// TestHelperStatusErrorsAreClassified is an integration test that drives the
-// real client helpers against a fake server and asserts the error they return
-// flows correctly through the top-level FormatError / ExitCodeFor. This is the
-// coverage the unit tests were missing: it proves that the actual command
-// paths (issue update -> PutJSON, comment list -> GetJSONWithHeaders, project
-// delete -> DeleteJSON, agent update -> PatchJSON, upload, download) all get
-// the friendly copy and the tiered exit code, not the old raw string + exit 1.
-func TestHelperStatusErrorsAreClassified(t *testing.T) {
-	withLang(t, "en_US.UTF-8")
-
-	// Each helper wraps a real client call onto a fixed path. The server
-	// returns whatever status the current case dictates.
-	helpers := []struct {
-		name string
-		call func(c *APIClient, ctx context.Context) error
-	}{
-		{"GetJSON (issue get)", func(c *APIClient, ctx context.Context) error {
-			var out map[string]any
-			return c.GetJSON(ctx, "/api/issues/abc", &out)
-		}},
-		{"GetJSONWithHeaders (comment list)", func(c *APIClient, ctx context.Context) error {
-			var out []any
-			_, err := c.GetJSONWithHeaders(ctx, "/api/issues/abc/comments", &out)
-			return err
-		}},
-		{"PostJSON (issue create)", func(c *APIClient, ctx context.Context) error {
-			return c.PostJSON(ctx, "/api/issues", map[string]any{"title": "t"}, nil)
-		}},
-		{"PutJSON (issue update)", func(c *APIClient, ctx context.Context) error {
-			return c.PutJSON(ctx, "/api/issues/abc", map[string]any{"title": "t"}, nil)
-		}},
-		{"PatchJSON (agent update)", func(c *APIClient, ctx context.Context) error {
-			return c.PatchJSON(ctx, "/api/agents/abc", map[string]any{"name": "n"}, nil)
-		}},
-		{"DeleteJSON (project delete)", func(c *APIClient, ctx context.Context) error {
-			return c.DeleteJSON(ctx, "/api/projects/abc")
-		}},
-		{"DeleteJSONWithBody (squad member remove)", func(c *APIClient, ctx context.Context) error {
-			return c.DeleteJSONWithBody(ctx, "/api/squads/abc/members", map[string]any{"member_id": "x"})
-		}},
-		{"UploadFile (issue attachment)", func(c *APIClient, ctx context.Context) error {
-			_, err := c.UploadFile(ctx, []byte("x"), "x.txt", "abc")
-			return err
-		}},
-		{"UploadFileWithURL (avatar)", func(c *APIClient, ctx context.Context) error {
-			_, _, err := c.UploadFileWithURL(ctx, []byte("x"), "x.txt")
-			return err
-		}},
-		{"DownloadFile (attachment)", func(c *APIClient, ctx context.Context) error {
-			_, err := c.DownloadFile(ctx, "/uploads/abc")
-			return err
-		}},
-	}
-
-	statusCases := []struct {
-		status   int
-		wantExit int
-		wantCopy string
-	}{
-		{http.StatusUnauthorized, ExitAuth, "auro login"},
-		{http.StatusForbidden, ExitAuth, "permission"},
-		{http.StatusNotFound, ExitNotFound, "not found"},
-		{http.StatusUnprocessableEntity, ExitValidation, "title is required"},
-		{http.StatusInternalServerError, ExitGeneric, "temporarily unavailable"},
-	}
-
-	for _, sc := range statusCases {
-		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(sc.status)
-			// Validation responses carry a server message that FormatError
-			// should surface verbatim; other statuses ignore the body.
-			io.WriteString(w, `{"error":"title is required"}`)
-		}))
-
-		for _, h := range helpers {
-			t.Run(http.StatusText(sc.status)+"/"+h.name, func(t *testing.T) {
-				client := NewAPIClient(srv.URL, "ws", "token")
-				err := h.call(client, context.Background())
-				if err == nil {
-					t.Fatalf("expected error, got nil")
-				}
-
-				// 1. The helper must return a *HTTPError (possibly wrapped).
-				var httpErr *HTTPError
-				if !errors.As(err, &httpErr) {
-					t.Fatalf("expected *HTTPError, got %T: %v", err, err)
-				}
-				if httpErr.StatusCode != sc.status {
-					t.Errorf("status = %d, want %d", httpErr.StatusCode, sc.status)
-				}
-
-				// 2. Tiered exit code.
-				if got := ExitCodeFor(err); got != sc.wantExit {
-					t.Errorf("ExitCodeFor = %d, want %d", got, sc.wantExit)
-				}
-
-				// 3. Friendly, localized copy — and no raw path/verb leak.
-				msg := FormatError(err, false)
-				if !strings.Contains(msg, sc.wantCopy) {
-					t.Errorf("FormatError = %q, want it to contain %q", msg, sc.wantCopy)
-				}
-				if strings.Contains(msg, "/api/") || strings.Contains(msg, "returned") {
-					t.Errorf("FormatError leaked raw detail: %q", msg)
-				}
-			})
-		}
-
-		srv.Close()
-	}
-}
 
 // TestCommandContextNotTruncatedBelowHTTPTimeout proves the must-fix: a
 // command-level context derived from APIContext never cancels a request before

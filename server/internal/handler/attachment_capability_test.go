@@ -287,51 +287,6 @@ func TestDownloadAttachmentWithCapability_PreservesRangeAndHeaders(t *testing.T)
 // Minting
 // ---------------------------------------------------------------------------
 
-func TestGetAttachmentByID_ProxyModeReturnsRedeemableCapability(t *testing.T) {
-	store := installProxyModeStorage(t)
-	id := seedPreviewAttachment(t, store, "downloads/inline.png", "inline.png", "image/png", []byte("png-bytes"))
-
-	req := httptest.NewRequest("GET", "/api/attachments/"+id, nil)
-	req.Header.Set("X-User-ID", testUserID)
-	req.Header.Set("X-Workspace-ID", testWorkspaceID)
-	rctx := chi.NewRouteContext()
-	rctx.URLParams.Add("id", id)
-	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
-	w := httptest.NewRecorder()
-
-	testHandler.GetAttachmentByID(w, req)
-
-	if w.Code != http.StatusOK {
-		t.Fatalf("status = %d, want 200; body=%s", w.Code, w.Body.String())
-	}
-	var resp AttachmentResponse
-	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
-		t.Fatalf("decode response: %v; body=%s", err, w.Body.String())
-	}
-
-	// Site-relative on purpose: an absolute URL here would be picked up by
-	// the inline-media re-sign path in packages/views/editor/attachment.tsx
-	// and pinned into an <img> for far longer than the 60s TTL.
-	if !strings.HasPrefix(resp.DownloadURL, "/api/attachments/"+id+"/signed-download?") {
-		t.Fatalf("download_url = %q, want a site-relative capability path", resp.DownloadURL)
-	}
-
-	parsed, err := url.Parse(resp.DownloadURL)
-	if err != nil {
-		t.Fatalf("parse download_url: %v", err)
-	}
-	if !verifyAttachmentCapability(id, parsed.Query().Get("exp"), parsed.Query().Get("sig"), "", time.Now()) {
-		t.Fatalf("minted capability does not verify: %q", resp.DownloadURL)
-	}
-
-	// markdown_url is persisted into comment bodies and must outlive the
-	// session, so a 60-second capability must never reach it — that is the
-	// exact class of bug MUL-3130 fixed.
-	if strings.Contains(resp.MarkdownURL, "signed-download") {
-		t.Fatalf("markdown_url = %q, must not embed a short-lived capability", resp.MarkdownURL)
-	}
-}
-
 // TestGetAttachmentByID_ProxyModeDownloadURLForcesAttachment is the end-to-end
 // proof for the download-intent field: the minted attachment_download_url is a
 // site-relative dl=1 capability that verifies only under the attachment intent

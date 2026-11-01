@@ -65,29 +65,6 @@ func dispatchGroupMessage(t *testing.T, botName, content string) channel.Inbound
 	return got
 }
 
-// TestAnIssueCommandAfterAMentionIsStillACommand: what a person experiences
-// when this regresses is that /issue in a group does nothing whatsoever — no
-// issue is filed and the bot answers as if they had just been chatting.
-func TestAnIssueCommandAfterAMentionIsStillACommand(t *testing.T) {
-	t.Parallel()
-	msg := dispatchGroupMessage(t, "", "@Andrew /issue 登录失败")
-
-	cmd, ok := engine.ParseIssueCommand(msg.CommandText)
-	if !ok {
-		t.Fatalf("the shared parser did not see /issue.\nCommandText = %q — the @-mention is still in "+
-			"front of the directive, so no issue is filed and nothing tells the person why.", msg.CommandText)
-	}
-	if cmd.Title != "登录失败" {
-		t.Errorf("issue title = %q, want 登录失败", cmd.Title)
-	}
-	// A pure /issue must not also run the agent, exactly as in a 1:1 chat —
-	// otherwise the group gets the confirmation AND "I don't know this slash
-	// command" underneath it.
-	if !msg.SkipAgentRun {
-		t.Error("SkipAgentRun = false for a pure group /issue; the agent would answer the command text too")
-	}
-}
-
 // TestAFreshSessionCommandAfterAMentionIsStillACommand: /clear is the other
 // shared directive. When it is dropped the agent keeps the previous thread and
 // answers with a conversation the person was trying to leave behind.

@@ -30,7 +30,7 @@ func (q *Queries) ArchiveAllInbox(ctx context.Context, arg ArchiveAllInboxParams
 }
 
 const archiveAllReadInbox = `-- name: ArchiveAllReadInbox :execrows
-UPDATE inbox_item SET archived=true WHERE workspace_id=$1 AND recipient_type='member' AND recipient_id=$2 AND NOT archived AND read
+UPDATE inbox_item SET archived=true WHERE type IN ('autopilot_paused', 'autopilot_quota_exceeded', 'creation_ready', 'character_milestone', 'world_digest') AND workspace_id=$1 AND recipient_type='member' AND recipient_id=$2 AND NOT archived AND read
 `
 
 type ArchiveAllReadInboxParams struct {
@@ -94,7 +94,7 @@ func (q *Queries) CountUnreadInbox(ctx context.Context, arg CountUnreadInboxPara
 }
 
 const countUnreadInboxByWorkspace = `-- name: CountUnreadInboxByWorkspace :many
-SELECT i.workspace_id,count(*) AS count FROM inbox_item i JOIN member m ON m.workspace_id=i.workspace_id AND m.user_id=i.recipient_id WHERE i.recipient_type='member' AND i.recipient_id=$1 AND NOT i.archived AND NOT i.read GROUP BY i.workspace_id
+SELECT i.workspace_id,count(*) AS count FROM inbox_item i JOIN member m ON m.workspace_id=i.workspace_id AND m.user_id=i.recipient_id WHERE i.type IN ('autopilot_paused', 'autopilot_quota_exceeded', 'creation_ready', 'character_milestone', 'world_digest') AND i.recipient_type='member' AND i.recipient_id=$1 AND NOT i.archived AND NOT i.read GROUP BY i.workspace_id
 `
 
 type CountUnreadInboxByWorkspaceRow struct {
@@ -210,7 +210,7 @@ func (q *Queries) GetInboxItemInWorkspace(ctx context.Context, arg GetInboxItemI
 }
 
 const listArchivedInboxItems = `-- name: ListArchivedInboxItems :many
-SELECT id, workspace_id, recipient_type, recipient_id, type, severity, title, body, read, archived, created_at, actor_type, actor_id, details, content FROM inbox_item WHERE workspace_id=$1 AND recipient_type=$2 AND recipient_id=$3 AND archived ORDER BY created_at DESC,id DESC LIMIT 200
+SELECT id, workspace_id, recipient_type, recipient_id, type, severity, title, body, read, archived, created_at, actor_type, actor_id, details, content FROM inbox_item WHERE type IN ('autopilot_paused', 'autopilot_quota_exceeded', 'creation_ready', 'character_milestone', 'world_digest') AND workspace_id=$1 AND recipient_type=$2 AND recipient_id=$3 AND archived ORDER BY created_at DESC,id DESC LIMIT 200
 `
 
 type ListArchivedInboxItemsParams struct {
@@ -256,7 +256,7 @@ func (q *Queries) ListArchivedInboxItems(ctx context.Context, arg ListArchivedIn
 }
 
 const listInboxItems = `-- name: ListInboxItems :many
-SELECT id, workspace_id, recipient_type, recipient_id, type, severity, title, body, read, archived, created_at, actor_type, actor_id, details, content FROM inbox_item WHERE workspace_id=$1 AND recipient_type=$2 AND recipient_id=$3 AND NOT archived ORDER BY created_at DESC,id DESC
+SELECT id, workspace_id, recipient_type, recipient_id, type, severity, title, body, read, archived, created_at, actor_type, actor_id, details, content FROM inbox_item WHERE type IN ('autopilot_paused', 'autopilot_quota_exceeded', 'creation_ready', 'character_milestone', 'world_digest') AND workspace_id=$1 AND recipient_type=$2 AND recipient_id=$3 AND NOT archived ORDER BY created_at DESC,id DESC
 `
 
 type ListInboxItemsParams struct {

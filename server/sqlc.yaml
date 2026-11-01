@@ -13,6 +13,3 @@ sql:
         overrides:
           - column: "user.password_hash"
             go_struct_tag: 'json:"-"'
-          - column: "issue_wakeup.condition"
-            go_type: "encoding/json.RawMessage"
-            nullable: true

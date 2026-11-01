@@ -279,8 +279,6 @@ return 1
 
 var webhookLimiterCheckScript = redis.NewScript(webhookLimiterCheckSrc)
 
-
-
 type redisWebhookRateLimiter struct {
 	cfg       SlidingWindowRateLimit
 	rdb       redis.UniversalClient

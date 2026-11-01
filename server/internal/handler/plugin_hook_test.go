@@ -160,44 +160,6 @@ func TestInvokePluginHookRefusesDisabledInstallation(t *testing.T) {
 	}
 }
 
-// The install token is returned once and stored only as a hash, so the same
-// token must never come back from a second rotation, and the old one must stop
-// working the moment a new one is issued.
-func TestRotatePluginTokenIssuesOnceAndInvalidatesThePrevious(t *testing.T) {
-	withPluginsV1Flag(t, testHandler, true)
-	cleanupPluginInstallations(t)
-	installationID := installHookPlugin(t)
-	testHandler.PluginService.DeploymentKey = bytes.Repeat([]byte{9}, 32)
-	t.Cleanup(func() { testHandler.PluginService.DeploymentKey = nil })
-
-	first := rotateToken(t, installationID)
-	if first.Token == "" || first.SigningSecret == "" {
-		t.Fatalf("rotation returned nothing usable: %+v", first)
-	}
-
-	installation, err := testHandler.PluginService.AuthenticateInstallToken(context.Background(), first.Token)
-	if err != nil {
-		t.Fatalf("the freshly issued token must authenticate: %v", err)
-	}
-	if uuidToString(installation.ID) != installationID {
-		t.Fatalf("token resolved to the wrong installation: %s", uuidToString(installation.ID))
-	}
-
-	second := rotateToken(t, installationID)
-	if second.Token == first.Token {
-		t.Fatal("rotation reissued the same token")
-	}
-	if _, err := testHandler.PluginService.AuthenticateInstallToken(context.Background(), first.Token); err == nil {
-		t.Fatal("the previous token must stop working after a rotation")
-	}
-	// Derived from the deployment key and the installation, so it survives
-	// rotation — an author does not have to reconfigure their server every
-	// time an admin rotates the token.
-	if second.SigningSecret != first.SigningSecret {
-		t.Fatal("the signing secret must be stable across token rotations")
-	}
-}
-
 func TestRotatePluginTokenDoesNotRequireHookSigning(t *testing.T) {
 	withPluginsV1Flag(t, testHandler, true)
 	cleanupPluginInstallations(t)

@@ -794,24 +794,6 @@ describe("AgentTranscriptDialog", () => {
 });
 
 describe("AgentTranscriptDialog — work directory handoff", () => {
-  it("shows and copies the durable project directory after worktree cleanup", async () => {
-    renderDialog(items, {
-      task: {
-        ...baseTask,
-        work_dir: "/managed/task/worktree",
-        relative_work_dir: "workspace/task/worktree",
-        durable_work_dir: "/Users/dev/project",
-        relative_durable_work_dir: "project",
-      },
-    });
-
-    await userEvent.click(screen.getByRole("button", { name: "Run details" }));
-    expect(screen.getByText("Project directory")).toBeInTheDocument();
-    expect(screen.getByText("project")).toBeInTheDocument();
-
-    await userEvent.click(screen.getByTitle("Copy project directory"));
-    expect(copyTextMock).toHaveBeenCalledWith("/Users/dev/project");
-  });
 
   it("keeps a live task on its actual workdir", async () => {
     renderDialog(items, {
@@ -1015,20 +997,6 @@ describe("AgentTranscriptDialog — reason vs raw diagnostics", () => {
 
     expect(screen.queryByText("Technical details")).not.toBeInTheDocument();
     expect(screen.queryByText("Reason")).not.toBeInTheDocument();
-  });
-});
-
-
-describe("readable issue references", () => {
-  it("searches both the displayed identifier and original UUID", async () => {
-    const issueId = "01a07eca-8e82-775e-be06-e4a97ccfa299";
-    renderDialog([{ seq: 1, type: "tool_use", tool: "exec_command", input: { command: `auro issue get ${issueId} --output json` } }]);
-    expect(screen.getByText("auro issue get DEV-17 --output json")).toBeInTheDocument();
-    const search = screen.getByRole("textbox");
-    fireEvent.change(search, { target: { value: "DEV-17" } });
-    expect(screen.getByText("auro issue get DEV-17 --output json")).toBeInTheDocument();
-    fireEvent.change(search, { target: { value: issueId } });
-    expect(screen.getByText("auro issue get DEV-17 --output json")).toBeInTheDocument();
   });
 });
 

@@ -1,11 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { InboxItem } from "@auro/core/types";
-import {
-  deduplicateInboxItems,
-  getAutopilotQuotaBody,
-  getInboxDisplayTitle,
-  getInboxNavigationTarget,
-} from "./inbox-display";
+import { getAutopilotQuotaBody, getInboxDisplayTitle } from "./inbox-display";
 
 function item(overrides: Partial<InboxItem>): InboxItem {
   return {
@@ -30,32 +25,6 @@ function item(overrides: Partial<InboxItem>): InboxItem {
 }
 
 describe("deduplicateInboxItems", () => {
-  it("keeps the newest issue row while preserving an older comment anchor", () => {
-    const merged = deduplicateInboxItems([
-      item({
-        id: "comment-notification",
-        created_at: "2026-06-15T08:00:00Z",
-        details: { comment_id: "comment-1" },
-      }),
-      item({
-        id: "status-notification",
-        type: "status_changed",
-        created_at: "2026-06-15T08:01:00Z",
-        details: { from: "in_progress", to: "in_review" },
-      }),
-    ]);
-
-    expect(merged).toHaveLength(1);
-    expect(merged[0]).toMatchObject({
-      id: "status-notification",
-      type: "status_changed",
-      details: {
-        from: "in_progress",
-        to: "in_review",
-        comment_id: "comment-1",
-      },
-    });
-  });
 });
 
 describe("getInboxDisplayTitle", () => {
@@ -85,37 +54,6 @@ describe("getInboxDisplayTitle", () => {
 });
 
 describe("getInboxNavigationTarget", () => {
-  it("opens issue-less quota notices in their workspace sheet", () => {
-    expect(
-      getInboxNavigationTarget(
-        item({ issue_id: null, type: "autopilot_quota_exceeded" }),
-        "acme",
-        "history-1",
-      ),
-    ).toEqual({
-      pathname: "/[workspace]/inbox/[id]",
-      params: { workspace: "acme", id: "inbox-1" },
-    });
-  });
-
-  it("preserves issue navigation and opens paused notices in the same sheet", () => {
-    expect(
-      getInboxNavigationTarget(item({}), "acme", "history-1"),
-    ).toMatchObject({
-      pathname: "/[workspace]/issue/[id]",
-      params: { workspace: "acme", id: "issue-1", h: "history-1" },
-    });
-    expect(
-      getInboxNavigationTarget(
-        item({ issue_id: null, type: "autopilot_paused" }),
-        "acme",
-        "history-1",
-      ),
-    ).toEqual({
-      pathname: "/[workspace]/inbox/[id]",
-      params: { workspace: "acme", id: "inbox-1" },
-    });
-  });
 });
 
 describe("getAutopilotQuotaBody", () => {

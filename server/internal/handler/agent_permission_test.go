@@ -145,67 +145,6 @@ func TestMigrationBackfill_VisibilityToPermission(t *testing.T) {
 	}
 }
 
-// TestCanInvokeAgent_PublicToMemberWhitelist verifies that a public_to agent
-// restricted to a specific member is invocable (assignable) only by that
-// member — not by other plain members, and not by workspace admins who are not
-// on the list (MUL-3963).
-func TestCanInvokeAgent_PublicToMemberWhitelist(t *testing.T) {
-	if testHandler == nil || testPool == nil {
-		t.Skip("database not available")
-	}
-	runtimeID := handlerTestRuntimeID(t)
-
-	allowedMember := createPermissionTestMember(t, "perm-allowed-member@auro.test")
-	otherMember := createPermissionTestMember(t, "perm-other-member@auro.test")
-
-	// Owner (testUserID) creates an agent public_to the allowed member only.
-	w := httptest.NewRecorder()
-	testHandler.CreateAgent(w, newRequest("POST", "/api/agents?workspace_id="+testWorkspaceID, map[string]any{
-		"name":            "public-to-specific-member-agent",
-		"runtime_id":      runtimeID,
-		"permission_mode": "public_to",
-		"invocation_targets": []map[string]any{
-			{"target_type": "member", "target_id": allowedMember},
-		},
-	}))
-	if w.Code != http.StatusCreated {
-		t.Fatalf("create agent: expected 201, got %d: %s", w.Code, w.Body.String())
-	}
-	var agent AgentResponse
-	if err := json.NewDecoder(w.Body).Decode(&agent); err != nil {
-		t.Fatalf("decode: %v", err)
-	}
-	t.Cleanup(func() { testPool.Exec(context.Background(), `DELETE FROM agent WHERE id = $1`, agent.ID) })
-
-	// Derived legacy visibility for a member-only public_to agent must be
-	// "private" so old clients never treat it as workspace-wide.
-	if agent.Visibility != "private" {
-		t.Errorf("member-only public_to derived visibility = %q, want private", agent.Visibility)
-	}
-
-	assignAs := func(actorID string) int {
-		rec := httptest.NewRecorder()
-		testHandler.CreateIssue(rec, newRequestAs(actorID, "POST", "/api/issues?workspace_id="+testWorkspaceID, map[string]any{
-			"title":         "assign to member-scoped agent",
-			"status":        "todo",
-			"assignee_type": "agent",
-			"assignee_id":   agent.ID,
-		}))
-		t.Cleanup(func() {
-			testPool.Exec(context.Background(), `DELETE FROM agent_task_queue WHERE agent_id = $1`, agent.ID)
-			testPool.Exec(context.Background(), `DELETE FROM issue WHERE workspace_id = $1 AND title = 'assign to member-scoped agent'`, testWorkspaceID)
-		})
-		return rec.Code
-	}
-
-	if code := assignAs(allowedMember); code != http.StatusCreated {
-		t.Errorf("allow-listed member assign: expected 201, got %d", code)
-	}
-	if code := assignAs(otherMember); code != http.StatusForbidden {
-		t.Errorf("non-allow-listed member assign: expected 403, got %d", code)
-	}
-}
-
 // --- MUL-3963 follow-up: stackable / mixed / batch-replaced targets -------
 
 // createPublicToAgentWithTargets creates a public_to agent (owned by

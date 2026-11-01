@@ -1,0 +1,1 @@
+DROP INDEX CONCURRENTLY IF EXISTS vcs_connection_pkey;

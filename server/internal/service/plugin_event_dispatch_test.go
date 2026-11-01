@@ -133,35 +133,6 @@ func TestEventBridgeMapsInternalEventsToThePublishedVocabulary(t *testing.T) {
 	}
 }
 
-// The issue id travels with the event so the callback token can be narrowed to
-// it. Each payload shape the product actually publishes is covered.
-func TestEventBridgeFindsTheIssueInEveryPayloadShape(t *testing.T) {
-	issueID := "3fa85f64-5717-4562-b3fc-2c963f66afa6"
-	for name, payload := range map[string]any{
-		"issue event":   map[string]any{"issue": map[string]any{"id": issueID}},
-		"comment event": map[string]any{"comment": map[string]any{"issue_id": issueID}},
-		"task event":    map[string]any{"issue_id": issueID},
-	} {
-		found := issueIDFromPayload(payload)
-		if uuidString(found) != issueID {
-			t.Fatalf("%s: issue id = %q, want %q", name, uuidString(found), issueID)
-		}
-	}
-
-	// A payload with no issue yields the zero UUID, which simply means the
-	// grant is not issue-scoped — not an error.
-	if issueIDFromPayload(map[string]any{"unrelated": true}).Valid {
-		t.Fatal("a payload with no issue must not produce an issue-scoped grant")
-	}
-	if issueIDFromPayload(nil).Valid {
-		t.Fatal("a nil payload must not produce an issue-scoped grant")
-	}
-	// Not a UUID: refuse rather than pass a malformed id into a grant.
-	if issueIDFromPayload(map[string]any{"issue_id": "not-a-uuid"}).Valid {
-		t.Fatal("a malformed id must not produce an issue-scoped grant")
-	}
-}
-
 // An event hook writes as the installation. This asserts the actor the
 // dispatcher stamps, which is what the callback token later carries.
 func TestEventDispatchStampsThePluginActor(t *testing.T) {
@@ -305,15 +276,5 @@ func TestPublishingDoesNotParseThePayload(t *testing.T) {
 
 	if marshals != 0 {
 		t.Fatalf("the payload was serialized %d time(s) on the publishing goroutine; the id must be extracted on a worker instead", marshals)
-	}
-}
-
-// And the id still arrives — moved, not dropped. issueIDFromPayload remains the
-// one place that knows the payload shapes; only where it runs changed.
-func TestTheIssueIDIsStillFoundOnTheWorker(t *testing.T) {
-	issueID := "3fa85f64-5717-4562-b3fc-2c963f66afa6"
-	found := issueIDFromPayload(map[string]any{"issue": map[string]any{"id": issueID}})
-	if uuidString(found) != issueID {
-		t.Fatalf("issue id = %q, want %q", uuidString(found), issueID)
 	}
 }

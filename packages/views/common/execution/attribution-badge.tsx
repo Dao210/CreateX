@@ -60,7 +60,7 @@ export function AttributionBadge({
    *  compete with a nearby primary avatar (the transcript identity row). */
   hideAvatar?: boolean;
 }) {
-  const { t } = useT("issues");
+  const { t } = useT("execution");
   if (!attribution) return null;
 
   // Human-readable resolution source, defaulting to the raw label so a

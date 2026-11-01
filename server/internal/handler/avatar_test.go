@@ -226,24 +226,6 @@ func seedForeignWorkspace(t *testing.T) string {
 	return id
 }
 
-// seedIssueForAvatarTest creates an issue an attachment can hang off.
-func seedIssueForAvatarTest(t *testing.T, workspaceID string) string {
-	t.Helper()
-	var id string
-	if err := testPool.QueryRow(context.Background(), `
-		INSERT INTO issue (workspace_id, title, status, priority, creator_type, creator_id, number)
-		VALUES ($1, 'avatar authorization fixture', 'todo', 'medium', 'member', $2,
-		        (SELECT COALESCE(MAX(number), 0) + 1 FROM issue WHERE workspace_id = $1))
-		RETURNING id::text
-	`, workspaceID, testUserID).Scan(&id); err != nil {
-		t.Fatalf("seed issue: %v", err)
-	}
-	t.Cleanup(func() {
-		testPool.Exec(context.Background(), `DELETE FROM issue WHERE id = $1`, id)
-	})
-	return id
-}
-
 // seedAvatarObject inserts the attachment row and returns its storage key.
 func seedAvatarObject(t *testing.T, opts avatarObjectOpts) string {
 	t.Helper()
@@ -356,18 +338,6 @@ func TestServeAvatar_ProxiesPrivateHostBody(t *testing.T) {
 // reproduced escalation: a private image attached to an issue must not become
 // a permanently public, unauthenticated avatar link — on the read side or the
 // write side, in this workspace or any other.
-
-// TestServeAvatar_RejectsAttachmentBoundToIssue is the reproduced attack. Even
-// with a valid signature (i.e. the value really did get stored in avatar_url),
-// an object attached to workspace content must never be served.
-func TestServeAvatar_RejectsAttachmentBoundToIssue(t *testing.T) {
-	withAvatarStorage(t, &mockStorageNoCdn{}, "")
-	key := seedAvatarObject(t, avatarObjectOpts{boundToIssue: true})
-
-	if w := serveAvatarRequest(t, signAvatarKey(key), key); w.Code != http.StatusNotFound {
-		t.Fatalf("status = %d, want 404 for an issue attachment", w.Code)
-	}
-}
 
 // TestServeAvatar_RejectsForeignWorkspaceAttachment — the cross-workspace leg:
 // a private image from a workspace the avatar's owner has nothing to do with

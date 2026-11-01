@@ -189,15 +189,6 @@ describe("suggestion trigger arming", () => {
       expect(picker(editor, slashKey)).toEqual({ active: true, query: "shi" });
     });
 
-    it("keeps multi-word queries alive, so allowSpaces issue search survives", () => {
-      const editor = makeEditor();
-      editor.commands.focus("end");
-
-      type(editor, "@login redirect bug");
-
-      expect(picker(editor)).toEqual({ active: true, query: "login redirect bug" });
-    });
-
     it("pasting into a query the user opened by typing keeps it open", () => {
       // Arming is about the trigger character, not about every later edit —
       // pasting a name into a mention you deliberately started is still a

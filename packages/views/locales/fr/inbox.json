@@ -150,6 +150,7 @@
     "residents": "Objectifs des habitants atteints : {{count}}",
     "view_resident": "Voir l’habitant",
     "view_world": "Voir le monde",
-    "author": "Par {{name}}"
+    "author": "Par {{name}}",
+    "view_automation": "Voir l’automatisation"
   }
 }

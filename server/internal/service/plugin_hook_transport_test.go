@@ -283,45 +283,6 @@ func TestHookCarriesAnInvocationScopedCallbackToken(t *testing.T) {
 	}
 }
 
-// The host resolved and permission-checked the issue, so it says which one this
-// call is about. Without it a handler has to read a client-supplied field —
-// unvalidated for ui/manual, and absent entirely for event, where no client was
-// involved.
-func TestHookBodyCarriesTheIssueTheHostResolved(t *testing.T) {
-	harness := newHookTestServer(t)
-	service := hookTestService(t, harness)
-	host := hookTestHost(harness)
-	installation := hookTestInstallation(t, harness.server.URL+"/hooks/summarize", host, []string{plugincontract.TriggerEvent})
-
-	hook, err := FindHook(installation, "summarize")
-	if err != nil {
-		t.Fatalf("find hook: %v", err)
-	}
-	issueID, err := parseUUIDValue("3fa85f64-5717-4562-b3fc-2c963f66afa6")
-	if err != nil {
-		t.Fatalf("parse issue id: %v", err)
-	}
-	if _, err := service.callHookEndpoint(context.Background(), HookInvocation{
-		Installation: installation,
-		Hook:         hook,
-		Trigger:      plugincontract.TriggerEvent,
-		EventType:    plugincontract.EventIssueCreated,
-		Actor:        HookActor{Type: "plugin", ID: installation.ID},
-		IssueID:      issueID,
-	}); err != nil {
-		t.Fatalf("hook call: %v", err)
-	}
-
-	received := <-harness.received
-	var body hookRequestBody
-	if err := json.Unmarshal(received.Body, &body); err != nil {
-		t.Fatalf("decode delivered body: %v", err)
-	}
-	if body.IssueID != uuidString(issueID) {
-		t.Fatalf("issue_id = %q, want %q — the handler has no other trustworthy way to know", body.IssueID, uuidString(issueID))
-	}
-}
-
 // A hook may not be reached through a trigger it never declared, even if the
 // caller asks for one the host supports.
 func TestInvokeHookRefusesUndeclaredTrigger(t *testing.T) {

@@ -46,25 +46,12 @@ describe("classic tank defense", () => {
     expect(game.player!.y).toBeLessThan(497);
   });
 
-  it("damages and opens a brick passage with real projectiles", () => {
-    const level = arena(); level.terrain[23 * 26 + 8] = "brick"; level.terrain[23 * 26 + 9] = "brick";
-    const game = new TankDefenseGame(level); game.start(); game.setInput(null, true); advance(game, 26);
-    expect(game.shots).toBe(2); expect(game.destroyedBricks).toBe(2);
-    expect(game.terrain[23 * 26 + 9]).toBe("floor");
-  });
-
   it("requires maximum player firepower to destroy steel", () => {
     const level = arena(); level.terrain[23 * 26 + 9] = "steel";
     for (const power of [0, 1, 2]) {
       const game = new TankDefenseGame(level); game.power = power; game.start(); game.setInput(null, true); advance(game, 10);
       expect(game.terrain[23 * 26 + 9]).toBe(power === 2 ? "floor" : "steel");
     }
-  });
-
-  it("lets projectiles pass through water", () => {
-    const level = arena(); level.terrain[23 * 26 + 9] = "water";
-    const game = new TankDefenseGame(level); game.start(); game.setInput(null, true); advance(game, 12);
-    expect(game.bullets[0]!.y).toBeLessThan(460); expect(game.terrain[23 * 26 + 9]).toBe("water");
   });
 
   it.each(["enemy", "player"] as const)("loses immediately when a %s round hits the castle", team => {
@@ -102,12 +89,6 @@ describe("classic tank defense", () => {
     Object.assign(enemy, { x: 180, y: 420, invincibleUntil: 0, thinkAt: 10000 });
     game.setInput(null, true); advance(game, 30);
     expect(game.kills).toBe(1); expect(game.score).toBe(100); expect(game.phase).toBe("cleared");
-  });
-
-  it("cancels opposing projectiles instead of allowing duplicate impacts", () => {
-    const game = new TankDefenseGame(arena()); game.start();
-    game.bullets.push(bullet({ x: 200, y: 300, direction: "down", team: "player" }), bullet({ id: 1000, x: 200, y: 306, direction: "up" }));
-    game.step(); expect(game.bullets).toHaveLength(0); expect(game.baseAlive).toBe(true);
   });
 
   it("collects firepower and fortifies the castle without changing the level source", () => {

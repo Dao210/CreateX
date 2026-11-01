@@ -3,7 +3,7 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import { I18nProvider } from "@auro/core/i18n/react";
 import type { Agent } from "@auro/core/types";
 import enChat from "../../locales/en/chat.json";
-import enIssues from "../../locales/en/issues.json";
+import enIssues from "../../locales/en/execution.json";
 
 vi.mock("../../common/actor-avatar", () => ({
   ActorAvatar: ({ actorId }: { actorId: string }) => (

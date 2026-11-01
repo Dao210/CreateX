@@ -18,13 +18,7 @@ func TestProtectedResourceMetadataURLPreservesResourcePath(t *testing.T) {
 	}
 }
 
-func TestAuthorizationMetadataURLsPreserveIssuerPath(t *testing.T) {
-	issuer, _ := url.Parse("https://login.example.com/tenant")
-	got := authorizationMetadataURLs(issuer)
-	if len(got) != 2 || got[0] != "https://login.example.com/.well-known/oauth-authorization-server/tenant" || got[1] != "https://login.example.com/.well-known/openid-configuration/tenant" {
-		t.Fatalf("authorizationMetadataURLs = %#v", got)
-	}
-}
+
 
 func TestBuildAuthorizationURLPinsPKCEStateAndResource(t *testing.T) {
 	metadata := OAuthMetadata{

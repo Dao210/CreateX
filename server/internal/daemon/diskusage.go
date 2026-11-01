@@ -358,14 +358,12 @@ func buildTaskUsage(taskDir, wsID, taskShort string, matcher artifactMatcher) Ta
 // matching Kind is meaningful.
 func parentIDForMeta(meta *execenv.GCMeta) string {
 	switch meta.Kind {
-	case execenv.GCKindIssue:
-		return strings.TrimSpace(meta.IssueID)
+
 	case execenv.GCKindChat:
 		return strings.TrimSpace(meta.ChatSessionID)
 	case execenv.GCKindAutopilotRun:
 		return strings.TrimSpace(meta.AutopilotRunID)
-	case execenv.GCKindQuickCreate:
-		return strings.TrimSpace(meta.TaskID)
+
 	default:
 		return ""
 	}
@@ -376,79 +374,6 @@ func parentIDForMeta(meta *execenv.GCMeta) string {
 // this token) must be omitted from the result rather than mapped to a
 // placeholder, so callers can tell "unresolved" from a real status.
 type ParentStatusFetcher func(ctx context.Context, workspaceID string, issueIDs []string) (map[string]string, error)
-
-// ResolveParentStatuses fills in ParentStatus on every issue-kind task in the
-// report. ScanDiskUsage is deliberately network-free — this is the opt-in
-// second pass that turns the STATUS column into real data.
-//
-// Only issue-kind tasks are resolved: they are the overwhelming majority of
-// task dirs and the only kind with a batch reconciliation endpoint. Chat,
-// autopilot-run, and quick-create dirs keep an empty ParentStatus rather than
-// costing one request each.
-//
-// Best-effort by design: a workspace whose fetch fails leaves its tasks
-// unresolved and the error is returned for the caller to surface, but every
-// other workspace is still filled in. Callers must not treat a non-nil error
-// as "the report is unusable".
-func ResolveParentStatuses(ctx context.Context, report *DiskUsageReport, fetch ParentStatusFetcher) error {
-	if report == nil || fetch == nil {
-		return nil
-	}
-
-	idsByWorkspace := map[string][]string{}
-	seen := map[string]map[string]bool{}
-	for _, task := range report.Tasks {
-		if task.Kind != string(execenv.GCKindIssue) || task.ParentID == "" {
-			continue
-		}
-		if seen[task.WorkspaceID] == nil {
-			seen[task.WorkspaceID] = map[string]bool{}
-		}
-		// Several task dirs can share one issue (a re-dispatched task reuses
-		// the prior workdir), so de-duplicate before asking the server.
-		if seen[task.WorkspaceID][task.ParentID] {
-			continue
-		}
-		seen[task.WorkspaceID][task.ParentID] = true
-		idsByWorkspace[task.WorkspaceID] = append(idsByWorkspace[task.WorkspaceID], task.ParentID)
-	}
-	if len(idsByWorkspace) == 0 {
-		return nil
-	}
-
-	var firstErr error
-	statuses := make(map[string]map[string]string, len(idsByWorkspace))
-	for workspaceID, ids := range idsByWorkspace {
-		resolved := make(map[string]string, len(ids))
-		// Same chunk size the GC loop uses, so one oversized root cannot trip
-		// the server's batch cap.
-		for start := 0; start < len(ids); start += issueGCBatchSize {
-			end := min(start+issueGCBatchSize, len(ids))
-			chunk, err := fetch(ctx, workspaceID, ids[start:end])
-			if err != nil {
-				if firstErr == nil {
-					firstErr = err
-				}
-				continue
-			}
-			for id, status := range chunk {
-				resolved[id] = status
-			}
-		}
-		statuses[workspaceID] = resolved
-	}
-
-	for i := range report.Tasks {
-		task := &report.Tasks[i]
-		if task.Kind != string(execenv.GCKindIssue) || task.ParentID == "" {
-			continue
-		}
-		if status, ok := statuses[task.WorkspaceID][task.ParentID]; ok {
-			task.ParentStatus = status
-		}
-	}
-	return firstErr
-}
 
 // taskSize walks taskDir and returns (totalBytes, artifactBytes). It never
 // follows symlinks and counts only regular files. A directory matched by

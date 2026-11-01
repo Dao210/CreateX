@@ -2116,7 +2116,6 @@ func (h *Handler) rejectClaimOnWorkspaceMismatch(ctx context.Context, task *db.A
 		"runtime_id", runtimeID,
 		"runtime_workspace", runtimeWorkspaceID,
 		"resolved_workspace", resolvedWorkspaceID,
-		"has_issue", task.IssueID.Valid,
 		"has_chat", task.ChatSessionID.Valid,
 		"has_autopilot_run", task.AutopilotRunID.Valid,
 		"has_quick_create", hasQuickCreate,
@@ -2256,7 +2255,6 @@ func (h *Handler) buildClaimedTaskResponse(r *http.Request, task *db.AgentTaskQu
 	// from the briefing text. Set unconditionally — on every claim, leader or
 	// not — because its absence is what tells an upgraded daemon it is talking
 	// to a server too old to have answered the question (MUL-5811).
-	resp.LeaderRoleResolved = true
 	// Agent-trigger plugin hooks, as tools. A failure here degrades to no
 	// tools rather than failing the claim: a plugin that cannot be listed must
 	// not stop an agent from working on the issue.
@@ -2510,14 +2508,7 @@ func (h *Handler) buildClaimedTaskResponse(r *http.Request, task *db.AgentTaskQu
 		// having zero human messages — otherwise every follow-up turn after the
 		// creator replies would re-run the "introduce yourself" prompt and the
 		// agent keeps repeating the same introduction (MUL-4259).
-		if cs.IsAgentIntro {
-			if hasUser, herr := h.Queries.ChatSessionHasUserMessage(r.Context(), cs.ID); herr != nil {
-				slog.Warn("chat intro gate: has-user-message check failed",
-					"chat_session_id", uuidToString(cs.ID), "error", herr)
-			} else {
-				resp.ChatIntro = !hasUser
-			}
-		}
+
 		// A task-level delivery snapshot, not the Chat's historical binding,
 		// decides whether this run is operating for an external audience.
 		// Web/Desktop/Mobile turns in an old channel-originated Chat have no
@@ -3738,7 +3729,7 @@ func (h *Handler) ReportTaskMessages(w http.ResponseWriter, r *http.Request) {
 	// tasks streamed live messages before, and widening that to autopilot /
 	// quick-create tasks is a product decision, not part of this optimization.
 	workspaceID := ""
-	if task.IssueID.Valid || task.ChatSessionID.Valid {
+	if task.ChatSessionID.Valid {
 		workspaceID = wsID
 	}
 
@@ -3848,7 +3839,7 @@ func (h *Handler) ReportTaskMessages(w http.ResponseWriter, r *http.Request) {
 			// in order, so the conversion is checked by the compiler and breaks
 			// loudly if the query ever stops returning the whole row.
 			h.publishTask(protocol.EventTaskMessage, workspaceID, "system", "", taskID,
-				taskMessageToPayload(db.TaskMessage(m), taskID, uuidToString(task.IssueID)))
+				taskMessageToPayload(db.TaskMessage(m), taskID))
 		}
 	}
 
@@ -3956,7 +3947,7 @@ func (h *Handler) AckTaskCancelled(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
-func taskMessageToPayload(m db.TaskMessage, taskID, issueID string) protocol.TaskMessagePayload {
+func taskMessageToPayload(m db.TaskMessage, taskID string) protocol.TaskMessagePayload {
 	var input map[string]any
 	if m.Input != nil {
 		json.Unmarshal(m.Input, &input)
@@ -3966,8 +3957,8 @@ func taskMessageToPayload(m db.TaskMessage, taskID, issueID string) protocol.Tas
 		createdAt = m.CreatedAt.Time.UTC().Format(time.RFC3339Nano)
 	}
 	return protocol.TaskMessagePayload{
-		TaskID:          taskID,
-		IssueID:         issueID,
+		TaskID: taskID,
+
 		Seq:             int(m.Seq),
 		Type:            m.Type,
 		Tool:            m.Tool.String,
@@ -4029,7 +4020,7 @@ func (h *Handler) ListTaskMessages(w http.ResponseWriter, r *http.Request) {
 	taskID := chi.URLParam(r, "taskId")
 
 	// Verify the caller owns this task's workspace.
-	task, ok := h.requireDaemonTaskAccess(w, r, taskID)
+	_, ok := h.requireDaemonTaskAccess(w, r, taskID)
 	if !ok {
 		return
 	}
@@ -4056,11 +4047,9 @@ func (h *Handler) ListTaskMessages(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	issueID := uuidToString(task.IssueID)
-
 	resp := make([]protocol.TaskMessagePayload, len(messages))
 	for i, m := range messages {
-		resp[i] = taskMessageToPayload(m, taskID, issueID)
+		resp[i] = taskMessageToPayload(m, taskID)
 	}
 
 	writeJSON(w, http.StatusOK, resp)
@@ -4199,11 +4188,9 @@ func (h *Handler) ListTaskMessagesByUser(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	issueID := uuidToString(task.IssueID)
-
 	resp := make([]protocol.TaskMessagePayload, len(messages))
 	for i, m := range messages {
-		resp[i] = taskMessageToPayload(m, taskID, issueID)
+		resp[i] = taskMessageToPayload(m, taskID)
 	}
 
 	writeJSON(w, http.StatusOK, resp)

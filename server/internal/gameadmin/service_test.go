@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"path/filepath"
 	"sync"
 	"testing"
 
@@ -51,24 +50,10 @@ func testDB(t *testing.T) *pgxpool.Pool {
 		t.Fatal(err)
 	}
 	t.Cleanup(pool.Close)
-	for _, table := range []string{"user", "workspace", "member", "life_world"} {
+	for _, table := range []string{"user", "workspace", "member", "life_world", "game_policy", "game_world_override", "game_policy_audit"} {
 		name := pgx.Identifier{table}.Sanitize()
 		if _, err = pool.Exec(ctx, "CREATE TABLE "+name+" (LIKE public."+name+" INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES)"); err != nil {
 			t.Fatal(err)
-		}
-	}
-	files, err := filepath.Glob("../../migrations/59[0-3]_*.up.sql")
-	if err != nil {
-		t.Fatal(err)
-	}
-	files = append([]string{"../../migrations/589_game_admin.up.sql"}, files...)
-	for _, name := range files {
-		raw, err := os.ReadFile(name)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if _, err = pool.Exec(ctx, string(raw)); err != nil {
-			t.Fatalf("%s: %v", name, err)
 		}
 	}
 	return pool

@@ -149,10 +149,9 @@ func (f *Fixture) User(t TB, name, email string, over ...Cols) string {
 func (f *Fixture) Workspace(t TB, name, slug string, over ...Cols) string {
 	t.Helper()
 	return f.Insert(t, "workspace", merge(Cols{
-		"name":         name,
-		"slug":         slug,
-		"description":  "",
-		"issue_prefix": "",
+		"name":        name,
+		"slug":        slug,
+		"description": "",
 	}, over))
 }
 
@@ -195,7 +194,7 @@ func (f *Fixture) Issue(t TB, title string, over ...Cols) string {
 func (f *Fixture) Comment(t TB, issueID, content string, over ...Cols) string {
 	t.Helper()
 	return f.Insert(t, "comment", merge(Cols{
-		"issue_id":     issueID,
+
 		"workspace_id": f.WorkspaceID,
 		"author_type":  "member",
 		"author_id":    f.UserID,
@@ -269,7 +268,7 @@ func (f *Fixture) Squad(t TB, name, leaderID string, over ...Cols) string {
 func (f *Fixture) SquadMember(t TB, squadID, memberType, memberID string, over ...Cols) string {
 	t.Helper()
 	return f.Insert(t, "squad_member", merge(Cols{
-		"squad_id":    squadID,
+
 		"member_type": memberType,
 		"member_id":   memberID,
 	}, over))

@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/auro-ai/auro/server/internal/events"
-	"github.com/auro-ai/auro/server/internal/util"
 	db "github.com/auro-ai/auro/server/pkg/db/generated"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -48,73 +47,4 @@ func taskStatus(t *testing.T, pool *pgxpool.Pool, id pgtype.UUID) string {
 		t.Fatalf("read task status: %v", err)
 	}
 	return status
-}
-
-// TestRerunIssueQueuesBehindActiveTaskWithoutCancelling is the regression this
-// change exists for. 'running' and 'waiting_local_directory' both mean an agent
-// is executing, and neither appears in idx_one_pending_task_per_issue_agent_v2 —
-// so a rerun enqueues a queued row alongside the active one and ClaimAgentTask's
-// per-(issue, agent) serialization holds it there until the active run reaches a
-// terminal state.
-//
-// The load-bearing assertion is that the active task is untouched. Rerun used to
-// call a cancel query covering every active status, so clicking "run this again"
-// silently killed the pass the agent was still working on.
-func TestRerunIssueQueuesBehindActiveTaskWithoutCancelling(t *testing.T) {
-	for _, activeStatus := range []string{"running", "waiting_local_directory"} {
-		t.Run(activeStatus, func(t *testing.T) {
-			svc, pool, creatorID, agentID, issueID, runtimeID := rerunQueueFixture(t)
-			activeID := seedRerunTask(t, pool, agentID, runtimeID, issueID, activeStatus)
-
-			task, err := svc.RerunIssue(context.Background(), util.MustParseUUID(issueID), pgtype.UUID{}, pgtype.UUID{}, util.MustParseUUID(creatorID), nil)
-			if err != nil {
-				t.Fatalf("RerunIssue: %v", err)
-			}
-			t.Cleanup(func() { pool.Exec(context.Background(), `DELETE FROM agent_task_queue WHERE id = $1`, task.ID) })
-
-			if got := taskStatus(t, pool, activeID); got != activeStatus {
-				t.Fatalf("rerun must NOT cancel an executing task; %s task is now %q", activeStatus, got)
-			}
-			if util.UUIDToString(task.ID) == util.UUIDToString(activeID) {
-				t.Fatal("rerun must enqueue its own row, not hand back the active task")
-			}
-			if task.Status != "queued" {
-				t.Fatalf("the rerun row must wait its turn as queued, got %q", task.Status)
-			}
-			if !task.ForceFreshSession {
-				t.Fatal("a rerun row must carry force_fresh_session (MUL-4869)")
-			}
-		})
-	}
-}
-
-// TestRerunIssueReplacesNotYetStartedTask keeps the other half of the contract:
-// a row that has not begun executing is still cancelled and replaced. Nothing is
-// lost by doing so (no agent was working), the unique index leaves no choice for
-// queued/dispatched, and replacing rather than reusing is what keeps the new run
-// attributed to the rerunning member instead of inheriting the attribution of
-// whoever created the pending row (MUL-4302 §5).
-func TestRerunIssueReplacesNotYetStartedTask(t *testing.T) {
-	for _, pendingStatus := range []string{"queued", "dispatched"} {
-		t.Run(pendingStatus, func(t *testing.T) {
-			svc, pool, creatorID, agentID, issueID, runtimeID := rerunQueueFixture(t)
-			pendingID := seedRerunTask(t, pool, agentID, runtimeID, issueID, pendingStatus)
-
-			task, err := svc.RerunIssue(context.Background(), util.MustParseUUID(issueID), pgtype.UUID{}, pgtype.UUID{}, util.MustParseUUID(creatorID), nil)
-			if err != nil {
-				t.Fatalf("RerunIssue: %v", err)
-			}
-			t.Cleanup(func() { pool.Exec(context.Background(), `DELETE FROM agent_task_queue WHERE id = $1`, task.ID) })
-
-			if util.UUIDToString(task.ID) == util.UUIDToString(pendingID) {
-				t.Fatal("expected a fresh rerun task, got the pre-existing pending row")
-			}
-			if got := taskStatus(t, pool, pendingID); got != "cancelled" {
-				t.Fatalf("a not-yet-started %s task must be cancelled to make room for the rerun, got %q", pendingStatus, got)
-			}
-			if task.Status != "queued" {
-				t.Fatalf("rerun task status = %q, want queued", task.Status)
-			}
-		})
-	}
 }

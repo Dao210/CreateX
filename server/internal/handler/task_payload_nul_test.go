@@ -14,51 +14,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// seedNULTask creates an agent with one running task, ready to be driven
-// through a terminal daemon callback.
-func seedNULTask(t *testing.T, label string) (agentID, taskID string) {
-	t.Helper()
-	ctx := context.Background()
-
-	if err := testPool.QueryRow(ctx, `
-		INSERT INTO agent (workspace_id, name, description, runtime_mode, runtime_config,
-			runtime_id, visibility, max_concurrent_tasks, owner_id,
-			instructions, custom_env, custom_args)
-		VALUES ($1, $2, '', 'cloud', '{}'::jsonb, $3, 'private', 1, $4, '', '{}'::jsonb, '[]'::jsonb)
-		RETURNING id`, testWorkspaceID, label, handlerTestRuntimeID(t), testUserID).Scan(&agentID); err != nil {
-		t.Fatalf("seed agent: %v", err)
-	}
-	t.Cleanup(func() {
-		testPool.Exec(context.Background(), `DELETE FROM agent WHERE id = $1`, agentID)
-	})
-
-	// The task needs an issue: requireDaemonTaskAccess resolves the workspace
-	// through it, and a task with no issue / chat / autopilot link 404s before
-	// the handler ever reads the body.
-	var issueID string
-	if err := testPool.QueryRow(ctx, `
-		INSERT INTO issue (workspace_id, title, status, priority, creator_id, creator_type, number, position)
-		VALUES ($1, $2, 'in_progress', 'none', $3, 'member',
-			(SELECT COALESCE(MAX(number), 0) + 1 FROM issue WHERE workspace_id = $1), 0)
-		RETURNING id`, testWorkspaceID, label+" fixture", testUserID).Scan(&issueID); err != nil {
-		t.Fatalf("seed issue: %v", err)
-	}
-	t.Cleanup(func() {
-		testPool.Exec(context.Background(), `DELETE FROM issue WHERE id = $1`, issueID)
-	})
-
-	if err := testPool.QueryRow(ctx, `
-		INSERT INTO agent_task_queue (agent_id, runtime_id, issue_id, status, priority, started_at)
-		VALUES ($1, $2, $3, 'running', 0, now())
-		RETURNING id`, agentID, handlerTestRuntimeID(t), issueID).Scan(&taskID); err != nil {
-		t.Fatalf("seed running task: %v", err)
-	}
-	t.Cleanup(func() {
-		testPool.Exec(context.Background(), `DELETE FROM agent_task_queue WHERE id = $1`, taskID)
-	})
-	return agentID, taskID
-}
-
 // daemonTaskRequest builds a daemon-authenticated request with taskId bound as
 // a chi URL param, the way the router does in production.
 func daemonTaskRequest(t *testing.T, path, taskID string, body any) *http.Request {

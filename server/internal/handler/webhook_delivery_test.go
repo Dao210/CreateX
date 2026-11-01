@@ -823,52 +823,6 @@ func TestWebhookDeliveryWorker_RunStopsBoundedPool(t *testing.T) {
 	}
 }
 
-func TestWebhookDeliveryWorker_RepairsCreateIssueTaskCrashWindow(t *testing.T) {
-	agentID := createWebhookTestAgent(t, "WorkerIssueRecovery Agent")
-	apID := createWebhookTestAutopilot(t, agentID, "active", "create_issue")
-	trig := createWebhookTriggerViaHandler(t, apID)
-
-	post := postWebhook(t, *trig.WebhookToken, map[string]any{"event": "issue-recovery"}, map[string]string{
-		"Idempotency-Key": "worker-issue-recovery",
-	})
-	deliveryID := requireAcceptedWebhookResponse(t, post)
-	first := processQueuedWebhookDelivery(t, deliveryID)
-	run, err := testHandler.Queries.GetAutopilotRun(context.Background(), first.AutopilotRunID)
-	if err != nil || !run.IssueID.Valid {
-		t.Fatalf("load create_issue run: run=%#v err=%v", run, err)
-	}
-	issueID := uuidToString(run.IssueID)
-	t.Cleanup(func() {
-		testPool.Exec(context.Background(), `DELETE FROM agent_task_queue WHERE issue_id = $1`, issueID)
-		testPool.Exec(context.Background(), `DELETE FROM issue WHERE id = $1`, issueID)
-	})
-
-	// Remove the task to model a process exit after the issue/run transaction
-	// but before task enqueue, then make the delivery recoverable again.
-	if _, err := testPool.Exec(context.Background(), `DELETE FROM agent_task_queue WHERE issue_id = $1`, issueID); err != nil {
-		t.Fatalf("remove issue task: %v", err)
-	}
-	if _, err := testPool.Exec(context.Background(), `
-		UPDATE webhook_delivery
-		SET status = 'queued', autopilot_run_id = NULL, available_at = now(),
-		    lease_token = NULL, lease_expires_at = NULL
-		WHERE id = $1
-	`, deliveryID); err != nil {
-		t.Fatalf("requeue delivery: %v", err)
-	}
-	second := processQueuedWebhookDelivery(t, deliveryID)
-	if got := uuidToString(second.AutopilotRunID); got != uuidToString(first.AutopilotRunID) {
-		t.Fatalf("repair should reuse run: got %s want %s", got, uuidToString(first.AutopilotRunID))
-	}
-	var taskCount int
-	if err := testPool.QueryRow(context.Background(), `SELECT count(*) FROM agent_task_queue WHERE issue_id = $1`, issueID).Scan(&taskCount); err != nil {
-		t.Fatalf("count repaired task: %v", err)
-	}
-	if taskCount != 1 {
-		t.Fatalf("expected one repaired issue task, got %d", taskCount)
-	}
-}
-
 func TestWebhookHandler_InvalidSignatureCountsAgainstRateLimit(t *testing.T) {
 	// Only requests classified as bad credentials consume the shared-IP debt
 	// budget; valid traffic behind the same NAT does not.

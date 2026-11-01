@@ -449,7 +449,7 @@ WITH deleted_github_installations AS (
 )
 DELETE FROM vcs_connection WHERE vcs_connection.workspace_id = $1;
 
--- name: DeleteWorkspaceSquadsAndSkills :exec
+-- name: DeleteWorkspaceSkills :exec
 DELETE FROM skill WHERE skill.workspace_id = $1;
 
 -- name: DeleteWorkspacePluginData :exec
@@ -508,7 +508,7 @@ DELETE FROM agent WHERE agent.workspace_id = $1;
 
 
 
--- name: DeleteWorkspaceRuntimesAndProjects :exec
+-- name: DeleteWorkspaceRuntimes :exec
 WITH deleted_runtimes AS (
     DELETE FROM agent_runtime WHERE agent_runtime.workspace_id = $1
 ),

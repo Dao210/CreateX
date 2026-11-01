@@ -1,0 +1,1 @@
+DROP INDEX CONCURRENTLY IF EXISTS autopilot_run_pkey;

@@ -36,7 +36,7 @@ RETURNING *;
 
 
 -- name: DeleteVCSConnection :exec
-DELETE FROM vcs_connection WHERE id=$1;
+DELETE FROM vcs_connection WHERE id = $1 AND workspace_id = $2;
 
 
 

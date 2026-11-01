@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/auro-ai/auro/server/internal/integrations/channel"
 	"github.com/auro-ai/auro/server/internal/integrations/channel/engine"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 func sessionUUID(b byte) pgtype.UUID {

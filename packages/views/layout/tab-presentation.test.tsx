@@ -2,8 +2,6 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { ReactNode } from "react";
 import { render, renderHook } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { issueDetailOptions } from "@auro/core/issues/queries";
-import { projectDetailOptions } from "@auro/core/projects/queries";
 import { chatSessionsOptions } from "@auro/core/chat/queries";
 import {
   inboxListOptions,
@@ -49,23 +47,6 @@ function makeClient() {
 }
 
 function seed(qc: QueryClient) {
-  qc.setQueryData(issueDetailOptions("ws1", "i1").queryKey, {
-    id: "i1",
-    identifier: "MUL-1",
-    title: "Fix login",
-    status: "in_progress",
-  } as never);
-  qc.setQueryData(issueDetailOptions("ws1", "i9").queryKey, {
-    id: "i9",
-    identifier: "MUL-9",
-    title: "Crash",
-    status: "todo",
-  } as never);
-  qc.setQueryData(projectDetailOptions("ws1", "p1").queryKey, {
-    id: "p1",
-    icon: "🚀",
-    title: "Apollo",
-  } as never);
   qc.setQueryData(chatSessionsOptions("ws1").queryKey, [
     { id: "s1", title: "Deploy plan", status: "active" },
     { id: "s2", title: "  ", status: "active" },
@@ -152,13 +133,6 @@ describe("useTabPresentation — live from cache", () => {
     });
   });
 
-  it("inbox container: selected non-issue shows its display title", () => {
-    expect(presentationOf("/acme/inbox?issue=n2")).toEqual({
-      visual: { kind: "icon", icon: "Inbox" },
-      title: "Autopilot paused",
-    });
-  });
-
   it("falls back to the persisted title while a selection is unresolved", () => {
     // Nothing cached for this key yet — an issue-less notification whose row
     // has not loaded. The persisted title is a better first frame than
@@ -183,13 +157,6 @@ describe("useTabPresentation — live from cache", () => {
     expect(presentationOf("/acme/inbox", "MUL-9: Crash").title).toBe("Inbox");
   });
 
-  it("archived inbox: selected non-issue resolves against the archived list", () => {
-    expect(presentationOf("/acme/inbox?view=archived&issue=a2")).toEqual({
-      visual: { kind: "icon", icon: "Inbox" },
-      title: "Archived note",
-    });
-  });
-
   it("archived inbox: a deep-link lookup supplies the title outside loaded pages", () => {
     expect(presentationOf("/acme/inbox?view=archived&issue=a3")).toEqual({
       visual: { kind: "icon", icon: "Inbox" }, title: "Deep archived note",
@@ -211,13 +178,6 @@ describe("useTabPresentation — live from cache", () => {
 
 describe("useTabPresentation — pending / fallback", () => {
 
-  it("unknown route is neutral, never Issues", () => {
-    expect(presentationOf("/acme/mystery")).toEqual({
-      visual: { kind: "icon", icon: "FileQuestion" },
-      title: "Unknown page",
-    });
-  });
-
   it("actor falls back to a type icon before the workspace resolves", () => {
     ws.current = null;
     expect(presentationOf("/acme/agents/ag1").visual).toEqual({
@@ -228,19 +188,6 @@ describe("useTabPresentation — pending / fallback", () => {
 });
 
 describe("ResourceLeadingVisual", () => {
-  it("renders a project icon with its emoji", () => {
-    const { getByText } = render(
-      <ResourceLeadingVisual visual={{ kind: "project-icon", icon: "🚀" }} />,
-    );
-    expect(getByText("🚀")).toBeTruthy();
-  });
-
-  it("renders a status glyph for an issue", () => {
-    const { container } = render(
-      <ResourceLeadingVisual visual={{ kind: "issue-status", status: "done" }} />,
-    );
-    expect(container.querySelector("svg")).toBeTruthy();
-  });
 
   it("renders the actor avatar for an actor visual", () => {
     const { getByTestId } = render(

@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/google/uuid"
 	"github.com/auro-ai/auro/server/internal/cli"
+	"github.com/google/uuid"
 )
 
 // daemonIDFileName is the file that stores this machine's stable daemon

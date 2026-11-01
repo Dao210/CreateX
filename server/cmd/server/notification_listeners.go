@@ -17,7 +17,9 @@ func inboxItemToResponse(item db.InboxItem) map[string]any {
 		"recipient_id":   util.UUIDToString(item.RecipientID),
 		"type":           item.Type,
 		"severity":       item.Severity,
-		"issue_id":       util.UUIDToPtr(item.IssueID),
+		"issue_id":       nil,
+		"issue_status":   nil,
+		"issue_priority": nil,
 		"title":          item.Title,
 		"body":           util.TextToPtr(item.Body),
 		"read":           item.Read,
@@ -26,5 +28,6 @@ func inboxItemToResponse(item db.InboxItem) map[string]any {
 		"actor_type":     util.TextToPtr(item.ActorType),
 		"actor_id":       util.UUIDToPtr(item.ActorID),
 		"details":        json.RawMessage(item.Details),
+		"content":        json.RawMessage(item.Content),
 	}
 }

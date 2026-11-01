@@ -81,7 +81,7 @@ describe("ApiClient Plugin preview response schema", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue(
-        new Response(JSON.stringify({ scopes: "issues:read" }), {
+        new Response(JSON.stringify({ scopes: "execution:read" }), {
           status: 200,
           headers: { "Content-Type": "application/json" },
         }),
@@ -363,43 +363,6 @@ describe("ApiClient Inbox response schemas", () => {
     archived: false,
     created_at: "2026-08-24T00:00:00Z",
   };
-
-  it("schema-parses the main Inbox and preserves omitted legacy projections", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue(
-        new Response(JSON.stringify([legacyRow]), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        }),
-      ),
-    );
-
-    const result = await new ApiClient("https://api.example.test").listInbox();
-
-    expect(result).toHaveLength(1);
-    expect(result[0]).not.toHaveProperty("issue_status");
-    expect(result[0]).not.toHaveProperty("issue_priority");
-  });
-
-  it("falls back safely when the main Inbox projection is wrong-typed", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue(
-        new Response(
-          JSON.stringify([{ ...legacyRow, issue_priority: 3 }]),
-          {
-            status: 200,
-            headers: { "Content-Type": "application/json" },
-          },
-        ),
-      ),
-    );
-
-    await expect(
-      new ApiClient("https://api.example.test").listInbox(),
-    ).resolves.toEqual([]);
-  });
 });
 
 describe("ApiClient", () => {

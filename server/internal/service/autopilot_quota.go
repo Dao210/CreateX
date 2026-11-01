@@ -278,10 +278,10 @@ func (s *AutopilotService) skipAutopilotRun(ctx context.Context, params db.Updat
 func autopilotRunFromTerminalRow(row db.UpdateAutopilotRunTerminalWithQuotaRow) db.AutopilotRun {
 	return db.AutopilotRun{
 		ID: row.ID, AutopilotID: row.AutopilotID, TriggerID: row.TriggerID,
-		Source: row.Source, Status: row.Status, IssueID: row.IssueID, TaskID: row.TaskID,
+		Source: row.Source, Status: row.Status, TaskID: row.TaskID,
 		TriggeredAt: row.TriggeredAt, CompletedAt: row.CompletedAt,
 		FailureReason: row.FailureReason, TriggerPayload: row.TriggerPayload,
-		Result: row.Result, CreatedAt: row.CreatedAt, SquadID: row.SquadID,
+		Result: row.Result, CreatedAt: row.CreatedAt,
 		PlannedAt: row.PlannedAt, WebhookDeliveryID: row.WebhookDeliveryID,
 		QuotaReservationID: row.QuotaReservationID, ReasonCode: row.ReasonCode,
 	}
@@ -386,8 +386,8 @@ func (s *AutopilotService) ReconcileAutopilotQuotaReservations(
 				continue
 			}
 		case (run.Source == "manual" || run.Source == "api") &&
-			!run.IssueID.Valid && !run.TaskID.Valid &&
-			(run.Status == "pending" || run.Status == "issue_created" || run.Status == "running"):
+			!run.TaskID.Valid &&
+			(run.Status == "pending" || run.Status == "running"):
 			changed, err := s.recoverPartialAutopilotRun(ctx, run)
 			if err != nil {
 				return settled, fmt.Errorf("recover abandoned quota run: %w", err)

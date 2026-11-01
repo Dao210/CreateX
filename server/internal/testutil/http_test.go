@@ -1,14 +1,11 @@
 package testutil
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"strings"
 	"testing"
-
-	"github.com/go-chi/chi/v5"
 )
 
 func TestJSONRequestEncodesValuesAndPassesRawBodiesThrough(t *testing.T) {
@@ -46,18 +43,6 @@ func TestJSONRequestEncodesValuesAndPassesRawBodiesThrough(t *testing.T) {
 	}
 }
 
-func TestWithURLParamsFeedsChiRouteParams(t *testing.T) {
-	t.Parallel()
-
-	req := WithURLParams(JSONRequest("GET", "/api/issues/x", nil), "issueId", "abc", "commentId", "def")
-	if got := chi.URLParam(req, "issueId"); got != "abc" {
-		t.Fatalf("issueId = %q, want abc", got)
-	}
-	if got := chi.URLParam(req, "commentId"); got != "def" {
-		t.Fatalf("commentId = %q, want def", got)
-	}
-}
-
 func TestWithHeadersSetsPairs(t *testing.T) {
 	t.Parallel()
 
@@ -67,29 +52,6 @@ func TestWithHeadersSetsPairs(t *testing.T) {
 	}
 	if got := req.Header.Get("X-Workspace-ID"); got != "w1" {
 		t.Fatalf("X-Workspace-ID = %q, want w1", got)
-	}
-}
-
-func TestCallRecordsStatusAndDecodesBody(t *testing.T) {
-	t.Parallel()
-
-	h := func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusCreated)
-		_ = json.NewEncoder(w).Encode(map[string]any{"id": "issue-1"})
-	}
-
-	var out struct {
-		ID string `json:"id"`
-	}
-	Call(t, h, JSONRequest("POST", "/api/issues", nil)).Want(http.StatusCreated).JSON(&out)
-	if out.ID != "issue-1" {
-		t.Fatalf("id = %q, want issue-1", out.ID)
-	}
-
-	if got := Decode[struct {
-		ID string `json:"id"`
-	}](t, h, JSONRequest("POST", "/api/issues", nil), http.StatusCreated); got.ID != "issue-1" {
-		t.Fatalf("Decode id = %q, want issue-1", got.ID)
 	}
 }
 

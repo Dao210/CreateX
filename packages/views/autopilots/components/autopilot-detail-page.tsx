@@ -69,10 +69,9 @@ import { PageHeader } from "../../layout/page-header";
 // the reader's zone (no timeZone passed). A run that is still to come belongs to
 // the schedule that will fire it — see the trigger row, which passes the
 // trigger's own timezone.
-type RunStatus = "issue_created" | "running" | "skipped" | "completed" | "failed";
+type RunStatus = "running" | "skipped" | "completed" | "failed";
 
 const RUN_VISUAL: Record<RunStatus, { color: string; icon: typeof CheckCircle2; spin?: boolean }> = {
-  issue_created: { color: "text-blue-500", icon: Clock },
   running: { color: "text-blue-500", icon: Loader2, spin: true },
   // `skipped` (admission check found the assignee runtime offline,
   // MUL-1899) is muted so it doesn't read as a failure-ratio inflator.
@@ -102,7 +101,7 @@ function WebhookPayloadSlot({ autopilotId, runId }: { autopilotId: string; runId
 
 function RunRow({ run, agentId, agentName }: { run: AutopilotRun; agentId: string; agentName: string }) {
   const { t, i18n } = useT("autopilots");
-  const status = (RUN_VISUAL[run.status as RunStatus] ? (run.status as RunStatus) : "issue_created");
+  const status = (RUN_VISUAL[run.status as RunStatus] ? (run.status as RunStatus) : "running");
   const visual = RUN_VISUAL[status];
   const StatusIcon = visual.icon;
 
@@ -139,16 +138,14 @@ function RunRow({ run, agentId, agentName }: { run: AutopilotRun; agentId: strin
         {t(($) => $.run_source[run.source as "schedule" | "manual" | "webhook" | "api"]) ?? run.source}
       </span>
       <span className="flex-1 min-w-0 text-caption text-muted-foreground truncate">
-        {run.issue_id ? (
-          t(($) => $.run.issue_linked)
-        ) : run.failure_reason ? (
+        {run.failure_reason ? (
           <span className="text-destructive">{run.failure_reason}</span>
         ) : null}
       </span>
       <span className="w-32 shrink-0 text-right text-caption text-muted-foreground tabular-nums">
         {formatInTimeZone(run.triggered_at || run.created_at, undefined, i18n.language)}
       </span>
-      {syntheticTask && !run.issue_id && (
+      {syntheticTask && (
         <TranscriptButton
           task={syntheticTask}
           agentName={agentName}
@@ -165,14 +162,6 @@ function RunRow({ run, agentId, agentName }: { run: AutopilotRun; agentId: strin
   );
 
   const rowClass = "flex items-center gap-3 px-4 py-2.5 text-body hover:bg-accent/30 transition-colors";
-
-  if (run.issue_id) {
-    return (
-      <span className={cn(rowClass, "cursor-pointer")}>
-        {content}
-      </span>
-    );
-  }
 
   return <div className={rowClass}>{content}</div>;
 }

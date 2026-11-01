@@ -450,50 +450,6 @@ func TestResolveAgent(t *testing.T) {
 	})
 }
 
-func TestRunAutopilotCreateSendsProjectID(t *testing.T) {
-	const (
-		agentID   = "11111111-1111-1111-1111-111111111111"
-		projectID = "22222222-2222-2222-2222-222222222222"
-	)
-
-	var body map[string]any
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/api/autopilots" {
-			http.NotFound(w, r)
-			return
-		}
-		if r.Method != http.MethodPost {
-			t.Errorf("method = %s, want POST", r.Method)
-		}
-		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			t.Errorf("decode body: %v", err)
-		}
-		json.NewEncoder(w).Encode(map[string]any{
-			"id":         "autopilot-1",
-			"title":      "Daily planner",
-			"project_id": body["project_id"],
-		})
-	}))
-	defer srv.Close()
-
-	t.Setenv("AURO_SERVER_URL", srv.URL)
-	t.Setenv("AURO_WORKSPACE_ID", "ws-1")
-	t.Setenv("AURO_TOKEN", "test-token")
-
-	cmd := newAutopilotCreateTestCmd()
-	_ = cmd.Flags().Set("title", "Daily planner")
-	_ = cmd.Flags().Set("agent", agentID)
-	_ = cmd.Flags().Set("mode", "create_issue")
-	_ = cmd.Flags().Set("project", projectID)
-
-	if err := runAutopilotCreate(cmd, nil); err != nil {
-		t.Fatalf("runAutopilotCreate: %v", err)
-	}
-	if got := body["project_id"]; got != projectID {
-		t.Fatalf("project_id = %#v, want %q", got, projectID)
-	}
-}
-
 func TestRunAutopilotCreateSendsSubscribers(t *testing.T) {
 	const (
 		agentID = "11111111-1111-1111-1111-111111111111"
@@ -539,65 +495,6 @@ func TestRunAutopilotCreateSendsSubscribers(t *testing.T) {
 		t.Fatalf("runAutopilotCreate: %v", err)
 	}
 	assertAutopilotSubscriberBody(t, body, userID)
-}
-
-func TestRunAutopilotUpdateSendsProjectIDChanges(t *testing.T) {
-	const (
-		autopilotID = "33333333-3333-3333-3333-333333333333"
-		projectID   = "44444444-4444-4444-4444-444444444444"
-	)
-
-	var bodies []map[string]any
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/api/autopilots/"+autopilotID {
-			http.NotFound(w, r)
-			return
-		}
-		if r.Method != http.MethodPatch {
-			t.Errorf("method = %s, want PATCH", r.Method)
-		}
-		var body map[string]any
-		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			t.Errorf("decode body: %v", err)
-		}
-		bodies = append(bodies, body)
-		json.NewEncoder(w).Encode(map[string]any{
-			"id":         autopilotID,
-			"title":      "Daily planner",
-			"project_id": body["project_id"],
-		})
-	}))
-	defer srv.Close()
-
-	t.Setenv("AURO_SERVER_URL", srv.URL)
-	t.Setenv("AURO_WORKSPACE_ID", "ws-1")
-	t.Setenv("AURO_TOKEN", "test-token")
-
-	t.Run("set project", func(t *testing.T) {
-		cmd := newAutopilotUpdateTestCmd()
-		_ = cmd.Flags().Set("project", projectID)
-		if err := runAutopilotUpdate(cmd, []string{autopilotID}); err != nil {
-			t.Fatalf("runAutopilotUpdate: %v", err)
-		}
-		if got := bodies[len(bodies)-1]["project_id"]; got != projectID {
-			t.Fatalf("project_id = %#v, want %q", got, projectID)
-		}
-	})
-
-	t.Run("clear project", func(t *testing.T) {
-		cmd := newAutopilotUpdateTestCmd()
-		_ = cmd.Flags().Set("project", "")
-		if err := runAutopilotUpdate(cmd, []string{autopilotID}); err != nil {
-			t.Fatalf("runAutopilotUpdate: %v", err)
-		}
-		got, ok := bodies[len(bodies)-1]["project_id"]
-		if !ok {
-			t.Fatalf("project_id key missing from update body")
-		}
-		if got != nil {
-			t.Fatalf("project_id = %#v, want nil", got)
-		}
-	})
 }
 
 func TestRunAutopilotUpdateAgentSwitchesAssigneeType(t *testing.T) {

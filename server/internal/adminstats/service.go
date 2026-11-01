@@ -34,9 +34,9 @@ const (
 
 // Counter is a total with rolling new-in-window deltas.
 type Counter struct {
-	Total int64 `json:"total"`
-	New1d int64 `json:"new1d"`
-	New7d int64 `json:"new7d"`
+	Total  int64 `json:"total"`
+	New1d  int64 `json:"new1d"`
+	New7d  int64 `json:"new7d"`
 	New30d int64 `json:"new30d"`
 }
 
@@ -77,9 +77,9 @@ type TrendPoint struct {
 }
 
 type Trends struct {
-	Tz     string        `json:"tz"`
-	Days   int           `json:"days"`
-	Series []TrendPoint  `json:"series"`
+	Tz     string       `json:"tz"`
+	Days   int          `json:"days"`
+	Series []TrendPoint `json:"series"`
 }
 
 // CountEntry is a labeled count with a stable key for locale lookup.
@@ -145,13 +145,13 @@ func (s *Service) Overview(ctx context.Context) (Overview, error) {
 			return Overview{}, err
 		}
 		return Overview{
-			Users:        Counter{Total: row.TotalUsers, New1d: row.NewUsers1d, New7d: row.NewUsers7d, New30d: row.NewUsers30d},
-			Workspaces:   Counter{Total: row.TotalWorkspaces, New1d: row.NewWorkspaces1d, New7d: row.NewWorkspaces7d, New30d: row.NewWorkspaces30d},
-			Members:      row.TotalMembers,
-			ActiveUsers:  ActiveWindow{Day: row.ActiveUsers1d, Week: row.ActiveUsers7d, Month: row.ActiveUsers30d},
-			ActiveDaemons: row.ActiveDaemons1d,
+			Users:              Counter{Total: row.TotalUsers, New1d: row.NewUsers1d, New7d: row.NewUsers7d, New30d: row.NewUsers30d},
+			Workspaces:         Counter{Total: row.TotalWorkspaces, New1d: row.NewWorkspaces1d, New7d: row.NewWorkspaces7d, New30d: row.NewWorkspaces30d},
+			Members:            row.TotalMembers,
+			ActiveUsers:        ActiveWindow{Day: row.ActiveUsers1d, Week: row.ActiveUsers7d, Month: row.ActiveUsers30d},
+			ActiveDaemons:      row.ActiveDaemons1d,
 			PendingInvitations: row.PendingInvitations,
-			GeneratedAt:  time.Now().UTC(),
+			GeneratedAt:        time.Now().UTC(),
 		}, nil
 	})
 }

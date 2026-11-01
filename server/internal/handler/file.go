@@ -58,10 +58,9 @@ const maxPreviewTextSize = 2 << 20 // 2 MB
 // ---------------------------------------------------------------------------
 
 type AttachmentResponse struct {
-	ID            string  `json:"id"`
-	WorkspaceID   string  `json:"workspace_id"`
-	IssueID       *string `json:"issue_id"`
-	CommentID     *string `json:"comment_id"`
+	ID          string `json:"id"`
+	WorkspaceID string `json:"workspace_id"`
+
 	ChatSessionID *string `json:"chat_session_id"`
 	ChatMessageID *string `json:"chat_message_id"`
 	UploaderType  string  `json:"uploader_type"`
@@ -180,14 +179,7 @@ func (h *Handler) attachmentToResponse(a db.Attachment, mode attachmentURLMode) 
 	if h.CFSigner != nil && mode != attachmentURLModeStable {
 		resp.DownloadURL = h.CFSigner.SignedURL(a.Url, time.Now().Add(h.attachmentDownloadURLTTL()))
 	}
-	if a.IssueID.Valid {
-		s := uuidToString(a.IssueID)
-		resp.IssueID = &s
-	}
-	if a.CommentID.Valid {
-		s := uuidToString(a.CommentID)
-		resp.CommentID = &s
-	}
+
 	if a.ChatSessionID.Valid {
 		s := uuidToString(a.ChatSessionID)
 		resp.ChatSessionID = &s
@@ -512,9 +504,7 @@ func (h *Handler) UploadFile(w http.ResponseWriter, r *http.Request) {
 		}
 		params.Url = link
 
-		var att db.CreateAttachmentRow
-
-		att, err = writeTransaction(h, r.Context(), func(q *db.Queries) (db.CreateAttachmentRow, error) {
+		att, err := writeTransaction(h, r.Context(), func(q *db.Queries) (db.Attachment, error) {
 			return q.CreateAttachment(r.Context(), params)
 		})
 
@@ -524,7 +514,7 @@ func (h *Handler) UploadFile(w http.ResponseWriter, r *http.Request) {
 			// so the file is usable. Log the error for investigation.
 		} else {
 
-			writeJSON(w, http.StatusOK, h.attachmentToResponse(att.Attachment(), attachmentURLModeFromRequest(r)))
+			writeJSON(w, http.StatusOK, h.attachmentToResponse(att, attachmentURLModeFromRequest(r)))
 			return
 		}
 
@@ -1331,13 +1321,6 @@ func (h *Handler) DeleteAttachment(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, "attachment not found")
 		return
 	}
-	// Captured-context attachments are immutable historical copies. They are
-	// deleted only with their target issue, workspace, or abandoned context.
-	if att.SourceContextID.Valid {
-		writeError(w, http.StatusNotFound, "attachment not found")
-		return
-	}
-
 	// Only the uploader (or workspace admin) can delete
 	uploaderID := uuidToString(att.UploaderID)
 	isUploader := att.UploaderType == "member" && uploaderID == userID

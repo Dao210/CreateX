@@ -1,0 +1,1 @@
+CREATE INDEX CONCURRENTLY IF NOT EXISTS agent_task_wakeup_terminal_idx ON agent_task_queue USING btree (((context ->> 'wakeup_id'::text)), created_at DESC, id DESC) WHERE (((context ->> 'wakeup_id'::text) IS NOT NULL) AND (status <> ALL (ARRAY['queued'::text, 'deferred'::text, 'dispatched'::text, 'running'::text, 'waiting_local_directory'::text])));

@@ -807,17 +807,6 @@ describe("InboxItemListSchema", () => {
     ).toHaveLength(1);
   });
 
-  it("returns the empty fallback when an issue projection is wrong-typed", () => {
-    expect(
-      parseWithFallback(
-        [row({ issue_priority: 3 })],
-        InboxItemListSchema,
-        EMPTY_INBOX_ITEMS,
-        ENDPOINT,
-      ),
-    ).toBe(EMPTY_INBOX_ITEMS);
-  });
-
   it("returns the empty fallback for a non-array body", () => {
     expect(
       parseWithFallback({ items: [] }, InboxItemListSchema, EMPTY_INBOX_ITEMS, ENDPOINT),
@@ -1281,7 +1270,7 @@ describe("Plugin schemas", () => {
   });
 
   it("degrades a malformed preview so the consent screen cannot show a blank scope list as approval", () => {
-    const parsed = parseWithFallback({ scopes: "issues:read" }, PluginPreviewSchema, EMPTY_PLUGIN_PREVIEW, {
+    const parsed = parseWithFallback({ scopes: "execution:read" }, PluginPreviewSchema, EMPTY_PLUGIN_PREVIEW, {
       endpoint: "POST /api/workspaces/{id}/plugins/preview",
     });
     expect(parsed).toEqual(EMPTY_PLUGIN_PREVIEW);
@@ -1307,7 +1296,7 @@ describe("Plugin schemas", () => {
   it("parses a preview that reports an upgrade adding new scopes", () => {
     const parsed = PluginPreviewSchema.parse({
       manifest: { key: "com.example.hello", name: "Hello", version: "2.0.0", author: { name: "example" } },
-      scopes: ["issues:read", "comments:write"],
+      scopes: ["execution:read", "comments:write"],
       installed: true,
       installed_version: "1.0.0",
       added_scopes: ["comments:write"],

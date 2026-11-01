@@ -17,7 +17,7 @@ import type {
 import { I18nProvider } from "@auro/core/i18n/react";
 import enAgents from "../../locales/en/agents.json";
 import enCommon from "../../locales/en/common.json";
-import enIssues from "../../locales/en/issues.json";
+import enIssues from "../../locales/en/execution.json";
 
 const mockInitiateListModels = vi.hoisted(() => vi.fn());
 const mockGetListModelsResult = vi.hoisted(() => vi.fn());

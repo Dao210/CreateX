@@ -7,7 +7,7 @@ import type { RuntimeModelsResult } from "@auro/core/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import enAgents from "../../../locales/en/agents.json";
 import enCommon from "../../../locales/en/common.json";
-import enIssues from "../../../locales/en/issues.json";
+import enIssues from "../../../locales/en/execution.json";
 import { ModelPicker } from "./model-picker";
 
 const TEST_RESOURCES = {

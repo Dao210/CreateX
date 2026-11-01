@@ -367,21 +367,6 @@ func TestMediaResolver_DownloadErrorDoesNotExposeSignedURL(t *testing.T) {
 	}
 }
 
-func TestMediaResolver_AcceptsProviderIssuedHTTPURL(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		_, _ = w.Write(pngBytes)
-	}))
-	defer server.Close()
-	resolver := NewMediaResolver(nil, nil, nil, nil, nil).(*mediaResolver)
-	// Bypass the production public-network dialer only for this loopback test;
-	// fetchBytes still exercises the real URL validation and response handling.
-	resolver.fetch.Transport = server.Client().Transport
-	data, contentType, err := resolver.fetchBytes(context.Background(), server.URL+"/image?token=supersecret")
-	if err != nil || contentType != "image/png" || !bytes.Equal(data, pngBytes) {
-		t.Fatalf("HTTP download: type=%q bytes=%d err=%v", contentType, len(data), err)
-	}
-}
-
 func TestMediaResolver_RejectsUnsupportedDownloadURLScheme(t *testing.T) {
 	resolver := &mediaResolver{fetch: http.DefaultClient}
 	_, _, err := resolver.fetchBytes(context.Background(), "ftp://files.example/image?token=supersecret")

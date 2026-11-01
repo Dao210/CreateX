@@ -1,12 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  deriveChecksStatus,
-  deriveMergeStatus,
-  derivePullRequestVerdict,
-  formatPullRequestDiffCount,
-  shouldShowPullRequestStats,
-  stripIssueKeyFromTitle,
-} from "./pull-request-status";
+import { deriveChecksStatus, deriveMergeStatus, derivePullRequestVerdict, formatPullRequestDiffCount, shouldShowPullRequestStats } from "./pull-request-status";
 
 describe("deriveChecksStatus", () => {
   it("maps a `failure` rollup to failed and carries counts + names", () => {
@@ -240,30 +233,6 @@ describe("derivePullRequestVerdict", () => {
       derivePullRequestVerdict({ state: "open", snapshot_available: false, checks_rollup: "failure", mergeable: "conflicting" }),
     ).toEqual({ kind: "unknown" });
     expect(derivePullRequestVerdict({ state: "open" })).toEqual({ kind: "unknown" });
-  });
-});
-
-describe("stripIssueKeyFromTitle", () => {
-  it.each([
-    ["MUL-7732: regroup settings", "regroup settings"],
-    ["MUL-7732 regroup settings", "regroup settings"],
-    ["mul-7732: regroup settings", "regroup settings"],
-    ["fix(chat): keep tool rows (MUL-7732)", "fix(chat): keep tool rows"],
-  ])("strips the issue's own key from %j", (title, expected) => {
-    expect(stripIssueKeyFromTitle(title, "MUL-7732")).toBe(expected);
-  });
-
-  it.each([
-    ["MUL-77321: another issue"],
-    ["MUL-7700: another issue"],
-    ["regroup MUL-7732 settings"],
-    ["MUL-7732"],
-  ])("leaves %j as written", (title) => {
-    expect(stripIssueKeyFromTitle(title, "MUL-7732")).toBe(title);
-  });
-
-  it("leaves the title alone without an identifier", () => {
-    expect(stripIssueKeyFromTitle("MUL-1: x", "")).toBe("MUL-1: x");
   });
 });
 

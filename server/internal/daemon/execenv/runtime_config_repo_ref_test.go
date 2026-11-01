@@ -82,30 +82,6 @@ func TestDeliveryRuleDoesNotAssumeThePinIsABranch(t *testing.T) {
 	}
 }
 
-// The Project Context bullet used to read as though --ref were how you reach
-// the configured revision. It is not: the daemon applies it, and --ref is the
-// override. An agent following the old wording would re-specify a value it
-// already had — and would keep using a stale one after the project changed.
-func TestProjectContextSaysThePinIsAlreadyApplied(t *testing.T) {
-	t.Parallel()
-	ctx := TaskContextForEnv{
-		IssueID: "i-1", AgentName: "Eve", AgentID: "eve-1",
-		ProjectID: "p-1", ProjectTitle: "Release line",
-		ProjectResources: []ProjectResourceForEnv{{
-			ResourceType: "github_repo",
-			ResourceRef:  []byte(`{"url":"https://github.com/o/r","ref":"release/2026-09"}`),
-		}},
-	}
-	out := buildMetaSkillContent("claude", ctx)
-
-	if !strings.Contains(out, "checked out there automatically") {
-		t.Errorf("Project Context should say the configured start is applied for you; got:\n%s", out)
-	}
-	if !strings.Contains(out, "only to override it") {
-		t.Errorf("Project Context should frame --ref as the override; got:\n%s", out)
-	}
-}
-
 // A resumed task can outlive a change to the project's starting point. The
 // checkout is kept as it was — holding work branched off the OLD value — while
 // the brief, rebuilt from the current claim, names the new one. An agent that

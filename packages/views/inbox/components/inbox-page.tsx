@@ -10,14 +10,14 @@ import { inboxListOptions, archivedInboxPagesOptions, archivedInboxLookupOptions
 import { EMPTY_INBOX_FILTERS } from "@auro/core/inbox/filter-store";
 import { useMarkInboxRead, useMarkInboxUnread, useArchiveInbox, useUnarchiveInbox, useMarkAllInboxRead } from "@auro/core/inbox/mutations";
 import { isVisibleInboxItem } from "@auro/core/inbox/system-notifications";
-import { inboxCategory, inboxContent, parseInboxCategory, type InboxCategory } from "@auro/core/inbox/messages";
+import { autopilotNoticeId, inboxCategory, inboxContent, parseInboxCategory, type InboxCategory } from "@auro/core/inbox/messages";
 import { Button } from "@auro/ui/components/ui/button";
 import { cn } from "@auro/ui/lib/utils";
 import { PageHeader, PAGE_GUTTER } from "../../layout/page-header";
-import { useNavigation } from "../../navigation";
+import { AppLink, useNavigation } from "../../navigation";
 import { useT } from "../../i18n";
 import { AutopilotQuotaNotice } from "./autopilot-quota-notice";
-import { useIssueLimitUpgradePrompt } from "../../modals/use-issue-limit-upgrade-prompt";
+import { useAutopilotQuotaRecovery } from "../../modals/use-autopilot-quota-recovery";
 import { InboxMessageContent } from "./inbox-message-content";
 import { useInboxCopy } from "./use-inbox-copy";
 
@@ -25,7 +25,7 @@ export function InboxPage() {
   const { t } = useT("inbox");
   const copy = useInboxCopy();
   const wsId = useWorkspaceId();
-  const openQuotaRecovery = useIssueLimitUpgradePrompt("autopilot_quota");
+  const openQuotaRecovery = useAutopilotQuotaRecovery();
   const paths = useWorkspacePaths();
   const { searchParams, replace } = useNavigation();
   const archived = searchParams.get("view") === "archived";
@@ -41,6 +41,7 @@ export function InboxPage() {
   }), [loadedItems, category]);
   const lookup = useQuery({ ...archivedInboxLookupOptions(wsId, selectedKey), enabled: archived && !!selectedKey && !loadedItems.some(item => item.id === selectedKey) });
   const selected = loadedItems.find(item => item.id === selectedKey) ?? lookup.data?.items.find(item => item.id === selectedKey && isVisibleInboxItem(item));
+  const automationId = selected?.type === "autopilot_paused" ? autopilotNoticeId(selected) : null;
   const markRead = useMarkInboxRead();
   const markUnread = useMarkInboxUnread();
   const archiveItem = useArchiveInbox();
@@ -100,6 +101,7 @@ export function InboxPage() {
         {selected ? <article className={cn(PAGE_GUTTER, "mx-auto max-w-3xl py-6")}>
           <h2 className="break-words text-title-sm font-semibold">{copy.title(selected)}</h2>
           {selected.type === "autopilot_quota_exceeded" ? <AutopilotQuotaNotice item={selected} onOpenRecovery={openQuotaRecovery} /> : selected.type === "creation_ready" || selected.type === "character_milestone" || selected.type === "world_digest" ? <InboxMessageContent item={selected} /> : selected.body && <p className="mt-4 whitespace-pre-wrap text-body leading-relaxed">{selected.body}</p>}
+          {selected.type === "autopilot_paused" && <AppLink href={automationId ? paths.autopilotDetail(automationId) : paths.autopilots()} className="mt-4 inline-flex rounded-sm text-label text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-ring">{t($ => $.messages.view_automation)}</AppLink>}
           <div className="mt-6 flex flex-wrap gap-2">
             <Button variant="outline" size="sm" disabled={archiveItem.isPending || restoreItem.isPending} onClick={() => {
               (archived ? restoreItem : archiveItem).mutate(selected.id, { onSuccess: () => select(""), onError: mutationError });

@@ -56,7 +56,6 @@ WHERE workspace_id = $1
 
 
   AND chat_message_id IS NULL
-  AND source_context_id IS NULL
 `
 
 type CountUnboundChatAttachmentsForTaskParams struct {

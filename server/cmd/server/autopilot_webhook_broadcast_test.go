@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gorilla/websocket"
 	"github.com/auro-ai/auro/server/internal/handler"
 	"github.com/auro-ai/auro/server/internal/testutil"
+	"github.com/gorilla/websocket"
 )
 
 // TestAutopilotWebhookTokenIsNotBroadcastToTheWorkspace is the end-to-end proof

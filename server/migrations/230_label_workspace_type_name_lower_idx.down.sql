@@ -1,0 +1,1 @@
+DROP INDEX CONCURRENTLY IF EXISTS label_workspace_type_name_lower_idx;

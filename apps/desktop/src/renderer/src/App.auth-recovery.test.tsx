@@ -218,7 +218,6 @@ describe("App main-window auth recovery", () => {
 
   it("keeps auth recovery ahead of a dedicated issue window", () => {
     state.auth.status = "recovering";
-    window.desktopAPI.windowContext = {
       issueId: "MUL-1",
       kind: "issue",
       path: "/acme/issues/MUL-1",

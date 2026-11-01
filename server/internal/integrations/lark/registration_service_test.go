@@ -8,11 +8,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/auro-ai/auro/server/internal/events"
 	db "github.com/auro-ai/auro/server/pkg/db/generated"
 	"github.com/auro-ai/auro/server/pkg/protocol"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // These tests cover the pure-Go halves of RegistrationService —

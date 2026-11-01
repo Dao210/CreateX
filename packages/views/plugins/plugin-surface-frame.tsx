@@ -154,7 +154,7 @@ function PluginSurfaceNotice({
   installation: PluginInstallation;
   kind: "unavailable" | "failed" | "loading" | "navigated";
 }) {
-  const { t } = useT("issues");
+  const { t } = useT("execution");
   if (kind === "failed") return <>{t(($) => $.plugins.surface_failed, { name: installation.name })}</>;
   if (kind === "loading") return <>{t(($) => $.plugins.surface_loading, { name: installation.name })}</>;
   if (kind === "navigated") return <>{t(($) => $.plugins.surface_navigated, { name: installation.name })}</>;

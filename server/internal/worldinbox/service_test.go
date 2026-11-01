@@ -4,14 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"os"
-	"path/filepath"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/auro-ai/auro/server/internal/tanks"
 	"github.com/auro-ai/auro/server/internal/testutil"
+	"github.com/auro-ai/auro/server/internal/util"
 	"github.com/auro-ai/auro/server/internal/worldinbox"
+	db "github.com/auro-ai/auro/server/pkg/db/generated"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -49,27 +50,10 @@ func database(t *testing.T) (*pgxpool.Pool, *testutil.Fixture, tanks.Actor) {
 		t.Fatal(err)
 	}
 	t.Cleanup(pool.Close)
-	for _, table := range []string{"user", "workspace", "member", "inbox_item", "notification_preference", "game_policy", "game_world_override", "life_world"} {
+	for _, table := range []string{"user", "workspace", "member", "inbox_item", "notification_preference", "game_policy", "game_world_override", "life_world", "tank_character", "tank_character_revision", "tank_play_session", "tank_request", "tank_training_run", "world_inbox_event"} {
 		name := pgx.Identifier{table}.Sanitize()
 		if _, err = pool.Exec(ctx, "CREATE TABLE "+name+" (LIKE public."+name+" INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES)"); err != nil {
 			t.Fatal(err)
-		}
-	}
-	files := []string{"../../migrations/566_tank_characters.up.sql"}
-	for _, pattern := range []string{"../../migrations/58[5-8]_*.up.sql", "../../migrations/59[4-8]_*.up.sql"} {
-		found, e := filepath.Glob(pattern)
-		if e != nil {
-			t.Fatal(e)
-		}
-		files = append(files, found...)
-	}
-	for _, file := range files {
-		raw, e := os.ReadFile(file)
-		if e != nil {
-			t.Fatal(e)
-		}
-		if _, e = pool.Exec(ctx, string(raw)); e != nil {
-			t.Fatalf("%s: %v", file, e)
 		}
 	}
 	fx := testutil.New(pool, "", "")
@@ -109,6 +93,7 @@ func TestDBDurableDeliveryHourlyDigestRetriesAndIsolation(t *testing.T) {
 	if got := fx.Count(t, "SELECT count(*) FROM world_inbox_event"); got != 3 {
 		t.Fatalf("retries created %d facts, want 3", got)
 	}
+	fx.Exec(t, `UPDATE "user" SET name='Renamed later' WHERE id=$1::uuid`, a.UserID)
 	start := time.Now().UTC().Truncate(time.Hour).Add(-time.Hour)
 	fx.Exec(t, "UPDATE member SET created_at=$1", start.Add(-time.Hour))
 	fx.Exec(t, "UPDATE world_inbox_event SET occurred_at=$1", start.Add(10*time.Minute))
@@ -157,6 +142,11 @@ func TestDBDurableDeliveryHourlyDigestRetriesAndIsolation(t *testing.T) {
 	}
 	if content.Totals.Created != 2 || content.Totals.Updated != 1 || len(content.Entries) != 3 {
 		t.Fatalf("digest=%s", raw)
+	}
+	for _, entry := range content.Entries {
+		if entry.SubjectID == c.ID && entry.AuthorName != "Creator" {
+			t.Fatalf("historical author changed: %+v", entry)
+		}
 	}
 	// Once read/archived, retries neither reopen the message nor change its content.
 	fx.Exec(t, "UPDATE inbox_item SET read=true,archived=true")
@@ -260,5 +250,60 @@ func TestDBClosedGamesSuppressNewDeliveryAndHiddenGamesRemainAvailable(t *testin
 	}
 	if got := fx.Count(t, "SELECT count(*) FROM inbox_item"); got != 2 {
 		t.Fatalf("closing game changed %d historical messages", got)
+	}
+}
+
+func TestDBRetiredNotificationsStayExcludedAcrossListsCountsAndBatchWrites(t *testing.T) {
+	pool, fx, a := database(t)
+	ctx := context.Background()
+	w, err := util.ParseUUID(a.WorkspaceID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	u, err := util.ParseUUID(a.UserID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	visible := fx.Insert(t, "inbox_item", testutil.Cols{"workspace_id": a.WorkspaceID, "recipient_type": "member", "recipient_id": a.UserID, "type": "creation_ready", "severity": "info", "title": "Ready"})
+	old := fx.Insert(t, "inbox_item", testutil.Cols{"workspace_id": a.WorkspaceID, "recipient_type": "member", "recipient_id": a.UserID, "type": "new_comment", "severity": "info", "title": "Retired", "read": true})
+	fx.Insert(t, "inbox_item", testutil.Cols{"workspace_id": a.WorkspaceID, "recipient_type": "member", "recipient_id": a.UserID, "type": "issue_assigned", "severity": "info", "title": "Retired unread"})
+	fx.Insert(t, "inbox_item", testutil.Cols{"workspace_id": a.WorkspaceID, "recipient_type": "member", "recipient_id": a.UserID, "type": "quick_create_failed", "severity": "info", "title": "Retired archived", "archived": true})
+	q := db.New(pool)
+	items, err := q.ListInboxItems(ctx, db.ListInboxItemsParams{WorkspaceID: w, RecipientType: "member", RecipientID: u})
+	if err != nil || len(items) != 1 || util.UUIDToString(items[0].ID) != visible {
+		t.Fatalf("active=%+v err=%v", items, err)
+	}
+	summary, err := q.CountUnreadInboxByWorkspace(ctx, u)
+	if err != nil || len(summary) != 1 || summary[0].Count != 1 {
+		t.Fatalf("summary=%+v err=%v", summary, err)
+	}
+	if count, err := q.CountUnreadInbox(ctx, db.CountUnreadInboxParams{WorkspaceID: w, RecipientID: u, RecipientType: "member"}); err != nil || count != 1 {
+		t.Fatalf("unread count=%d err=%v", count, err)
+	}
+	if count, err := q.MarkAllInboxRead(ctx, db.MarkAllInboxReadParams{WorkspaceID: w, RecipientID: u}); err != nil || count != 1 {
+		t.Fatalf("mark read=%d err=%v", count, err)
+	}
+	if count, err := q.ArchiveAllReadInbox(ctx, db.ArchiveAllReadInboxParams{WorkspaceID: w, RecipientID: u}); err != nil || count != 1 {
+		t.Fatalf("archive read=%d err=%v", count, err)
+	}
+	if count := fx.Count(t, "SELECT count(*) FROM inbox_item WHERE id=$1::uuid AND archived", old); count != 0 {
+		t.Fatal("batch write changed a retired notification")
+	}
+	archived, err := q.ListArchivedInboxItems(ctx, db.ListArchivedInboxItemsParams{WorkspaceID: w, RecipientType: "member", RecipientID: u})
+	if err != nil || len(archived) != 1 {
+		t.Fatalf("archived=%+v err=%v", archived, err)
+	}
+	page, err := q.ListArchivedInboxPage(ctx, db.ListArchivedInboxPageParams{WorkspaceID: w, RecipientID: u, Actors: []string{}, PageLimit: 50})
+	if err != nil || len(page) != 1 {
+		t.Fatalf("archive page=%+v err=%v", page, err)
+	}
+	facets, err := q.ArchivedInboxFacets(ctx, db.ArchivedInboxFacetsParams{WorkspaceID: w, RecipientID: u, Actors: []string{}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, facet := range facets {
+		if facet.Dimension == "unread" && facet.Count != 0 {
+			t.Fatalf("retired archive inflated facets: %+v", facets)
+		}
 	}
 }

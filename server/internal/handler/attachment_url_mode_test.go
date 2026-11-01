@@ -40,14 +40,6 @@ func withCloudFrontSigner(t *testing.T) {
 	t.Cleanup(func() { testHandler.CFSigner = orig })
 }
 
-func requestWithCapabilities(caps string) *http.Request {
-	r := httptest.NewRequest(http.MethodGet, "/api/issues/x/comments", nil)
-	if caps != "" {
-		r.Header.Set("X-Client-Capabilities", caps)
-	}
-	return r
-}
-
 // TestAttachmentURLMode_DefaultsToSignedWithoutCapability is the compatibility
 // promise itself: a caller that does not advertise the capability — every
 // installed mobile build, every third-party script — must get exactly the

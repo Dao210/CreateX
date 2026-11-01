@@ -26,7 +26,7 @@ import { stripMentionMarkdown } from "./strip-mention-markdown";
  * almost always hit the snapshot path.
  */
 export function useTriggerText(task: AgentTask): string {
-  const { t } = useT("issues");
+  const { t } = useT("execution");
   const isRetry = !!task.parent_task_id;
   const retryPrefix = isRetry
     ? task.attempt && task.attempt > 1
@@ -86,7 +86,7 @@ export function plainTriggerSummary(raw: string, imageLabel: string): string {
 }
 
 export function useStatusLabel(status: AgentTask["status"]): string {
-  const { t } = useT("issues");
+  const { t } = useT("execution");
   switch (status) {
     case "queued": return t(($) => $.execution_log.status_queued);
     case "dispatched": return t(($) => $.execution_log.status_dispatched);

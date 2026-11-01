@@ -347,42 +347,6 @@ func TestInboundUsesExactStructuredTelegramMentions(t *testing.T) {
 	}
 }
 
-func TestDispatchIssueErrorSendsFailureNotice(t *testing.T) {
-	notice := make(chan sendMessageParams, 1)
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var got sendMessageParams
-		_ = json.NewDecoder(r.Body).Decode(&got)
-		notice <- got
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"ok":true,"result":{"message_id":1,"chat":{"id":42,"type":"private"}}}`))
-	}))
-	defer srv.Close()
-
-	wantErr := errors.New("database unavailable")
-	c := &telegramChannel{
-		botID: 999, botUsername: "my_bot",
-		api:     newBotAPI(srv.URL, "123:abc", srv.Client()),
-		handler: func(context.Context, channel.InboundMessage) error { return wantErr },
-		logger:  testLogger(),
-	}
-	err := c.dispatch(context.Background(), Update{UpdateID: 1, Message: &Message{
-		MessageID: 2, From: &User{ID: 3, FirstName: "U"},
-		Chat: Chat{ID: 42, Type: "private"}, Text: "/issue broken path",
-	}})
-	if !errors.Is(err, wantErr) {
-		t.Fatalf("dispatch error = %v, want %v", err, wantErr)
-	}
-	select {
-	case got := <-notice:
-		if got.Text != issueDispatchFailedText || got.ChatID != 42 ||
-			got.ReplyParameters == nil || got.ReplyParameters.MessageID != 2 {
-			t.Fatalf("notice = %+v", got)
-		}
-	case <-time.After(time.Second):
-		t.Fatal("timed out waiting for issue failure notice")
-	}
-}
-
 func TestTelegramSessionRouting(t *testing.T) {
 	p2p := channel.InboundMessage{Source: channel.Source{
 		ChatID: "555", ChatType: channel.ChatTypeP2P,

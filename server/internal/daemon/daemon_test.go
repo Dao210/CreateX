@@ -363,9 +363,9 @@ func TestConfigureCodexTaskShellEnvironment(t *testing.T) {
 			"AURO_LLM_API_KEY=daemon-secret",
 		}
 		agentEnv := map[string]string{
-			"CUSTOM_ACCESS_TOKEN":      "agent-secret",
-			"CUSTOM_FLAG":              "enabled",
-			"UNAUTHORIZED_TOKEN":       "daemon-secret",
+			"CUSTOM_ACCESS_TOKEN":   "agent-secret",
+			"CUSTOM_FLAG":           "enabled",
+			"UNAUTHORIZED_TOKEN":    "daemon-secret",
 			"AURO_TASK_CONFIG_ROOT": "/task/auro-config",
 			"AURO_SERVER_URL":       "https://task.example",
 			"AURO_TOKEN":            "mat_task",
@@ -426,7 +426,7 @@ func TestCodexTaskShellEnvInheritsRealHome(t *testing.T) {
 	// What runTask layers on top for a Codex task: task identity plus the
 	// task-scoped CODEX_HOME, and — since MUL-5578 — no HOME/XDG entry.
 	explicit := map[string]string{
-		"CODEX_HOME":               codexHome,
+		"CODEX_HOME":            codexHome,
 		"AURO_TASK_CONFIG_ROOT": "/task/auro-config",
 		"AURO_TOKEN":            "mat_task",
 		"AURO_SERVER_URL":       "https://task.example",
@@ -472,7 +472,7 @@ func TestCodexShellAuthorizedCustomEnvNamesUsesDaemonBlocklist(t *testing.T) {
 	got := codexShellAuthorizedCustomEnvNames(map[string]string{
 		"CUSTOM_ACCESS_TOKEN": "agent-secret",
 		"custom_secret":       "agent-secret",
-		"AURO_TOKEN":       "must-not-authorize",
+		"AURO_TOKEN":          "must-not-authorize",
 		"PATH":                "/must/not/override",
 		"HOME":                "/must/not/override",
 		"CODEX_HOME":          "/must/not/override",
@@ -560,9 +560,9 @@ func TestTaskAuroEnvironmentIncludesPrivateConfigRoot(t *testing.T) {
 		"AURO_AGENT_ID":             "agent-test",
 		"AURO_TASK_ID":              "task-test",
 		"AURO_TASK_SLOT":            "3",
-		"TMPDIR":                       "/task/tmp",
-		"TMP":                          "/task/tmp",
-		"TEMP":                         "/task/tmp",
+		"TMPDIR":                    "/task/tmp",
+		"TMP":                       "/task/tmp",
+		"TEMP":                      "/task/tmp",
 	}
 	if !maps.Equal(env, want) {
 		t.Fatalf("taskAuroEnvironment() = %#v, want %#v", env, want)
@@ -801,38 +801,6 @@ func TestComposeOpenclawIncludeRoots(t *testing.T) {
 	}
 }
 
-func TestBuildPromptContainsIssueID(t *testing.T) {
-	t.Parallel()
-
-	issueID := "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
-	prompt := BuildPrompt(Task{
-		IssueID: issueID,
-		Agent: &AgentData{
-			Name: "Local Codex",
-			Skills: []SkillData{
-				{Name: "Concise", Content: "Be concise."},
-			},
-		},
-	}, "claude")
-
-	// Prompt should contain the issue ID and CLI hint.
-	for _, want := range []string{
-		issueID,
-		"auro issue get",
-	} {
-		if !strings.Contains(prompt, want) {
-			t.Fatalf("prompt missing %q", want)
-		}
-	}
-
-	// Skills should NOT be inlined in the prompt (they're in runtime config).
-	for _, absent := range []string{"## Agent Skills", "Be concise."} {
-		if strings.Contains(prompt, absent) {
-			t.Fatalf("prompt should NOT contain %q (skills are in runtime config)", absent)
-		}
-	}
-}
-
 // TestSessionContinuityNoticeMatchesSurface locks the MUL-5722 split. The same
 // event costs each surface something different, so it cannot be reported with
 // one sentence. The dividing question is whether the conversation can still be
@@ -1068,22 +1036,6 @@ func TestReconcileFreshRetryResult(t *testing.T) {
 	}
 }
 
-func TestBuildPromptNoIssueDetails(t *testing.T) {
-	t.Parallel()
-
-	prompt := BuildPrompt(Task{
-		IssueID: "test-id",
-		Agent:   &AgentData{Name: "Test"},
-	}, "claude")
-
-	// Prompt should not contain issue title/description (agent fetches via CLI).
-	for _, absent := range []string{"**Issue:**", "**Summary:**"} {
-		if strings.Contains(prompt, absent) {
-			t.Fatalf("prompt should NOT contain %q — agent fetches details via CLI", absent)
-		}
-	}
-}
-
 func TestBuildPromptAutopilotRunOnly(t *testing.T) {
 	t.Parallel()
 
@@ -1126,138 +1078,6 @@ func TestBuildPromptAutopilotRunOnly(t *testing.T) {
 	}
 	if strings.Contains(prompt, "Your assigned issue ID is:") {
 		t.Fatalf("autopilot prompt should not use issue assignment template\n---\n%s", prompt)
-	}
-}
-
-func TestBuildPromptCommentTriggered(t *testing.T) {
-	t.Parallel()
-
-	issueID := "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
-	commentID := "c1c2c3c4-d5d6-7890-abcd-ef1234567890"
-	commentContent := "请把报告翻译成英文"
-
-	prompt := BuildPrompt(Task{
-		IssueID:               issueID,
-		TriggerCommentID:      commentID,
-		TriggerCommentContent: commentContent,
-		Agent:                 &AgentData{Name: "Test"},
-	}, "claude")
-
-	// Prompt should contain the comment content, the trigger comment id, and
-	// the full reply command with --parent. Re-emitting --parent on every turn
-	// is what prevents resumed sessions from reusing the previous turn's
-	// --parent UUID.
-	for _, want := range []string{
-		issueID,
-		commentContent,
-		"Focus on THIS comment",
-		commentID,
-		"auro issue comment add " + issueID + " --parent " + commentID,
-		"do NOT reuse --parent values from previous turns",
-		// MUL-5442 (2026-08-06): with the generic no-reply rule retired,
-		// the reply command is framed as a plain imperative again — the
-		// squad leader's `no_action` block states its own exception.
-		"Post your reply as a comment",
-	} {
-		if !strings.Contains(prompt, want) {
-			t.Fatalf("prompt missing %q\n---\n%s", want, prompt)
-		}
-	}
-
-	// Should still contain CLI hint for fetching issue context.
-	if !strings.Contains(prompt, "auro issue get") {
-		t.Fatal("prompt missing CLI hint for issue context")
-	}
-}
-
-// TestBuildPromptCommentTriggeredByAgent covers the trigger-attribution
-// line for agent-authored triggers, and guards the RETIREMENT of the
-// generic no-reply warning block that used to follow it (MUL-1323 /
-// GH#1576). Retired by MUL-5442 owner decision (2026-08-06): an agent
-// comment cannot wake an ordinary agent without an explicit @mention
-// (computeCommentAgentTriggers routes agent-authored comments only via
-// mentions, plus the squad-leader wake), so loop prevention belongs to the
-// mention discipline in the brief's `## Mentions`, and recorded silence
-// stays squad-leader-only (`no_action`). Retired pins, now negative
-// guards: "do not @mention the other agent as a sign-off", "Silence is
-// the preferred way".
-func TestBuildPromptCommentTriggeredByAgent(t *testing.T) {
-	t.Parallel()
-
-	prompt := BuildPrompt(Task{
-		IssueID:               "issue-1",
-		TriggerCommentID:      "comment-1",
-		TriggerCommentContent: "thanks, looks good!",
-		TriggerAuthorType:     "agent",
-		TriggerAuthorName:     "Atlas",
-		Agent:                 &AgentData{Name: "Test"},
-	}, "claude")
-
-	if !strings.Contains(prompt, "Another agent (Atlas)") {
-		t.Fatalf("prompt missing trigger attribution\n---\n%s", prompt)
-	}
-	for _, banned := range []string{
-		"Silence is the preferred way",
-		"do not @mention the other agent as a sign-off",
-		"reply is warranted",
-		"exit with no output",
-		// The conditional reply framing was the door the retired rule
-		// walked through — guard it shut (MUL-5442 #6493 review).
-		"If you decide to reply",
-	} {
-		if strings.Contains(prompt, banned) {
-			t.Fatalf("per-turn prompt still carries retired no-reply warning %q\n---\n%s", banned, prompt)
-		}
-	}
-}
-
-// TestBuildPromptCommentTriggeredByMember guards against the agent-loop warning
-// leaking into human-authored triggers — a human asking a question should not
-// be pre-discouraged from getting a reply.
-func TestBuildPromptCommentTriggeredByMember(t *testing.T) {
-	t.Parallel()
-
-	prompt := BuildPrompt(Task{
-		IssueID:               "issue-1",
-		TriggerCommentID:      "comment-1",
-		TriggerCommentContent: "can you translate this?",
-		TriggerAuthorType:     "member",
-		TriggerAuthorName:     "Alice",
-		Agent:                 &AgentData{Name: "Test"},
-	}, "claude")
-
-	if !strings.Contains(prompt, "A user just left a new comment") {
-		t.Fatalf("member-triggered prompt should label the author as a user\n---\n%s", prompt)
-	}
-	if strings.Contains(prompt, "Another agent") {
-		t.Fatalf("member-triggered prompt should not claim the author was another agent")
-	}
-	// Must NOT use the old "You MUST respond" language: the reply command is
-	// shared across turn types, and a squad leader's `no_action` exit — the
-	// one silent path left after MUL-5442 retired the generic no-reply rule —
-	// must not be shouted over by the per-turn channel. The unconditional
-	// one-comment contract for ordinary agents lives in the brief.
-	if strings.Contains(prompt, "MUST respond") {
-		t.Fatalf("prompt should not contain unconditional \"MUST respond\" language\n---\n%s", prompt)
-	}
-	if !strings.Contains(prompt, "Post your reply as a comment") {
-		t.Fatalf("prompt should carry the imperative reply command\n---\n%s", prompt)
-	}
-}
-
-func TestBuildPromptCommentTriggeredNoContent(t *testing.T) {
-	t.Parallel()
-
-	// When TriggerCommentID is set but content is empty (e.g. fetch failed),
-	// it should still use the comment prompt path.
-	prompt := BuildPrompt(Task{
-		IssueID:          "test-id",
-		TriggerCommentID: "comment-id",
-		Agent:            &AgentData{Name: "Test"},
-	}, "claude")
-
-	if !strings.Contains(prompt, "auro issue get") {
-		t.Fatal("prompt missing CLI hint")
 	}
 }
 
@@ -4678,60 +4498,6 @@ func TestEnsureRepoReadyRefreshesOnMiss(t *testing.T) {
 	}
 }
 
-// A project github_repo URL that the workspace itself does not bind must still
-// be allowed for `auro repo checkout` after registerTaskRepos runs. Without
-// this, the new project-repos-override-workspace-repos behavior would surface
-// repos in the meta-skill that the agent then can't actually clone.
-func TestRegisterTaskReposAllowsProjectOnlyURL(t *testing.T) {
-	t.Parallel()
-
-	sourceRepo := createDaemonTestRepo(t)
-	var refreshCalls atomic.Int32
-	d := newRepoReadyTestDaemon(t, func(w http.ResponseWriter, r *http.Request) {
-		refreshCalls.Add(1)
-		// If the workspace endpoint is hit it returns an empty list — the
-		// project-only URL must NOT depend on this for allowlist membership.
-		json.NewEncoder(w).Encode(WorkspaceReposResponse{
-			WorkspaceID:  "ws-1",
-			Repos:        []RepoData{},
-			ReposVersion: "v1",
-		})
-	})
-	// Workspace has zero workspace-bound repos; the project resource gives us
-	// the only repo URL the agent should be able to check out.
-	d.workspaces["ws-1"] = newWorkspaceState("ws-1", nil, "", nil, nil)
-
-	d.registerTaskRepos("ws-1", "task-project-only", []RepoData{{URL: sourceRepo}})
-
-	// The async clone goroutine in registerTaskRepos may not have finished;
-	// poll briefly until the cache is populated so the test isn't racy.
-	deadline := time.Now().Add(5 * time.Second)
-	for time.Now().Before(deadline) {
-		if d.repoCache.Lookup("ws-1", sourceRepo) != "" {
-			break
-		}
-		time.Sleep(20 * time.Millisecond)
-	}
-	if d.repoCache.Lookup("ws-1", sourceRepo) == "" {
-		t.Fatalf("expected repo to be cached after registerTaskRepos, but Lookup returned empty")
-	}
-
-	if !d.workspaceRepoAllowed("ws-1", sourceRepo) {
-		t.Fatal("expected project repo to pass workspaceRepoAllowed")
-	}
-
-	if err := d.ensureRepoReady(context.Background(), "ws-1", sourceRepo); err != nil {
-		t.Fatalf("ensureRepoReady: %v", err)
-	}
-	// ensureRepoReady refreshes settings on every call (RFC MUL-2414 §4.8; PR
-	// #2847 review by Emacs) so a freshly-flipped GitHub toggle takes effect
-	// without waiting for the 30s sync tick. We expect exactly one refresh —
-	// the project-only URL still skips re-cloning because the cache is warm.
-	if got := refreshCalls.Load(); got != 1 {
-		t.Fatalf("expected 1 workspace-repos refresh (settings live-refresh on checkout), got %d", got)
-	}
-}
-
 // Confirms that a workspace refresh wiping allowedRepoURLs does not also wipe
 // task-scoped URLs (project repos). Without the separate taskRepoURLs map a
 // concurrent refresh would silently revoke project-only URLs and the next
@@ -6137,7 +5903,7 @@ func TestSanitizeAgentEnv(t *testing.T) {
 	in := map[string]string{
 		"HOME":        "/evil",
 		"PATH":        "/evil/bin",
-		"AURO_X":   "1",
+		"AURO_X":      "1",
 		"TEAM_SKILLS": "/srv/team",
 		"HERMES_HOME": "/some/home",
 	}
@@ -6439,104 +6205,6 @@ func TestFreshSessionMayHelp(t *testing.T) {
 	const hermesAuth = "hermes provider error: \"Could not resolve authentication method. Expected either api_key or auth_token to be set. Or for one of the X-Api-Key or Authorization headers to be explicitly omitted\""
 	if !freshSessionMayHelp(hermesAuth) {
 		t.Fatalf("freshSessionMayHelp(auth-resolution error) = false; a fresh session cures this failure, it must report session-fixable")
-	}
-}
-
-// TestBuildPromptSquadLeaderReplyCommandCarvesOutNoAction renders the COMPLETE
-// leader prompt and pins the exception's scope relation (MUL-5442 #6493
-// review): the no_action rule and the reply imperative appear in the same
-// prompt, so the imperative must carry the carve-out itself — a bare
-// unconditional "Post your reply as a comment" anywhere in a leader prompt
-// re-opens the contradiction the carve-out exists to close.
-func TestBuildPromptSquadLeaderReplyCommandCarvesOutNoAction(t *testing.T) {
-	t.Parallel()
-
-	prompt := BuildPrompt(Task{
-		IssueID:               "issue-1",
-		TriggerCommentID:      "comment-1",
-		TriggerCommentContent: "team update posted",
-		TriggerAuthorType:     "member",
-		TriggerAuthorName:     "Bohan",
-		IsLeaderTask:          true,
-		LeaderRoleResolved:    true,
-		Agent: &AgentData{
-			Name:         "Lead",
-			Instructions: "Some instructions\n\n## Squad Operating Protocol\n\nYou are the LEADER...",
-		},
-	}, "claude")
-
-	if !strings.Contains(prompt, "Unless your outcome is `no_action`, post your reply as a comment") {
-		t.Fatalf("leader prompt missing the carve-out reply imperative\n---\n%s", prompt)
-	}
-	if strings.Contains(prompt, "Post your reply as a comment") {
-		t.Fatalf("leader prompt still carries the unconditional reply imperative\n---\n%s", prompt)
-	}
-}
-
-// TestBuildPromptSquadLeaderMultiThreadCarvesOutNoAction renders the complete
-// leader prompt on the cross-thread fan-out path (MUL-5442 #6493 review): the
-// fan-out imperative fires AFTER the no_action rule, so its scope sentence
-// must govern the ENTIRE block — assert it precedes every later obligation,
-// not just the first verb. The ordinary fan-out output keeps the
-// unconditional form byte-for-byte.
-func TestBuildPromptSquadLeaderMultiThreadCarvesOutNoAction(t *testing.T) {
-	t.Parallel()
-
-	leaderTask := Task{
-		IssueID:               "issue-1",
-		TriggerCommentID:      "comment-9",
-		TriggerThreadID:       "thread-B",
-		TriggerCommentContent: "second update",
-		TriggerAuthorType:     "agent",
-		TriggerAuthorName:     "Worker",
-		CoalescedComments: []CoalescedCommentData{
-			{ID: "comment-8", ThreadID: "thread-A", Content: "first update"},
-		},
-		IsLeaderTask:       true,
-		LeaderRoleResolved: true,
-		Agent: &AgentData{
-			Name:         "Lead",
-			Instructions: "Some instructions\n\n## Squad Operating Protocol\n\nYou are the LEADER...",
-		},
-	}
-	prompt := BuildPrompt(leaderTask, "claude")
-	scope := strings.Index(prompt, "skip this ENTIRE fan-out block")
-	if scope < 0 {
-		t.Fatalf("leader multi-thread prompt missing the whole-block scope sentence\n---\n%s", prompt)
-	}
-	// Obligation strings track the converged fan-out block (MUL-5825). Pin
-	// ledger: "Post the replies in the order listed below" → the order rule
-	// merged into the targets header ("OLDEST thread first"); "For EACH
-	// thread above" → the embedded cookbook collapsed to the
-	// `## Comment Formatting` pointer plus the per-thread file delta
-	// ("DISTINCT body file per thread"). The assertion shape is unchanged:
-	// every obligation must sit AFTER the no_action scope sentence.
-	for _, obligation := range []string{
-		"multiple replies are required and correct",
-		"OLDEST thread first",
-		"DISTINCT body file per thread",
-	} {
-		idx := strings.Index(prompt, obligation)
-		if idx < 0 {
-			t.Fatalf("leader multi-thread prompt missing obligation %q\n---\n%s", obligation, prompt)
-		}
-		if idx < scope {
-			t.Fatalf("obligation %q precedes the no_action scope sentence — it escapes the carve-out\n---\n%s", obligation, prompt)
-		}
-	}
-	if strings.Contains(prompt, ". Post ONE reply per thread") {
-		t.Fatalf("leader multi-thread prompt still carries the unconditional imperative\n---\n%s", prompt)
-	}
-
-	ordinaryTask := leaderTask
-	ordinaryTask.IsLeaderTask = false
-	ordinaryTask.Agent = &AgentData{Name: "Reg", Instructions: "You are a regular agent."}
-	ordinary := BuildPrompt(ordinaryTask, "claude")
-	if !strings.Contains(ordinary, ". Post ONE reply per thread") {
-		t.Fatalf("ordinary multi-thread prompt missing the unconditional imperative\n---\n%s", ordinary)
-	}
-	if strings.Contains(ordinary, "Unless your outcome is") || strings.Contains(ordinary, "skip this ENTIRE fan-out block") {
-		t.Fatalf("ordinary multi-thread prompt leaked the leader carve-out\n---\n%s", ordinary)
 	}
 }
 

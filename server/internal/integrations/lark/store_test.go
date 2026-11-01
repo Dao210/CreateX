@@ -169,7 +169,7 @@ func TestUserBindingConfigRoundTrip(t *testing.T) {
 	in := UserBinding{
 		ID:             uuidFrom(0x55),
 		WorkspaceID:    uuidFrom(0x22),
-		AuroUserID:  uuidFrom(0x66),
+		AuroUserID:     uuidFrom(0x66),
 		InstallationID: uuidFrom(0x11),
 		ChannelUserID:  "ou_sender",
 		UnionID:        pgtype.Text{String: "on_union_777", Valid: true},
@@ -181,7 +181,7 @@ func TestUserBindingConfigRoundTrip(t *testing.T) {
 	got, err := userBindingFromRow(db.ChannelUserBinding{
 		ID:             in.ID,
 		WorkspaceID:    in.WorkspaceID,
-		AuroUserID:  in.AuroUserID,
+		AuroUserID:     in.AuroUserID,
 		InstallationID: in.InstallationID,
 		ChannelUserID:  in.ChannelUserID,
 		Config:         cfg,

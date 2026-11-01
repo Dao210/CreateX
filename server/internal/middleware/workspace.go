@@ -5,9 +5,9 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/auro-ai/auro/server/internal/util"
 	db "github.com/auro-ai/auro/server/pkg/db/generated"
+	"github.com/go-chi/chi/v5"
 )
 
 // Context keys for workspace-scoped request data.

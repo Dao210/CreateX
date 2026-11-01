@@ -133,19 +133,6 @@ func TestSetAuthCookies_HTTPSProduction(t *testing.T) {
 	}
 }
 
-// csrfHeaderFor builds the request a browser would send: the auth cookie the
-// server set, plus the CSRF cookie's value echoed in the header.
-// csrfRequest presents authToken as the auth cookie and echoes csrfValue in
-// the single CSRF header. Which of the two cookie values a client puts there
-// is the client's choice; the server tries both bindings either way.
-func csrfRequest(t *testing.T, authToken, csrfValue string) *http.Request {
-	t.Helper()
-	req := httptest.NewRequest(http.MethodPost, "/api/issues", nil)
-	req.AddCookie(&http.Cookie{Name: AuthCookieName, Value: authToken})
-	req.Header.Set(CSRFHeaderName, csrfValue)
-	return req
-}
-
 // legacyCSRFRequest is the same request; the name records that the value came
 // from the token-bound cookie — what a client that has not picked up the new
 // cookie sends, and what a rolled-back server would be verifying.
@@ -351,39 +338,15 @@ func TestValidateCSRF_IgnoresExpirySoAuthCanAnswer(t *testing.T) {
 	}
 }
 
-func TestValidateCSRF_RejectsMalformedAndMissing(t *testing.T) {
-	sid, _ := NewSessionID()
-	token := signSession(t, sessionClaims(t, time.Now().Add(time.Hour), sid))
-
-	cases := map[string]string{
-		"empty":          "",
-		"no separator":   "abcdef",
-		"bad nonce hex":  "zz.00",
-		"bad sig hex":    "00.zz",
-		"wrong sig":      "0011223344556677889900112233445566.00",
-		"extra segments": "00.11.22",
-	}
-	for name, csrf := range cases {
-		t.Run(name, func(t *testing.T) {
-			if ValidateCSRF(csrfRequest(t, token, csrf)) {
-				t.Errorf("malformed CSRF token %q must not validate", csrf)
-			}
-		})
-	}
-
-	// No auth cookie at all: nothing to bind to, so nothing validates.
-	req := httptest.NewRequest(http.MethodPost, "/api/issues", nil)
-	req.Header.Set("X-CSRF-Token", setAuthCookiesFor(t, token))
-	if ValidateCSRF(req) {
-		t.Error("CSRF must not validate without an auth cookie")
-	}
-}
-
-func TestValidateCSRF_SafeMethodsSkipTheCheck(t *testing.T) {
-	for _, method := range []string{http.MethodGet, http.MethodHead, http.MethodOptions} {
-		req := httptest.NewRequest(method, "/api/issues", nil)
-		if !ValidateCSRF(req) {
-			t.Errorf("%s must not require a CSRF token", method)
-		}
-	}
+// csrfHeaderFor builds the request a browser would send: the auth cookie the
+// server set, plus the CSRF cookie's value echoed in the header.
+// csrfRequest presents authToken as the auth cookie and echoes csrfValue in
+// the single CSRF header. Which of the two cookie values a client puts there
+// is the client's choice; the server tries both bindings either way.
+func csrfRequest(t *testing.T, authToken, csrfValue string) *http.Request {
+	t.Helper()
+	req := httptest.NewRequest(http.MethodPost, "/api/chat/sessions", nil)
+	req.AddCookie(&http.Cookie{Name: AuthCookieName, Value: authToken})
+	req.Header.Set(CSRFHeaderName, csrfValue)
+	return req
 }

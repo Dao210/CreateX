@@ -99,49 +99,6 @@ func assertFinishes(t *testing.T, done <-chan struct{}, what string) {
 	}
 }
 
-// TestDelegatedSubscribe_BlocksOnConcurrentSubtreeOptOut is the escape-hatch
-// race. A user unsubscribes from a tree while an agent is still decomposing it;
-// the child the agent files next did not exist when the tombstone was written,
-// so there is no row a row-lock could have protected. If the rule reads the
-// pre-tombstone snapshot, the user silently becomes a watcher again on exactly
-// the tree they just left.
-func TestDelegatedSubscribe_BlocksOnConcurrentSubtreeOptOut(t *testing.T) {
-	queries := db.New(testPool)
-	bus := events.New()
-	registerSubscriberListeners(bus, testPool)
-
-	agentID, runtimeID := firstFixtureAgent(t)
-	parentID := createTestIssue(t, testWorkspaceID, testUserID)
-	t.Cleanup(func() { cleanupTestIssue(t, parentID) })
-
-	task := createAgentTaskWithOriginator(t, agentID, runtimeID, util.MustParseUUID(testUserID))
-
-	// The user leaves the whole tree. Still uncommitted.
-	release := blockedTx(t, testUserID, func(qtx *db.Queries) error {
-		_, err := qtx.UnsubscribeFromIssueSubtree(context.Background(), db.UnsubscribeFromIssueSubtreeParams{
-			ID:       util.MustParseUUID(parentID),
-			UserType: "member",
-			UserID:   util.MustParseUUID(testUserID),
-		})
-		return err
-	})
-
-	// The agent files a NEW child under that tree, after the opt-out was
-	// written but before it committed.
-	childID := createAgentOriginIssue(t, agentID, "agent_create", task, util.MustParseUUID(parentID))
-
-	done := fireDelegatedRule(bus, childID, agentID)
-	assertBlocked(t, done, "delegated subscribe")
-
-	release()
-	assertFinishes(t, done, "delegated subscribe")
-
-	if isSubscribed(t, queries, childID, "member", testUserID) {
-		t.Fatal("a child filed during a concurrent subtree unsubscribe must not resurrect the subscription: " +
-			"this is the escape hatch the feature depends on")
-	}
-}
-
 // TestDelegatedSubscribe_BlocksOnConcurrentMemberRevoke is the membership race.
 // Round 6 moved the membership check to write time, but the check and the
 // insert were still two statements, so a revoke landing between them produced

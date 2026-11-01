@@ -78,10 +78,6 @@ describe("parseTabSubject", () => {
       sessionId: "s1",
     });
   });
-
-  it("keeps sub-route ids at index 2 (issue filters/anchors don't leak)", () => {
-    expect(parseTabSubject("/acme/issues/bug-1?comment=c1")).toEqual({ kind: "unknown" });
-  });
 });
 
 describe("tabSubjectKey", () => {

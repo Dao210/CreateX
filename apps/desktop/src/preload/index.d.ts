@@ -4,9 +4,6 @@ import type { NavigationGesture } from "../shared/navigation-gestures";
 import type { RendererRouteContextInput } from "../shared/renderer-route-context";
 import type { FreezeBreadcrumb } from "../shared/freeze-breadcrumb";
 import type {
-  DesktopWindowContext,
-} from "../shared/issue-window";
-import type {
   ManualUpdateCheckResult,
   UpdaterPreferences,
 } from "../shared/updater-types";
@@ -30,7 +27,6 @@ interface DesktopAPI {
   /** Validated runtime endpoint config, or a blocking config error. */
   runtimeConfig: RuntimeConfigResult;
   /** Main tabbed window or a dedicated issue-only window. */
-  windowContext: DesktopWindowContext;
   /** Read any freeze/crash breadcrumb from a previous session, so the renderer
    *  can flush it to telemetry on boot. Null when nothing's pending. Reading
    *  does not consume it — acknowledge with `ackFreeze`. */

@@ -899,9 +899,7 @@ UPDATE agent_task_queue AS task
 SET status = 'queued', fire_at = NULL
 WHERE task.chat_session_id = @chat_session_id
   AND task.status = 'deferred'
-  AND task.issue_id IS NULL
   AND task.parent_task_id IS NULL
-  AND task.escalation_for_task_id IS NULL
   AND NOT EXISTS (
       SELECT 1
       FROM chat_message AS message

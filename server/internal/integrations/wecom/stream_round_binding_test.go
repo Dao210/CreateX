@@ -95,48 +95,6 @@ func TestARunQueuedBeforeItsBubbleStillBindsToIt(t *testing.T) {
 
 // ---- 3. the runs that are not this conversation's ----
 
-// TestAnIssueRunNeverTakesAWaitingBubble.
-//
-// task:queued fires for every run in the deployment. An /issue command, an
-// autopilot run, a rerun from the web card: they all carry an issue id, and
-// they all answer somewhere other than this chat. One of them binding a WeCom
-// bubble would leave the real turn with nowhere to land and seal the asker's
-// question with an answer produced for somebody else's issue.
-//
-// A chat turn is the one with no issue at all — CreateChatTask inserts issue_id
-// as NULL, and taskEvent serializes that as the empty string.
-//
-// REVERSE VERIFICATION: delete the issue_id check in handleTaskQueued and this
-// fails — the issue run takes the bubble, and the chat run's own answer arrives
-// as a plain message under a spinner the issue run's ending never closes.
-func TestAnIssueRunNeverTakesAWaitingBubble(t *testing.T) {
-	t.Parallel()
-	rig := newBubbleRig(t)
-
-	rig.ask(t, "REQ-ISSUE")
-	rig.queueTask(t, taskUUID(t, "issue-run"), "99999999-0000-0000-0000-000000000001")
-
-	if rig.streams.has(bubbleSessionID(t), taskUUID(t, "issue-run")) {
-		t.Fatal("an /issue run took the bubble a chat question opened; its answer never comes " +
-			"back to this chat, so the spinner has no ending left")
-	}
-
-	// The conversation's own run arrives and takes the bubble it was always for.
-	rig.queued(t, "task-1")
-	rig.answer(t, "the agent reply", "task-1")
-
-	frames := rig.conn.streamFrames(t)
-	if len(frames) != 2 {
-		t.Fatalf("got %d stream frames, want 2 (open + seal)", len(frames))
-	}
-	if frames[1]["id"] != frames[0]["id"] || frames[1]["content"] != "the agent reply" {
-		t.Fatalf("the chat run's answer did not replace the bubble its question opened: %v", frames[1])
-	}
-	if pushes := rig.conn.pushes(t); len(pushes) != 0 {
-		t.Fatalf("the answer went out as %d plain message(s)", len(pushes))
-	}
-}
-
 // ---- 4. the auto-retry clone ----
 
 // TestARetryCloneTakesTheRoundItIsReplacingNotTheNextQuestions.

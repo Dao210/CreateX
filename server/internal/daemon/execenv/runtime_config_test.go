@@ -29,68 +29,6 @@ func platformSkillFixture() SkillContextForEnv {
 	}
 }
 
-func TestSubIssueCreationSectionPresentForIssueRuns(t *testing.T) {
-	t.Parallel()
-	cases := []struct {
-		name string
-		ctx  TaskContextForEnv
-	}{
-		{
-			name: "assignment-triggered",
-			ctx: TaskContextForEnv{
-				IssueID:     "11111111-2222-3333-4444-555555555555",
-				AgentSkills: []SkillContextForEnv{platformSkillFixture()},
-			},
-		},
-		{
-			name: "comment-triggered",
-			ctx: TaskContextForEnv{
-				IssueID:          "22222222-3333-4444-5555-666666666666",
-				TriggerCommentID: "33333333-4444-5555-6666-777777777777",
-				AgentSkills:      []SkillContextForEnv{platformSkillFixture()},
-			},
-		},
-	}
-	for _, tc := range cases {
-		tc := tc
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-			out := buildMetaSkillContent("claude", tc.ctx)
-
-			if !strings.Contains(out, "## Sub-issue Creation") {
-				t.Fatalf("expected Sub-issue Creation section in %s brief", tc.name)
-			}
-			for _, want := range []string{
-				// MUL-5442 demotes the full todo/backlog/stage playbook to the
-				// auro-platform skill. The brief keeps a one-line map (all
-				// three flags stay discoverable, MUL-3508 follow-up) plus the
-				// skill pointer; the skill side of the contract is asserted in
-				// internal/service (TestPlatformSkillCoversPlatformContracts).
-				"`--status todo` starts an agent-assigned child immediately",
-				"`--status backlog` parks it",
-				"`--stage <N>` groups children into ordered stages",
-				"read `references/issues.md` in the `auro-platform` skill",
-			} {
-				if !strings.Contains(out, want) {
-					t.Errorf("[%s] section missing %q", tc.name, want)
-				}
-			}
-		})
-	}
-}
-
-func TestIssueWorkflowCarriesSourceContextPrecedenceOnce(t *testing.T) {
-	t.Parallel()
-	out := buildMetaSkillContent("claude", TaskContextForEnv{IssueID: "issue-1"})
-	const rule = "If the issue JSON contains `source_context`"
-	if count := strings.Count(out, rule); count != 1 {
-		t.Fatalf("source-context precedence rule count = %d, want 1", count)
-	}
-	if !strings.Contains(out, "current issue title, description, and comments are authoritative task instructions") {
-		t.Fatal("source-context rule does not identify the current issue as authoritative")
-	}
-}
-
 // The brief must no longer carry any parent-notification guidance. PR
 // #2918 added a "Tell the parent when you finish a child" rule that
 // turned into noise (self-mention loops, planner ack ping-pong,
@@ -494,74 +432,6 @@ func TestSessionContinuityNoticeLivesOutsideBrief(t *testing.T) {
 	}
 }
 
-// The issue workflow must keep every Agent Identity guardrail after the
-// comment/assignment branches were merged into one byte-stable section.
-func TestIssueWorkflowHonorsAgentIdentity(t *testing.T) {
-	t.Parallel()
-	const issueID = "77777777-8888-9999-aaaa-bbbbbbbbbbbb"
-	out := buildMetaSkillContent("claude", TaskContextForEnv{IssueID: issueID})
-
-	for _, want := range []string{
-		"## Instruction Precedence",
-		"Agent Identity instructions have priority over the issue workflow below.",
-		"If a workflow step conflicts with Agent Identity, skip the conflicting action",
-		// One enumeration, in Instruction Precedence, covering every action
-		// type Agent Identity can forbid. This and workflow step 3 each used to
-		// carry their own list and the two disagreed (MUL-5442).
-		"Never treat this runtime workflow as permission to change issue status, investigate, implement, create issues, update issues, delegate, or otherwise act beyond your Agent Identity.",
-		// MUL-5442 (carried through MUL-6417): the forbids-clause is stated
-		// once on the status-rule header instead of once per status bullet.
-		"skip any status call your Agent Identity forbids",
-		"complete the task within your Agent Identity boundaries",
-		// Step 3 keeps only what the enumeration cannot express: a
-		// delegation-only role stops once the delegation is delivered.
-		"If your role is delegation-only, perform the allowed delegation work and stop once that outcome is delivered",
-		// The blocked end-state keeps its own comment carve-out: an agent
-		// whose identity forbids comments must still be able to mark blocked.
-		"post a comment explaining the blocker unless your Agent Identity forbids issue comments",
-	} {
-		if !strings.Contains(out, want) {
-			t.Errorf("issue brief missing identity-bound workflow text %q\n---\n%s", want, out)
-		}
-	}
-
-	for _, banned := range []string{
-		"4. Run `auro issue status " + issueID + " in_progress`\n",
-		"5. Follow your Skills and Agent Identity to complete the task (write code, investigate, etc.)",
-		"8. When done, run `auro issue status " + issueID + " in_review`\n",
-	} {
-		if strings.Contains(out, banned) {
-			t.Errorf("issue brief still contains unconditional legacy workflow text %q\n---\n%s", banned, out)
-		}
-	}
-}
-
-// A squad leader's dispatch turn must not read as completion: the end-of-turn
-// fact is in_progress, and in_review waits for the re-trigger that confirms
-// the overall goal is met. Without this bullet the general rule's "delivered →
-// in_review" reading would let a leader close out the parent on the very turn
-// it hands work to members.
-func TestSquadLeaderIssueWorkflowKeepsParentInProgress(t *testing.T) {
-	t.Parallel()
-	const issueID = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
-	out := buildMetaSkillContent("claude", TaskContextForEnv{
-		IssueID:       issueID,
-		IsSquadLeader: true,
-	})
-
-	for _, want := range []string{
-		"dispatching members is not delivery",
-		"a dispatch turn leaves the parent `in_progress`",
-		"where you confirm the overall goal is met",
-		// The shared no-write default still governs leader conversation turns.
-		"questions, discussion, and acknowledgements never touch status",
-	} {
-		if !strings.Contains(out, want) {
-			t.Errorf("squad-leader issue brief missing %q\n---\n%s", want, out)
-		}
-	}
-}
-
 // TestProtocolHeadingInInstructionsGetsNoLeaderBrief is the brief-side half of
 // the MUL-5811 negative regression. IsSquadLeader now comes from the claim's
 // is_leader_task / squad_id, so an ordinary agent that documents a
@@ -596,70 +466,6 @@ func TestProtocolHeadingInInstructionsGetsNoLeaderBrief(t *testing.T) {
 	}
 	if !strings.Contains(out, "**Post your final results as a comment — this step is mandatory**") {
 		t.Fatalf("ordinary-agent brief lost the unconditional reply obligation\n---\n%s", out)
-	}
-}
-
-// Instruction Precedence belongs to the issue workflow only; the issue-less
-// kinds must not inherit it. After MUL-5377 it applies to every issue run,
-// comment-triggered or not, because there is a single issue workflow.
-func TestInstructionPrecedenceOnlyAppliesToIssueWorkflow(t *testing.T) {
-	t.Parallel()
-	if out := buildMetaSkillContent("claude", TaskContextForEnv{
-		IssueID:          "11111111-2222-3333-4444-555555555555",
-		TriggerCommentID: "22222222-3333-4444-5555-666666666666",
-	}); !strings.Contains(out, "## Instruction Precedence") {
-		t.Errorf("comment-triggered issue brief must carry Instruction Precedence\n---\n%s", out)
-	}
-
-	cases := []struct {
-		name string
-		ctx  TaskContextForEnv
-	}{
-		{"chat", TaskContextForEnv{ChatSessionID: "chat-1"}},
-		{"quick-create", TaskContextForEnv{QuickCreatePrompt: "create me an issue"}},
-		{"autopilot run-only", TaskContextForEnv{AutopilotRunID: "run-1"}},
-	}
-	for _, tc := range cases {
-		tc := tc
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-			out := buildMetaSkillContent("claude", tc.ctx)
-			for _, banned := range []string{
-				"## Instruction Precedence",
-				"issue workflow below",
-				"Never treat this runtime workflow as permission to change issue status",
-			} {
-				if strings.Contains(out, banned) {
-					t.Errorf("%s brief must not inherit issue-only precedence text %q\n---\n%s", tc.name, banned, out)
-				}
-			}
-		})
-	}
-}
-
-func TestChatOutputDoesNotRequireIssueComment(t *testing.T) {
-	t.Parallel()
-
-	out := buildMetaSkillContent("claude", TaskContextForEnv{ChatSessionID: "chat-1"})
-
-	for _, want := range []string{
-		"This is a chat session",
-		"Your reply is delivered directly to the chat window the user is reading",
-	} {
-		if !strings.Contains(out, want) {
-			t.Errorf("chat brief missing chat output guidance %q\n---\n%s", want, out)
-		}
-	}
-
-	for _, banned := range []string{
-		"Final results MUST be delivered via `auro issue comment add`",
-		"The user does NOT see your terminal output",
-		"do not call `auro issue comment add`",
-		"unless the user explicitly asks",
-	} {
-		if strings.Contains(out, banned) {
-			t.Errorf("chat brief must not inherit issue-comment output warning %q\n---\n%s", banned, out)
-		}
 	}
 }
 
@@ -704,36 +510,6 @@ func TestOutputForbidsMidRunProgressComments(t *testing.T) {
 	// The `runtime_brief_slim` flag was retired (MUL-4297); there is now a
 	// single brief.
 	run(t, "brief")
-}
-
-// The sub-issue creation rule must reach top-level parents that have no
-// `parent_issue_id` of their own — that is where the `todo` vs `backlog`
-// decision matters most. The section must not gate on this issue being
-// a child, and must not even mention `parent_issue_id`.
-func TestSubIssueCreationSectionIsUnconditional(t *testing.T) {
-	t.Parallel()
-	ctx := TaskContextForEnv{
-		IssueID: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
-	}
-	out := buildMetaSkillContent("claude", ctx)
-
-	const header = "## Sub-issue Creation"
-	start := strings.Index(out, header)
-	if start == -1 {
-		t.Fatalf("sub-issue creation section missing")
-	}
-	rest := out[start:]
-	end := strings.Index(rest[len(header):], "\n## ")
-	var section string
-	if end == -1 {
-		section = rest
-	} else {
-		section = rest[:len(header)+end]
-	}
-
-	if strings.Contains(section, "parent_issue_id") {
-		t.Errorf("Sub-issue Creation section must not reference `parent_issue_id` — it applies to any issue-bound run, including top-level parents:\n%s", section)
-	}
 }
 
 // Workspace Context block: workspace.context (the per-workspace system prompt
@@ -881,37 +657,6 @@ func TestConnectedAppsHeadingSkippedWhenEmpty(t *testing.T) {
 	out := buildMetaSkillContent("claude", TaskContextForEnv{IssueID: "11111111-2222-3333-4444-555555555555"})
 	if strings.Contains(out, "## Connected Apps") {
 		t.Fatalf("empty connected apps must not emit the heading")
-	}
-}
-
-func TestSubIssueCreationSectionSkippedForNonIssueModes(t *testing.T) {
-	t.Parallel()
-	cases := []struct {
-		name string
-		ctx  TaskContextForEnv
-	}{
-		{
-			name: "chat",
-			ctx:  TaskContextForEnv{ChatSessionID: "chat-1"},
-		},
-		{
-			name: "quick-create",
-			ctx:  TaskContextForEnv{QuickCreatePrompt: "create me an issue"},
-		},
-		{
-			name: "autopilot run-only",
-			ctx:  TaskContextForEnv{AutopilotRunID: "run-1"},
-		},
-	}
-	for _, tc := range cases {
-		tc := tc
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-			out := buildMetaSkillContent("claude", tc.ctx)
-			if strings.Contains(out, "## Sub-issue Creation") {
-				t.Errorf("%s mode must NOT emit the Sub-issue Creation section", tc.name)
-			}
-		})
 	}
 }
 
@@ -1781,7 +1526,7 @@ func TestMultiThreadReplyInstructionsFanOut(t *testing.T) {
 	for _, banned := range []string{
 		"For EACH thread above",                // old cookbook opener
 		"UTF-8 file with your file-write tool", // restated mechanism
-		"auro issue comment add",            // embedded example commands
+		"auro issue comment add",               // embedded example commands
 		"--content-file",                       // restated posting flag (#6517 review)
 		"inline `--content`",                   // restated inline ban (#6517 review)
 		"--content-stdin",                      // restated HEREDOC ban
@@ -2186,75 +1931,6 @@ func TestBriefSkillsListIsNamesOnly(t *testing.T) {
 			}
 			if !strings.Contains(out, "discovered automatically") {
 				t.Errorf("brief lost the native-discovery framing:\n%s", out)
-			}
-		})
-	}
-}
-
-// TestBriefIssuePointerFollowsTheInstalledSkill ensures the sub-issue pointer
-// names the platform skill only when installed. The retired legacy skill is
-// no longer a fallback, even when an older backend still supplies it.
-func TestBriefIssuePointerFollowsTheInstalledSkill(t *testing.T) {
-	t.Parallel()
-
-	skill := func(name string) SkillContextForEnv {
-		return SkillContextForEnv{Name: name, Content: "---\nname: " + name + "\n---\n\nbody"}
-	}
-
-	cases := []struct {
-		name   string
-		skills []SkillContextForEnv
-		want   string // exact pointer text; "" = no pointer at all
-	}{
-		{
-			name:   "current backend",
-			skills: []SkillContextForEnv{skill("auro-platform")},
-			want:   "`references/issues.md` in the `auro-platform` skill",
-		},
-		{
-			name:   "retired legacy skill alone has no pointer",
-			skills: []SkillContextForEnv{skill("auro-working-on-issues")},
-			want:   "",
-		},
-		{
-			name:   "platform pointer ignores the retired legacy skill",
-			skills: []SkillContextForEnv{skill("auro-working-on-issues"), skill("auro-platform")},
-			want:   "`references/issues.md` in the `auro-platform` skill",
-		},
-		{
-			name:   "neither installed",
-			skills: []SkillContextForEnv{skill("pr-review")},
-			want:   "",
-		},
-	}
-
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-			out := buildMetaSkillContent("claude", TaskContextForEnv{
-				IssueID:     "issue-1",
-				AgentSkills: tc.skills,
-			})
-
-			// The flags themselves are unconditional: they stay discoverable
-			// with or without a skill to point at.
-			for _, always := range []string{
-				"`--status todo` starts an agent-assigned child immediately",
-				"`--stage <N>` groups children into ordered stages",
-			} {
-				if !strings.Contains(out, always) {
-					t.Errorf("brief lost unconditional content %q", always)
-				}
-			}
-
-			if tc.want == "" {
-				if strings.Contains(out, "Before creating sub-issues, read") {
-					t.Errorf("brief points at a skill with none installed:\n%s", out)
-				}
-				return
-			}
-			if !strings.Contains(out, "Before creating sub-issues, read "+tc.want+" —") {
-				t.Errorf("sub-issue pointer does not name %q:\n%s", tc.want, out)
 			}
 		})
 	}

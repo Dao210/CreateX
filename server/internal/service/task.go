@@ -612,7 +612,6 @@ func taskAnalyticsContextKey(task db.AgentTaskQueue) string {
 	return strings.Join([]string{
 		taskID,
 		util.UUIDToString(task.RuntimeID),
-		util.UUIDToString(task.IssueID),
 		util.UUIDToString(task.ChatSessionID),
 		util.UUIDToString(task.AutopilotRunID),
 	}, "|")
@@ -1762,7 +1761,7 @@ func (s *TaskService) CancelTaskWithResult(ctx context.Context, taskID pgtype.UU
 		return nil, fmt.Errorf("cancel task: %w", err)
 	}
 
-	slog.Info("task cancelled", "task_id", util.UUIDToString(task.ID), "issue_id", util.UUIDToString(task.IssueID))
+	slog.Info("task cancelled", "task_id", util.UUIDToString(task.ID))
 	s.captureTaskCancelled(ctx, task)
 	if !opts.QueuedOnly {
 		cancelledChatMessage = s.finalizeCancelledChatMessage(ctx, task, opts)
@@ -1813,7 +1812,7 @@ func (s *TaskService) CancelQueuedChatTasks(ctx context.Context, sessionID, agen
 	}
 
 	for _, task := range tasks {
-		slog.Info("task cancelled", "task_id", util.UUIDToString(task.ID), "issue_id", util.UUIDToString(task.IssueID))
+		slog.Info("task cancelled", "task_id", util.UUIDToString(task.ID))
 		s.captureTaskCancelled(ctx, task)
 	}
 	if len(tasks) > 0 {
@@ -2669,7 +2668,7 @@ func (s *TaskService) ClaimTasksForRuntimes(ctx context.Context, runtimeIDs []pg
 	// MarkEmpty from a prior idle poll would short-circuit the runtime and the
 	// promoted task would sit unclaimed until the empty key's TTL. Also emits
 	// the deferred→queued UI event and the enqueue analytics sample.
-	s.cancelSupersededDeferredRetries(ctx, uniqueIDs)
+
 	promoted, err := s.Queries.PromoteDueDeferredTasksForRuntimes(ctx, db.PromoteDueDeferredTasksForRuntimesParams{
 		RuntimeIds:       uniqueIDs,
 		RuntimeStaleSecs: RuntimeClaimFreshnessSeconds,
@@ -2832,34 +2831,8 @@ func (s *TaskService) ClaimTasksForRuntimes(ctx context.Context, runtimeIDs []pg
 	return claimed, nil
 }
 
-// cancelSupersededDeferredRetries drops deferred auto-retry rows that an active
-// task already supersedes, so a single rerun click still produces exactly one
-// more run. Runs immediately before promotion — promotion is the moment a stale
-// retry would otherwise become claimable. Best-effort: a failure here must not
-// stop the claim loop, it just leaves the row for the next tick.
-func (s *TaskService) cancelSupersededDeferredRetries(ctx context.Context, runtimeIDs []pgtype.UUID) {
-	if len(runtimeIDs) == 0 {
-		return
-	}
-	cancelled, err := s.Queries.CancelSupersededDeferredRetriesForRuntimes(ctx, runtimeIDs)
-	if err != nil {
-		slog.Warn("cancel superseded deferred retries failed", "error", err)
-		return
-	}
-	for _, task := range cancelled {
-		slog.Info("deferred auto-retry cancelled: superseded by an active task",
-			"task_id", util.UUIDToString(task.ID),
-			"issue_id", util.UUIDToString(task.IssueID),
-			"agent_id", util.UUIDToString(task.AgentID),
-		)
-		s.captureTaskCancelled(ctx, task)
-		s.ReconcileAgentStatus(ctx, task.AgentID)
-		s.broadcastTaskEvent(ctx, protocol.EventTaskCancelled, task)
-	}
-}
-
 func (s *TaskService) PromoteDueDeferredTasksForRuntime(ctx context.Context, runtimeID pgtype.UUID) error {
-	s.cancelSupersededDeferredRetries(ctx, []pgtype.UUID{runtimeID})
+
 	tasks, err := s.Queries.PromoteDueDeferredTasksForRuntime(ctx, db.PromoteDueDeferredTasksForRuntimeParams{
 		RuntimeID:        runtimeID,
 		RuntimeStaleSecs: RuntimeClaimFreshnessSeconds,
@@ -2959,7 +2932,7 @@ func (s *TaskService) StartTaskForClaim(ctx context.Context, claim db.LockAgentT
 func (s *TaskService) taskStarted(ctx context.Context, task db.AgentTaskQueue) {
 	s.forgetTaskReclaim(task)
 
-	slog.Info("task started", "task_id", util.UUIDToString(task.ID), "issue_id", util.UUIDToString(task.IssueID))
+	slog.Info("task started", "task_id", util.UUIDToString(task.ID))
 	s.captureTaskStarted(ctx, task)
 	// A local-directory waiter was reconciled out of the persisted working
 	// status while parked. Restore working as soon as it enters running; the
@@ -3018,7 +2991,6 @@ func (s *TaskService) MarkTaskWaitingLocalDirectory(ctx context.Context, taskID 
 
 	slog.Info("task waiting_local_directory",
 		"task_id", util.UUIDToString(task.ID),
-		"issue_id", util.UUIDToString(task.IssueID),
 		"reason", reason,
 	)
 	// waiting_local_directory is owned/queued work, not executing work. The
@@ -3191,7 +3163,6 @@ func (s *TaskService) CompleteTaskWithTransition(ctx context.Context, taskID pgt
 			slog.Warn("complete task failed",
 				"task_id", util.UUIDToString(taskID),
 				"current_status", existing.Status,
-				"issue_id", util.UUIDToString(existing.IssueID),
 				"chat_session_id", util.UUIDToString(existing.ChatSessionID),
 				"agent_id", util.UUIDToString(existing.AgentID),
 				"error", err,
@@ -3205,7 +3176,7 @@ func (s *TaskService) CompleteTaskWithTransition(ctx context.Context, taskID pgt
 		return nil, false, fmt.Errorf("complete task: %w", err)
 	}
 
-	slog.Info("task completed", "task_id", util.UUIDToString(task.ID), "issue_id", util.UUIDToString(task.IssueID))
+	slog.Info("task completed", "task_id", util.UUIDToString(task.ID))
 	s.captureTaskCompleted(ctx, task)
 
 	// Invariant: every completed issue task must have at least one agent
@@ -3685,7 +3656,6 @@ func (s *TaskService) FailTaskWithTransition(ctx context.Context, taskID pgtype.
 				// 'running'. Record the failure and move on without a retry.
 				slog.Info("fail task auto-retry not created: no row written",
 					"task_id", util.UUIDToString(taskID),
-					"issue_id", util.UUIDToString(t.IssueID),
 					"agent_id", util.UUIDToString(t.AgentID),
 				)
 			default:
@@ -3741,7 +3711,6 @@ func (s *TaskService) FailTaskWithTransition(ctx context.Context, taskID pgtype.
 			slog.Warn("fail task failed",
 				"task_id", util.UUIDToString(taskID),
 				"current_status", existing.Status,
-				"issue_id", util.UUIDToString(existing.IssueID),
 				"chat_session_id", util.UUIDToString(existing.ChatSessionID),
 				"agent_id", util.UUIDToString(existing.AgentID),
 				"error", err,
@@ -3755,7 +3724,7 @@ func (s *TaskService) FailTaskWithTransition(ctx context.Context, taskID pgtype.
 		return nil, false, fmt.Errorf("fail task: %w", err)
 	}
 
-	slog.Warn("task failed", "task_id", util.UUIDToString(task.ID), "issue_id", util.UUIDToString(task.IssueID), "error", errMsg, "failure_reason", failureReason)
+	slog.Warn("task failed", "task_id", util.UUIDToString(task.ID), "error", errMsg, "failure_reason", failureReason)
 	s.captureTaskFailed(ctx, task)
 
 	// The auto-retry child (if any) was created inside the transaction above so
@@ -4707,7 +4676,7 @@ func (s *TaskService) broadcastTaskDispatch(ctx context.Context, task db.AgentTa
 	}
 	payload["task_id"] = util.UUIDToString(task.ID)
 	payload["runtime_id"] = util.UUIDToString(task.RuntimeID)
-	payload["issue_id"] = util.UUIDToString(task.IssueID)
+
 	payload["agent_id"] = util.UUIDToString(task.AgentID)
 	// chat_session_id is the routing key the chat window uses to writethrough
 	// `chatKeys.pendingTask` to status="running" the moment the daemon claims
@@ -4737,8 +4706,8 @@ func taskEvent(eventType, workspaceID string, task db.AgentTaskQueue, extra ...m
 	payload := map[string]any{
 		"task_id":  util.UUIDToString(task.ID),
 		"agent_id": util.UUIDToString(task.AgentID),
-		"issue_id": util.UUIDToString(task.IssueID),
-		"status":   task.Status,
+
+		"status": task.Status,
 	}
 	e := events.Event{
 		Type:        eventType,

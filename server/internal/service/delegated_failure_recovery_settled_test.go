@@ -10,46 +10,6 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-// seedRecoverySignal drives one delegated failure to the point where the
-// durable recovery comment and its coordinator task exist, and returns both.
-func (f *delegatedFailureFixture) seedRecoverySignal(t *testing.T, svc *TaskService) (recoveryTaskID, recoveryCommentID pgtype.UUID) {
-	t.Helper()
-	ctx := context.Background()
-	failedID := f.insertWorkerTask(t, "failed", "comment", 1, 2)
-	if _, err := f.pool.Exec(ctx, `
-		UPDATE agent_task_queue
-		SET failure_reason = 'agent_error.process_failure', error = 'worker exited', completed_at = now()
-		WHERE id = $1`, failedID); err != nil {
-		t.Fatalf("stamp failed task: %v", err)
-	}
-	failed, err := svc.Queries.GetAgentTask(ctx, failedID)
-	if err != nil {
-		t.Fatalf("load failed task: %v", err)
-	}
-	if handled, err := svc.recoverDelegatedTaskFailure(ctx, failed); err != nil || !handled {
-		t.Fatalf("initial recovery = handled %v err %v", handled, err)
-	}
-	if err := f.pool.QueryRow(ctx, `
-		SELECT task.id, recovery.id
-		FROM agent_task_queue task
-		JOIN comment recovery ON recovery.id = task.trigger_comment_id
-		WHERE task.trigger_evidence_kind = 'delegated_failure'
-		  AND task.trigger_evidence_ref_id = $1`, failedID).Scan(&recoveryTaskID, &recoveryCommentID); err != nil {
-		t.Fatalf("load recovery task/comment: %v", err)
-	}
-	return recoveryTaskID, recoveryCommentID
-}
-
-func (f *delegatedFailureFixture) settled(t *testing.T, commentID pgtype.UUID) bool {
-	t.Helper()
-	var marked bool
-	if err := f.pool.QueryRow(context.Background(),
-		`SELECT recovery_settled_at IS NOT NULL FROM comment WHERE id = $1`, commentID).Scan(&marked); err != nil {
-		t.Fatalf("read recovery_settled_at: %v", err)
-	}
-	return marked
-}
-
 // markDelivered simulates the dispatch receipt a daemon writes before it runs
 // the coordinator task, and puts the task in the status the terminal callbacks
 // expect.

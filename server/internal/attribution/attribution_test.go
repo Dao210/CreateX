@@ -202,40 +202,6 @@ func TestClassifyDirect_MemberCreatorIsDirectHuman(t *testing.T) {
 	}
 }
 
-func TestClassifyDirect_QuickCreateInheritsOriginAsDelegation(t *testing.T) {
-	got := ClassifyDirect(DirectFacts{
-		IssueID:          issue,
-		CreatorType:      "agent",
-		OriginType:       "quick_create",
-		OriginTaskID:     originTk,
-		OriginOriginator: human,
-	})
-	if got.Source != SourceDelegation {
-		t.Fatalf("source = %q, want delegation", got.Source)
-	}
-	if got.UserID != human {
-		t.Errorf("quick-create issue must inherit the origin task's human")
-	}
-	if got.DelegatedFromTaskID != originTk {
-		t.Errorf("delegated_from = %v, want %v", got.DelegatedFromTaskID, originTk)
-	}
-}
-
-func TestClassifyDirect_QuickCreateWithoutHumanIsUnattributed(t *testing.T) {
-	got := ClassifyDirect(DirectFacts{
-		IssueID:      issue,
-		CreatorType:  "agent",
-		OriginType:   "quick_create",
-		OriginTaskID: originTk,
-	})
-	if got.Source != SourceUnattributed {
-		t.Fatalf("source = %q, want unattributed", got.Source)
-	}
-	if got.UserID.Valid {
-		t.Errorf("must not fabricate a human")
-	}
-}
-
 func TestClassifyDirect_AgentCreatedNoOriginIsUnattributed(t *testing.T) {
 	got := ClassifyDirect(DirectFacts{
 		IssueID:     issue,

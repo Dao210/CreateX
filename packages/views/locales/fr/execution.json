@@ -1,0 +1,74 @@
+{
+  "comment": {
+    "trigger_blocked_invocation_not_allowed": "Cette cible est introuvable, ou vous n'avez pas la permission de l'utiliser",
+    "trigger_blocked_target_unavailable": "Cette cible est indisponible",
+    "trigger_blocked_runtime_offline": "Le runtime de cette cible est hors ligne",
+    "trigger_blocked_runtime_unusable": "Le CLI d'agent de cette cible ne peut pas s'exécuter sur sa machine — réinstallez-le sur place",
+    "trigger_blocked_runtime_profile_missing": "Le CLI de l'agent cible n'a pas de profil de runtime sur sa machine : installez-le sur celle-ci",
+    "trigger_blocked_agent_runtime_required": "Cette cible n'a pas de runtime — associez-en un pour l'exécuter",
+    "trigger_blocked_runtime_access_denied": "L'agent de cette cible ne peut pas s'exécuter sur son runtime privé — passez le runtime en public, ou réassociez/copiez l'agent vers un runtime que son propriétaire peut utiliser",
+    "trigger_blocked_generic": "Cette cible ne sera pas déclenchée",
+    "trigger_blocked_short_invocation_not_allowed": "Introuvable ou sans permission",
+    "trigger_blocked_short_target_unavailable": "Indisponible",
+    "trigger_blocked_short_runtime_offline": "Runtime hors ligne",
+    "trigger_blocked_short_runtime_unusable": "CLI inexécutable",
+    "trigger_blocked_short_runtime_profile_missing": "Profil de runtime manquant",
+    "trigger_blocked_short_agent_runtime_required": "Runtime requis",
+    "trigger_blocked_short_runtime_access_denied": "Pas d'accès au runtime",
+    "trigger_blocked_short_generic": "Ne démarrera pas"
+  },
+  "wakeups": {
+    "triggered_by_wakeup": "Déclenché par un réveil"
+  },
+  "agent_activity": {
+    "status_running": "Au travail",
+    "status_queued": "En file d'attente",
+    "empty_hover": "Aucun agent au travail pour l'instant"
+  },
+  "execution_log": {
+    "attribution": {
+      "source_direct_human": "Action directe d'un membre",
+      "source_delegation": "Délégué depuis une autre exécution",
+      "source_comment_source": "Depuis un fil de commentaires",
+      "source_trigger_owner": "Créateur du déclencheur d'automatisation",
+      "source_rule_owner": "Auteur de la règle d'automatisation",
+      "source_owner_fallback": "Aucun responsable précis — attribué au propriétaire de l'agent",
+      "source_backfill": "Attribution reconstituée",
+      "source_unattributed": "Aucun membre responsable identifié",
+      "someone": "quelqu'un",
+      "on_behalf_of": "Au nom de {{name}}"
+    },
+    "trigger_retry_attempt_prefix": "Relance n° {{attempt}} · ",
+    "trigger_retry_prefix": "Relance · ",
+    "trigger_image": "[Image]",
+    "trigger_retry_attempt": "Relance n° {{attempt}}",
+    "trigger_retry": "Relance",
+    "trigger_autopilot": "Exécution d'automatisation",
+    "trigger_comment": "Déclenchement par commentaire",
+    "trigger_initial": "Exécution initiale",
+    "status_queued": "En file d'attente",
+    "status_dispatched": "Démarrage",
+    "status_waiting_local_directory": "En attente du répertoire local",
+    "status_running": "Au travail",
+    "status_completed": "Terminée",
+    "status_failed": "En échec",
+    "status_cancelled": "Annulée"
+  },
+  "filters": {
+    "placeholder": "Filtrer..."
+  },
+  "pickers": {
+    "filter_options_aria": "Options de filtrage",
+    "no_results": "Aucun résultat"
+  },
+  "plugins": {
+    "hook_succeeded": "{{name}} a terminé.",
+    "hook_refused": "{{name}} n'a pas été exécuté.",
+    "hook_failed": "{{name}} a échoué.",
+    "panels": "Plugins",
+    "surface_failed": "{{name}} n'a pas pu charger son interface.",
+    "surface_loading": "Chargement de {{name}}…",
+    "surface_navigated": "{{name}} a tenté de remplacer son panneau par une page chargée depuis une autre source. Il a été arrêté et déconnecté : prévenez l'administrateur de votre monde.",
+    "surface_unavailable": "{{name}} n'a pas pu charger son interface. La version installée ne la contient peut-être pas."
+  }
+}

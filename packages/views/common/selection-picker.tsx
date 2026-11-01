@@ -83,7 +83,7 @@ export function PropertyPicker({
    */
   footer?: React.ReactNode;
 }) {
-  const { t } = useT("issues");
+  const { t } = useT("execution");
   const placeholder = searchPlaceholder ?? t(($) => $.filters.placeholder);
   const filterAria = t(($) => $.pickers.filter_options_aria);
   const [query, setQuery] = useState("");
@@ -319,7 +319,7 @@ export function PickerSection({
 // ---------------------------------------------------------------------------
 
 export function PickerEmpty() {
-  const { t } = useT("issues");
+  const { t } = useT("execution");
   return (
     <div className="px-2 py-3 text-center text-body text-muted-foreground">
       {t(($) => $.pickers.no_results)}

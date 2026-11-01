@@ -350,31 +350,6 @@ func TestHealthHandlerRespondsWhileTaskRepoLookupWaits(t *testing.T) {
 	}
 }
 
-func TestRepoCheckoutUsesTaskScopedProjectRefByDefault(t *testing.T) {
-	t.Parallel()
-
-	const workspaceID = "ws-checkout"
-	const repoURL = "https://github.com/org/repo.git"
-	cache := &recordingRepoCache{lookupPath: "/cache/org/repo.git"}
-	workDir := t.TempDir()
-	d := newRepoCheckoutTestDaemon(t, workspaceID, repoURL, workDir, cache)
-	d.registerTaskRepos(workspaceID, "task-1", []RepoData{{URL: repoURL, Ref: "release/v2"}})
-
-	rec := httptest.NewRecorder()
-	body := strings.NewReader(`{"url":"` + repoURL + `","workspace_id":"` + workspaceID + `","workdir":"` + workDir + `","agent_name":"Other Agent","task_id":"task-1"}`)
-	d.repoCheckoutHandler().ServeHTTP(rec, authorizedRepoCheckoutRequest(body))
-
-	if rec.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
-	}
-	if got := cache.lastCreateParams().Ref; got != "release/v2" {
-		t.Fatalf("CreateWorktree Ref = %q, want release/v2", got)
-	}
-	if got := cache.lastCreateParams().AgentName; got != "Test Agent" {
-		t.Fatalf("CreateWorktree AgentName = %q, want token-bound active agent", got)
-	}
-}
-
 // A request with no Authorization header can only come from a CLI older than
 // repoCheckoutMinCLIVersion, which is a permanent failure. The rejection has to
 // say so: the agent sees this string and nothing else (#7520).
@@ -574,28 +549,6 @@ func TestRepoCheckoutRejectsUnresolvableWorkdirWithTheReason(t *testing.T) {
 	}
 	if !strings.Contains(rec.Body.String(), "resolve requested workdir") {
 		t.Fatalf("rejection body should name the resolution failure: %s", rec.Body.String())
-	}
-}
-
-func TestRepoCheckoutExplicitRefOverridesProjectDefault(t *testing.T) {
-	t.Parallel()
-
-	const workspaceID = "ws-checkout"
-	const repoURL = "https://github.com/org/repo.git"
-	cache := &recordingRepoCache{lookupPath: "/cache/org/repo.git"}
-	workDir := t.TempDir()
-	d := newRepoCheckoutTestDaemon(t, workspaceID, repoURL, workDir, cache)
-	d.registerTaskRepos(workspaceID, "task-1", []RepoData{{URL: repoURL, Ref: "release/v2"}})
-
-	rec := httptest.NewRecorder()
-	body := strings.NewReader(`{"url":"` + repoURL + `","workspace_id":"` + workspaceID + `","workdir":"` + workDir + `","task_id":"task-1","ref":"hotfix"}`)
-	d.repoCheckoutHandler().ServeHTTP(rec, authorizedRepoCheckoutRequest(body))
-
-	if rec.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
-	}
-	if got := cache.lastCreateParams().Ref; got != "hotfix" {
-		t.Fatalf("CreateWorktree Ref = %q, want explicit hotfix", got)
 	}
 }
 

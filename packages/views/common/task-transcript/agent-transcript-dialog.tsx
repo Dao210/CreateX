@@ -1329,7 +1329,7 @@ function FactDot() {
  */
 function RunTriggerRow({ task }: { task: AgentTask }) {
   const { t } = useT("agents");
-  const { t: tIssues } = useT("issues");
+  const { t: tIssues } = useT("execution");
   if (!task.trigger_summary) return null;
   const text = plainTriggerSummary(
     task.trigger_summary,

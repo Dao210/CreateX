@@ -125,13 +125,6 @@ describe("resolveTabPresentation — flow and unknown", () => {
       title: { kind: "tab", tabKey: "create_agent" },
     });
   });
-
-  it("unknown route uses a neutral icon and label, never Issues", () => {
-    expect(present("/acme/mystery")).toEqual({
-      visual: { kind: "icon", icon: "FileQuestion" },
-      title: { kind: "tab", tabKey: "unknown" },
-    });
-  });
 });
 
 describe("iconForAttachment", () => {

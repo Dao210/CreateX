@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/google/uuid"
 	"github.com/auro-ai/auro/server/internal/entitlement"
+	"github.com/google/uuid"
 )
 
 func TestStubIsWorkspaceScopedAndDefaultsOff(t *testing.T) {

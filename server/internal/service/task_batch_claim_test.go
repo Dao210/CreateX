@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"fmt"
 	"testing"
 	"time"
 
@@ -10,89 +9,7 @@ import (
 	"github.com/auro-ai/auro/server/internal/util"
 	db "github.com/auro-ai/auro/server/pkg/db/generated"
 	"github.com/jackc/pgx/v5/pgtype"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
-
-// batchClaimFixture provisions two runtimes on one machine, each with its own
-// agent (max_concurrent_tasks=5): agent1 (on rt1) has two queued tasks on two
-// different issues; agent2 (on rt2) has one queued task. Returns the two
-// runtime IDs.
-func batchClaimFixture(t *testing.T, ctx context.Context, pool *pgxpool.Pool) (rt1, rt2 string) {
-	t.Helper()
-	suffix := time.Now().UnixNano()
-
-	var userID string
-	if err := pool.QueryRow(ctx, `INSERT INTO "user" (name, email) VALUES ($1,$2) RETURNING id`,
-		"Batch Claim Test", fmt.Sprintf("batch-claim-%d@auro.ai", suffix)).Scan(&userID); err != nil {
-		t.Fatalf("create user: %v", err)
-	}
-	var workspaceID string
-	if err := pool.QueryRow(ctx, `INSERT INTO workspace (name, slug, description, issue_prefix) VALUES ($1,$2,$3,$4) RETURNING id`,
-		"Batch Claim Test", fmt.Sprintf("batch-claim-%d", suffix), "temp batch claim test workspace", "BCR").Scan(&workspaceID); err != nil {
-		t.Fatalf("create workspace: %v", err)
-	}
-	if _, err := pool.Exec(ctx, `INSERT INTO member (workspace_id, user_id, role) VALUES ($1,$2,'owner')`, workspaceID, userID); err != nil {
-		t.Fatalf("create member: %v", err)
-	}
-
-	mkRuntime := func(name, provider string) string {
-		var id string
-		if err := pool.QueryRow(ctx, `
-			INSERT INTO agent_runtime (workspace_id, daemon_id, name, runtime_mode, provider, status, device_info, metadata, last_seen_at, visibility, owner_id)
-			VALUES ($1, 'daemon-batch', $2, 'cloud', $3, 'online', 'test runtime', '{}'::jsonb, now(), 'private', $4)
-			RETURNING id`, workspaceID, name, provider, userID).Scan(&id); err != nil {
-			t.Fatalf("create runtime %s: %v", name, err)
-		}
-		return id
-	}
-	mkAgent := func(name, runtimeID string) string {
-		var id string
-		if err := pool.QueryRow(ctx, `
-			INSERT INTO agent (workspace_id, name, description, runtime_mode, runtime_config, runtime_id, visibility, max_concurrent_tasks, owner_id)
-			VALUES ($1, $2, '', 'cloud', '{}'::jsonb, $3, 'private', 5, $4)
-			RETURNING id`, workspaceID, name, runtimeID, userID).Scan(&id); err != nil {
-			t.Fatalf("create agent %s: %v", name, err)
-		}
-		return id
-	}
-
-	rt1 = mkRuntime("Batch RT1", "batch_provider_1")
-	rt2 = mkRuntime("Batch RT2", "batch_provider_2")
-	agent1 := mkAgent("Batch Agent1", rt1)
-	agent2 := mkAgent("Batch Agent2", rt2)
-
-	mkQueuedTask := func(agentID, runtimeID string, n int) {
-		var issueID string
-		if err := pool.QueryRow(ctx, `
-			INSERT INTO issue (workspace_id, title, status, priority, creator_id, creator_type, number, position)
-			VALUES ($1, $2, 'in_progress', 'none', $3, 'member', $4, $5)
-			RETURNING id`, workspaceID, fmt.Sprintf("batch issue %d", n), userID, 800000+n, n).Scan(&issueID); err != nil {
-			t.Fatalf("create issue %d: %v", n, err)
-		}
-		if _, err := pool.Exec(ctx, `
-			INSERT INTO agent_task_queue (agent_id, issue_id, status, priority, context, runtime_id)
-			VALUES ($1, $2, 'queued', 0, '{}'::jsonb, $3)`, agentID, issueID, runtimeID); err != nil {
-			t.Fatalf("create task %d: %v", n, err)
-		}
-		// Space out created_at so ordering is deterministic.
-		time.Sleep(2 * time.Millisecond)
-	}
-	mkQueuedTask(agent1, rt1, 1)
-	mkQueuedTask(agent1, rt1, 2)
-	mkQueuedTask(agent2, rt2, 3)
-
-	t.Cleanup(func() {
-		c := context.Background()
-		pool.Exec(c, `DELETE FROM agent_task_queue WHERE agent_id IN ($1,$2)`, agent1, agent2)
-		pool.Exec(c, `DELETE FROM issue WHERE workspace_id = $1`, workspaceID)
-		pool.Exec(c, `DELETE FROM agent WHERE id IN ($1,$2)`, agent1, agent2)
-		pool.Exec(c, `DELETE FROM agent_runtime WHERE id IN ($1,$2)`, rt1, rt2)
-		pool.Exec(c, `DELETE FROM member WHERE workspace_id = $1 AND user_id = $2`, workspaceID, userID)
-		pool.Exec(c, `DELETE FROM workspace WHERE id = $1`, workspaceID)
-		pool.Exec(c, `DELETE FROM "user" WHERE id = $1`, userID)
-	})
-	return rt1, rt2
-}
 
 // TestClaimTasksForRuntimes_MultiRuntimeDrain verifies the machine-level batch
 // claim (MUL-4257): a single call claims across all runtimes, one task per

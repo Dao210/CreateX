@@ -1,0 +1,1 @@
+DROP INDEX CONCURRENTLY IF EXISTS lark_installation_id_workspace_id_key;
