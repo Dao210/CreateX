@@ -10,7 +10,7 @@ import { api } from "@auro/core/api";
 import { useHasOnboarded } from "@auro/core/paths";
 import { setCurrentWorkspace } from "@auro/core/platform";
 import { ThemeProvider } from "@auro/ui/components/common/theme-provider";
-import { AuroIcon } from "@auro/ui/components/common/auro-icon";
+import { AppLoading } from "@auro/views/common/app-loading";
 import { Toaster } from "@auro/ui/components/ui/sonner";
 import { DesktopLoginPage } from "./pages/login";
 import { DesktopAuthRecoveryPage } from "./pages/auth-recovery";
@@ -295,11 +295,7 @@ function AppContent() {
     return <DesktopAuthRecoveryPage />;
   }
   if (isLoading || bootstrapping) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <AuroIcon className="size-6 animate-pulse" />
-      </div>
-    );
+    return <AppLoading />;
   }
 
   if (workspaceListUnavailable) {

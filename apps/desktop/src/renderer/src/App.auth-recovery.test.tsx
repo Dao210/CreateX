@@ -73,9 +73,6 @@ vi.mock("@auro/core/analytics", () => ({ captureEvent: vi.fn() }));
 vi.mock("@auro/ui/components/common/theme-provider", () => ({
   ThemeProvider: ({ children }: { children: ReactNode }) => <>{children}</>,
 }));
-vi.mock("@auro/ui/components/common/auro-icon", () => ({
-  AuroIcon: () => <div data-testid="app-loading" />,
-}));
 vi.mock("@auro/ui/components/ui/sonner", () => ({ Toaster: () => null }));
 vi.mock("@auro/views/locales", () => ({ RESOURCES: { en: {} } }));
 

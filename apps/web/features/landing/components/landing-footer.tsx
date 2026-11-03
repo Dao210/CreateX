@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { cn } from "@auro/ui/lib/utils";
 import { useAuthStore } from "@auro/core/auth";
-import { BrandMark } from "./brand-mark";
+import { BrandMark } from "@auro/ui/components/common/brand-mark";
 import { XMark, DiscordMark, twitterUrl, discordUrl } from "./shared";
 import { useLocale, locales, localeLabels } from "../i18n";
 import { useDashboardCtaHref } from "../utils/use-dashboard-cta";

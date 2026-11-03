@@ -2,7 +2,7 @@ import { useEffect, useRef, useSyncExternalStore } from "react";
 import { motion } from "motion/react";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@auro/ui/lib/utils";
-import { AuroIcon } from "@auro/ui/components/common/auro-icon";
+import { AppLoading } from "@auro/views/common/app-loading";
 import {
   useNavigationInputBindings,
   useTabHistory,
@@ -129,17 +129,11 @@ function MainCanvas({
     >
       {children}
       {showWorkspaceLoading && (
-        <div
-          aria-label={loadingLabel}
-          aria-live="polite"
-          className="absolute inset-0 z-20 flex items-center justify-center bg-page-canvas"
-          role="status"
-        >
-          <div className="flex flex-col items-center gap-4">
-            <AuroIcon className="size-8 animate-pulse" />
-            <p className="text-body text-muted-foreground">{loadingLabel}</p>
-          </div>
-        </div>
+        <AppLoading
+          label={loadingLabel}
+          fullScreen={false}
+          className="absolute inset-0 z-20 bg-page-canvas"
+        />
       )}
     </motion.div>
   );

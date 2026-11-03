@@ -39,7 +39,7 @@
   },
   "workspace_loader": {
     "loading_workspace": "Chargement du monde…",
-    "loading_named_prefix": "Chargement"
+    "loading_named": "Chargement de {{name}}…"
   },
   "sidebar": {
     "unpin_tooltip": "Détacher",

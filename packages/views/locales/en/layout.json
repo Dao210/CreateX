@@ -39,7 +39,7 @@
   },
   "workspace_loader": {
     "loading_workspace": "Loading world…",
-    "loading_named_prefix": "Loading"
+    "loading_named": "Loading {{name}}…"
   },
   "sidebar": {
     "unpin_tooltip": "Unpin",

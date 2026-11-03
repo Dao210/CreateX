@@ -1,10 +1,10 @@
 /**
- * The Auro mark.
+ * The project mark shared by marketing and application surfaces.
  *
  * Traced from the brand artwork in `1 Logo&Icon/截屏2026-09-10 下午9.23.33.png` so
  * the header, the footer and the favicon all come from one outline.
  * `currentColor` keeps a single asset usable on the dark marketing chrome and on
- * light surfaces; the tab icon reuses the same path in `public/favicon.svg`.
+ * light surfaces; the tab icon reuses the same path in `apps/web/public/favicon.svg`.
  */
 export function BrandMark({ className }: { className?: string }) {
   return (

@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { SupportedLocale } from "@auro/core/i18n";
 import { brandForLocale } from "@/lib/brand";
 import { localizedHref, MARKETING_LOCALES } from "@/lib/marketing-urls";
-import { BrandMark } from "@/features/landing/components/brand-mark";
+import { BrandMark } from "@auro/ui/components/common/brand-mark";
 
 const labels = {
   en: { navigation: "Main navigation", menu: "Menu", language: "Language", privacy: "Privacy", licensing: "Licensing" },

@@ -39,7 +39,7 @@
   },
   "workspace_loader": {
     "loading_workspace": "세계 로딩 중...",
-    "loading_named_prefix": "로딩 중"
+    "loading_named": "{{name}} 불러오는 중…"
   },
   "sidebar": {
     "unpin_tooltip": "고정 해제",

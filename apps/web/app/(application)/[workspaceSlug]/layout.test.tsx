@@ -1,6 +1,8 @@
 import { Suspense, type ReactNode } from "react";
 import { render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { I18nProvider } from "@auro/core/i18n/react";
+import { RESOURCES } from "@auro/views/locales";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const state = vi.hoisted(() => ({
@@ -65,10 +67,6 @@ vi.mock("@auro/views/workspace/use-workspace-seen", () => ({
   useWorkspaceSeen: () => state.hasBeenSeen,
 }));
 
-vi.mock("@auro/ui/components/common/auro-icon", () => ({
-  AuroIcon: () => <div data-testid="workspace-loading" />,
-}));
-
 import { setCurrentWorkspace } from "@auro/core/platform";
 import WorkspaceLayout from "./layout";
 
@@ -86,7 +84,11 @@ function renderTree(node: ReactNode) {
     defaultOptions: { queries: { retry: false, gcTime: Infinity } },
   });
   const wrapper = ({ children }: { children: ReactNode }) => (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    <QueryClientProvider client={queryClient}>
+      <I18nProvider locale="zh-Hans" resources={RESOURCES}>
+        {children}
+      </I18nProvider>
+    </QueryClientProvider>
   );
   const result = render(
     <Suspense fallback={<div data-testid="route-loading" />}>{node}</Suspense>,
@@ -118,6 +120,17 @@ beforeEach(() => {
 });
 
 describe("WorkspaceLayout", () => {
+  it("shows the project logo and visible loading copy while authentication resolves", () => {
+    state.isAuthLoading = true;
+    state.user = null;
+    renderLayout();
+
+    const loading = screen.getByRole("status", { name: "正在加载世界…" });
+    expect(loading).toHaveTextContent("正在加载世界…");
+    expect(loading.querySelector("svg path")).not.toBeNull();
+    expect(screen.queryByTestId("workspace-content")).toBeNull();
+  });
+
   it("keeps loading instead of showing NoAccess when the initial list request fails", async () => {
     state.workspaceError = true;
     const { queryClient } = renderLayout();
@@ -128,14 +141,14 @@ describe("WorkspaceLayout", () => {
       ).toBe("error");
     });
     expect(screen.queryByTestId("no-access")).toBeNull();
-    expect(screen.getByTestId("workspace-loading")).toBeInTheDocument();
+    expect(screen.getByRole("status", { name: "正在加载世界…" })).toBeVisible();
   });
 
   it("shows NoAccess only after an authoritative list omits the slug", async () => {
     renderLayout();
 
     expect(await screen.findByTestId("no-access")).toBeInTheDocument();
-    expect(screen.queryByTestId("workspace-loading")).toBeNull();
+    expect(screen.queryByRole("status")).toBeNull();
   });
 });
 

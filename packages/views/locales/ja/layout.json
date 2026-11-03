@@ -39,7 +39,7 @@
   },
   "workspace_loader": {
     "loading_workspace": "ワールドを読み込み中…",
-    "loading_named_prefix": "読み込み中"
+    "loading_named": "「{{name}}」を読み込み中…"
   },
   "sidebar": {
     "unpin_tooltip": "ピン留めを解除",

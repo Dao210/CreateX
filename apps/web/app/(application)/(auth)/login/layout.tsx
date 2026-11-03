@@ -4,7 +4,7 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import type { SupportedLocale } from "@auro/core/i18n";
 import { useLocale, useT } from "@auro/views/i18n";
-import { BrandMark } from "@/features/landing/components/brand-mark";
+import { BrandMark } from "@auro/ui/components/common/brand-mark";
 import { WorldPoster } from "@/features/reach/components/world-poster";
 import { brandForLocale } from "@/lib/brand";
 

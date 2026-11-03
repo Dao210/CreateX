@@ -8,7 +8,7 @@ import { workspaceBySlugOptions } from "@auro/core/workspace";
 import { setCurrentWorkspace } from "@auro/core/platform";
 import { useAuthStore } from "@auro/core/auth";
 import { NoAccessPage } from "@auro/views/workspace/no-access-page";
-import { AuroIcon } from "@auro/ui/components/common/auro-icon";
+import { WorkspaceLoader } from "@auro/views/layout/workspace-loader";
 import { useWorkspaceSeen } from "@auro/views/workspace/use-workspace-seen";
 import { workspaceSlugFromPathname } from "@/lib/workspace-slug-from-pathname";
 
@@ -94,11 +94,7 @@ export default function WorkspaceLayout({
   // and we just need to hold null briefly.
   const hasBeenSeen = useWorkspaceSeen(workspaceSlug, !!workspace);
 
-  const loadingIndicator = (
-    <div className="flex h-svh items-center justify-center">
-      <AuroIcon className="size-6 animate-pulse" />
-    </div>
-  );
+  const loadingIndicator = <WorkspaceLoader />;
 
   if (isAuthLoading) return loadingIndicator;
   // Don't render children until workspace is resolved. useWorkspaceId()

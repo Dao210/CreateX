@@ -17,7 +17,7 @@ import { BRAND, BRAND_NAME } from "@/lib/brand";
  *
  * The icons under /icons are rasterised from the two source SVGs, both of which
  * carry the same outline (the mark traced into
- * `features/landing/components/brand-mark.tsx`). `public/favicon.svg` is the
+ * `packages/ui/components/common/brand-mark.tsx`). `public/favicon.svg` is the
  * artwork at 66% inside a rounded tile; `public/icons/icon.svg` is the same
  * mark at 56% on a full-bleed square, because Android crops maskable icons to
  * the launcher's shape and only the middle ~80% is guaranteed to survive.

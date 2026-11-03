@@ -38,8 +38,8 @@
     "server_version": "服务器版本 {{version}}"
   },
   "workspace_loader": {
-    "loading_workspace": "正在加载世界...",
-    "loading_named_prefix": "正在加载"
+    "loading_workspace": "正在加载世界…",
+    "loading_named": "正在加载「{{name}}」…"
   },
   "sidebar": {
     "unpin_tooltip": "取消固定",
