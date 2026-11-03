@@ -71,11 +71,50 @@ cohost_assert_unchanged() {
 }
 
 finish_mutation() {
-  local status="$1" before="$2"
+  local status="$1" before="$2" action="${3:-operation}"
   trap - EXIT
   if ! cohost_assert_unchanged "$before"; then status=1; fi
   rm -f "$before"
+  if [[ "$status" != 0 ]]; then echo "Createx $action failed (exit $status)" >&2; fi
   exit "$status"
+}
+
+database_versions() {
+  local exists ledger tables
+  exists="$(runuser -u postgres -- psql -XAt -v ON_ERROR_STOP=1 -d postgres -c "SELECT count(*) FROM pg_database WHERE datname='createx'")" || return 1
+  [[ "$exists" != 0 ]] || return 0
+  ledger="$(runuser -u postgres -- psql -XAt -v ON_ERROR_STOP=1 -d createx -c "SELECT to_regclass('public.schema_migrations') IS NOT NULL")" || return 1
+  if [[ "$ledger" = t ]]; then
+    runuser -u postgres -- psql -XAt -v ON_ERROR_STOP=1 -d createx -c 'SELECT version FROM public.schema_migrations ORDER BY version'
+  else
+    tables="$(runuser -u postgres -- psql -XAt -v ON_ERROR_STOP=1 -d createx -c "SELECT count(*) FROM pg_tables WHERE schemaname='public'")" || return 1
+    [[ "$tables" = 0 ]] || die 'Createx has tables without a migration ledger; back up and rebuild before deploying'
+  fi
+}
+
+require_database_baseline() {
+  local baseline="$1" versions
+  [[ "$baseline" =~ ^[0-9]+_[a-z0-9_]+$ ]] || die 'Invalid schema baseline'
+  versions="$(database_versions)" || return 1
+  if [[ -n "$versions" ]] && ! grep -Fxq "$baseline" <<< "$versions"; then
+    die "Createx uses retired migration history; back up, rebuild an empty database and selectively import retained business data before deploying. See docs/deploy-auro.md (database baseline rebuild). No application release was activated."
+  fi
+}
+
+require_database_versions() {
+  local directory="$1" versions version
+  versions="$(database_versions)" || return 1
+  while IFS= read -r version; do
+    [[ -n "$version" ]] || continue
+    [[ "$version" =~ ^[a-zA-Z0-9_]+$ && -f "$directory/$version.up.sql" ]] ||
+      die "Release is incompatible with the database migration ledger; restore its matching database backup before activating it"
+  done <<< "$versions"
+}
+
+deploycheck() {
+  preflight || return 1
+  require_database_baseline "$1" || return 1
+  echo 'Createx schema preflight passed (no changes)'
 }
 
 preflight() {
@@ -502,15 +541,16 @@ deploy() {
   cp -a "$target/web/apps/web/.next-createx/static/." "$STATE/static/"
   chmod -R a+rX "$STATE/static" "$target"
   smoke_native "$target"
+  require_database_versions "$target/migrations"
   runuser -u postgres -- pg_dump -Fc createx > "/var/backups/createx/$release.dump"
   chmod 600 "/var/backups/createx/$release.dump"
-  install_units
   # No credentials appear in the command line or logs; systemd reads the env file.
   systemd-run --quiet --wait --pipe --collect --unit="createx-migrate-$release" \
     -p User=createx -p Group=createx -p "WorkingDirectory=$target" \
     -p "EnvironmentFile=$CONFIG/backend.env" -p Slice=createx.slice \
     --setenv='PGOPTIONS=-c statement_timeout=0 -c lock_timeout=10s' \
     "$target/bin/migrate" up
+  install_units
   activate "$target"
   # Preserve an existing public site on subsequent internal deployments.
   if [[ ! -f "$SITE" ]]; then
@@ -664,6 +704,7 @@ main() {
   [[ "$EUID" = 0 ]] || die 'Remote host script requires sudo'
   case "${1:-}" in
     preflight|verify|webcheck) [[ $# = 1 ]] || die 'Unexpected arguments'; "$1" ;;
+    deploycheck) [[ $# = 2 ]] || die 'Expected schema baseline'; deploycheck "$2" ;;
     deploy|web|publish|https|rollback|prune|resources)
       # flock releases automatically even when SSH disconnects. No stale lock file deletion.
       exec 9>/run/lock/createx-deploy.lock
@@ -671,7 +712,8 @@ main() {
       cohost_health || die 'Co-hosted services are unhealthy; refusing mutation'
       before="$(mktemp /tmp/createx-cohost-before.XXXXXXXX)"
       if ! cohost_snapshot > "$before"; then rm -f "$before"; die 'Cannot snapshot co-hosted services'; fi
-      trap 'finish_mutation "$?" "$before"' EXIT
+      action="$1"
+      trap 'finish_mutation "$?" "$before" "$action"' EXIT
       case "$1" in
         deploy) [[ $# = 3 ]] || die 'Expected upload and release'; deploy "$2" "$3" ;;
         web) [[ $# = 3 ]] || die 'Expected upload and release'; deploy_web "$2" "$3" ;;
@@ -681,6 +723,7 @@ main() {
           preflight
           previous="$(readlink -f "$BASE/previous")"
           [[ "$previous" = "$BASE/releases/"* && -s "$previous/manifest" ]] || die 'No previous release'
+          require_database_versions "$previous/migrations"
           activate "$previous"; verify
           ;;
         prune) preflight; prune ;;

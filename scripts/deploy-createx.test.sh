@@ -33,6 +33,44 @@ valid_release 20261028T120000Z-0123456789ab-dirty-web
 reject valid_release 20261028T120000Z-0123456789ab-api
 reject valid_release '../../agentpage'
 
+# Retired ledgers fail before building; fresh and partially initialized current
+# databases remain deployable. Database failures must never look like emptiness.
+(
+  preflight() { :; }
+  database_versions() { printf '%s' "$MIGRATION_VERSIONS"; }
+  MIGRATION_VERSIONS=$'001_init\n588_tank_training_history'
+  reject deploycheck 001_application_schema
+  grep -Fq 'back up, rebuild an empty database and selectively import' "$TEMP/error"
+  MIGRATION_VERSIONS=''
+  deploycheck 001_application_schema >/dev/null
+  MIGRATION_VERSIONS=$'001_application_schema\n002_current_index'
+  deploycheck 001_application_schema >/dev/null
+
+  mkdir "$TEMP/migrations"
+  touch "$TEMP/migrations/001_application_schema.up.sql" "$TEMP/migrations/002_current_index.up.sql"
+  require_database_versions "$TEMP/migrations"
+  MIGRATION_VERSIONS=$'001_application_schema\n003_newer_index'
+  reject require_database_versions "$TEMP/migrations"
+  MIGRATION_VERSIONS=$'001_application_schema\n../../foreign'
+  reject require_database_versions "$TEMP/migrations"
+  database_versions() { return 42; }
+  reject deploycheck 001_application_schema
+)
+
+# A passing co-host check must not replace the failing deployment's exit code
+# or leave the final output looking like a successful deployment.
+(
+  cohost_assert_unchanged() { echo 'Co-hosts healthy'; }
+  touch "$TEMP/finish-before"
+  if (finish_mutation 7 "$TEMP/finish-before" deploy) >"$TEMP/finish-output" 2>&1; then
+    echo 'Expected the deployment error to survive cleanup' >&2; exit 1
+  else
+    [[ $? = 7 ]]
+  fi
+  grep -Fxq 'Createx deploy failed (exit 7)' "$TEMP/finish-output"
+  [[ ! -e "$TEMP/finish-before" ]]
+)
+
 render_nginx > "$TEMP/internal"
 grep -Fq 'listen 127.0.0.1:23080;' "$TEMP/internal"
 if grep -Eq 'listen (80|443)|default_server|proxy_cache' "$TEMP/internal"; then echo 'Unexpected public listener or dynamic cache' >&2; exit 1; fi

@@ -40,6 +40,15 @@ remote() {
   "${SSH[@]}" "$HOST" "$command" < "$ROOT/scripts/deploy/createx-host.sh"
 }
 
+current_baseline() {
+  local migration
+  for migration in "$ROOT/server/migrations/"*.up.sql; do
+    [[ -f "$migration" ]] || { echo 'No application migrations found' >&2; return 1; }
+    basename "$migration" .up.sql
+    return
+  done
+}
+
 build_setup() {
   local expected actual
   expected="$(node -p 'require(process.argv[1]).packageManager.split("@")[1]' "$ROOT/package.json")"
@@ -156,7 +165,7 @@ case "${1:-plan}" in
   build) [[ $# = 1 ]] || exit 1; build ;;
   deploy)
     [[ $# = 1 ]] || exit 1
-    remote preflight
+    remote deploycheck "$(current_baseline)"
     build
     publish_artifact deploy
     ;;

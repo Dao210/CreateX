@@ -86,7 +86,7 @@ Installed desktop clients may talk to newer backends. Preserve response compatib
 
 ## Database and Migration Rules
 
-- The migration history initializes the current application schema in an empty database. Databases carrying retired migration ledgers require an explicit backup, rebuild, and selective import; never auto-run the retired history. Database fixture tests use disposable databases or schemas.
+- The migration history initializes the current application schema in an empty database. Databases carrying retired migration ledgers require an explicit backup, rebuild, and selective import; never auto-run the retired history. Deployment checks this boundary before building and rejects application rollback across an incompatible database baseline. Database fixture tests use disposable databases or schemas.
 - Do not add foreign keys, cascading deletes, or cascading updates. Validate relationships and clean up dependents in application code, using a transaction when the operation must be atomic.
 - Every migration-created index, including indexes on new tables, uses `CREATE [UNIQUE] INDEX CONCURRENTLY`. Each concurrent index build gets its own single-statement migration file; the runner executes files outside an explicit transaction.
 - Conditionally skipped migrations are still recorded in `schema_migrations`. Later DDL touching conditional objects must be idempotent (`IF EXISTS` / `IF NOT EXISTS`); document recovery if the missing object would break runtime behavior.
