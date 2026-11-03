@@ -109,6 +109,13 @@ func TestDeleteWorkspaceCleansRetiredChatContexts(t *testing.T) {
 	target := seedDingTalkContextCleanupOwner(t, ctx, pool, "user")
 	unrelated := seedDingTalkContextCleanupOwner(t, ctx, pool, "user")
 
+	queries := db.New(pool)
+	if err := queries.DeleteWorkspaceLeafData(ctx, util.MustParseUUID(target.workspaceID)); err != nil {
+		t.Fatal(err)
+	}
+	if err := queries.DeleteWorkspaceCommunicationRoots(ctx, util.MustParseUUID(target.workspaceID)); err != nil {
+		t.Fatal(err)
+	}
 	if err := db.New(pool).DeleteWorkspace(ctx, util.MustParseUUID(target.workspaceID)); err != nil {
 		t.Fatalf("DeleteWorkspace: %v", err)
 	}

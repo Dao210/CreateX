@@ -100,7 +100,7 @@ describe("bucketDiagnosticPath", () => {
   });
 
   it("drops query string and hash — they can carry resource ids", () => {
-    expect(bucketDiagnosticPath("/acme/skills?issue=MUL-1#comment-3")).toBe(
+    expect(bucketDiagnosticPath("/acme/skills?item=MUL-1#comment-3")).toBe(
       "/:slug/skills",
     );
   });

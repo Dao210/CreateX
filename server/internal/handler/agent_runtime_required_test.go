@@ -15,46 +15,6 @@ import (
 // unbound agent has no machine to bring back; the fix is to bind one. These tests
 // pin the distinct reason code (MUL-5559).
 
-// TestCommentMention_UnboundAgentReportsRuntimeRequired: @mentioning an unbound
-// agent posts the comment, enqueues nothing, and reports agent_runtime_required
-// rather than runtime_offline.
-func TestCommentMention_UnboundAgentReportsRuntimeRequired(t *testing.T) {
-	if testHandler == nil {
-		t.Skip("database not available")
-	}
-	ctx := context.Background()
-
-	runtimeID := createCascadeFixtureRuntime(t, ctx, "Mention Unbound Runtime")
-	agentID := createCascadeFixtureAgent(t, ctx, runtimeID, "Mention Unbound Agent")
-	// Public so the invocation gate (which runs first, and is enumeration-safe)
-	// cannot be the reason we see a block.
-	if _, err := testPool.Exec(ctx,
-		`UPDATE agent SET visibility = 'workspace', permission_mode = 'public_to' WHERE id = $1`,
-		agentID); err != nil {
-		t.Fatalf("make agent invocable: %v", err)
-	}
-	if _, err := testPool.Exec(ctx,
-		`INSERT INTO agent_invocation_target (agent_id, target_type, target_id, created_by)
-		 VALUES ($1, 'workspace', $2, $3)`,
-		agentID, testWorkspaceID, testUserID); err != nil {
-		t.Fatalf("allow-list agent: %v", err)
-	}
-
-	issueID := createMentionFixtureIssue(t, ctx, "Mention unbound agent")
-
-	// Bound but never mentioned yet: the same agent must be triggerable before we
-	// unbind it, otherwise this test could pass for the wrong reason.
-	if code := mentionAgentReasonCode(t, issueID, agentID); code != "" {
-		t.Fatalf("bound agent: expected a successful trigger, got blocked with %q", code)
-	}
-
-	unbindRuntime(t, ctx, runtimeID, agentID)
-
-	if code := mentionAgentReasonCode(t, issueID, agentID); code != string(ReasonAgentRuntimeRequired) {
-		t.Fatalf("unbound agent: reason_code = %q, want agent_runtime_required", code)
-	}
-}
-
 // TestChatSend_UnboundAgentReturnsStructuredConflict: the chat gate already
 // refused, but with a bare error string. The composer needs a code to offer
 // "bind a runtime" instead of a generic failure.
@@ -150,7 +110,14 @@ func TestUpdateAutopilot_UnboundAgentCannotResume(t *testing.T) {
 		t.Fatalf("insert paused autopilot: %v", err)
 	}
 	t.Cleanup(func() {
-		testPool.Exec(context.Background(), `DELETE FROM autopilot WHERE id = $1`, autopilotID)
+		testPool.Exec(context.Background(), `WITH runs AS MATERIALIZED (SELECT id FROM autopilot_run WHERE autopilot_id=$1),
+ removed_deliveries AS (DELETE FROM webhook_delivery WHERE autopilot_id=$1),
+ removed_triggers AS (DELETE FROM autopilot_trigger WHERE autopilot_id=$1),
+ removed_versions AS (DELETE FROM autopilot_rule_version WHERE autopilot_id=$1),
+ removed_collaborators AS (DELETE FROM autopilot_collaborator WHERE autopilot_id=$1),
+ detached_tasks AS (UPDATE agent_task_queue SET autopilot_run_id=NULL WHERE autopilot_run_id IN (SELECT id FROM runs)),
+ removed_runs AS (DELETE FROM autopilot_run WHERE autopilot_id=$1)
+ DELETE FROM autopilot WHERE id=$1`, autopilotID)
 	})
 
 	unbindRuntime(t, ctx, runtimeID, agentID)

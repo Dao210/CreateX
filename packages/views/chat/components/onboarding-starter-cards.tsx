@@ -35,11 +35,11 @@ export function OnboardingStarterCards({
 
   const cards = [
     {
-      key: "board",
-      title: t(($) => $.onboarding_cards.board.title),
-      desc: t(($) => $.onboarding_cards.board.desc),
-      prompt: t(($) => $.onboarding_cards.board.prompt),
-      vignette: <BoardVignette />,
+      key: "plan",
+      title: t(($) => $.onboarding_cards.plan.title),
+      desc: t(($) => $.onboarding_cards.plan.desc),
+      prompt: t(($) => $.onboarding_cards.plan.prompt),
+      vignette: <PlanVignette />,
     },
     {
       key: "delegate",
@@ -150,41 +150,17 @@ function MiniCard({
   );
 }
 
-// Three tiny kanban columns; the middle card carries Mika and a brand accent.
-function BoardVignette() {
+// A written plan with three concrete steps.
+function PlanVignette() {
   return (
-    <div aria-hidden="true" className="flex w-49 gap-1.5">
-      <div className="flex flex-1 flex-col gap-1 rounded-md bg-muted/70 p-1.5">
-        <div className="h-1.5 w-6.5 rounded-full bg-muted-foreground/20" />
-        <MiniCard>
-          <Bar className="w-4/5" />
-          <Bar className="w-1/2" />
-        </MiniCard>
-        <MiniCard>
-          <Bar className="w-2/3" />
-        </MiniCard>
-      </div>
-      <div className="flex flex-1 flex-col gap-1 rounded-md bg-muted/70 p-1.5">
-        <div className="h-1.5 w-8 rounded-full bg-brand/30" />
-        <MiniCard className="border-brand/45">
-          <Bar className="w-3/4" />
-          <div className="flex items-center gap-1">
-            <span className="flex size-3.5 items-center justify-center rounded-full bg-muted text-micro leading-none">
-              🦄
-            </span>
-            <Bar className="w-6 bg-brand/55" />
-          </div>
-        </MiniCard>
-      </div>
-      <div className="flex flex-1 flex-col gap-1 rounded-md bg-muted/70 p-1.5">
-        <div className="h-1.5 w-6.5 rounded-full bg-muted-foreground/20" />
-        <MiniCard>
-          <Bar className="w-3/4" />
-        </MiniCard>
-        <MiniCard className="opacity-60">
-          <Bar className="w-1/2" />
-        </MiniCard>
-      </div>
+    <div aria-hidden="true" className="w-40 rounded-md border bg-card p-3">
+      <Bar className="mb-3 w-2/3 bg-brand/50" />
+      {["w-5/6", "w-2/3", "w-3/4"].map((width) => (
+        <div key={width} className="mt-2 flex items-center gap-2">
+          <span className="size-2 rounded-full border border-brand/50" />
+          <Bar className={width} />
+        </div>
+      ))}
     </div>
   );
 }

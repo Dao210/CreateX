@@ -102,7 +102,7 @@ func TestDeleteWorkspacePluginDataClearsEveryPluginTable(t *testing.T) {
 		PackageVersionID: version.ID,
 		Version:          "1.0.0",
 		Manifest:         manifest,
-		GrantedScopes:    []byte(`["issues:read"]`),
+		GrantedScopes:    []byte(`["tasks:read"]`),
 	})
 	if err != nil {
 		t.Fatalf("create installation: %v", err)

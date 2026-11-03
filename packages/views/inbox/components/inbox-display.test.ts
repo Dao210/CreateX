@@ -6,9 +6,9 @@ const item = (overrides: Partial<InboxItem>) => ({ read: false, archived: false,
 describe("resolveDetailItem", () => {
   // Rows the inbox keys by issue_id, plus one plain notification that has none
   // and is therefore keyed by its own id.
-  const a = item({ id: "inbox-a", issue_id: "inbox-a" });
-  const b = item({ id: "inbox-b", issue_id: "inbox-b" });
-  const plain = item({ id: "inbox-plain", issue_id: null });
+  const a = item({ id: "inbox-a", });
+  const b = item({ id: "inbox-b", });
+  const plain = item({ id: "inbox-plain", });
   const list = [a, b, plain];
 
   it("holds the row the pane is still on while the list has moved on", () => {

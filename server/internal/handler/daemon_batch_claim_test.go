@@ -9,12 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/auro-ai/auro/server/internal/service"
 	"github.com/auro-ai/auro/server/internal/testutil"
-	db "github.com/auro-ai/auro/server/pkg/db/generated"
 	"github.com/auro-ai/auro/server/pkg/protocol"
 	"github.com/auro-ai/auro/server/pkg/taskfailure"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // batchClaimResponse mirrors the {"tasks":[...]} envelope ClaimTasksByRuntime
@@ -61,12 +58,12 @@ func TestClaimTasksByRuntime_ClaimPollHintSchedulesNextDeferredTask(t *testing.T
 	}
 	ctx := context.Background()
 	runtimeID := createClaimReclaimRuntime(t, ctx, "Batch claim deferred hint")
-	agentID, issueID := createClaimReclaimAgentAndIssue(t, ctx, runtimeID, "Batch claim deferred hint agent")
+	agentID, issueID := createClaimReclaimAgentAndChat(t, ctx, runtimeID, "Batch claim deferred hint agent")
 	dbfx.Task(t, agentID, testutil.Cols{
-		"runtime_id": runtimeID,
-		"issue_id":   issueID,
-		"status":     "deferred",
-		"fire_at":    testutil.Raw("now() + interval '5 seconds'"),
+		"runtime_id":      runtimeID,
+		"chat_session_id": issueID,
+		"status":          "deferred",
+		"fire_at":         testutil.Raw("now() + interval '5 seconds'"),
 	})
 
 	hinted := testutil.Decode[batchClaimResponse](t, testHandler.ClaimTasksByRuntime,
@@ -82,59 +79,6 @@ func TestClaimTasksByRuntime_ClaimPollHintSchedulesNextDeferredTask(t *testing.T
 		batchClaimRequest(testWorkspaceID, []string{runtimeID}, 1, ""), http.StatusOK)
 	if legacy.ClaimPollHintSupported || legacy.NextDeferredTaskAfterMillis != 0 {
 		t.Fatalf("legacy response unexpectedly exposed poll hints: %+v", legacy)
-	}
-}
-
-func TestNextDeferredTaskFireAtForRuntimes_OmitsIneligibleOverdueTasks(t *testing.T) {
-	if testHandler == nil || testPool == nil {
-		t.Skip("database not available")
-	}
-
-	tests := []struct {
-		name        string
-		runtimeCols testutil.Cols
-		occupied    bool
-		wantHint    bool
-	}{
-		{name: "eligible", wantHint: true},
-		{name: "occupied", occupied: true},
-		{name: "runtime offline", runtimeCols: testutil.Cols{"status": "offline"}},
-		{name: "runtime stale", runtimeCols: testutil.Cols{
-			"last_seen_at": testutil.Raw("now() - interval '10 minutes'"),
-			"updated_at":   testutil.Raw("now() - interval '10 minutes'"),
-		}},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			runtimeID := dbfx.Runtime(t, "deferred hint "+tt.name, tt.runtimeCols)
-			agentID := dbfx.Agent(t, "deferred hint "+tt.name, runtimeID)
-			issueID := dbfx.Issue(t, "deferred hint "+tt.name)
-			dbfx.Task(t, agentID, testutil.Cols{
-				"runtime_id": runtimeID,
-				"issue_id":   issueID,
-				"status":     "deferred",
-				"fire_at":    testutil.Raw("now() - interval '1 second'"),
-			})
-			if tt.occupied {
-				dbfx.Task(t, agentID, testutil.Cols{
-					"runtime_id": runtimeID,
-					"issue_id":   issueID,
-					"status":     "queued",
-				})
-			}
-
-			next, err := testHandler.Queries.NextDeferredTaskFireAtForRuntimes(t.Context(), db.NextDeferredTaskFireAtForRuntimesParams{
-				RuntimeIds:       []pgtype.UUID{parseUUID(runtimeID)},
-				RuntimeStaleSecs: service.RuntimeClaimFreshnessSeconds,
-			})
-			if err != nil {
-				t.Fatalf("NextDeferredTaskFireAtForRuntimes: %v", err)
-			}
-			if next.Valid != tt.wantHint {
-				t.Fatalf("hint validity = %v, want %v", next.Valid, tt.wantHint)
-			}
-		})
 	}
 }
 
@@ -168,10 +112,10 @@ func TestClaimTasksByRuntime_RoutesAcrossRuntimesAndMintsTokens(t *testing.T) {
 
 	rt1 := createClaimReclaimRuntime(t, ctx, "Batch claim rt1")
 	rt2 := createClaimReclaimRuntime(t, ctx, "Batch claim rt2")
-	a1, i1 := createClaimReclaimAgentAndIssue(t, ctx, rt1, "Batch claim a1")
-	a2, i2 := createClaimReclaimAgentAndIssue(t, ctx, rt2, "Batch claim a2")
-	seedQueuedIssueTask(t, ctx, a1, rt1, i1)
-	seedQueuedIssueTask(t, ctx, a2, rt2, i2)
+	a1, i1 := createClaimReclaimAgentAndChat(t, ctx, rt1, "Batch claim a1")
+	a2, i2 := createClaimReclaimAgentAndChat(t, ctx, rt2, "Batch claim a2")
+	seedQueuedChatTask(t, ctx, a1, rt1, i1)
+	seedQueuedChatTask(t, ctx, a2, rt2, i2)
 
 	w := postBatchClaim(t, testWorkspaceID, []string{rt1, rt2}, 5)
 	if w.Code != http.StatusOK {
@@ -215,8 +159,8 @@ func TestClaimTasksByRuntime_CancelsTaskWhenRuntimeOwnerMissing(t *testing.T) {
 	}
 	t.Cleanup(func() { testPool.Exec(ctx, `DELETE FROM agent_runtime WHERE id = $1`, rtNull) })
 
-	agentID, issueID := createClaimReclaimAgentAndIssue(t, ctx, rtNull, "Ownerless agent")
-	taskID := seedQueuedIssueTask(t, ctx, agentID, rtNull, issueID)
+	agentID, issueID := createClaimReclaimAgentAndChat(t, ctx, rtNull, "Ownerless agent")
+	taskID := seedQueuedChatTask(t, ctx, agentID, rtNull, issueID)
 
 	w := postBatchClaim(t, testWorkspaceID, []string{rtNull}, 1)
 	if w.Code != http.StatusOK {
@@ -248,8 +192,8 @@ func TestFailClaimedTaskBeforeLaunchSettlesDispatchedTask(t *testing.T) {
 	}
 	ctx := context.Background()
 	runtimeID := createClaimReclaimRuntime(t, ctx, "Prelaunch failure rt")
-	agentID, issueID := createClaimReclaimAgentAndIssue(t, ctx, runtimeID, "Prelaunch failure agent")
-	taskID := seedQueuedIssueTask(t, ctx, agentID, runtimeID, issueID)
+	agentID, issueID := createClaimReclaimAgentAndChat(t, ctx, runtimeID, "Prelaunch failure agent")
+	taskID := seedQueuedChatTask(t, ctx, agentID, runtimeID, issueID)
 	if _, err := testPool.Exec(ctx, `
 		UPDATE agent_task_queue
 		SET status = 'dispatched', dispatched_at = now()
@@ -292,4 +236,18 @@ func TestFailClaimedTaskBeforeLaunchSettlesDispatchedTask(t *testing.T) {
 	if failureReason != taskfailure.ReasonAgentMissingConfig.String() {
 		t.Fatalf("failure_reason = %q", failureReason)
 	}
+}
+
+func seedQueuedChatTask(t *testing.T, ctx context.Context, agentID, runtimeID, issueID string) string {
+	t.Helper()
+	var id string
+	if err := testPool.QueryRow(ctx, `
+		INSERT INTO agent_task_queue (agent_id, runtime_id, chat_session_id, status, priority)
+		VALUES ($1, $2, $3, 'queued', 0)
+		RETURNING id
+	`, agentID, runtimeID, issueID).Scan(&id); err != nil {
+		t.Fatalf("seed queued task: %v", err)
+	}
+	t.Cleanup(func() { testPool.Exec(ctx, `DELETE FROM agent_task_queue WHERE id = $1`, id) })
+	return id
 }

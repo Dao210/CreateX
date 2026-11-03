@@ -54,9 +54,8 @@ func TestNotifyTaskAvailable_BumpsBeforeWakeup(t *testing.T) {
 	cache := NewEmptyClaimCache(rdb)
 	wakeup := &stubWakeup{}
 
-	svc := &TaskService{
+	svc := &TaskService{Wakeup: wakeup,
 		EmptyClaim: cache,
-		Wakeup:     wakeup,
 	}
 
 	runtimeID := testUUID(7)
@@ -101,9 +100,8 @@ func TestNotifyTaskAvailable_InvalidWithoutRuntimeIsNoOp(t *testing.T) {
 	cache := NewEmptyClaimCache(rdb)
 	wakeup := &stubWakeup{}
 
-	svc := &TaskService{
+	svc := &TaskService{Wakeup: wakeup,
 		EmptyClaim: cache,
-		Wakeup:     wakeup,
 	}
 
 	ctx := context.Background()
@@ -131,7 +129,7 @@ func TestNotifyTaskFinished_BumpsBeforeRuntimeWakeup(t *testing.T) {
 	rdb := newRedisTestClient(t)
 	cache := NewEmptyClaimCache(rdb)
 	wakeup := &stubWakeup{}
-	svc := &TaskService{EmptyClaim: cache, Wakeup: wakeup}
+	svc := &TaskService{Wakeup: wakeup, EmptyClaim: cache}
 
 	runtimeID := testUUID(10)
 	runtimeKey := util.UUIDToString(runtimeID)
@@ -205,11 +203,11 @@ func TestNotifyTaskEnqueued_UnwiredServiceCannotInvalidateClaimVerdict(t *testin
 	ctx := context.Background()
 
 	// The router's service: serves daemon claims, owns the cache.
-	claimSvc := &TaskService{EmptyClaim: NewEmptyClaimCache(rdb), Wakeup: &stubWakeup{}}
+	claimSvc := &TaskService{EmptyClaim: NewEmptyClaimCache(rdb)}
 	// A background service built without the router's post-construction
 	// wiring. Same wakeup notifier, no EmptyClaim.
 	enqueueWakeup := &stubWakeup{}
-	unwiredSvc := &TaskService{Wakeup: enqueueWakeup}
+	unwiredSvc := &TaskService{}
 
 	runtimeID := testUUID(18)
 	runtimeKey := util.UUIDToString(runtimeID)

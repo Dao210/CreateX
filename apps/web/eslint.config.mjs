@@ -2,7 +2,7 @@ import nextConfig from "@auro/eslint-config/next";
 
 export default [
   ...nextConfig,
-  { ignores: [".next/", ".next-local/", ".source/"] },
+  { ignores: [".next/", ".next-*/**", ".source/"] },
   {
     files: ["**/*.test.{ts,tsx}", "**/test/**/*.{ts,tsx}"],
     rules: {

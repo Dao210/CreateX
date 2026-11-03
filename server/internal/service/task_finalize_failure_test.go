@@ -2,72 +2,55 @@ package service
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"testing"
 	"time"
 
 	"github.com/auro-ai/auro/server/internal/events"
+	"github.com/auro-ai/auro/server/internal/testutil"
 	"github.com/auro-ai/auro/server/internal/util"
 	db "github.com/auro-ai/auro/server/pkg/db/generated"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-// TestFinalizeTaskClaimFailureRollsBackTokenThenRequeue is the regression for
-// the PR #5193 review ask on the batch path's failure handling: when
-// FinalizeTaskClaim fails (here: a delivery receipt referencing an id outside
-// the task's comment plan, which the CAS subset-guard rejects), the token write
-// is rolled back with it, and RequeueTaskAfterClaimFailure releases the exact
-// dispatched claim back to `queued`. These are the two building blocks the
-// batch handler composes on a finalization error.
+// A failed secondary credential write must roll back the task token too.
 func TestFinalizeTaskClaimFailureRollsBackTokenThenRequeue(t *testing.T) {
 	ctx := context.Background()
 	pool := newTaskClaimRacePool(t)
-	svc := NewTaskService(db.New(pool), pool, nil, events.New())
-	queries := db.New(pool)
-
-	taskID, userID, workspaceID := dispatchedCommentTaskFixture(t, ctx, pool)
-	task, err := queries.GetAgentTask(ctx, util.MustParseUUID(taskID))
+	fx := testutil.New(pool, "", "")
+	suffix := fmt.Sprint(time.Now().UnixNano())
+	fx.UserID = fx.User(t, "Finalize Test", "finalize-"+suffix+"@example.test")
+	fx.WorkspaceID = fx.Workspace(t, "Finalize Test", "finalize-"+suffix)
+	fx.Member(t, fx.WorkspaceID, fx.UserID, "owner")
+	rt := fx.Runtime(t, "Finalize Runtime")
+	agent := fx.Agent(t, "Finalize Agent", rt)
+	chat := fx.ChatSession(t, agent)
+	taskID := fx.Task(t, agent, testutil.Cols{"chat_session_id": chat, "runtime_id": rt, "status": "dispatched", "dispatched_at": testutil.Raw("now()")})
+	q := db.New(pool)
+	svc := NewTaskService(q, pool, nil, events.New())
+	task, err := q.GetAgentTask(ctx, util.MustParseUUID(taskID))
 	if err != nil {
-		t.Fatalf("load task: %v", err)
+		t.Fatal(err)
 	}
-
-	// A delivered id outside the task's plan (no trigger/coalesced match) makes
-	// SetTaskDeliveredCommentIDs match zero rows → FinalizeTaskClaim errors.
-	bogus := util.MustParseUUID("11111111-1111-1111-1111-111111111111")
-	_, ferr := svc.FinalizeTaskClaim(ctx, task, db.CreateTaskTokenParams{
-		TokenHash:   fmt.Sprintf("finalize-fail-hash-%d", time.Now().UnixNano()),
-		TaskID:      task.ID,
-		AgentID:     task.AgentID,
-		WorkspaceID: util.MustParseUUID(workspaceID),
-		UserID:      util.MustParseUUID(userID),
-		ExpiresAt:   pgtype.Timestamptz{Time: time.Now().Add(24 * time.Hour), Valid: true},
-	}, []pgtype.UUID{bogus}, true, nil, nil)
-	if ferr == nil {
-		t.Fatal("expected FinalizeTaskClaim to fail for an out-of-plan delivery receipt")
+	expires := pgtype.Timestamptz{Time: time.Now().Add(time.Hour), Valid: true}
+	daemon := db.CreateDaemonTokenParams{TokenHash: "duplicate-" + suffix, WorkspaceID: util.MustParseUUID(fx.WorkspaceID), DaemonID: "test-daemon", ExpiresAt: expires}
+	if _, err := q.CreateDaemonToken(ctx, daemon); err != nil {
+		t.Fatal(err)
 	}
-	if errors.Is(ferr, context.Canceled) {
-		t.Fatalf("unexpected ctx error: %v", ferr)
+	fx.Cleanup(t, `DELETE FROM daemon_token WHERE token_hash=$1`, daemon.TokenHash)
+	err = svc.FinalizeTaskClaim(ctx, db.CreateTaskTokenParams{TokenHash: "task-" + suffix, TaskID: task.ID, AgentID: task.AgentID, WorkspaceID: util.MustParseUUID(fx.WorkspaceID), UserID: util.MustParseUUID(fx.UserID), ExpiresAt: expires}, nil, daemon)
+	if err == nil {
+		t.Fatal("expected duplicate daemon credential to fail")
 	}
-
-	// Token write must have rolled back with the receipt (transactional).
-	var tokenCount int
-	if err := pool.QueryRow(ctx, `SELECT count(*) FROM task_token WHERE task_id = $1`, taskID).Scan(&tokenCount); err != nil {
-		t.Fatalf("count tokens: %v", err)
+	if n := fx.Count(t, `SELECT count(*) FROM task_token WHERE task_id=$1`, taskID); n != 0 {
+		t.Fatalf("task token persisted after rollback: %d", n)
 	}
-	if tokenCount != 0 {
-		t.Fatalf("expected token rolled back, found %d task_token rows", tokenCount)
-	}
-
-	// The exact dispatched claim is released back to queued.
 	if _, err := svc.RequeueTaskAfterClaimFailure(ctx, task); err != nil {
-		t.Fatalf("requeue: %v", err)
+		t.Fatal(err)
 	}
 	var status string
-	if err := pool.QueryRow(ctx, `SELECT status FROM agent_task_queue WHERE id = $1`, taskID).Scan(&status); err != nil {
-		t.Fatalf("read status: %v", err)
-	}
+	fx.QueryRow(t, `SELECT status FROM agent_task_queue WHERE id=$1`, taskID).Scan(&status)
 	if status != "queued" {
-		t.Fatalf("task status = %s, want queued after requeue", status)
+		t.Fatalf("status=%q, want queued", status)
 	}
 }

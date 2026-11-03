@@ -1,25 +1,4 @@
 {
-  "comment": {
-    "trigger_blocked_invocation_not_allowed": "이 대상을 찾을 수 없거나 사용할 권한이 없습니다",
-    "trigger_blocked_target_unavailable": "이 대상을 사용할 수 없습니다",
-    "trigger_blocked_runtime_offline": "이 대상의 런타임이 오프라인입니다",
-    "trigger_blocked_runtime_unusable": "이 대상의 CLI를 해당 기기에서 실행할 수 없습니다 — 그 기기에서 다시 설치하세요",
-    "trigger_blocked_runtime_profile_missing": "이 대상의 CLI에 해당 기기의 런타임 프로필이 없습니다 — 그 기기에서 설치하세요",
-    "trigger_blocked_agent_runtime_required": "이 대상에 런타임이 없습니다 — 실행하려면 런타임을 연결하세요",
-    "trigger_blocked_runtime_access_denied": "이 대상의 에이전트는 비공개 런타임에서 실행할 수 없습니다 — 런타임을 공개로 변경하거나, 소유자가 사용할 수 있는 런타임으로 에이전트를 다시 연결/복사하세요",
-    "trigger_blocked_generic": "이 대상은 트리거되지 않습니다",
-    "trigger_blocked_short_invocation_not_allowed": "찾을 수 없음 또는 권한 없음",
-    "trigger_blocked_short_target_unavailable": "사용 불가",
-    "trigger_blocked_short_runtime_offline": "런타임 오프라인",
-    "trigger_blocked_short_runtime_unusable": "CLI 실행 불가",
-    "trigger_blocked_short_runtime_profile_missing": "런타임 프로필 없음",
-    "trigger_blocked_short_agent_runtime_required": "런타임 필요",
-    "trigger_blocked_short_runtime_access_denied": "런타임 접근 거부",
-    "trigger_blocked_short_generic": "트리거 안 됨"
-  },
-  "wakeups": {
-    "triggered_by_wakeup": "자동 깨우기로 시작됨"
-  },
   "agent_activity": {
     "status_running": "작업 중",
     "status_queued": "대기 중",
@@ -70,5 +49,23 @@
     "surface_loading": "{{name}} 불러오는 중…",
     "surface_navigated": "{{name}}이(가) 패널을 외부에서 불러온 페이지로 바꾸려 했습니다. 중지하고 연결을 끊었습니다. 세계 관리자에게 알리세요.",
     "surface_unavailable": "{{name}}의 인터페이스를 불러올 수 없습니다. 설치된 버전에 포함되어 있지 않을 수 있습니다."
+  },
+  "invocation": {
+    "trigger_blocked_invocation_not_allowed": "이 대상을 찾을 수 없거나 사용할 권한이 없습니다",
+    "trigger_blocked_target_unavailable": "이 대상을 사용할 수 없습니다",
+    "trigger_blocked_runtime_offline": "이 대상의 런타임이 오프라인입니다",
+    "trigger_blocked_runtime_unusable": "이 대상의 CLI를 해당 기기에서 실행할 수 없습니다 — 그 기기에서 다시 설치하세요",
+    "trigger_blocked_runtime_profile_missing": "이 대상의 CLI에 해당 기기의 런타임 프로필이 없습니다 — 그 기기에서 설치하세요",
+    "trigger_blocked_agent_runtime_required": "이 대상에 런타임이 없습니다 — 실행하려면 런타임을 연결하세요",
+    "trigger_blocked_runtime_access_denied": "이 대상의 에이전트는 비공개 런타임에서 실행할 수 없습니다 — 런타임을 공개로 변경하거나, 소유자가 사용할 수 있는 런타임으로 에이전트를 다시 연결/복사하세요",
+    "trigger_blocked_generic": "이 대상은 트리거되지 않습니다",
+    "trigger_blocked_short_invocation_not_allowed": "찾을 수 없음 또는 권한 없음",
+    "trigger_blocked_short_target_unavailable": "사용 불가",
+    "trigger_blocked_short_runtime_offline": "런타임 오프라인",
+    "trigger_blocked_short_runtime_unusable": "CLI 실행 불가",
+    "trigger_blocked_short_runtime_profile_missing": "런타임 프로필 없음",
+    "trigger_blocked_short_agent_runtime_required": "런타임 필요",
+    "trigger_blocked_short_runtime_access_denied": "런타임 접근 거부",
+    "trigger_blocked_short_generic": "트리거 안 됨"
   }
 }

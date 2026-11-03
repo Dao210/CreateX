@@ -67,8 +67,7 @@ func seedFixtureWorkspace(ctx context.Context, pool *pgxpool.Pool) error {
 		"Testutil Fixture User", fixtureEmail).Scan(&testUserID); err != nil {
 		return err
 	}
-	if err := pool.QueryRow(ctx, `INSERT INTO workspace (name, slug, issue_prefix) VALUES ($1, $2, $3) RETURNING id`,
-		"Testutil Fixtures", fixtureSlug, "TUF").Scan(&testWorkspaceID); err != nil {
+	if err := pool.QueryRow(ctx, `INSERT INTO workspace (name, slug) VALUES ($1, $2) RETURNING id`, "Testutil Fixtures", fixtureSlug).Scan(&testWorkspaceID); err != nil {
 		return err
 	}
 	_, err := pool.Exec(ctx, `INSERT INTO member (workspace_id, user_id, role) VALUES ($1, $2, 'owner')`,
@@ -93,13 +92,8 @@ func TestBuildersInsertRowsTheSchemaAccepts(t *testing.T) {
 
 	runtimeID := f.Runtime(t, "fixture runtime")
 	agentID := f.Agent(t, "fixture agent", runtimeID)
-	issueID := f.Issue(t, "fixture issue")
-	commentID := f.Comment(t, issueID, "fixture comment")
-	taskID := f.Task(t, agentID, Cols{"runtime_id": runtimeID, "issue_id": issueID})
-	squadID := f.Squad(t, "fixture squad", agentID)
-	f.SquadMember(t, squadID, "agent", agentID)
-	projectID := f.Project(t, "fixture project")
 	sessionID := f.ChatSession(t, agentID)
+	taskID := f.Task(t, agentID, Cols{"runtime_id": runtimeID, "chat_session_id": sessionID})
 
 	for _, tt := range []struct {
 		table string
@@ -107,11 +101,7 @@ func TestBuildersInsertRowsTheSchemaAccepts(t *testing.T) {
 	}{
 		{"agent_runtime", runtimeID},
 		{"agent", agentID},
-		{"issue", issueID},
-		{"comment", commentID},
 		{"agent_task_queue", taskID},
-		{"squad", squadID},
-		{"project", projectID},
 		{"chat_session", sessionID},
 	} {
 		if n := f.Count(t, fmt.Sprintf(`SELECT count(*) FROM %s WHERE id = $1`, tt.table), tt.id); n != 1 {

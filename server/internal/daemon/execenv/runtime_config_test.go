@@ -29,355 +29,6 @@ func platformSkillFixture() SkillContextForEnv {
 	}
 }
 
-// The brief must no longer carry any parent-notification guidance. PR
-// #2918 added a "Tell the parent when you finish a child" rule that
-// turned into noise (self-mention loops, planner ack ping-pong,
-// hardcoded `MUL-` prefix). PR #3055 first downgraded it to a "do NOT
-// post one" guardrail, but Bohan's product call was to remove the
-// guidance entirely rather than substitute a new prohibition. These
-// canaries lock that in: any wording that re-introduces the
-// parent-comment concept — positive, negative, or descriptive — must
-// not come back through future edits.
-func TestBriefHasNoParentNotificationGuidance(t *testing.T) {
-	t.Parallel()
-	cases := []TaskContextForEnv{
-		{IssueID: "11111111-2222-3333-4444-555555555555"},
-		{
-			IssueID:          "22222222-3333-4444-5555-666666666666",
-			TriggerCommentID: "33333333-4444-5555-6666-777777777777",
-		},
-	}
-	for _, ctx := range cases {
-		ctx := ctx
-		out := buildMetaSkillContent("claude", ctx)
-
-		// The pre-MUL-2538 phrasing instructed the agent to compose a
-		// parent comment by hand — including a hardcoded `MUL-` prefix
-		// and an assignee mention. The intermediate revision (PR #3055
-		// before Bohan's call) instead told the agent NOT to post one.
-		// Both framings must stay out.
-		for _, banned := range []string{
-			// Old "do it yourself" framing (PR #2918).
-			"## Parent / Sub-issue Protocol",
-			"**Tell the parent when you finish a child.**",
-			"auro issue comment add <parent-id>",
-			"with NO `--parent`",
-			"link the child as `[MUL-",
-			"`@mention` the parent's assignee",
-			"`mention://agent/<id>`",
-			"`mention://member/<id>`",
-			"`mention://squad/<id>`",
-			// Intermediate "do NOT do it yourself" framing (PR #3055
-			// before Bohan's call) — also out per product direction.
-			"**Do NOT post your own parent-notification comment.**",
-			"Do NOT post your own parent-notification comment",
-			"parent-notification comment",
-			"system comment on the parent fires from the status transition",
-			"re-trigger the parent's assignee for nothing",
-			"platform posts a top-level system comment on the parent",
-			// Earlier revisions split rules by trigger type or used
-			// table/subsection layouts. None of those structures should
-			// come back either.
-			"| Parent assignee | Parent status |",
-			"The same agent as yourself",
-			"| Member or squad |",
-			"### A. Notify the parent",
-			"### B. Choose",
-			"When this issue has `parent_issue_id`:",
-			"**Closing out child work** (only if this issue has `parent_issue_id`)",
-			"**Notify the parent** (only if this issue has `parent_issue_id`",
-			"**Creating sub-issues** (applies to any issue-bound run)",
-			"For parent/child work, use these best-effort rules",
-			// The protocol must no longer emit a placeholder
-			// `<this-issue-id>` status flip — the workflow above owns
-			// that command with the real issue id substituted.
-			"`auro issue status <this-issue-id> in_review`",
-			// Non-existent CLI form Elon's earlier review flagged.
-			"issue list --parent",
-		} {
-			if strings.Contains(out, banned) {
-				t.Errorf("expected %q to be removed from the brief", banned)
-			}
-		}
-	}
-}
-
-// The status rule is a fact judgment with two write moments (MUL-6417): no
-// trigger-type modes, no assignee gate. A turn that advances the issue's own
-// ask records in_progress when it STARTS — judged only at turn end, a fresh
-// assignment sat in todo for the whole first work turn (Bohan's post-merge
-// report) — and the end of the turn records the state the work reached. The
-// two invariants MUL-6300 pinned as gates (PR #205, reinforced by Elon's
-// blocking review on PR #2918) survive as consequences of the fact anchor and
-// stay pinned here:
-//
-//   - a purely conversational turn changes nothing about the issue's state,
-//     so it writes nothing — at either moment;
-//   - concurrently triggered agents judging the same fact write the same
-//     value or nothing, so the board cannot flap.
-//
-// The brief must also still carry no unconditional placeholder flip: a bare
-// `auro issue status <this-issue-id> in_review` command would fire on every
-// turn regardless of whether the turn delivered anything.
-func TestStatusRuleIsFactJudgmentAtBothMoments(t *testing.T) {
-	t.Parallel()
-	ctx := TaskContextForEnv{
-		IssueID:          "55555555-6666-7777-8888-999999999999",
-		TriggerCommentID: "66666666-7777-8888-9999-aaaaaaaaaaaa",
-	}
-	out := buildMetaSkillContent("claude", ctx)
-
-	if strings.Contains(out, "`auro issue status <this-issue-id> in_review`") {
-		t.Errorf("brief must not contain a placeholder `<this-issue-id> in_review` flip — status is judged from what the turn delivered")
-	}
-
-	for _, want := range []string{
-		// The anchor: issue state, not run lifecycle, written when it changes.
-		"**Issue status — write the state the issue is in, whenever it changes**",
-		"Status reflects the state the ISSUE is in, not your run's lifecycle",
-		// The start moment: INSIDE step 3, at the read→work boundary. A run
-		// on MUL-6460 proved a detached status-block bullet does not fire —
-		// the model is walking the numbered list when the condition triggers.
-		"3. If any part of what this turn will produce is what the issue itself asks for",
-		// Only the exact built-in key satisfies this workflow step. The
-		// started category also contains review and blocked statuses.
-		"already `in_progress`",
-		"the board should show the issue being worked while you work, not only after",
-		// No assignee gate: the judgment applies to whoever is running.
-		"whoever the assignee is",
-		// Delivery lands in in_review and the ceiling keeps `done` human.
-		"`done` stays human",
-		// Assigned deliverables must not be misread as status-neutral
-		// research: stage barriers and parent notifications key off the
-		// delivery write.
-		"stage barriers and parent notifications depend on that signal",
-		// Invariant 1: conversation does not move the board. Ancillary is
-		// defined by OUTPUT (no part of the issue's own deliverable), not by
-		// activity words like "research" that also describe real work.
-		"questions, discussion, and acknowledgements never touch status",
-		"Your turn produced none of the issue's own deliverable",
-		// Invariant 2: concurrent agents converge instead of flapping.
-		"This no-write default is what keeps concurrent runs from flapping the board",
-	} {
-		if !strings.Contains(out, want) {
-			t.Errorf("status rule missing %q\n---\n%s", want, out)
-		}
-	}
-
-	// The retired gates must not come back: no trigger-type modes, no
-	// assignee-scoped arc, no UNCONDITIONAL opening flip (the start moment is
-	// conditional on the turn advancing the issue's ask), and no end-only
-	// timing that hides a long first work turn in todo.
-	for _, banned := range []string{
-		"Turn mode",
-		"already in an `in_progress`-category status",
-		"already in a `started`-category status",
-		"Ownership mode",
-		"Reply mode",
-		"when this issue is assigned to you and this turn does substantive work on it",
-		"set `in_progress` when you start",
-		"Before step 3, run `auro issue status",
-		"judge once, at the end of the turn",
-		"do not open with a status write",
-		// The example that misled the MUL-6460 run: research that IS the
-		// issue's ask pattern-matched an example meant for consult pull-ins.
-		"asked to research stays",
-		// Activity-word lists must not come back in EITHER direction — the
-		// negative lists are the failure class behind the research and
-		// review cases, and the positive form-list ("in whatever form:
-		// code, research, ...") is the same shape read as exhaustive
-		// (J's review on #7295).
-		"A turn that only answers, reviews, or consults",
-		"you only answered a question, reviewed, or discussed",
-		"in whatever form: code, research",
-	} {
-		if strings.Contains(out, banned) {
-			t.Errorf("brief still carries retired status gate %q (MUL-6417)\n---\n%s", banned, out)
-		}
-	}
-
-	// Position is load-bearing, not style (J's review on #7295): a
-	// presence-pin cannot tell WHERE a sentence lives, and both field
-	// incidents came from correct sentences sitting in positions that do
-	// not fire. The two anchors must live INSIDE their numbered steps.
-	var step3, step5 string
-	for _, line := range strings.Split(out, "\n") {
-		if strings.HasPrefix(line, "3. ") {
-			step3 = line
-		}
-		if strings.HasPrefix(line, "5. ") {
-			step5 = line
-		}
-	}
-	if !strings.Contains(step3, "set `in_progress` FIRST") {
-		t.Errorf("the start write must be anchored inside step 3\n---\n%s", step3)
-	}
-	if !strings.Contains(step3, "never decides") {
-		t.Errorf("the never-decides guard must live inside step 3, the position that fires\n---\n%s", step3)
-	}
-	if !strings.Contains(step5, "confirm the status still matches") {
-		t.Errorf("the exit-side status check must be anchored inside step 5\n---\n%s", step5)
-	}
-
-	// The squad-leader bullet must not leak into the ordinary path.
-	if strings.Contains(out, "dispatching members is not delivery") {
-		t.Errorf("ordinary-agent brief must not carry the squad-leader status bullet:\n%s", out)
-	}
-}
-
-// TestPerRunCommentContextStaysOutOfBrief pins MUL-5377: no per-run comment
-// routing value may be rendered into the runtime brief. The brief lands in
-// messages[0], ahead of the whole conversation, so any change there throws away
-// the prompt cache for the entire history on resume. The helpers are unchanged
-// and still feed the per-turn user message (daemon.buildCommentPrompt).
-func TestPerRunCommentContextStaysOutOfBrief(t *testing.T) {
-	t.Parallel()
-	const (
-		issueID = "55555555-6666-7777-8888-999999999999"
-		since   = "2026-05-28T11:00:00Z"
-	)
-	out := buildMetaSkillContent("claude", TaskContextForEnv{
-		IssueID:          issueID,
-		TriggerCommentID: "reply-abc",
-		TriggerThreadID:  "thread-abc",
-		NewCommentCount:  4,
-		NewCommentsSince: since,
-		CommentReplyTargets: []ThreadReplyTarget{
-			{ThreadID: "thread-abc", ParentID: "reply-abc"},
-			{ThreadID: "thread-def", ParentID: "reply-def"},
-		},
-	})
-
-	for _, banned := range []string{
-		"reply-abc", "thread-abc", "reply-def", "thread-def", since,
-		"4 new comment(s) on this issue since your last run",
-		"DISTINCT threads",
-		// MUL-7344's issue-state report is per-run for the same reason the
-		// comment delta is, and TaskContextForEnv deliberately has no field to
-		// carry it. These pin the rendered text so a future "just pass it
-		// through to the brief" cannot land quietly.
-		"The issue is unchanged since your last run",
-		"Since your last run the issue changed",
-	} {
-		if strings.Contains(out, banned) {
-			t.Errorf("brief must not carry per-run comment value %q (MUL-5377)\n---\n%s", banned, out)
-		}
-	}
-
-	// The helper that now feeds the per-turn prompt still carries the per-run
-	// values, as ONE issue-wide `--since` delta read (MUL-7344).
-	hint := BuildNewCommentsHint(issueID, "reply-abc", "thread-abc", since, 4)
-	for _, want := range []string{
-		"4 new comment(s) on this issue since your last run",
-		"across all threads",
-		"auro issue comment list " + issueID + " --since " + since + " --compact --output json",
-		"--thread thread-abc --tail 30",
-	} {
-		if !strings.Contains(hint, want) {
-			t.Errorf("BuildNewCommentsHint missing %q\n---\n%s", want, hint)
-		}
-	}
-	// The scan the `--since` delta replaces must not also be handed over: two
-	// wide reads for one server-computed answer is exactly the cost MUL-7344
-	// removed.
-	if strings.Contains(hint, "--roots-only --summary") {
-		t.Errorf("BuildNewCommentsHint must not hand over the roots scan alongside the delta read\n---\n%s", hint)
-	}
-}
-
-// TestCommentHintsCarryNoModality pins MUL-6984: the per-turn comment hints
-// carry this turn's facts and exact commands and never decide whether the
-// wide read happens — workflow step 2 owns that. Each hint hands the scan over
-// (or, on the resumed no-delta path, reports the server-computed answer to
-// it); none of them makes it conditional on the agent's own guess.
-func TestCommentHintsCarryNoModality(t *testing.T) {
-	t.Parallel()
-	const issueID = "55555555-6666-7777-8888-999999999999"
-	hints := map[string]string{
-		"cold":    BuildColdCommentsHint(issueID, "trigger-1", "thread-root-1"),
-		"warm":    BuildNewCommentsHint(issueID, "trigger-1", "thread-root-1", "2026-05-28T11:00:00Z", 4),
-		"resumed": BuildResumedCommentsHint(issueID, "trigger-1", "thread-root-1"),
-	}
-	for name, hint := range hints {
-		if hint == "" {
-			t.Fatalf("%s hint rendered empty", name)
-		}
-		for _, banned := range []string{
-			"Only if you need",
-			"Need cross-thread background",
-			"If your reply depends on thread context",
-			"read them all blindly",
-			"only if needed",
-		} {
-			if strings.Contains(hint, banned) {
-				t.Errorf("%s hint must not make the wide read optional (%q):\n%s", name, banned, hint)
-			}
-		}
-	}
-	// Cold has no server-computed delta, so it hands over the scan itself. Warm
-	// has one, so it hands over the read that IS the scan's answer — a single
-	// issue-wide `--since` (MUL-7344). Both are unconditional commands.
-	if !strings.Contains(hints["cold"], "--roots-only --summary") {
-		t.Errorf("cold hint must hand over the scan step 2 requires:\n%s", hints["cold"])
-	}
-	if !strings.Contains(hints["warm"], "--since 2026-05-28T11:00:00Z --compact --output json") {
-		t.Errorf("warm hint must hand over the issue-wide delta read:\n%s", hints["warm"])
-	}
-	if strings.Contains(hints["warm"], "--roots-only --summary") {
-		t.Errorf("warm hint must not also hand over the scan the delta read answers:\n%s", hints["warm"])
-	}
-	if !strings.Contains(hints["resumed"], "issue-wide delta is empty") {
-		t.Errorf("resumed hint must report the empty delta as the scan's answer:\n%s", hints["resumed"])
-	}
-}
-
-// Cold-start thread routing moved to the per-turn prompt (MUL-5377); the
-// helper behaviour it relies on is pinned here directly.
-func TestColdCommentsHintPointsAtTriggeringThread(t *testing.T) {
-	t.Parallel()
-	const issueID = "55555555-6666-7777-8888-999999999999"
-	hint := BuildColdCommentsHint(issueID, "trigger-1", "thread-root-1")
-	if strings.Contains(hint, "new comment(s) since your last run") {
-		t.Errorf("no since-delta hint should render on cold start, got:\n%s", hint)
-	}
-	if !strings.Contains(hint, "auro issue comment list "+issueID+" --thread thread-root-1 --tail 30 --compact --output json") {
-		t.Errorf("cold start must point at the triggering thread read, got:\n%s", hint)
-	}
-	if strings.Contains(buildMetaSkillContent("claude", TaskContextForEnv{IssueID: issueID, TriggerCommentID: "trigger-1", TriggerThreadID: "thread-root-1"}), "thread-root-1") {
-		t.Error("brief must not carry the per-run thread id (MUL-5377)")
-	}
-}
-
-// Resumed/no-delta routing moved to the per-turn prompt (MUL-5377).
-func TestResumedCommentsHintSkipsDefaultThreadRead(t *testing.T) {
-	t.Parallel()
-	const issueID = "55555555-6666-7777-8888-999999999999"
-	hint := BuildResumedCommentsHint(issueID, "trigger-1", "thread-root-1")
-
-	for _, want := range []string{
-		"triggering comment is already included above",
-		"No other new comments on this issue since your last run",
-		"issue-wide delta is empty",
-		"if resumed memory is not enough",
-		"auro issue comment list " + issueID + " --thread thread-root-1 --tail 30 --compact --output json",
-	} {
-		if !strings.Contains(hint, want) {
-			t.Errorf("resumed/no-delta hint missing %q\n--- output ---\n%s", want, hint)
-		}
-	}
-	// The anchor-restating sentence is gone (MUL-5721 OPT-1): the read command
-	// carries the thread anchor and the reply cookbook carries the trigger id.
-	if strings.Contains(hint, "active thread anchor") {
-		t.Errorf("resumed/no-delta hint must not restate anchors outside the commands, got:\n%s", hint)
-	}
-	if strings.Contains(hint, "scoped to the triggering thread") {
-		t.Errorf("resumed/no-delta hint must not claim the delta is thread-scoped, got:\n%s", hint)
-	}
-	if strings.Contains(hint, "in place of `--thread ... --tail 30`") {
-		t.Errorf("resumed/no-delta hint must not render the reconstruction (cold) hint, got:\n%s", hint)
-	}
-}
-
 // The continuity notice moved out of the brief and into the per-turn prompt
 // (MUL-5377) because it is true of one run and false of the next.
 func TestSessionContinuityNoticeLivesOutsideBrief(t *testing.T) {
@@ -390,23 +41,6 @@ func TestSessionContinuityNoticeLivesOutsideBrief(t *testing.T) {
 		if !strings.Contains(SessionContinuityNoticeUnrecoverable, want) {
 			t.Errorf("SessionContinuityNoticeUnrecoverable missing %q", want)
 		}
-	}
-
-	// MUL-5722: the issue variant carries the same heading and the same
-	// "do not assume continuity" job, but must NOT order an announcement. An
-	// issue's discussion lives in its comments, which the agent re-reads every
-	// turn, so telling the user it was lost describes a loss that did not
-	// happen — they hear "the discussion is gone" when every word survives.
-	if !strings.Contains(SessionContinuityNoticeIssue, "## Session Continuity Notice") {
-		t.Error("SessionContinuityNoticeIssue must keep the section heading")
-	}
-	if strings.Contains(SessionContinuityNoticeIssue, "tell the user") {
-		t.Errorf("issue variant must not script an apology:\n%s", SessionContinuityNoticeIssue)
-	}
-	// It still has to say what genuinely went missing, or the agent silently
-	// assumes it remembers work it no longer has.
-	if !strings.Contains(SessionContinuityNoticeIssue, "your own working memory") {
-		t.Errorf("issue variant must state the real loss:\n%s", SessionContinuityNoticeIssue)
 	}
 
 	// The web-chat / Feishu transcript variant points at the read-back command
@@ -423,93 +57,13 @@ func TestSessionContinuityNoticeLivesOutsideBrief(t *testing.T) {
 	}
 
 	lost := TaskContextForEnv{
-		IssueID:                       "11111111-2222-3333-4444-555555555555",
-		TriggerCommentID:              "trigger-1",
+		ChatSessionID: "11111111-2222-3333-4444-555555555555",
+
 		PriorSessionResumeUnavailable: true,
 	}
 	if strings.Contains(buildMetaSkillContent("codex", lost), "Session Continuity Notice") {
 		t.Error("brief must never carry the continuity notice — it is per-run state (MUL-5377)")
 	}
-}
-
-// TestProtocolHeadingInInstructionsGetsNoLeaderBrief is the brief-side half of
-// the MUL-5811 negative regression. IsSquadLeader now comes from the claim's
-// is_leader_task / squad_id, so an ordinary agent that documents a
-// "## Squad Operating Protocol" section in its own instructions must get the
-// ordinary brief — its instructions rendered verbatim under Agent Identity,
-// and not one leader-only branch.
-func TestProtocolHeadingInInstructionsGetsNoLeaderBrief(t *testing.T) {
-	t.Parallel()
-
-	const instructions = "I write docs about squads.\n\n## Squad Operating Protocol\n\nHow leaders dispatch work..."
-	out := buildMetaSkillContent("claude", TaskContextForEnv{
-		IssueID:           "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
-		TriggerCommentID:  "bbbbbbbb-cccc-dddd-eeee-ffffffffffff",
-		AgentName:         "Docs writer",
-		AgentInstructions: instructions,
-		IsSquadLeader:     false,
-	})
-
-	if !strings.Contains(out, instructions) {
-		t.Fatalf("agent instructions must reach the brief verbatim\n---\n%s", out)
-	}
-	for _, banned := range []string{
-		"### Squad maintenance",
-		"auro squad member set-role",
-		"auro squad activity",
-		"unless your outcome is `no_action`",
-		"dispatching members is not delivery",
-	} {
-		if strings.Contains(out, banned) {
-			t.Fatalf("ordinary-agent brief leaked leader-only content %q\n---\n%s", banned, out)
-		}
-	}
-	if !strings.Contains(out, "**Post your final results as a comment — this step is mandatory**") {
-		t.Fatalf("ordinary-agent brief lost the unconditional reply obligation\n---\n%s", out)
-	}
-}
-
-// The Output section for issue tasks must forbid mid-run progress
-// comments and require the single final result comment. Guards the
-// MUL-3605 regression where a review agent surfaced its progress
-// narration as the result instead of posting a conclusion. (The
-// pre-existing "Final results MUST be delivered … invisible without it"
-// and "state the outcome, not the process" lines already carry the
-// mandatory-comment and no-process-dump halves.) Chat / quick-create /
-// autopilot kinds keep their own delivery channels and must NOT inherit
-// this rule. Runs both the legacy and slim paths.
-func TestOutputForbidsMidRunProgressComments(t *testing.T) {
-	wantPhrases := []string{
-		"Post exactly ONE comment per run",
-		"Do NOT post progress updates",
-	}
-	issueCtxs := map[string]TaskContextForEnv{
-		"assignment": {IssueID: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"},
-		"comment":    {IssueID: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee", TriggerCommentID: "tc-1"},
-	}
-
-	run := func(t *testing.T, label string) {
-		for name, ctx := range issueCtxs {
-			out := buildMetaSkillContent("claude", ctx)
-			for _, want := range wantPhrases {
-				if !strings.Contains(out, want) {
-					t.Errorf("%s/%s brief missing output rule %q\n---\n%s", label, name, want, out)
-				}
-			}
-		}
-		// Chat keeps its own delivery channel; it must not inherit the
-		// issue-task "post a final comment" rules.
-		chat := buildMetaSkillContent("claude", TaskContextForEnv{ChatSessionID: "chat-1"})
-		for _, banned := range wantPhrases {
-			if strings.Contains(chat, banned) {
-				t.Errorf("%s chat brief must not inherit issue output rule %q", label, banned)
-			}
-		}
-	}
-
-	// The `runtime_brief_slim` flag was retired (MUL-4297); there is now a
-	// single brief.
-	run(t, "brief")
 }
 
 // Workspace Context block: workspace.context (the per-workspace system prompt
@@ -527,15 +81,15 @@ func TestWorkspaceContextRenderedAcrossTaskKinds(t *testing.T) {
 		{
 			name: "assignment-triggered",
 			ctx: TaskContextForEnv{
-				IssueID:          "11111111-2222-3333-4444-555555555555",
+				ChatSessionID:    "11111111-2222-3333-4444-555555555555",
 				WorkspaceContext: wsContext,
 			},
 		},
 		{
 			name: "comment-triggered",
 			ctx: TaskContextForEnv{
-				IssueID:          "22222222-3333-4444-5555-666666666666",
-				TriggerCommentID: "33333333-4444-5555-6666-777777777777",
+				ChatSessionID: "22222222-3333-4444-5555-666666666666",
+
 				WorkspaceContext: wsContext,
 			},
 		},
@@ -549,8 +103,8 @@ func TestWorkspaceContextRenderedAcrossTaskKinds(t *testing.T) {
 		{
 			name: "quick-create",
 			ctx: TaskContextForEnv{
-				QuickCreatePrompt: "create me an issue",
-				WorkspaceContext:  wsContext,
+
+				WorkspaceContext: wsContext,
 			},
 		},
 		{
@@ -593,14 +147,14 @@ func TestWorkspaceContextHeadingSkippedWhenEmpty(t *testing.T) {
 		{
 			name: "empty string",
 			ctx: TaskContextForEnv{
-				IssueID:          "11111111-2222-3333-4444-555555555555",
+				ChatSessionID:    "11111111-2222-3333-4444-555555555555",
 				WorkspaceContext: "",
 			},
 		},
 		{
 			name: "whitespace only",
 			ctx: TaskContextForEnv{
-				IssueID:          "11111111-2222-3333-4444-555555555555",
+				ChatSessionID:    "11111111-2222-3333-4444-555555555555",
 				WorkspaceContext: "   \n\t  \r\n",
 			},
 		},
@@ -643,7 +197,7 @@ func TestConnectedAppsBlockLivesOutsideBrief(t *testing.T) {
 	}
 
 	out := buildMetaSkillContent("claude", TaskContextForEnv{
-		IssueID:          "11111111-2222-3333-4444-555555555555",
+		ChatSessionID:    "11111111-2222-3333-4444-555555555555",
 		WorkspaceContext: "Prefer source-of-truth systems.",
 		ConnectedApps:    apps,
 	})
@@ -654,7 +208,7 @@ func TestConnectedAppsBlockLivesOutsideBrief(t *testing.T) {
 
 func TestConnectedAppsHeadingSkippedWhenEmpty(t *testing.T) {
 	t.Parallel()
-	out := buildMetaSkillContent("claude", TaskContextForEnv{IssueID: "11111111-2222-3333-4444-555555555555"})
+	out := buildMetaSkillContent("claude", TaskContextForEnv{ChatSessionID: "11111111-2222-3333-4444-555555555555"})
 	if strings.Contains(out, "## Connected Apps") {
 		t.Fatalf("empty connected apps must not emit the heading")
 	}
@@ -845,7 +399,7 @@ func TestInjectRuntimeConfigPreservesUserContent(t *testing.T) {
 			}
 
 			content, err := InjectRuntimeConfig(dir, tc.provider, TaskContextForEnv{
-				IssueID: "11111111-2222-3333-4444-555555555555",
+				ChatSessionID: "11111111-2222-3333-4444-555555555555",
 			})
 			if err != nil {
 				t.Fatalf("InjectRuntimeConfig: %v", err)
@@ -905,7 +459,7 @@ func TestInjectRuntimeConfigUnknownProviderSkipsWrite(t *testing.T) {
 	}
 
 	if _, err := InjectRuntimeConfig(dir, "totally-unknown-provider", TaskContextForEnv{
-		IssueID: "11111111-2222-3333-4444-555555555555",
+		ChatSessionID: "11111111-2222-3333-4444-555555555555",
 	}); err != nil {
 		t.Fatalf("InjectRuntimeConfig: %v", err)
 	}
@@ -1227,7 +781,7 @@ func TestCleanupRuntimeConfigByProvider(t *testing.T) {
 			// Inject through the production path so cleanup runs against
 			// the same wire format the agent saw.
 			if _, err := InjectRuntimeConfig(dir, tc.provider, TaskContextForEnv{
-				IssueID: "11111111-2222-3333-4444-555555555555",
+				ChatSessionID: "11111111-2222-3333-4444-555555555555",
 			}); err != nil {
 				t.Fatalf("InjectRuntimeConfig: %v", err)
 			}
@@ -1267,7 +821,7 @@ func TestInjectThenCleanupRoundTrip(t *testing.T) {
 	// again" path.
 	for i := 0; i < 2; i++ {
 		if _, err := InjectRuntimeConfig(dir, "claude", TaskContextForEnv{
-			IssueID: "11111111-2222-3333-4444-555555555555",
+			ChatSessionID: "11111111-2222-3333-4444-555555555555",
 		}); err != nil {
 			t.Fatalf("iter %d inject: %v", i, err)
 		}
@@ -1363,7 +917,7 @@ func TestInjectThenCleanupRoundTripByteExactBoundaries(t *testing.T) {
 			// "subsequent inject hits a cleaned file" paths.
 			for i := 0; i < 2; i++ {
 				if _, err := InjectRuntimeConfig(dir, "claude", TaskContextForEnv{
-					IssueID: "11111111-2222-3333-4444-555555555555",
+					ChatSessionID: "11111111-2222-3333-4444-555555555555",
 				}); err != nil {
 					t.Fatalf("iter %d inject: %v", i, err)
 				}
@@ -1420,13 +974,13 @@ func TestInjectReplaceThenCleanupRestoresByteExact(t *testing.T) {
 
 			// First inject — append path.
 			if _, err := InjectRuntimeConfig(dir, "claude", TaskContextForEnv{
-				IssueID: "11111111-2222-3333-4444-555555555555",
+				ChatSessionID: "11111111-2222-3333-4444-555555555555",
 			}); err != nil {
 				t.Fatalf("first inject: %v", err)
 			}
 			// Second inject — replace-in-place path.
 			if _, err := InjectRuntimeConfig(dir, "claude", TaskContextForEnv{
-				IssueID: "11111111-2222-3333-4444-555555555555",
+				ChatSessionID: "11111111-2222-3333-4444-555555555555",
 			}); err != nil {
 				t.Fatalf("second inject: %v", err)
 			}
@@ -1488,98 +1042,6 @@ func TestWriteRuntimeConfigFileAlwaysInsertsFixedManagedSeparator(t *testing.T) 
 	}
 }
 
-// Cross-thread fan-out moved to the per-turn prompt (MUL-5377).
-func TestMultiThreadReplyInstructionsFanOut(t *testing.T) {
-	t.Parallel()
-	out := BuildMultiThreadCommentReplyInstructions("55555555-6666-7777-8888-999999999999", []ThreadReplyTarget{
-		{ThreadID: "c1", ParentID: "c1"},
-		{ThreadID: "c2", ParentID: "c2"},
-		{ThreadID: "c3", ParentID: "c3"},
-	}, false)
-
-	for _, want := range []string{
-		"3 DISTINCT threads",
-		"Post ONE reply per thread",
-		"OVERRIDES",
-		"--parent c1", "--parent c2", "--parent c3",
-		"OLDEST thread first",
-		// MUL-5825: the posting mechanism is a pointer at the brief's
-		// canonical section plus the one multi-thread-specific delta.
-		"`## Comment Formatting`",
-		"DISTINCT body file per thread",
-		"never reuse a `--parent` from an earlier turn",
-	} {
-		if !strings.Contains(out, want) {
-			t.Errorf("cross-thread instructions must contain %q, got:\n%s", want, out)
-		}
-	}
-
-	// Pin ledger (MUL-5825): the embedded file-operations cookbook was
-	// retired in favour of the `## Comment Formatting` pointer above — it
-	// triple-wrote the mechanism already carried by the brief and the
-	// single-thread cookbook (~1KB per multi-thread turn). These strings are
-	// the retired machinery; none may reappear in the fan-out block. The
-	// `--content-file` / inline `--content` anchors and the semantic
-	// `\n`-escape anchor (replacing the phrasing-fragile "Do NOT write
-	// literal") were added on Elon's #6517 review: without them, prose-only
-	// restatements of the flag mechanics could regrow under green tests.
-	for _, banned := range []string{
-		"For EACH thread above",                // old cookbook opener
-		"UTF-8 file with your file-write tool", // restated mechanism
-		"auro issue comment add",               // embedded example commands
-		"--content-file",                       // restated posting flag (#6517 review)
-		"inline `--content`",                   // restated inline ban (#6517 review)
-		"--content-stdin",                      // restated HEREDOC ban
-		"rm ./reply-",                          // unix cleanup example
-		"Remove-Item",                          // windows cleanup example
-		"`\\n` escape",                         // restated \n-escape rule, any phrasing
-	} {
-		if strings.Contains(out, banned) {
-			t.Errorf("fan-out block re-grew retired cookbook text %q (mechanism lives in ## Comment Formatting — MUL-5825), got:\n%s", banned, out)
-		}
-	}
-}
-
-// TestMultiThreadReplyInstructionsOSInvariant pins that the fan-out block is
-// byte-identical across host OSes (MUL-5825). The only OS-dependent text was
-// the embedded cleanup command pair (`rm` vs `Remove-Item`), which left with
-// the cookbook; the OS split now lives solely in the brief's
-// `## Comment Formatting`. If this fails, OS-specific mechanism text crept
-// back into the block — move it to the brief instead.
-//
-// Not parallel: mutates the package-level runtimeGOOS.
-func TestMultiThreadReplyInstructionsOSInvariant(t *testing.T) {
-	saved := runtimeGOOS
-	t.Cleanup(func() { runtimeGOOS = saved })
-
-	targets := []ThreadReplyTarget{
-		{ThreadID: "c1", ParentID: "c1"},
-		{ThreadID: "c2", ParentID: "c2"},
-	}
-	for _, leader := range []bool{false, true} {
-		runtimeGOOS = "linux"
-		linux := BuildMultiThreadCommentReplyInstructions("55555555-6666-7777-8888-999999999999", targets, leader)
-		runtimeGOOS = "windows"
-		windows := BuildMultiThreadCommentReplyInstructions("55555555-6666-7777-8888-999999999999", targets, leader)
-		if linux != windows {
-			t.Errorf("fan-out block (leader=%v) must be OS-invariant\nlinux:\n%s\nwindows:\n%s", leader, linux, windows)
-		}
-	}
-}
-
-// Single-thread reply cookbook moved to the per-turn prompt (MUL-5377).
-func TestSingleThreadReplyInstructionsKeepSingleParent(t *testing.T) {
-	t.Parallel()
-	out := BuildCommentReplyInstructions("claude", "55555555-6666-7777-8888-999999999999", "c3", false)
-
-	if strings.Contains(out, "DISTINCT threads") {
-		t.Errorf("single/same-thread instructions must not emit the multi-thread fan-out block, got:\n%s", out)
-	}
-	if !strings.Contains(out, "--parent c3 --content-file ./reply.md") {
-		t.Errorf("single/same-thread instructions must keep the single --parent=trigger cookbook, got:\n%s", out)
-	}
-}
-
 // TestInjectRuntimeConfigByteIdenticalAcrossTriggers is the regression guard
 // for MUL-5377.
 //
@@ -1603,9 +1065,9 @@ func TestInjectRuntimeConfigByteIdenticalAcrossTriggers(t *testing.T) {
 
 	const issueID = "11111111-2222-3333-4444-555555555555"
 	base := TaskContextForEnv{
-		IssueID:   issueID,
-		AgentID:   "agent-1",
-		AgentName: "Eve",
+		ChatSessionID: issueID,
+		AgentID:       "agent-1",
+		AgentName:     "Eve",
 	}
 
 	variants := []struct {
@@ -1614,29 +1076,19 @@ func TestInjectRuntimeConfigByteIdenticalAcrossTriggers(t *testing.T) {
 	}{
 		{"assignment-triggered", func(c *TaskContextForEnv) {}},
 		{"comment-triggered", func(c *TaskContextForEnv) {
-			c.TriggerCommentID = "comment-1"
-			c.TriggerThreadID = "thread-1"
+
 		}},
 		{"comment-triggered-other-comment", func(c *TaskContextForEnv) {
-			c.TriggerCommentID = "comment-2"
-			c.TriggerThreadID = "thread-2"
+
 		}},
 		{"resumed-with-delta", func(c *TaskContextForEnv) {
-			c.TriggerCommentID = "comment-3"
+
 			c.PriorSessionResumed = true
-			c.NewCommentCount = 7
-			c.NewCommentsSince = "2026-05-28T11:00:00Z"
+
 		}},
 		{"resume-unavailable", func(c *TaskContextForEnv) {
-			c.TriggerCommentID = "comment-4"
+
 			c.PriorSessionResumeUnavailable = true
-		}},
-		{"cross-thread-fan-out", func(c *TaskContextForEnv) {
-			c.TriggerCommentID = "comment-5"
-			c.CommentReplyTargets = []ThreadReplyTarget{
-				{ThreadID: "t1", ParentID: "t1"},
-				{ThreadID: "t2", ParentID: "t2"},
-			}
 		}},
 		{"member-initiator", func(c *TaskContextForEnv) {
 			c.InitiatorType = "member"
@@ -1678,7 +1130,7 @@ func TestInjectRuntimeConfigByteIdenticalAcrossTriggers(t *testing.T) {
 	// the Contains-based negative check.
 	for _, provider := range []string{"claude", "codex"} {
 		otherIssue := base
-		otherIssue.IssueID = "99999999-8888-7777-6666-555555555555"
+		otherIssue.ChatSessionID = "99999999-8888-7777-6666-555555555555"
 		if buildMetaSkillContent(provider, base) != buildMetaSkillContent(provider, otherIssue) {
 			t.Fatalf("%s brief differs across issue ids — the cross-issue cache invariant is broken", provider)
 		}
@@ -1816,7 +1268,7 @@ func TestBriefByteIdenticalAcrossRunsForEveryKind(t *testing.T) {
 
 	kinds := map[string]TaskContextForEnv{
 		"chat":         {ChatSessionID: "chat-1", ChatChannelType: ChannelTypeSlack, AgentID: "a-1", AgentName: "Eve"},
-		"quick-create": {QuickCreatePrompt: "make an issue", AgentID: "a-1", AgentName: "Eve"},
+		"quick-create": {AgentID: "a-1", AgentName: "Eve"},
 		"autopilot":    {AutopilotRunID: "run-1", AutopilotID: "ap-1", AgentID: "a-1", AgentName: "Eve"},
 		// WeCom is the channel a real deployment flips the file-delivery
 		// verdict on. The Slack row above catches the same leak today, but only
@@ -1901,9 +1353,9 @@ func TestBriefSkillsListIsNamesOnly(t *testing.T) {
 	t.Parallel()
 
 	ctx := TaskContextForEnv{
-		IssueID:   "issue-1",
-		AgentName: "Eve",
-		AgentID:   "eve-1",
+		ChatSessionID: "issue-1",
+		AgentName:     "Eve",
+		AgentID:       "eve-1",
 		AgentSkills: []SkillContextForEnv{
 			{
 				Name:        "PR Review",
@@ -1980,10 +1432,10 @@ func TestBriefPointsAtThePlatformSkill(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			out := buildMetaSkillContent("claude", TaskContextForEnv{
-				IssueID:     "issue-1",
-				AgentName:   "Eve",
-				AgentID:     "eve-1",
-				AgentSkills: tc.skills,
+				ChatSessionID: "issue-1",
+				AgentName:     "Eve",
+				AgentID:       "eve-1",
+				AgentSkills:   tc.skills,
 			})
 			if tc.want == "" {
 				if strings.Contains(out, "skill and open the reference") {
@@ -2045,8 +1497,8 @@ func TestEveryBriefThatTeachesJSONOutputAlsoWarnsAgainstMergingStderr(t *testing
 		wantWhy = "a write that SUCCEEDED look like it failed"
 	)
 	briefs := map[string]string{
-		"full":         buildMetaSkillContent("claude", TaskContextForEnv{IssueID: "11111111-2222-3333-4444-555555555555"}),
-		"quick-create": buildMetaSkillContent("claude", TaskContextForEnv{QuickCreatePrompt: "make an issue"}),
+		"full":         buildMetaSkillContent("claude", TaskContextForEnv{ChatSessionID: "11111111-2222-3333-4444-555555555555"}),
+		"quick-create": buildMetaSkillContent("claude", TaskContextForEnv{}),
 	}
 	for name, brief := range briefs {
 		if !strings.Contains(brief, wantFlag) {

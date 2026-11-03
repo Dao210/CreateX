@@ -132,7 +132,6 @@ func TestReply_CommandOutcomes_PostGuidance(t *testing.T) {
 		want    string
 	}{
 		{engine.OutcomeFreshPending, freshPendingText},
-		{engine.OutcomeIssueUsage, issueUsageText},
 	} {
 		sender := &fakeReplySender{}
 		r := newTestReplier(&fakeBindingMinter{}, sender)

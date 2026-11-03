@@ -24,7 +24,6 @@ test.beforeAll(async () => {
 });
 test.afterAll(async () => {
   if (workspace) { api.setWorkspaceId(workspace.id); api.setWorkspaceSlug(workspace.slug); await api.deleteWorkspace(); }
-  await api?.cleanup();
 });
 test.beforeEach(async ({ page, baseURL }) => {
   await page.context().addCookies([{ name: "auro-locale", value: "zh-Hans", url: baseURL! }]);

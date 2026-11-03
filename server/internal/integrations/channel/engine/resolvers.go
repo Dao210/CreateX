@@ -28,7 +28,6 @@ const (
 	OutcomeIngested      Outcome = "ingested"
 	OutcomeFreshPending  Outcome = "fresh_pending"
 	OutcomeChatStarted   Outcome = "chat_started"
-	OutcomeIssueUsage    Outcome = "issue_usage"
 	OutcomeAgentOffline  Outcome = "agent_offline"
 	OutcomeAgentArchived Outcome = "agent_archived"
 	// OutcomeInvokeDenied — the sender may not run this agent. The web chat
@@ -150,8 +149,6 @@ type AppendResult struct {
 	// Detached media processing uses it to link attachments after the
 	// connector ACK path has completed.
 	MessageID pgtype.UUID
-	// IssueCommand is non-nil when the message was an /issue command.
-	IssueCommand *IssueCommand
 	// DedupMarked is true when AppendMessage finalized the dedup claim in its
 	// own tx; the Router then skips the post-pipeline finalize.
 	DedupMarked bool
@@ -223,12 +220,6 @@ type BindMediaParams struct {
 type BindMediaResult struct {
 	InitialTitle string
 	TitleSource  string
-}
-
-// IssueCommand is the parsed /issue command.
-type IssueCommand struct {
-	Title       string
-	Description string
 }
 
 // Sentinel errors the resolvers return so the Router can map them to the right

@@ -608,7 +608,7 @@ func autopilotWriteRequestError(action string, err error) error {
 // a future or anomalous-but-parseable status must read as "did not start" rather
 // than be reported as a successful trigger.
 func autopilotRunStarted(status string) bool {
-	return status == "issue_created" || status == "running"
+	return status == "running"
 }
 
 func runAutopilotRuns(cmd *cobra.Command, args []string) error {
@@ -650,14 +650,14 @@ func runAutopilotRuns(cmd *cobra.Command, args []string) error {
 		return cli.PrintJSON(os.Stdout, resp)
 	}
 
-	headers := []string{"ID", "SOURCE", "STATUS", "ISSUE", "TRIGGERED_AT", "COMPLETED_AT"}
+	headers := []string{"ID", "SOURCE", "STATUS", "TASK", "TRIGGERED_AT", "COMPLETED_AT"}
 	rows := make([][]string, 0, len(resp.Runs))
 	for _, r := range resp.Runs {
 		rows = append(rows, []string{
 			strVal(r, "id"),
 			strVal(r, "source"),
 			strVal(r, "status"),
-			strVal(r, "issue_id"),
+			strVal(r, "task_id"),
 			strVal(r, "triggered_at"),
 			strVal(r, "completed_at"),
 		})

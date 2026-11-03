@@ -66,14 +66,29 @@ INSERT INTO agent (
     instructions, custom_env, custom_args, mcp_config, model, thinking_level,
     service_tier, conversation_starters,
     composio_toolkit_allowlist, permission_mode
-) VALUES (
-    $1, $2, $3, $4, $5,
-    $6, $7, $8, $9, $10,
-    $11, $12, $13, $14, $15, $16,
-    $17, COALESCE(sqlc.narg('conversation_starters')::jsonb, '[]'::jsonb),
-    sqlc.narg('composio_toolkit_allowlist')::text[],
-    COALESCE(sqlc.narg('permission_mode'), 'private')
 )
+SELECT
+    $1 AS workspace_id,
+    $2 AS name,
+    $3 AS description,
+    $4 AS avatar_url,
+    $5 AS runtime_mode,
+    $6 AS runtime_config,
+    $7 AS runtime_id,
+    $8 AS visibility,
+    $9 AS max_concurrent_tasks,
+    $10 AS owner_id,
+    $11 AS instructions,
+    $12 AS custom_env,
+    $13 AS custom_args,
+    $14 AS mcp_config,
+    $15 AS model,
+    $16 AS thinking_level,
+    $17 AS service_tier,
+    COALESCE(sqlc.narg('conversation_starters')::jsonb, '[]'::jsonb) AS conversation_starters,
+    sqlc.narg('composio_toolkit_allowlist')::text[] AS composio_toolkit_allowlist,
+    COALESCE(sqlc.arg('permission_mode'), 'private') AS permission_mode
+WHERE lock_agent_owner_rows($1, $7)
 RETURNING *;
 
 
@@ -85,11 +100,25 @@ INSERT INTO agent (
     workspace_id, name, description, runtime_mode, runtime_config, runtime_id,
     visibility, permission_mode, max_concurrent_tasks, owner_id, instructions,
     custom_env, custom_args, model, kind, system_key
-) VALUES (
-    @workspace_id, @name, '', @runtime_mode, '{}'::jsonb, @runtime_id,
-    'private', 'private', 1, @owner_id, @instructions,
-    '{}'::jsonb, '[]'::jsonb, sqlc.narg('model'), 'system', @system_key
 )
+SELECT
+    @workspace_id AS workspace_id,
+    @name AS name,
+    '' AS description,
+    @runtime_mode AS runtime_mode,
+    '{}'::jsonb AS runtime_config,
+    @runtime_id AS runtime_id,
+    'private' AS visibility,
+    'private' AS permission_mode,
+    1 AS max_concurrent_tasks,
+    @owner_id AS owner_id,
+    @instructions AS instructions,
+    '{}'::jsonb AS custom_env,
+    '[]'::jsonb AS custom_args,
+    sqlc.narg('model') AS model,
+    'system' AS kind,
+    @system_key AS system_key
+WHERE lock_agent_owner_rows(@workspace_id, @runtime_id)
 RETURNING *;
 
 
@@ -139,7 +168,7 @@ UPDATE agent SET
     conversation_starters = COALESCE(sqlc.narg('conversation_starters'), conversation_starters),
     composio_toolkit_allowlist = COALESCE(sqlc.narg('composio_toolkit_allowlist')::text[], composio_toolkit_allowlist),
     updated_at = now()
-WHERE id = $1
+WHERE id = $1 AND lock_task_owner_rows(NULL, sqlc.narg('runtime_id'), NULL)
 RETURNING *;
 
 
@@ -294,7 +323,7 @@ LIMIT @page_limit;
 INSERT INTO agent_task_queue(
 agent_id,runtime_id,chat_session_id,autopilot_run_id,status,priority,trigger_summary,context,session_id,work_dir,
 attempt,max_attempts,parent_task_id,force_fresh_session,originator_user_id,accountable_user_id,runtime_mcp_overlay,runtime_connected_apps,
-originator_source,delegated_from_task_id,rule_version_id,trigger_evidence_kind,trigger_evidence_ref_id,retry_of_task_id,
+originator_source,rule_version_id,trigger_evidence_kind,trigger_evidence_ref_id,retry_of_task_id,
 chat_input_task_id,fire_at,channel_context_revision,handoff_note,id)
 SELECT p.agent_id,p.runtime_id,p.chat_session_id,p.autopilot_run_id,
 CASE WHEN sqlc.narg(fire_at)::timestamptz IS NOT NULL THEN 'deferred' ELSE 'queued' END,
@@ -302,9 +331,9 @@ CASE WHEN p.chat_session_id IS NOT NULL THEN GREATEST(p.priority,3) ELSE p.prior
 CASE WHEN p.failure_reason IS NOT DISTINCT FROM 'codex_semantic_inactivity' THEN NULL ELSE p.session_id END,p.work_dir,
 p.attempt+1,COALESCE(sqlc.narg(max_attempts)::int,p.max_attempts),p.id,p.failure_reason IS NOT DISTINCT FROM 'codex_semantic_inactivity',
 p.originator_user_id,p.accountable_user_id,sqlc.narg(runtime_mcp_overlay),sqlc.narg(runtime_connected_apps),
-p.originator_source,p.delegated_from_task_id,p.rule_version_id,p.trigger_evidence_kind,p.trigger_evidence_ref_id,p.id,
+p.originator_source,p.rule_version_id,p.trigger_evidence_kind,p.trigger_evidence_ref_id,p.id,
 p.chat_input_task_id,sqlc.narg(fire_at),p.channel_context_revision,p.handoff_note,COALESCE(sqlc.narg('new_task_id')::uuid,gen_random_uuid())
-FROM agent_task_queue p WHERE p.id=$1 AND lock_task_owner_rows(p.agent_id,p.runtime_id)
+FROM agent_task_queue p WHERE p.id=$1 AND lock_task_owner_rows(p.agent_id, p.runtime_id, p.chat_session_id)
 ON CONFLICT DO NOTHING RETURNING *;
 
 
@@ -882,7 +911,6 @@ WITH head AS MATERIALIZED (
   FROM agent_task_queue AS candidate
   WHERE candidate.chat_session_id = $1
     AND candidate.status IN ('queued', 'dispatched', 'running', 'waiting_local_directory', 'deferred')
-    AND candidate.regenerate_quick_actions_for IS NULL
   ORDER BY
     CASE
       WHEN candidate.status IN ('dispatched', 'running', 'waiting_local_directory') THEN 0
@@ -1140,3 +1168,11 @@ INSERT INTO agent (
 )
 RETURNING *;
 
+
+-- name: ListRuntimeSystemAgentsForDelete :many
+SELECT * FROM agent WHERE runtime_id=$1 AND kind='system' ORDER BY id FOR UPDATE;
+
+-- name: DeleteAgentExecutionBindings :exec
+WITH skills AS (DELETE FROM agent_skill WHERE agent_skill.agent_id=$1),
+ mcp AS (DELETE FROM agent_mcp_server WHERE agent_mcp_server.agent_id=$1)
+DELETE FROM agent_builder_draft WHERE chat_session_id IN (SELECT chat_session.id FROM chat_session WHERE chat_session.agent_id=$1);

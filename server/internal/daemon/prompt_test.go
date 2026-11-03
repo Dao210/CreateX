@@ -9,43 +9,6 @@ import (
 	"github.com/auro-ai/auro/server/internal/daemon/execenv"
 )
 
-// TestBuildPromptProtocolHeadingInInstructionsIsNotALeader is the end-to-end
-// negative regression for MUL-5811: on a current server, a plain agent that
-// happens to document a "## Squad Operating Protocol" section in its own
-// instructions must get the ordinary comment prompt — no squad activity
-// obligation, no silent-exit licence, and the unconditional reply imperative
-// intact.
-func TestBuildPromptProtocolHeadingInInstructionsIsNotALeader(t *testing.T) {
-	t.Parallel()
-
-	out := BuildPrompt(Task{
-		IssueID:               "issue-123",
-		TriggerCommentID:      "comment-456",
-		TriggerCommentContent: "please take a look",
-		TriggerAuthorType:     "member",
-		TriggerAuthorName:     "Bohan",
-		LeaderRoleResolved:    true,
-		Agent: &AgentData{
-			Name:         "Docs writer",
-			Instructions: "I document squads.\n\n## Squad Operating Protocol\n\nHow leaders dispatch work...",
-		},
-	}, "claude")
-
-	for _, banned := range []string{
-		"Squad leader no_action rule",
-		"auro squad activity",
-		"DO NOT post any comment",
-		"Unless your outcome is `no_action`",
-	} {
-		if strings.Contains(out, banned) {
-			t.Fatalf("ordinary agent prompt leaked squad-leader rule %q\n---\n%s", banned, out)
-		}
-	}
-	if !strings.Contains(out, "Post your reply as a comment") {
-		t.Fatalf("ordinary agent prompt lost the unconditional reply imperative\n---\n%s", out)
-	}
-}
-
 func TestBuildChatPromptChannelAwareness(t *testing.T) {
 	t.Run("slack-backed prompt teaches both read commands", func(t *testing.T) {
 		out := buildChatPrompt(Task{
@@ -400,27 +363,6 @@ func TestBuildChatPromptAudience(t *testing.T) {
 	}
 }
 
-func TestBuildChatPromptAgentIntro(t *testing.T) {
-	// Historical proactive-introduction sessions remain readable even though
-	// new agent creation no longer creates one. Their message-less first turn
-	// must not receive the generic "respond to their message" framing.
-	out := buildChatPrompt(Task{ChatSessionID: "sess-1", ChatIntro: true})
-	for _, want := range []string{
-		"You were just created",
-		"you are opening the conversation",
-		"introduce yourself",
-	} {
-		if !strings.Contains(out, want) {
-			t.Fatalf("intro prompt missing %q\n--- output ---\n%s", want, out)
-		}
-	}
-	for _, unwanted := range []string{"Respond to their message", "User message:"} {
-		if strings.Contains(out, unwanted) {
-			t.Fatalf("intro prompt should not contain %q\n--- output ---\n%s", unwanted, out)
-		}
-	}
-}
-
 func TestBuildChatPromptSlashSkills(t *testing.T) {
 	t.Run("injects selected skills block", func(t *testing.T) {
 		task := Task{
@@ -526,107 +468,6 @@ func TestBuildChatPromptSlashSkills(t *testing.T) {
 	})
 }
 
-// TestBuildPromptDefaultScansRootsFirst pins that the catch-all fallback
-// prompt (no trigger comment, no chat, no autopilot, no quick-create)
-// starts assignment-triggered comment catch-up with a bounded roots scan and
-// only then offers the full-thread read, while still keeping older history
-// available through pagination.
-func TestBuildPromptDefaultScansRootsFirst(t *testing.T) {
-	out := BuildPrompt(Task{IssueID: "issue-default-1"}, "claude")
-	for _, s := range []string{
-		"auro issue comment list issue-default-1 --roots-only --summary --compact --output json",
-		"--since",
-	} {
-		if !strings.Contains(out, s) {
-			t.Errorf("default BuildPrompt missing %q\n--- output ---\n%s", s, out)
-		}
-	}
-	// MUL-5372: the per-turn prompt names only the reads it wants run. Flag
-	// mechanics — cursors, the --recent saturation trap — live once in the
-	// runtime workflow file's `## Available Commands`, so restating them here
-	// would put the same reference text on every turn.
-	if strings.Contains(out, "--recent") {
-		t.Errorf("default BuildPrompt should not restate the --recent surface\n--- output ---\n%s", out)
-	}
-	if strings.Contains(out, "Next thread cursor:") {
-		t.Errorf("default BuildPrompt should not restate pagination mechanics\n--- output ---\n%s", out)
-	}
-	// MUL-5372: this path now leads with a cheap roots scan, and the scan is
-	// what supplies thread ids, so a generic `--thread <thread-id>` drill-down
-	// is well-founded here. What must still never appear is a CONCRETE anchor —
-	// the default path has no trigger comment to derive one from, and an
-	// interpolated id would send the agent after a thread that does not exist.
-	for _, seg := range strings.Split(out, "--thread")[1:] {
-		if !strings.HasPrefix(seg, " <thread-id>") {
-			t.Errorf("default BuildPrompt must only use the generic --thread <thread-id> placeholder, never a concrete anchor\n--- output ---\n%s", out)
-		}
-	}
-	// The legacy "If you need comment history" soft phrasing conflicts with
-	// the assignment-trigger runtime workflow, which treats reading comments
-	// as mandatory. Guard against it sneaking back in.
-	if strings.Contains(out, "If you need comment history") {
-		t.Errorf("default BuildPrompt still carries the legacy 'If you need' soft phrasing that conflicts with the mandatory workflow\n--- output ---\n%s", out)
-	}
-	if strings.Contains(out, "auro issue comment list issue-default-1 --output json") {
-		t.Errorf("default BuildPrompt still presents the unbounded flat read as the assignment catch-up command\n--- output ---\n%s", out)
-	}
-}
-
-// TestBuildPromptOlderFallbackSessionRequiresReconstruction is the other half of the
-// dropped-resume contract, and the half a PriorSessionID != "" check cannot
-// see.
-//
-// MUL-5305 lets the server withhold a more recent Codex session whose rollout
-// is missing and hand back an OLDER session instead: PriorSessionResumeUnavailable
-// is true AND PriorSessionID is non-empty. The older session may resume
-// perfectly well — it is simply not the turn this run continues from. Treating
-// it as a warm resume would let the run skip the full trigger-thread read and,
-// on an empty delta, the scan too, on the strength of context it does not have.
-//
-// The prompt must also not call the session fresh. The daemon resumes that
-// older session — ResumeSessionID is not gated on the flag — so the agent may
-// well hold earlier turns' memory; what is true is only that the LATEST turn
-// did not come back. The hint says nothing about the session and the
-// continuity notice says the run "does not continue" the lost one.
-func TestBuildPromptOlderFallbackSessionRequiresReconstruction(t *testing.T) {
-	const issueID = "issue-fallback-1"
-	task := Task{
-		IssueID:               issueID,
-		TriggerCommentID:      "trigger-1",
-		TriggerThreadID:       "thread-root-1",
-		TriggerCommentContent: "hi",
-		TriggerAuthorType:     "member",
-		// The server computed a real delta AND handed back a session id — every
-		// warm-path precondition except the one that matters.
-		NewCommentCount:               2,
-		NewCommentsSince:              "2026-05-28T11:00:00Z",
-		NewCommentsDeltaKnown:         true,
-		PriorSessionID:                "older-fallback-session",
-		PriorSessionResumeUnavailable: true,
-	}
-	out := BuildPrompt(task, "claude")
-
-	for _, want := range []string{
-		"auro issue comment list " + issueID + " --thread thread-root-1 --tail 30 --compact --output json",
-		"`--roots-only --summary` in place of `--thread ... --tail 30`",
-		"## Session Continuity Notice",
-	} {
-		if !strings.Contains(out, want) {
-			t.Errorf("older-fallback prompt missing %q\n--- output ---\n%s", want, out)
-		}
-	}
-	for _, banned := range []string{
-		"You're resuming the prior session",
-		"new comment(s) on this issue since your last run",
-		"fresh session",
-		"fresh one",
-	} {
-		if strings.Contains(out, banned) {
-			t.Errorf("older-fallback prompt claims a warm resume or a fresh session (%q)\n--- output ---\n%s", banned, out)
-		}
-	}
-}
-
 // assertBoundedIDOnlyFallback holds the completeness contract both fallback
 // shapes must satisfy: every listed id is reachable deterministically, through
 // bounded reads, without a bulk pull.
@@ -667,9 +508,8 @@ func TestPerTurnContextBlocksCarryMovedBriefSections(t *testing.T) {
 	t.Parallel()
 
 	task := Task{
-		IssueID:                       "issue-1",
-		TriggerCommentID:              "comment-1",
-		TriggerCommentContent:         "please look at this",
+		ChatSessionID: "issue-1",
+
 		PriorSessionResumeUnavailable: true,
 		InitiatorType:                 "member",
 		InitiatorName:                 "Bohan",
@@ -685,7 +525,7 @@ func TestPerTurnContextBlocksCarryMovedBriefSections(t *testing.T) {
 	prompt := BuildPrompt(task, "claude")
 	for _, want := range []string{
 		"## Session Continuity Notice",
-		// Issue wording: this task has an IssueID, and since MUL-5722 the two
+		// Issue wording: this task has an ChatSessionID, and since MUL-5722 the two
 		// surfaces word the notice differently (the chat variant is the one
 		// that says "could NOT be restored" and asks the agent to announce it).
 		// What this test cares about is that the section reaches the per-turn
@@ -707,7 +547,7 @@ func TestPerTurnContextBlocksCarryMovedBriefSections(t *testing.T) {
 func TestPerTurnContextBlocksOmittedWhenEmpty(t *testing.T) {
 	t.Parallel()
 
-	prompt := BuildPrompt(Task{IssueID: "issue-1"}, "claude")
+	prompt := BuildPrompt(Task{ChatSessionID: "issue-1"}, "claude")
 	for _, banned := range []string{
 		"## Session Continuity Notice",
 		"## On Behalf Of",
@@ -724,41 +564,12 @@ func TestPerTurnContextBlocksOnAssignmentPath(t *testing.T) {
 	t.Parallel()
 
 	prompt := BuildPrompt(Task{
-		IssueID:       "issue-1",
+		ChatSessionID: "issue-1",
 		InitiatorType: "member",
 		InitiatorName: "Alice",
 	}, "claude")
 	if !strings.Contains(prompt, "acting on behalf of **Alice**") {
 		t.Errorf("assignment-triggered prompt lost the authorization human\n---\n%s", prompt)
-	}
-}
-
-func TestPerTurnContextBlocksOnDelegatedPath(t *testing.T) {
-	t.Parallel()
-
-	prompt := BuildPrompt(Task{
-		IssueID:               "issue-1",
-		TriggerCommentID:      "comment-1",
-		TriggerCommentContent: "Please take over",
-		TriggerAuthorType:     "agent",
-		TriggerAuthorName:     "Agent A",
-		InitiatorType:         "member",
-		InitiatorID:           "user-alice",
-		InitiatorName:         "Alice",
-		InitiatorEmail:        "alice@example.com",
-	}, "claude")
-
-	for _, want := range []string{
-		"Agent A",
-		"## On Behalf Of",
-		"acting on behalf of **Alice** (alice@example.com)",
-	} {
-		if !strings.Contains(prompt, want) {
-			t.Errorf("delegated prompt must contain %q\n---\n%s", want, prompt)
-		}
-	}
-	if strings.Contains(prompt, "## Task Initiator") || strings.Contains(prompt, "## Original Requester") {
-		t.Errorf("delegated prompt must use one identity block\n---\n%s", prompt)
 	}
 }
 
@@ -779,57 +590,6 @@ func TestTaskDecodesAndRendersOnBehalfOf(t *testing.T) {
 	}
 	if strings.Contains(prompt, "## Task Initiator") || strings.Contains(prompt, "## Original Requester") {
 		t.Errorf("daemon must not render old identity blocks\n---\n%s", prompt)
-	}
-}
-
-// TestTurnModeMarkersRetired pins MUL-6417: the Reply/Ownership turn-mode
-// split is gone, so no task kind may emit a `Turn mode:` marker. The brief no
-// longer carries a router to consume one, and a stray marker would read as an
-// instruction the brief never defines. The empty-content comment case is kept
-// from the old router guard: it exercised the branch that historically
-// misrouted, and it must stay marker-free like every other path.
-func TestTurnModeMarkersRetired(t *testing.T) {
-	t.Parallel()
-
-	for _, tc := range []struct {
-		name string
-		task Task
-	}{
-		{"comment-triggered with content", Task{IssueID: "issue-1", TriggerCommentID: "c-1", TriggerCommentContent: "please look"}},
-		{"comment-triggered with EMPTY content", Task{IssueID: "issue-1", TriggerCommentID: "c-1"}},
-		{"assignment-triggered", Task{IssueID: "issue-1"}},
-		{"chat", Task{ChatSessionID: "chat-1"}},
-		{"quick-create", Task{QuickCreatePrompt: "make an issue"}},
-		{"autopilot", Task{AutopilotRunID: "run-1"}},
-	} {
-		tc := tc
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-			prompt := BuildPrompt(tc.task, "claude")
-			if strings.Contains(prompt, "Turn mode") {
-				t.Errorf("%s prompt must not carry a turn-mode marker (MUL-6417)\n---\n%s", tc.name, prompt)
-			}
-		})
-	}
-}
-
-// The brief must not carry the retired mode router either — end-to-end through
-// InjectRuntimeConfig, so a reintroduction anywhere in the assembled brief
-// fails here even if the workflow section itself stays clean.
-func TestBriefCarriesNoModeRouter(t *testing.T) {
-	t.Parallel()
-
-	brief, err := execenv.InjectRuntimeConfig(t.TempDir(), "claude", execenv.TaskContextForEnv{IssueID: "issue-1"})
-	if err != nil {
-		t.Fatalf("InjectRuntimeConfig: %v", err)
-	}
-	for _, banned := range []string{"Turn mode", "Ownership mode", "Reply mode", "mode block"} {
-		if strings.Contains(brief, banned) {
-			t.Errorf("brief still references the retired turn-mode split via %q (MUL-6417)\n---\n%s", banned, brief)
-		}
-	}
-	if !strings.Contains(brief, "**Issue status — write the state the issue is in, whenever it changes**") {
-		t.Errorf("brief lost the unified status rule\n---\n%s", brief)
 	}
 }
 
@@ -890,50 +650,6 @@ func TestChatChannelDeliversFilesDefaultsOffAcrossVersions(t *testing.T) {
 	}
 }
 
-// TestSharedLocalDirectoryBlock covers the notice a lock-exempt turn gets. It
-// is opt-in per run rather than derived from the Task, because whether the
-// directory is shared depends on the daemon's own resolution of the resource —
-// something the claimed Task does not carry.
-func TestSharedLocalDirectoryBlock(t *testing.T) {
-	t.Parallel()
-
-	chat := Task{ChatSessionID: "sess-1", ChatMessage: "how does the parser work?"}
-
-	t.Run("absent by default", func(t *testing.T) {
-		out := BuildPrompt(chat, "claude")
-		if strings.Contains(out, "Shared working directory") {
-			t.Fatalf("notice leaked into a run with no local_directory:\n%s", out)
-		}
-	})
-
-	t.Run("present when the turn runs unlocked in a shared directory", func(t *testing.T) {
-		out := BuildPrompt(chat, "claude", WithSharedLocalDirectory())
-		if !strings.Contains(out, "Shared working directory") {
-			t.Fatalf("notice missing:\n%s", out)
-		}
-		// The non-inferable fact is the concurrent writer. Without it the block
-		// is just style advice.
-		if !strings.Contains(out, "another task on this machine may be editing it") {
-			t.Fatalf("notice does not state that a sibling task may be writing:\n%s", out)
-		}
-		// It must stay guidance: turning it into a prohibition would promise an
-		// isolation the daemon does not enforce for the user's own editor either.
-		if strings.Contains(out, "Do NOT write") || strings.Contains(out, "must not write") {
-			t.Fatalf("notice hardened into a prohibition the system does not enforce:\n%s", out)
-		}
-	})
-
-	t.Run("appended after the cacheable prefix", func(t *testing.T) {
-		// Run-scoped blocks go at the end so a resumed session's cached prefix
-		// is unchanged by them (MUL-5377).
-		out := BuildPrompt(chat, "claude", WithSharedLocalDirectory())
-		body := buildChatPrompt(chat)
-		if !strings.HasPrefix(out, body) {
-			t.Fatalf("notice was not appended after the chat body:\n%s", out)
-		}
-	})
-}
-
 // TestWorktreeReplayConflictBlock covers the one thing a conflicted worktree
 // cannot tell the agent by itself: where the two sides came from. `git status`
 // shows the unmerged paths; only the prompt can say that "theirs" is the user's
@@ -941,7 +657,7 @@ func TestSharedLocalDirectoryBlock(t *testing.T) {
 func TestWorktreeReplayConflictBlock(t *testing.T) {
 	t.Parallel()
 
-	task := Task{IssueID: "issue-1", IssueIdentifier: "MUL-6881"}
+	task := Task{ChatSessionID: "issue-1"}
 
 	t.Run("absent when the replay was clean", func(t *testing.T) {
 		out := BuildPrompt(task, "claude")
@@ -1049,22 +765,4 @@ func TestWorktreeReplayConflictBlock(t *testing.T) {
 			t.Fatalf("the remainder was not reported for a long list:\n%s", block)
 		}
 	})
-}
-
-// A wakeup the server folded into this run reaches the agent whatever started
-// the run, and nothing is added when none joined.
-func TestPromptCarriesJoinedWakeups(t *testing.T) {
-	note := "Wakeup w1 fired while this run was waiting to start. Instruction:\nSummarize the discussion"
-	for name, task := range map[string]Task{
-		"assignment": {IssueID: "issue-1", WakeupJoined: note},
-		"comment":    {IssueID: "issue-1", TriggerCommentID: "c1", TriggerCommentContent: "please look", WakeupJoined: note},
-	} {
-		out := BuildPrompt(task, "claude")
-		if !strings.Contains(out, "[WAKEUP — joined this run]\n"+note) {
-			t.Errorf("%s prompt lacks the joined wakeup:\n%s", name, out)
-		}
-	}
-	if out := BuildPrompt(Task{IssueID: "issue-1"}, "claude"); strings.Contains(out, "joined this run") {
-		t.Errorf("prompt without joined wakeups mentions them:\n%s", out)
-	}
 }

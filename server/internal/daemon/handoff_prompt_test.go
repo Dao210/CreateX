@@ -7,9 +7,9 @@ import (
 
 func TestBuildPromptAssignmentHandoffIsPerTurnContext(t *testing.T) {
 	note := "Only touch the login flow; do not change payments."
-	out := BuildPrompt(Task{IssueID: "issue-123", HandoffNote: note}, "claude")
+	out := BuildPrompt(Task{HandoffNote: note}, "claude")
 
-	for _, want := range []string{note, "handoff note", "auro issue get issue-123"} {
+	for _, want := range []string{note} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("assignment prompt missing %q:\n%s", want, out)
 		}
@@ -20,7 +20,7 @@ func TestBuildPromptAssignmentHandoffIsPerTurnContext(t *testing.T) {
 }
 
 func TestBuildPromptAssignmentWithoutHandoffStaysClean(t *testing.T) {
-	out := BuildPrompt(Task{IssueID: "issue-123"}, "claude")
+	out := BuildPrompt(Task{ChatSessionID: "issue-123"}, "claude")
 	if strings.Contains(out, "handoff note") {
 		t.Fatalf("assignment without a note gained handoff framing:\n%s", out)
 	}

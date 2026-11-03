@@ -306,39 +306,9 @@ type RepoData struct {
 	Ref         string `json:"ref,omitempty"`
 }
 
-// ProjectResourceData is the wire shape for a project resource included in a
-// claim response. The daemon reads this list and writes it into the agent's
-// working directory so skills/agents can discover project-scoped context.
-//
-// resource_ref is type-specific JSON; the daemon doesn't interpret it beyond
-// well-known fields like url for github_repo. New types can be added without
-// changing this struct.
-type ProjectResourceData struct {
-	ID           string          `json:"id"`
-	ResourceType string          `json:"resource_type"`
-	ResourceRef  json.RawMessage `json:"resource_ref"`
-	Label        string          `json:"label,omitempty"`
-}
-
 // ConnectedAppData keeps the daemon-claim wire field local to handler types
 // while sharing the canonical JSON shape with the runtime app metadata package.
 type ConnectedAppData = runtimeapps.ConnectedApp
-
-// TaskIssueStatusData is one active CUSTOM workspace status on the claim wire
-// (MUL-6460). Only the fields an agent needs to choose and write the status
-// travel: key is the CLI argument, name is what users call it in instructions,
-// category uses the legacy wire enum for installed daemons (presentation only,
-// not inherited platform behavior), and description is the
-// admin's "when to use me" guidance — the disambiguator when a category holds
-// more than one status. Color/position/id stay off the wire: they carry no
-// behavioral meaning for an agent, and the server already emits entries in
-// catalog order (category rank, then position, then key).
-type TaskIssueStatusData struct {
-	Key         string `json:"key"`
-	Name        string `json:"name"`
-	Category    string `json:"category"`
-	Description string `json:"description,omitempty"`
-}
 
 // TaskCancellationActor is the point-in-time actor snapshot attached to a
 // cancelled run. Type stays open for forward compatibility; current producers
@@ -350,9 +320,8 @@ type TaskCancellationActor struct {
 }
 
 type AgentTaskResponse struct {
-	StartClaimSupported      bool                   `json:"start_claim_supported,omitempty"`
-	CancelledByCommentChange bool                   `json:"cancelled_by_comment_change,omitempty"`
-	CancelledBy              *TaskCancellationActor `json:"cancelled_by,omitempty"`
+	StartClaimSupported bool                   `json:"start_claim_supported,omitempty"`
+	CancelledBy         *TaskCancellationActor `json:"cancelled_by,omitempty"`
 
 	ID        string `json:"id"`
 	AgentID   string `json:"agent_id"`
@@ -377,18 +346,6 @@ type AgentTaskResponse struct {
 	// regardless of issue / chat / autopilot / quick-create — sees the same
 	// shared context. Empty when the workspace owner hasn't set it.
 	WorkspaceContext string `json:"workspace_context,omitempty"`
-	// IssueStatuses is the workspace's ACTIVE CUSTOM status catalog (MUL-6460),
-	// injected into the agent brief so agents can see and use statuses beyond
-	// the seven built-ins. Built-ins are omitted: their keys, names, and
-	// semantics are locked (is_system rows cannot be renamed or archived), so
-	// the daemon already knows them. Empty for a workspace with no custom
-	// statuses — the daemon then renders the brief exactly as before, keeping
-	// existing deployments byte-identical. Capped at taskIssueStatusCap
-	// entries; IssueStatusesOmitted carries the overflow count.
-
-	// IssueStatusesOmitted is how many active custom statuses were dropped by
-	// the cap, so the brief can say the list is incomplete instead of
-	// presenting a truncated catalog as the whole one.
 
 	ThreadName    string  `json:"thread_name,omitempty"` // semantic title for provider-native session/thread history
 	Status        string  `json:"status"`
@@ -403,17 +360,12 @@ type AgentTaskResponse struct {
 	MaxAttempts   int32   `json:"max_attempts"`
 	ParentTaskID  *string `json:"parent_task_id,omitempty"`
 
-	// claim-only capability, always true here: IsLeaderTask/SquadID authoritatively answer "is this a leader run", so the daemon must not infer the role from briefing text. Servers predating it make no such promise — before #4951 they sent no is_leader_task at all, after it they sent the flag without guaranteeing a briefing — so a daemon seeing no capability keeps the legacy inference. Never rendered into a prompt; see daemon.taskIsSquadLeader (MUL-5811). Mirror field: internal/daemon/types.go, same JSON name
-	Agent         *TaskAgentData     `json:"agent,omitempty"`
-	ConnectedApps []ConnectedAppData `json:"connected_apps,omitempty"` // daemon-claim only: per-run app capabilities mounted through runtime MCP overlays
-	Repos         []RepoData         `json:"repos,omitempty"`
-	// issue's project, when present
-	// for surfacing in agent context
-	// durable project-level context injected into the brief
-	// resources attached to the project
-	CreatedAt      string `json:"created_at"`
-	PriorSessionID string `json:"prior_session_id,omitempty"` // session ID from a previous task on same issue
-	PriorWorkDir   string `json:"prior_work_dir,omitempty"`   // work_dir from a previous task on same issue
+	Agent          *TaskAgentData     `json:"agent,omitempty"`
+	ConnectedApps  []ConnectedAppData `json:"connected_apps,omitempty"` // daemon-claim only: per-run app capabilities mounted through runtime MCP overlays
+	Repos          []RepoData         `json:"repos,omitempty"`
+	CreatedAt      string             `json:"created_at"`
+	PriorSessionID string             `json:"prior_session_id,omitempty"` // session ID from a previous task on same issue
+	PriorWorkDir   string             `json:"prior_work_dir,omitempty"`   // work_dir from a previous task on same issue
 	// PriorSessionResumeUnavailable is set when a more recent Codex session was
 	// withheld because its rollout was missing (MUL-5305); PriorSessionID (if
 	// any) is then an older fallback, and the daemon surfaces the continuity gap
@@ -446,44 +398,8 @@ type AgentTaskResponse struct {
 	// verbatim: it is a ref inside the user's own repo, not a filesystem path.
 	// Populated on both terminal paths — a failed run can still have committed
 	// partial work, and that is when the pointer matters most.
-	BranchName string `json:"branch_name,omitempty"`
-	// comment that triggered this task
-	// MUL-4195: earlier comments folded into this run when it had not yet started, so a single run still covers every deliberate comment; trigger_comment_id is the newest. Surfaced so the UI can show which comments a run covered. omitempty so old clients ignore it
-	// MUL-4195: full detail (thread_id/author/created_at/content) of the folded comments, so the daemon prompt can address each without assuming they share the triggering thread. omitempty so old clients ignore it
-	// always present: [] is an authoritative empty receipt, while field absence identifies responses from legacy servers
-	SupplementCapability string   `json:"supplement_capability,omitempty"`
-	SupplementCommentIDs []string `json:"supplement_comment_ids,omitempty"`
-	CanSupplement        bool     `json:"can_supplement,omitempty"`
-	// root comment ID for the triggering thread
-	// content of the triggering comment
-	TriggerSummary *string `json:"trigger_summary,omitempty"` // canonical short description snapshot — comment text / autopilot title — taken at task creation; survives source edits/deletes
-	// "agent" or "member" — author kind of the triggering comment
-	// display name of the triggering comment author
-	// ISSUE-WIDE comments since this agent's last run — every thread, not just the triggering one (CountNewCommentsSince); excludes the injected trigger and the agent's own comments; omitempty so old daemons ignore it
-	// RFC3339 anchor (last run's started_at) the count is measured from; omitempty so old daemons ignore it. Suppressed with the count when the delta is zero — NewCommentsDeltaKnown, not this field, is what says the server looked
-	// NewCommentsDeltaKnown reports that the issue-wide delta above was
-	// actually COMPUTED this claim — both the anchor lookup and the count
-	// query succeeded. Without it, NewCommentCount == 0 is ambiguous: a true
-	// zero, a failed anchor read, a failed count read, a cold start with no
-	// prior run, and an old server that never sends these fields all produce
-	// the same zero. Only the first of those answers "has anything else been
-	// said on this issue", so only the first may waive the workflow's comment
-	// scan. Absent on old servers, which is the safe reading (MUL-6984).
-
-	// IssueStateDeltaKnown is the same contract as NewCommentsDeltaKnown, for
-	// the ISSUE record rather than its comments: the server compared this
-	// claim's title / description against the
-	// snapshot taken when this agent last ran on this issue, and both the
-	// lookup and the decode succeeded. Absent means NOT compared — a cold
-	// start, no prior snapshot, a read error, a shape-version mismatch, or an
-	// old server — and a daemon must then keep telling the agent to read the
-	// issue. An empty IssueChangedFields is only "unchanged" alongside this
-	// flag; on its own it is indistinguishable from "nobody looked" (MUL-7344).
-
-	// subset of title,description in that order; empty alongside IssueStateDeltaKnown means unchanged. Fields outside that set (status, assignee, priority, labels, parent, due date, stage, project, metadata) are NOT compared and must never be reported as checked. Status and assignee are out because IssueStatus / IssueAssigneeType / IssueAssigneeID ship their current values on every claim, so no comparison is needed to learn them; priority is out because it does not change what the agent does
-	// the issue's status key at claim time. Sent whether or not the delta is known: the agent needs it to decide workflow step 3 ("already in progress?") without a read
-	// "agent", "member" or "squad" at claim time; empty when unassigned. With IssueAssigneeID, lets the agent tell "mine" from "someone else's" without a read
-	// assignee UUID at claim time; empty when unassigned
+	BranchName               string               `json:"branch_name,omitempty"`
+	TriggerSummary           *string              `json:"trigger_summary,omitempty"`
 	ChatSessionID            string               `json:"chat_session_id,omitempty"`             // non-empty for chat tasks
 	ChatChannelType          string               `json:"chat_channel_type,omitempty"`           // "slack" when the chat session is backed by an IM channel; empty for a web-only chat. Makes the agent channel-aware (read history from the channel, not Auro)
 	ChatChannelDeliversFiles bool                 `json:"chat_channel_delivers_files,omitempty"` // server capability: THIS deployment can put a file the agent produced into THIS conversation — the adapter goes back for the bound attachment AND object storage exists to go back to. Absent/false on a server predating it, which is the safe reading: the agent is told to describe its file in words. Never inferred daemon-side from chat_channel_type; see handler.Handler.channelDeliversFiles
@@ -491,7 +407,6 @@ type AgentTaskResponse struct {
 	ChatInThread             bool                 `json:"chat_in_thread,omitempty"`              // true when the latest @mention was a thread reply; tells the agent to start with `auro chat thread` vs `auro chat history`
 	ChatMessage              string               `json:"chat_message,omitempty"`                // user message for chat tasks
 	ChatMessageAttachments   []ChatAttachmentMeta `json:"chat_message_attachments,omitempty"`    // attachments on the user message — agent calls `auro attachment download <id>` per entry
-	ChatIntro                bool                 `json:"chat_intro,omitempty"`                  // legacy compatibility for historical is_agent_intro sessions; new agent creation no longer creates these chats
 	AutopilotRunID           string               `json:"autopilot_run_id,omitempty"`            // non-empty for autopilot-spawned tasks
 	AutopilotID              string               `json:"autopilot_id,omitempty"`                // autopilot that spawned this task
 	AutopilotTitle           string               `json:"autopilot_title,omitempty"`             // autopilot title used as task context
@@ -576,11 +491,9 @@ type TaskAttribution struct {
 	// (rule_owner / owner_fallback), where no human authorized the run.
 	Originator *AttributionUser `json:"originator,omitempty"`
 	// Evidence points at the direct cause of the run so the UI can jump to it.
-	Evidence            *TaskEvidence `json:"evidence,omitempty"`
-	RuleVersionID       string        `json:"rule_version_id,omitempty"`
-	DelegatedFromTaskID string        `json:"delegated_from_task_id,omitempty"`
-	RetryOfTaskID       string        `json:"retry_of_task_id,omitempty"`
-	RerunOfTaskID       string        `json:"rerun_of_task_id,omitempty"`
+	Evidence      *TaskEvidence `json:"evidence,omitempty"`
+	RuleVersionID string        `json:"rule_version_id,omitempty"`
+	RetryOfTaskID string        `json:"retry_of_task_id,omitempty"`
 }
 
 // AttributionUser is a departed-member-safe user ref, resolved from the global user
@@ -605,12 +518,10 @@ type TaskEvidence struct {
 func taskAttributionBase(t db.AgentTaskQueue) *TaskAttribution {
 	src := attribution.Source(t.OriginatorSource.String)
 	attr := &TaskAttribution{
-		Source:              src.String(), // empty (pre-migration) → "unattributed"
-		Precise:             src.Precise(),
-		RuleVersionID:       uuidToString(t.RuleVersionID),
-		DelegatedFromTaskID: uuidToString(t.DelegatedFromTaskID),
-		RetryOfTaskID:       uuidToString(t.RetryOfTaskID),
-		RerunOfTaskID:       uuidToString(t.RerunOfTaskID),
+		Source:        src.String(), // empty (pre-migration) → "unattributed"
+		Precise:       src.Precise(),
+		RuleVersionID: uuidToString(t.RuleVersionID),
+		RetryOfTaskID: uuidToString(t.RetryOfTaskID),
 	}
 	if t.AccountableUserID.Valid {
 		attr.Initiator = &AttributionUser{ID: uuidToString(t.AccountableUserID)}
@@ -775,10 +686,6 @@ type TaskAgentData struct {
 // derivation; pass "" only on daemon-facing paths that genuinely don't have
 // it, in which case RelativeWorkDir falls back to the existing WorkDir.
 func taskToResponse(t db.AgentTaskQueue, workspaceID string) AgentTaskResponse {
-	var cancellation struct {
-		TaskID string `json:"comment_change_cancelled_task_id"`
-	}
-	_ = json.Unmarshal(t.Context, &cancellation)
 	var result any
 	if t.Result != nil {
 		json.Unmarshal(t.Result, &result)
@@ -799,19 +706,14 @@ func taskToResponse(t db.AgentTaskQueue, workspaceID string) AgentTaskResponse {
 	if t.BranchName.Valid {
 		branchName = t.BranchName.String
 	}
-	var wakeupContext struct {
-		ID         string `json:"wakeup_id"`
-		SystemRule string `json:"wakeup_system"`
-	}
-	_ = json.Unmarshal(t.Context, &wakeupContext)
+
 	handoffNote := ""
 	if t.HandoffNote.Valid {
 		handoffNote = t.HandoffNote.String
 	}
 	return AgentTaskResponse{
 		// Task-scoped provenance must not transfer through copied retry context.
-		CancelledByCommentChange: t.Status == "cancelled" && cancellation.TaskID != "" && cancellation.TaskID == uuidToString(t.ID),
-		CancelledBy:              taskCancellationActorToResponse(t),
+		CancelledBy: taskCancellationActorToResponse(t),
 
 		ID:        uuidToString(t.ID),
 		AgentID:   uuidToString(t.AgentID),

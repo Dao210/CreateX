@@ -146,6 +146,5 @@ test("renders assistant quick actions and sends the hidden prompt", async ({
     if (runtimeId)
       await db.query(`DELETE FROM agent_runtime WHERE id = $1`, [runtimeId]);
     await db.end();
-    await api.cleanup();
   }
 });

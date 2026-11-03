@@ -43,7 +43,7 @@ func TestDeleteAndInstallRaceLeavesNoDanglingInstallation(t *testing.T) {
 		wait.Add(2)
 		go func() {
 			defer wait.Done()
-			body, _ := json.Marshal(map[string]any{"version_id": versionID, "granted_scopes": []string{"issues:read"}})
+			body, _ := json.Marshal(map[string]any{"version_id": versionID, "granted_scopes": []string{"tasks:read"}})
 			recorder := httptest.NewRecorder()
 			testHandler.InstallPlugin(recorder,
 				pluginHandlerRequest(http.MethodPost, "/plugins", body, map[string]string{"id": testWorkspaceID}))

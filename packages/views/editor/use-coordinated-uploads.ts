@@ -360,8 +360,6 @@ export function useCoordinatedUploads(
     };
   }, [uploads, editorRef, editorHoldsThisTarget]);
 
-  const issueId = ctx.issueId;
-  const commentId = ctx.commentId;
   const chatSessionId = ctx.chatSessionId;
 
   const handleUpload = useCallback(
@@ -416,7 +414,7 @@ export function useCoordinatedUploads(
           clientUploadId,
           file,
           api,
-          ctx: { issueId, commentId, chatSessionId },
+          ctx: { chatSessionId },
           onSettled: (outcome) => {
             if (outcome.status === "uploaded") {
               if (target) {
@@ -481,7 +479,7 @@ export function useCoordinatedUploads(
         });
       });
     },
-    [binding, editorRef, issueId, commentId, chatSessionId, t],
+    [binding, editorRef, chatSessionId, t],
   );
 
   const removeUpload = useCallback(

@@ -21,7 +21,6 @@ import { isMentionBoundaryAfter } from "@auro/core/markdown";
 import type {
   MemberWithUser,
   Agent,
-  Squad,
 } from "@auro/core/types";
 import { ActorAvatar } from "../../common/actor-avatar";
 import { useT } from "../../i18n";
@@ -32,7 +31,6 @@ import {
   TooltipTrigger,
 } from "@auro/ui/components/ui/tooltip";
 import { cn } from "@auro/ui/lib/utils";
-import type { IssueStatus, IssueStatusCategory, ProjectStatus } from "@auro/core/types";
 import type { SuggestionOptions } from "@tiptap/suggestion";
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import { PluginKey } from "@tiptap/pm/state";
@@ -59,24 +57,11 @@ import { blockedReasonLabel } from "../../agents/blocked-trigger-copy";
 export interface MentionItem {
   id: string;
   label: string;
-  type: "member" | "agent" | "squad" | "issue" | "project" | "all";
+  type: "member" | "agent" | "all";
   /** Optional grouping hint for injected context items. */
   group?: "current" | "recent" | "search";
-  /** Secondary text shown beside the label (e.g. issue title) */
+  /** Secondary text shown beside the label. */
   description?: string;
-  /** Issue status for StatusIcon rendering */
-  status?: IssueStatus;
-  /**
-   * The category that status behaves as, carried from the issue payload so the
-   * list never has to resolve a custom key itself. Both the glyph and the
-   * "closed / demoted" rules read this — comparing the raw key left a custom
-   * done status looking and ranking like active work. (MUL-6243)
-   */
-  statusCategory?: IssueStatusCategory;
-  /** Project emoji/icon snapshot for ProjectIcon rendering */
-  icon?: string | null;
-  /** Project status snapshot for recent/current project rendering */
-  projectStatus?: ProjectStatus;
   /** Present when the target should remain discoverable but cannot be selected. */
   disabledReason?: "agent_runtime_required";
 }
@@ -85,7 +70,6 @@ interface MentionListProps {
   items: MentionItem[];
   query: string;
   command: (item: MentionItem) => void;
-  includeProjectSearch?: boolean;
 }
 
 export interface MentionListRef {
@@ -106,7 +90,6 @@ function groupItems(items: MentionItem[]): MentionGroup[] {
   const recent: MentionItem[] = [];
   const search: MentionItem[] = [];
   const users: MentionItem[] = [];
-  const issues: MentionItem[] = [];
   const cancelled: MentionItem[] = [];
 
   for (const item of items) {
@@ -116,8 +99,6 @@ function groupItems(items: MentionItem[]): MentionGroup[] {
       recent.push(item);
     } else if (item.group === "search") {
       search.push(item);
-    } else if (item.type === "issue" || item.type === "project") {
-      issues.push(item);
     } else {
       users.push(item);
     }
@@ -128,7 +109,6 @@ function groupItems(items: MentionItem[]): MentionGroup[] {
   if (recent.length > 0) groups.push({ label: "Recent", items: recent });
   if (search.length > 0) groups.push({ label: "Search", items: search });
   if (users.length > 0) groups.push({ label: "Users", items: users });
-  if (issues.length > 0) groups.push({ label: "Issues", items: issues });
   // Always last: no cancelled row of any type may precede a live one.
   if (cancelled.length > 0) groups.push({ label: "Cancelled", items: cancelled });
   return groups;
@@ -173,7 +153,7 @@ export const MentionList = forwardRef<MentionListRef, MentionListProps>(
     const [selectedKey, setSelectedKey] = useState<string | null>(null);
     const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
-    const displayItems = useMemo(() => items.filter((item) => item.type !== "issue" && item.type !== "project").slice(0, MAX_ITEMS), [items]);
+    const displayItems = useMemo(() => items.slice(0, MAX_ITEMS), [items]);
 
     // The single index space for selection. groupItems() re-buckets displayItems
     // (current → recent → search → users → issues); orderedItems is exactly what
@@ -275,7 +255,6 @@ export const MentionList = forwardRef<MentionListRef, MentionListProps>(
       if (label === "Recent") return t(($) => $.mention.group_recent);
       if (label === "Search") return t(($) => $.mention.group_search);
       if (label === "Users") return t(($) => $.mention.group_users);
-      if (label === "Issues") return t(($) => $.mention.group_issues);
       if (label === "Cancelled") return t(($) => $.mention.group_cancelled);
       return label;
     };
@@ -382,11 +361,7 @@ function MentionRow({
           {t(($) => $.mention.agent_badge)}
         </Badge>
       )}
-      {item.type === "squad" && (
-        <Badge variant="outline" className="ml-auto text-micro h-4 px-1.5">
-          {t(($) => $.mention.squad_badge)}
-        </Badge>
-      )}
+
     </button>
   );
 
@@ -457,7 +432,6 @@ export function createMentionSuggestion(
 
     const members: MemberWithUser[] = qc.getQueryData(workspaceKeys.members(wsId)) ?? [];
     const agents: Agent[] = qc.getQueryData(workspaceKeys.agents(wsId)) ?? [];
-    const squads: Squad[] = qc.getQueryData(workspaceKeys.squads(wsId)) ?? [];
 
     // Read current user identity imperatively — this factory runs outside
     // React render so we can't useAuthStore() as a hook here. The Proxy in
@@ -498,36 +472,8 @@ export function createMentionSuggestion(
           ? undefined
           : ("agent_runtime_required" as const),
       }));
-    const activeAgentRuntimeBinding = new Map(
-      agents
-        .filter((agent) => !agent.archived_at)
-        .map((agent) => [agent.id, isAgentRuntimeBound(agent)]),
-    );
-
-    const squadItems: MentionItem[] = squads
-      .filter(
-        (s) =>
-          !s.archived_at &&
-          (s.name.toLowerCase().includes(q) || matchesPinyin(s.name, q)),
-      )
-      .map((s) => ({
-        id: s.id,
-        label: s.name,
-        type: "squad" as const,
-        disabledReason:
-          activeAgentRuntimeBinding.get(s.leader_id) === false
-            ? ("agent_runtime_required" as const)
-            : undefined,
-      }));
-
-    // Members and agents share a single ranked list — recently mentioned
-    // targets come first regardless of type, with an alphabetical fallback
-    // for everyone the user hasn't mentioned yet on this device.
     const recency = getRecencyMap(wsId);
-    const userItems = sortUserItemsByRecency(
-      [...memberItems, ...agentItems, ...squadItems],
-      recency,
-    );
+    const userItems = sortUserItemsByRecency([...memberItems, ...agentItems], recency);
 
     return [...allItem, ...userItems];
   }
@@ -547,7 +493,7 @@ export function createMentionSuggestion(
     items: ({ query }) => {
       if (options.mode === "context") {
         const normalizedQuery = query.trim();
-        const contextItems = (options.getContextItems?.() ?? []).filter((item) => item.type !== "issue" && item.type !== "project" && matchesMentionQuery(item, query));
+        const contextItems = (options.getContextItems?.() ?? []).filter((item) => matchesMentionQuery(item, query));
         if (!normalizedQuery) return contextItems;
         return mergeMentionItems(contextItems, buildSyncItems(query));
       }

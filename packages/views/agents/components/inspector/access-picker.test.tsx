@@ -20,7 +20,7 @@ vi.mock("../../../common/actor-avatar", () => ({
 }));
 
 const TEST_RESOURCES = {
-  en: { common: enCommon, agents: enAgents, issues: enIssues },
+  en: { common: enCommon, agents: enAgents, execution: enIssues },
 };
 
 const MEMBERS = [

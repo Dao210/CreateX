@@ -4,9 +4,11 @@ import (
 	"context"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/auro-ai/auro/server/internal/events"
 	"github.com/auro-ai/auro/server/internal/service"
+	"github.com/auro-ai/auro/server/internal/util"
 	db "github.com/auro-ai/auro/server/pkg/db/generated"
 	"github.com/jackc/pgx/v5/pgtype"
 )
@@ -58,7 +60,7 @@ func TestAutopilotRunOnlyTaskTerminalEventsUpdateRun(t *testing.T) {
 		{
 			name: "completed",
 			finalize: func(task db.AgentTaskQueue) {
-				if _, err := taskSvc.CompleteTask(ctx, task.ID, []byte(`{"output":"done"}`), "", "", "", false, "", ""); err != nil {
+				if _, _, err := taskSvc.CompleteTaskWithTransition(ctx, task.ID, []byte(`{"output":"done"}`), "", "", "", false, "", ""); err != nil {
 					t.Fatalf("CompleteTask: %v", err)
 				}
 			},
@@ -80,27 +82,34 @@ func TestAutopilotRunOnlyTaskTerminalEventsUpdateRun(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			ap, err := queries.CreateAutopilot(ctx, db.CreateAutopilotParams{
-				WorkspaceID:        parseUUID(testWorkspaceID),
-				Title:              "Run-only listener " + tc.name,
-				Description:        pgtype.Text{String: "Run listener regression test", Valid: true},
-				AssigneeType:       "agent",
-				AssigneeID:         parseUUID(agentID),
-				Status:             "active",
-				ExecutionMode:      "run_only",
-				IssueTitleTemplate: pgtype.Text{},
-				CreatedByType:      "member",
-				CreatedByID:        parseUUID(testUserID),
+				WorkspaceID:   parseUUID(testWorkspaceID),
+				Title:         "Run-only listener " + tc.name,
+				Description:   pgtype.Text{String: "Run listener regression test", Valid: true},
+				AssigneeType:  "agent",
+				AssigneeID:    parseUUID(agentID),
+				Status:        "active",
+				ExecutionMode: "run_only",
+
+				CreatedByType: "member",
+				CreatedByID:   parseUUID(testUserID),
 			})
 			if err != nil {
 				t.Fatalf("CreateAutopilot: %v", err)
 			}
 			t.Cleanup(func() {
-				if _, err := testPool.Exec(context.Background(), `DELETE FROM autopilot WHERE id = $1`, ap.ID); err != nil {
+				if _, err := testPool.Exec(context.Background(), `WITH runs AS MATERIALIZED (SELECT id FROM autopilot_run WHERE autopilot_id=$1),
+ removed_deliveries AS (DELETE FROM webhook_delivery WHERE autopilot_id=$1),
+ removed_triggers AS (DELETE FROM autopilot_trigger WHERE autopilot_id=$1),
+ removed_versions AS (DELETE FROM autopilot_rule_version WHERE autopilot_id=$1),
+ removed_collaborators AS (DELETE FROM autopilot_collaborator WHERE autopilot_id=$1),
+ detached_tasks AS (UPDATE agent_task_queue SET autopilot_run_id=NULL WHERE autopilot_run_id IN (SELECT id FROM runs)),
+ removed_runs AS (DELETE FROM autopilot_run WHERE autopilot_id=$1)
+ DELETE FROM autopilot WHERE id=$1`, ap.ID); err != nil {
 					t.Logf("cleanup autopilot: %v", err)
 				}
 			})
 
-			run, err := autopilotSvc.DispatchAutopilot(ctx, ap, seedAutopilotScheduleTrigger(t, queries, ap), "manual", nil)
+			run, _, err := autopilotSvc.DispatchAutopilotManualWithKey(ctx, ap, seedAutopilotScheduleTrigger(t, queries, ap), nil, util.MustParseUUID(testUserID), "test-manual")
 			if err != nil {
 				t.Fatalf("DispatchAutopilot: %v", err)
 			}
@@ -214,25 +223,32 @@ func TestAutopilotDispatchSkipsWhenRuntimeOffline(t *testing.T) {
 	})
 
 	ap, err := queries.CreateAutopilot(ctx, db.CreateAutopilotParams{
-		WorkspaceID:        parseUUID(testWorkspaceID),
-		Title:              "Offline-runtime autopilot",
-		Description:        pgtype.Text{String: "MUL-1899 admission test", Valid: true},
-		AssigneeType:       "agent",
-		AssigneeID:         parseUUID(agentID),
-		Status:             "active",
-		ExecutionMode:      "run_only",
-		IssueTitleTemplate: pgtype.Text{},
-		CreatedByType:      "member",
-		CreatedByID:        parseUUID(testUserID),
+		WorkspaceID:   parseUUID(testWorkspaceID),
+		Title:         "Offline-runtime autopilot",
+		Description:   pgtype.Text{String: "MUL-1899 admission test", Valid: true},
+		AssigneeType:  "agent",
+		AssigneeID:    parseUUID(agentID),
+		Status:        "active",
+		ExecutionMode: "run_only",
+
+		CreatedByType: "member",
+		CreatedByID:   parseUUID(testUserID),
 	})
 	if err != nil {
 		t.Fatalf("CreateAutopilot: %v", err)
 	}
 	t.Cleanup(func() {
-		_, _ = testPool.Exec(context.Background(), `DELETE FROM autopilot WHERE id = $1`, ap.ID)
+		_, _ = testPool.Exec(context.Background(), `WITH runs AS MATERIALIZED (SELECT id FROM autopilot_run WHERE autopilot_id=$1),
+ removed_deliveries AS (DELETE FROM webhook_delivery WHERE autopilot_id=$1),
+ removed_triggers AS (DELETE FROM autopilot_trigger WHERE autopilot_id=$1),
+ removed_versions AS (DELETE FROM autopilot_rule_version WHERE autopilot_id=$1),
+ removed_collaborators AS (DELETE FROM autopilot_collaborator WHERE autopilot_id=$1),
+ detached_tasks AS (UPDATE agent_task_queue SET autopilot_run_id=NULL WHERE autopilot_run_id IN (SELECT id FROM runs)),
+ removed_runs AS (DELETE FROM autopilot_run WHERE autopilot_id=$1)
+ DELETE FROM autopilot WHERE id=$1`, ap.ID)
 	})
 
-	run, err := autopilotSvc.DispatchAutopilot(ctx, ap, seedAutopilotScheduleTrigger(t, queries, ap), "schedule", nil)
+	run, err := autopilotSvc.DispatchAutopilotForPlan(ctx, ap, seedAutopilotScheduleTrigger(t, queries, ap), "schedule", nil, time.Now())
 	if err != nil {
 		t.Fatalf("DispatchAutopilot: %v", err)
 	}
@@ -319,25 +335,32 @@ func TestManualTriggerDoesNotErrorOnPostAdmissionSkip(t *testing.T) {
 	})
 
 	ap, err := queries.CreateAutopilot(ctx, db.CreateAutopilotParams{
-		WorkspaceID:        parseUUID(testWorkspaceID),
-		Title:              "Manual-trigger skip autopilot",
-		Description:        pgtype.Text{String: "PR #2888 review fix #2", Valid: true},
-		AssigneeType:       "agent",
-		AssigneeID:         parseUUID(agentID),
-		Status:             "active",
-		ExecutionMode:      "run_only",
-		IssueTitleTemplate: pgtype.Text{},
-		CreatedByType:      "member",
-		CreatedByID:        parseUUID(testUserID),
+		WorkspaceID:   parseUUID(testWorkspaceID),
+		Title:         "Manual-trigger skip autopilot",
+		Description:   pgtype.Text{String: "PR #2888 review fix #2", Valid: true},
+		AssigneeType:  "agent",
+		AssigneeID:    parseUUID(agentID),
+		Status:        "active",
+		ExecutionMode: "run_only",
+
+		CreatedByType: "member",
+		CreatedByID:   parseUUID(testUserID),
 	})
 	if err != nil {
 		t.Fatalf("CreateAutopilot: %v", err)
 	}
 	t.Cleanup(func() {
-		_, _ = testPool.Exec(context.Background(), `DELETE FROM autopilot WHERE id = $1`, ap.ID)
+		_, _ = testPool.Exec(context.Background(), `WITH runs AS MATERIALIZED (SELECT id FROM autopilot_run WHERE autopilot_id=$1),
+ removed_deliveries AS (DELETE FROM webhook_delivery WHERE autopilot_id=$1),
+ removed_triggers AS (DELETE FROM autopilot_trigger WHERE autopilot_id=$1),
+ removed_versions AS (DELETE FROM autopilot_rule_version WHERE autopilot_id=$1),
+ removed_collaborators AS (DELETE FROM autopilot_collaborator WHERE autopilot_id=$1),
+ detached_tasks AS (UPDATE agent_task_queue SET autopilot_run_id=NULL WHERE autopilot_run_id IN (SELECT id FROM runs)),
+ removed_runs AS (DELETE FROM autopilot_run WHERE autopilot_id=$1)
+ DELETE FROM autopilot WHERE id=$1`, ap.ID)
 	})
 
-	run, err := autopilotSvc.DispatchAutopilot(ctx, ap, seedAutopilotScheduleTrigger(t, queries, ap), "manual", nil)
+	run, _, err := autopilotSvc.DispatchAutopilotManualWithKey(ctx, ap, seedAutopilotScheduleTrigger(t, queries, ap), nil, util.MustParseUUID(testUserID), "test-manual")
 	if err != nil {
 		t.Fatalf("manual DispatchAutopilot returned error (would 500 the handler): %v", err)
 	}

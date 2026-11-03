@@ -17,25 +17,6 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-// seedBatchTask builds the running, issue-backed task the /messages endpoint
-// needs: requireDaemonTaskAccess resolves the workspace through the issue, and a
-// task with no issue / chat / autopilot link 404s before the body is read.
-func seedBatchTask(t *testing.T, label string) string {
-	t.Helper()
-	agentID := dbfx.Agent(t, label+" agent", handlerTestRuntimeID(t), testutil.Cols{
-		"instructions": "",
-		"custom_env":   testutil.Raw("'{}'::jsonb"),
-		"custom_args":  testutil.Raw("'[]'::jsonb"),
-	})
-	issueID := dbfx.Issue(t, label+" fixture", testutil.Cols{"status": "in_progress"})
-	return dbfx.Task(t, agentID, testutil.Cols{
-		"runtime_id": handlerTestRuntimeID(t),
-		"issue_id":   issueID,
-		"status":     "running",
-		"started_at": testutil.Raw("now()"),
-	})
-}
-
 // batchMessagesRequest builds the daemon-authenticated POST the daemon sends,
 // with taskId bound as a chi URL param the way the router does in production.
 func batchMessagesRequest(t *testing.T, taskID string, messages []any) *http.Request {
@@ -341,4 +322,23 @@ func TestTaskMessageCreatedAtsFallsBackWholeBatch(t *testing.T) {
 	if want := []string{valid.Format(time.RFC3339Nano), serverNow.Format(time.RFC3339Nano)}; !slices.Equal(got, want) {
 		t.Fatalf("taskMessageCreatedAts() = %q, want %q", got, want)
 	}
+}
+
+// seedBatchTask builds the running, issue-backed task the /messages endpoint
+// needs: requireDaemonTaskAccess resolves the workspace through the issue, and a
+// task with no issue / chat / autopilot link 404s before the body is read.
+func seedBatchTask(t *testing.T, label string) string {
+	t.Helper()
+	agentID := dbfx.Agent(t, label+" agent", handlerTestRuntimeID(t), testutil.Cols{
+		"instructions": "",
+		"custom_env":   testutil.Raw("'{}'::jsonb"),
+		"custom_args":  testutil.Raw("'[]'::jsonb"),
+	})
+	issueID := dbfx.ChatSession(t, agentID, testutil.Cols{"title": label + " fixture"})
+	return dbfx.Task(t, agentID, testutil.Cols{
+		"runtime_id":      handlerTestRuntimeID(t),
+		"chat_session_id": issueID,
+		"status":          "running",
+		"started_at":      testutil.Raw("now()"),
+	})
 }

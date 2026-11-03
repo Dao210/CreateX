@@ -400,3 +400,10 @@ type recoveryContextKey struct{}
 // silenceUnusedPgUUID ensures the package compiles even if no other test
 // happens to reference pgtype after future edits trim imports.
 var _ = pgtype.UUID{}
+
+func (b *BatchedHeartbeatScheduler) PendingCount() int {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return len(b.pending)
+}
+func (b *BatchedHeartbeatScheduler) FlushNow(ctx context.Context) { b.flushOnce(ctx) }

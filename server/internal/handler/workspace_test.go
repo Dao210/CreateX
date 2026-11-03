@@ -146,244 +146,9 @@ VALUES ($1, $2, 'admin')
 	}
 }
 
-// TestDeleteWorkspace_OwnerSucceeds is the positive counterpart: an owner
-// calling DeleteWorkspace directly must succeed (204) and the workspace must
-// be gone. This guards the handler check against being too strict.
-func TestDeleteWorkspace_OwnerSucceeds(t *testing.T) {
-	ctx := context.Background()
-
-	const slug = "handler-tests-delete-ok"
-	_, _ = testPool.Exec(ctx, `DELETE FROM workspace WHERE slug = $1`, slug)
-
-	wsID := dbfx.Insert(t, "workspace", testutil.Cols{
-		"name":        "Handler Test Delete OK",
-		"slug":        slug,
-		"description": "DeleteWorkspace handler owner test",
-	})
-
-	dbfx.Exec(t, `
-INSERT INTO member (workspace_id, user_id, role)
-VALUES ($1, $2, 'owner')
-`, wsID, testUserID)
-	dbfx.Exec(t, `
-INSERT INTO github_pending_check_suite (
-	workspace_id, installation_id, repo_owner, repo_name, pr_number,
-	suite_id, head_sha, app_id, status, suite_updated_at
-)
-VALUES ($1, 123456789, 'auro-ai', 'auro', 3366, 987654321, 'abc123', 15368, 'completed', now())
-`, wsID)
-	githubPRID := dbfx.Insert(t, "github_pull_request", testutil.Cols{
-		"workspace_id":    wsID,
-		"installation_id": 123456789,
-		"repo_owner":      "auro-ai",
-		"repo_name":       "auro",
-		"pr_number":       5265,
-		"title":           "Workspace cleanup snapshot",
-		"state":           "open",
-		"html_url":        "https://github.com/auro-ai/auro/pull/5265",
-		"pr_created_at":   testutil.Raw("now()"),
-		"pr_updated_at":   testutil.Raw("now()"),
-		"head_sha":        "head-a",
-	})
-	dbfx.Exec(t, `
-INSERT INTO github_pull_request_check_run (
-	pr_id, head_sha, ordinal, name, status, conclusion, is_status_context
-)
-VALUES ($1, 'head-a', 0, 'backend', 'completed', 'success', false)
-`, githubPRID)
-	t.Cleanup(func() {
-		_, _ = testPool.Exec(context.Background(), `DELETE FROM github_pull_request_check_run WHERE pr_id = $1`, githubPRID)
-		_, _ = testPool.Exec(context.Background(), `DELETE FROM github_pull_request WHERE id = $1`, githubPRID)
-	})
-	propertyID := dbfx.Insert(t, "issue_property", testutil.Cols{
-		"workspace_id": wsID,
-		"name":         "Delete cleanup property",
-		"type":         "text",
-	})
-
-	runtimeID := dbfx.Insert(t, "agent_runtime", testutil.Cols{
-		"workspace_id": wsID,
-		"name":         "Workspace delete runtime",
-		"runtime_mode": "cloud",
-		"provider":     "delete-test",
-		"status":       "offline",
-		"device_info":  "",
-		"metadata":     testutil.Raw("'{}'::jsonb"),
-		"owner_id":     testUserID,
-	})
-
-	agentID := dbfx.Insert(t, "agent", testutil.Cols{
-		"workspace_id":   wsID,
-		"name":           "Workspace delete agent",
-		"runtime_mode":   "cloud",
-		"runtime_config": testutil.Raw("'{}'::jsonb"),
-		"runtime_id":     runtimeID,
-		"owner_id":       testUserID,
-	})
-
-	issueID := dbfx.Insert(t, "issue", testutil.Cols{
-		"workspace_id": wsID,
-		"title":        "Workspace delete issue",
-		"creator_type": "member",
-		"creator_id":   testUserID,
-	})
-
-	autopilotID := dbfx.Insert(t, "autopilot", testutil.Cols{
-		"workspace_id":    wsID,
-		"title":           "Workspace delete autopilot",
-		"assignee_id":     agentID,
-		"created_by_type": "member",
-		"created_by_id":   testUserID,
-	})
-
-	autopilotRunID := dbfx.Insert(t, "autopilot_run", testutil.Cols{
-		"autopilot_id": autopilotID,
-		"source":       "manual",
-		"status":       "completed",
-		"issue_id":     issueID,
-	})
-
-	taskID := dbfx.Task(t, agentID, testutil.Cols{
-		"runtime_id":       runtimeID,
-		"issue_id":         issueID,
-		"status":           "completed",
-		"autopilot_run_id": autopilotRunID,
-	})
-	dbfx.Exec(t, `
-UPDATE autopilot_run SET task_id = $2 WHERE id = $1
-`, autopilotRunID, taskID)
-	dbfx.Exec(t, `
-INSERT INTO task_usage (task_id, provider, model, input_tokens, output_tokens)
-VALUES ($1, 'delete-test', 'workspace-delete', 10, 5)
-`, taskID)
-
-	var rollupRuntimeID, rollupAgentID string
-	dbfx.QueryRow(t, `SELECT gen_random_uuid(), gen_random_uuid()`).Scan(&rollupRuntimeID, &rollupAgentID)
-	dbfx.Exec(t, `
-INSERT INTO task_usage_hourly (
-	bucket_hour, workspace_id, runtime_id, agent_id, provider, model,
-	input_tokens, output_tokens, task_count, event_count
-)
-VALUES (date_trunc('hour', now()), $1, $2, $3, 'delete-test', 'workspace-rollup', 10, 5, 1, 1)
-`, wsID, rollupRuntimeID, rollupAgentID)
-	dbfx.Exec(t, `
-INSERT INTO task_usage_hourly_dirty (
-	bucket_hour, workspace_id, runtime_id, agent_id, provider, model
-)
-VALUES (date_trunc('hour', now()), $1, $2, $3, 'delete-test', 'workspace-rollup')
-`, wsID, rollupRuntimeID, rollupAgentID)
-
-	runtimeProfileID := dbfx.Insert(t, "runtime_profile", testutil.Cols{
-		"workspace_id":    wsID,
-		"display_name":    "Delete cleanup profile",
-		"protocol_family": "codex",
-		"command_name":    "codex",
-		"created_by":      testUserID,
-	})
-
-	ruleVersionID := dbfx.Insert(t, "autopilot_rule_version", testutil.Cols{
-		"autopilot_id":      testutil.Raw("gen_random_uuid()"),
-		"workspace_id":      wsID,
-		"published_by_type": "member",
-		"published_by_id":   testUserID,
-	})
-
-	const pendingObjectKey = "workspace-delete-pending-object"
-	dbfx.Exec(t, `
-INSERT INTO channel_media_pending_object (
-	storage_key, workspace_id, chat_message_id, storage_url
-)
-VALUES ($1, $2, gen_random_uuid(), 's3://workspace-delete/pending-object')
-`, pendingObjectKey, wsID)
-	const sourceContextObjectKey = "workspace-delete-source-context-object"
-	dbfx.Exec(t, `
-INSERT INTO issue_source_context_object_intent (
-	storage_key, workspace_id, source_context_id, attachment_id, object_url
-)
-VALUES ($1, $2, gen_random_uuid(), gen_random_uuid(), 's3://workspace-delete/source-context-object')
-`, sourceContextObjectKey, wsID)
-
-	t.Cleanup(func() {
-		_, _ = testPool.Exec(context.Background(), `DELETE FROM task_usage_hourly_dirty WHERE workspace_id = $1`, wsID)
-		_, _ = testPool.Exec(context.Background(), `DELETE FROM task_usage_hourly WHERE workspace_id = $1`, wsID)
-		_, _ = testPool.Exec(context.Background(), `DELETE FROM runtime_profile WHERE id = $1`, runtimeProfileID)
-		_, _ = testPool.Exec(context.Background(), `DELETE FROM autopilot_rule_version WHERE id = $1`, ruleVersionID)
-		_, _ = testPool.Exec(context.Background(), `DELETE FROM channel_media_pending_object WHERE storage_key = $1`, pendingObjectKey)
-		_, _ = testPool.Exec(context.Background(), `DELETE FROM issue_source_context_object_intent WHERE storage_key = $1`, sourceContextObjectKey)
-	})
-
-	req := newRequest("DELETE", "/api/workspaces/"+wsID, nil)
-	req = withURLParam(req, "id", wsID)
-	notifier := &recordingRuntimeGoneNotifier{}
-	h := *testHandler
-	h.DaemonRuntimeGone = notifier
-	testutil.Call(t, h.DeleteWorkspace, req).Want(http.StatusNoContent)
-
-	var exists bool
-	dbfx.QueryRow(t, `SELECT EXISTS (SELECT 1 FROM workspace WHERE id = $1)`, wsID).Scan(&exists)
-	if exists {
-		t.Fatal("workspace still exists after owner DELETE")
-	}
-	if len(notifier.runtimeIDs) != 1 || notifier.runtimeIDs[0] != runtimeID {
-		t.Fatalf("runtime-gone notifications = %v, want [%s]", notifier.runtimeIDs, runtimeID)
-	}
-
-	var pendingCount int
-	dbfx.QueryRow(t, `SELECT COUNT(*) FROM github_pending_check_suite WHERE workspace_id = $1`, wsID).Scan(&pendingCount)
-	if pendingCount != 0 {
-		t.Fatalf("pending check suites were not cleaned up for deleted workspace: %d", pendingCount)
-	}
-
-	var checkRunCount int
-	dbfx.QueryRow(t, `SELECT COUNT(*) FROM github_pull_request_check_run WHERE pr_id = $1`, githubPRID).Scan(&checkRunCount)
-	if checkRunCount != 0 {
-		t.Fatalf("github PR check runs were not cleaned up for deleted workspace: %d", checkRunCount)
-	}
-
-	var propertyCount int
-	dbfx.QueryRow(t, `SELECT COUNT(*) FROM issue_property WHERE id = $1`, propertyID).Scan(&propertyCount)
-	if propertyCount != 0 {
-		t.Fatalf("issue properties were not cleaned up for deleted workspace: %d", propertyCount)
-	}
-
-	for _, table := range []string{
-		"task_usage_hourly_dirty",
-		"task_usage_hourly",
-		"runtime_profile",
-		"autopilot_rule_version",
-	} {
-		var count int
-		dbfx.QueryRow(t, `SELECT COUNT(*) FROM `+table+` WHERE workspace_id = $1`, wsID).Scan(&count)
-		if count != 0 {
-			t.Fatalf("%s rows survived workspace delete: %d", table, count)
-		}
-	}
-
-	var pendingObjectState string
-	dbfx.QueryRow(t, `
-SELECT state
-FROM channel_media_pending_object
-WHERE storage_key = $1
-`, pendingObjectKey).Scan(&pendingObjectState)
-	if pendingObjectState != "deleting" {
-		t.Fatalf("pending channel media object state = %q, want deleting", pendingObjectState)
-	}
-
-	var sourceContextIntentState string
-	dbfx.QueryRow(t, `
-SELECT state
-FROM issue_source_context_object_intent
-WHERE storage_key = $1
-`, sourceContextObjectKey).Scan(&sourceContextIntentState)
-	if sourceContextIntentState != "pending" {
-		t.Fatalf("source context object intent state = %q, want pending durable retry ledger", sourceContextIntentState)
-	}
-}
-
 func TestDeleteWorkspace_DirtyTriggersHaveTeardownGuard(t *testing.T) {
 	for _, triggerName := range []string{
 		"trg_atq_dirty_hourly",
-		"trg_issue_delete_dirty_hourly",
 		"trg_tu_dirty_hourly",
 	} {
 		var definition string
@@ -610,10 +375,9 @@ func setupRevocationFixture(t *testing.T, slug, daemonID string) revocationFixtu
 	_, _ = testPool.Exec(ctx, `DELETE FROM workspace WHERE slug = $1`, slug)
 
 	wsID := dbfx.Insert(t, "workspace", testutil.Cols{
-		"name":         "Revocation " + slug,
-		"slug":         slug,
-		"description":  "revocation test",
-		"issue_prefix": "REV",
+		"name":        "Revocation " + slug,
+		"slug":        slug,
+		"description": "revocation test",
 	})
 
 	// Requester (= testUserID) is always an owner so DeleteMember authorization
@@ -798,102 +562,6 @@ VALUES ($1, $2, $3, 'feishu', $4)
 	}
 }
 
-// TestDeleteMember_PrunesAutopilotSubscribers verifies the application-layer
-// cleanup for the FK-free autopilot_subscriber table. DeleteMember and
-// LeaveWorkspace both use revokeAndRemoveMember, so this pins their shared
-// transaction while also proving the delete is scoped to the departed user.
-func TestDeleteMember_PrunesAutopilotSubscribers(t *testing.T) {
-	fx := setupRevocationFixture(t, "handler-tests-revoke-autopilot-subscriber", "daemon-revoke-autopilot-subscriber")
-
-	autopilotID := dbfx.Insert(t, "autopilot", testutil.Cols{
-		"workspace_id":    fx.WorkspaceID,
-		"title":           "Revocation autopilot subscriber",
-		"assignee_type":   "agent",
-		"assignee_id":     fx.AgentID,
-		"status":          "active",
-		"execution_mode":  "run_only",
-		"created_by_type": "member",
-		"created_by_id":   testUserID,
-	})
-	dbfx.Exec(t, `
-INSERT INTO autopilot_subscriber (autopilot_id, user_type, user_id)
-VALUES ($1, 'member', $2), ($1, 'member', $3)
-`, autopilotID, fx.TargetUserID, testUserID)
-
-	// The same person belongs to another workspace and subscribes there too.
-	// Removing them from fx.WorkspaceID must not cross this tenant boundary.
-	otherWorkspaceID := dbfx.Insert(t, "workspace", testutil.Cols{
-		"name":         "Revocation subscriber other workspace",
-		"slug":         fmt.Sprintf("handler-tests-revoke-autopilot-subscriber-other-%d", time.Now().UnixNano()),
-		"description":  "tenant-scope regression fixture",
-		"issue_prefix": "RAO",
-	})
-	dbfx.Insert(t, "member", testutil.Cols{
-		"workspace_id": otherWorkspaceID,
-		"user_id":      fx.TargetUserID,
-		"role":         "owner",
-	})
-	otherRuntimeID := dbfx.Runtime(t, "Other workspace runtime", testutil.Cols{
-		"workspace_id": otherWorkspaceID,
-		"daemon_id":    "daemon-revoke-autopilot-subscriber-other",
-		"runtime_mode": "local",
-		"provider":     "auro_daemon",
-		"owner_id":     fx.TargetUserID,
-	})
-	otherAgentID := dbfx.Agent(t, "Other workspace agent", otherRuntimeID, testutil.Cols{
-		"workspace_id": otherWorkspaceID,
-		"runtime_mode": "local",
-		"visibility":   "workspace",
-		"owner_id":     fx.TargetUserID,
-	})
-	otherAutopilotID := dbfx.Insert(t, "autopilot", testutil.Cols{
-		"workspace_id":    otherWorkspaceID,
-		"title":           "Other workspace autopilot subscriber",
-		"assignee_type":   "agent",
-		"assignee_id":     otherAgentID,
-		"status":          "active",
-		"execution_mode":  "run_only",
-		"created_by_type": "member",
-		"created_by_id":   fx.TargetUserID,
-	})
-	dbfx.Exec(t, `
-INSERT INTO autopilot_subscriber (autopilot_id, user_type, user_id)
-VALUES ($1, 'member', $2)
-`, otherAutopilotID, fx.TargetUserID)
-
-	req := newRequest("DELETE", "/api/workspaces/"+fx.WorkspaceID+"/members/"+fx.MemberID, nil)
-	req.Header.Set("X-Workspace-ID", fx.WorkspaceID)
-	req = withURLParams(req, "id", fx.WorkspaceID, "memberId", fx.MemberID)
-	testutil.Call(t, testHandler.DeleteMember, req).Want(http.StatusNoContent)
-
-	var removedCount int
-	dbfx.QueryRow(t, `
-SELECT count(*) FROM autopilot_subscriber
-WHERE autopilot_id = $1 AND user_id = $2
-`, autopilotID, fx.TargetUserID).Scan(&removedCount)
-	if removedCount != 0 {
-		t.Fatalf("departed member autopilot subscribers = %d, want 0", removedCount)
-	}
-
-	var remainingCount int
-	dbfx.QueryRow(t, `
-SELECT count(*) FROM autopilot_subscriber
-WHERE autopilot_id = $1 AND user_id = $2
-`, autopilotID, testUserID).Scan(&remainingCount)
-	if remainingCount != 1 {
-		t.Fatalf("remaining member autopilot subscribers = %d, want 1", remainingCount)
-	}
-
-	var otherWorkspaceCount int
-	dbfx.QueryRow(t, `
-SELECT count(*) FROM autopilot_subscriber
-WHERE autopilot_id = $1 AND user_id = $2
-`, otherAutopilotID, fx.TargetUserID).Scan(&otherWorkspaceCount)
-	if otherWorkspaceCount != 1 {
-		t.Fatalf("other workspace autopilot subscribers = %d, want 1", otherWorkspaceCount)
-	}
-}
-
 // TestLeaveWorkspace_RevokesOwnRuntimes is the self-removal counterpart: when
 // a member leaves a workspace voluntarily, their own runtimes are revoked
 // with the same atomic write set as DeleteMember.
@@ -1005,10 +673,9 @@ func TestDeleteMember_NoRuntimes_DeletesMember(t *testing.T) {
 	_, _ = testPool.Exec(ctx, `DELETE FROM workspace WHERE slug = $1`, slug)
 
 	wsID := dbfx.Insert(t, "workspace", testutil.Cols{
-		"name":         "Revocation no runtimes",
-		"slug":         slug,
-		"description":  "revocation no-runtimes test",
-		"issue_prefix": "REV",
+		"name":        "Revocation no runtimes",
+		"slug":        slug,
+		"description": "revocation no-runtimes test",
 	})
 
 	dbfx.Exec(t, `
@@ -1042,33 +709,26 @@ INSERT INTO member (workspace_id, user_id, role) VALUES ($1, $2, 'owner')
 	}
 }
 
-// TestCreateWorkspace_ChineseNameDerivesPrefixFromSlug is the end-to-end
-// regression for MUL-6050: a workspace whose name has no ASCII letters used
-// to be created with prefix "WS" — deterministically, for every Chinese team
-// on the instance. It must now take its prefix from the slug, which the same
-// form already forced the user to choose in ASCII.
-func TestCreateWorkspace_ChineseNameDerivesPrefixFromSlug(t *testing.T) {
-	if testHandler == nil {
-		t.Skip("database not available")
-	}
-
+func TestDeleteWorkspace_OwnerSucceeds(t *testing.T) {
 	ctx := context.Background()
-	const slug = "handler-tests-frontend-team"
-	_, _ = testPool.Exec(ctx, `DELETE FROM workspace WHERE slug = $1`, slug)
-	dbfx.Cleanup(t, `DELETE FROM workspace WHERE slug = $1`, slug)
-
-	req := newRequest("POST", "/api/workspaces", map[string]any{
-		"name": "前端团队",
-		"slug": slug,
-	})
-	w := testutil.Call(t, testHandler.CreateWorkspace, req).Want(http.StatusCreated)
-
-	var resp WorkspaceResponse
-	w.JSON(&resp)
-	if resp.IssuePrefix != "HAND" {
-		t.Fatalf("issue_prefix = %q, want %q (derived from the slug, not the name)", resp.IssuePrefix, "HAND")
-	}
-	if resp.IssuePrefix == "WS" {
-		t.Fatal("issue_prefix fell back to WS — the MUL-6050 regression is back")
+	wsID := dbfx.Workspace(t, "Delete fixture", fmt.Sprintf("delete-fixture-%d", time.Now().UnixNano()))
+	fx := testutil.New(testPool, wsID, testUserID)
+	fx.Member(t, wsID, testUserID, "owner")
+	runtimeID := fx.Runtime(t, "Delete runtime")
+	agentID := fx.Agent(t, "Delete agent", runtimeID)
+	chatID := fx.ChatSession(t, agentID)
+	messageID := fx.Insert(t, "chat_message", testutil.Cols{"chat_session_id": chatID, "role": "user", "content": "owned message"})
+	attachmentID := fx.Insert(t, "attachment", testutil.Cols{"workspace_id": wsID, "chat_session_id": chatID, "chat_message_id": messageID, "uploader_type": "member", "uploader_id": testUserID, "filename": "fixture.txt", "url": "https://example.test/fixture", "content_type": "text/plain", "size_bytes": 1})
+	labelID := fx.Insert(t, "label", testutil.Cols{"workspace_id": wsID, "name": "Retained label", "color": "blue", "resource_type": "agent"})
+	req := withURLParam(newRequest("DELETE", "/api/workspaces/"+wsID, nil), "id", wsID)
+	testutil.Call(t, testHandler.DeleteWorkspace, req).Want(http.StatusNoContent)
+	for _, row := range []struct{ table, id string }{{"workspace", wsID}, {"agent_runtime", runtimeID}, {"agent", agentID}, {"chat_session", chatID}, {"chat_message", messageID}, {"attachment", attachmentID}, {"label", labelID}} {
+		var exists bool
+		if err := testPool.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM `+row.table+` WHERE id=$1)`, row.id).Scan(&exists); err != nil {
+			t.Fatal(err)
+		}
+		if exists {
+			t.Errorf("%s row survived workspace deletion", row.table)
+		}
 	}
 }

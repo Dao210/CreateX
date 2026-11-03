@@ -13,7 +13,7 @@ vi.mock("../../common/actor-avatar", () => ({
 
 import { NewChatButton } from "./new-chat-button";
 
-const TEST_RESOURCES = { en: { chat: enChat, issues: enIssues } };
+const TEST_RESOURCES = { en: { chat: enChat, execution: enIssues } };
 
 function makeAgent(overrides: Partial<Agent> & Pick<Agent, "id" | "name" | "owner_id">): Agent {
   return {
@@ -74,7 +74,7 @@ describe("NewChatButton", () => {
   it("filters both My agents and Others by agent name", async () => {
     renderPicker();
 
-    const input = await screen.findByRole("textbox", { name: "Filter options" });
+    const input = await screen.findByPlaceholderText("Search agents...");
     fireEvent.change(input, { target: { value: "ta" } });
     const dialog = screen.getByRole("dialog");
 
@@ -88,7 +88,7 @@ describe("NewChatButton", () => {
   it("matches My agents by pinyin", async () => {
     renderPicker();
 
-    const input = await screen.findByRole("textbox", { name: "Filter options" });
+    const input = await screen.findByPlaceholderText("Search agents...");
     fireEvent.change(input, { target: { value: "zhang" } });
     const dialog = screen.getByRole("dialog");
 
@@ -101,7 +101,7 @@ describe("NewChatButton", () => {
   it("shows the shared empty state when no agents match", async () => {
     renderPicker();
 
-    const input = await screen.findByRole("textbox", { name: "Filter options" });
+    const input = await screen.findByPlaceholderText("Search agents...");
     fireEvent.change(input, { target: { value: "missing" } });
 
     expect(screen.getByText("No results")).toBeInTheDocument();
@@ -122,7 +122,7 @@ describe("NewChatButton", () => {
 
     expect(onStart).toHaveBeenCalledWith(agents[2]);
     await waitFor(() => {
-      expect(screen.queryByRole("textbox", { name: "Filter options" })).not.toBeInTheDocument();
+      expect(screen.queryByPlaceholderText("Search agents...")).not.toBeInTheDocument();
     });
   });
 

@@ -15,16 +15,16 @@ import (
 // enqueueViaRealQuery creates a task through the generated CreateAgentTask query —
 // the actual production enqueue path, fence included. Raw INSERTs in tests would
 // bypass the fence, which lives in the application SQL rather than in a trigger.
-func enqueueViaRealQuery(ctx context.Context, q *db.Queries, agentID, runtimeID, issueID string) error {
-	params := db.CreateAgentTaskParams{
+func enqueueViaRealQuery(ctx context.Context, q *db.Queries, agentID, runtimeID, chatID string) error {
+	params := db.CreateChatTaskParams{
 		AgentID:   parseUUID(agentID),
 		RuntimeID: parseUUID(runtimeID),
 		Priority:  0,
 	}
-	if issueID != "" {
-		params.IssueID = parseUUID(issueID)
+	if chatID != "" {
+		params.ChatSessionID = parseUUID(chatID)
 	}
-	_, err := q.CreateAgentTask(ctx, params)
+	_, err := q.CreateChatTask(ctx, params)
 	return err
 }
 
@@ -81,7 +81,7 @@ func TestTaskWriteFence_BlocksOnWorkspaceLockAlone(t *testing.T) {
 
 	// Each expected-blocked writer waits out its whole lock_timeout, which only
 	// runs while the writer is actually blocked, so it is kept small.
-	blockedEnqueue := func(name, agentID, runtimeID, issueID string) {
+	blockedEnqueue := func(name, agentID, runtimeID, chatID string) {
 		t.Helper()
 		writer, err := testPool.Begin(ctx)
 		if err != nil {
@@ -91,7 +91,7 @@ func TestTaskWriteFence_BlocksOnWorkspaceLockAlone(t *testing.T) {
 		if _, err := writer.Exec(ctx, "SET LOCAL lock_timeout = 50"); err != nil {
 			t.Fatalf("%s: set lock_timeout: %v", name, err)
 		}
-		err = enqueueViaRealQuery(ctx, testHandler.Queries.WithTx(writer), agentID, runtimeID, issueID)
+		err = enqueueViaRealQuery(ctx, testHandler.Queries.WithTx(writer), agentID, runtimeID, chatID)
 		if err == nil {
 			t.Errorf("%s: enqueue committed while the workspace row was locked; the fence is not in the write path", name)
 			return
@@ -102,9 +102,9 @@ func TestTaskWriteFence_BlocksOnWorkspaceLockAlone(t *testing.T) {
 		}
 	}
 
-	blockedEnqueue("enqueue via the victim's agent", f.victimAgent, f.neighbourRuntime, f.neighbourIssue)
-	blockedEnqueue("enqueue via the victim's runtime", f.neighbourAgent, f.victimRuntime, f.neighbourIssue)
-	blockedEnqueue("enqueue via the victim's issue", f.neighbourAgent, f.neighbourRuntime, f.victimIssue)
+	blockedEnqueue("enqueue via the victim's agent", f.victimAgent, f.neighbourRuntime, f.neighbourChat)
+	blockedEnqueue("enqueue via the victim's runtime", f.neighbourAgent, f.victimRuntime, f.neighbourChat)
+	blockedEnqueue("enqueue via the victim's issue", f.neighbourAgent, f.neighbourRuntime, f.victimChat)
 
 	// Reassignment onto the victim's runtime is fenced too.
 	reassign, err := testPool.Begin(ctx)
@@ -134,7 +134,7 @@ func TestTaskWriteFence_BlocksOnWorkspaceLockAlone(t *testing.T) {
 		t.Fatalf("unrelated: set lock_timeout: %v", err)
 	}
 	if err := enqueueViaRealQuery(ctx, testHandler.Queries.WithTx(unrelated),
-		f.neighbourAgent, f.neighbourRuntime, f.neighbourIssue); err != nil {
+		f.neighbourAgent, f.neighbourRuntime, f.neighbourChat); err != nil {
 		t.Errorf("neighbour-only enqueue was blocked by the victim's workspace lock: %v", err)
 	}
 
@@ -363,7 +363,7 @@ func TestLockTaskOwnerRows_RejectsUnresolvableOwner(t *testing.T) {
 
 	var ok bool
 	if err := testPool.QueryRow(ctx, `SELECT lock_task_owner_rows($1, $2, $3)`,
-		f.victimAgent, f.victimIssue, f.victimRuntime).Scan(&ok); err != nil {
+		f.victimAgent, f.victimRuntime, f.victimChat).Scan(&ok); err != nil {
 		t.Fatalf("all owners present: %v", err)
 	}
 	if !ok {

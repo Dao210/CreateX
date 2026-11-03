@@ -126,14 +126,13 @@ func (b *kiroBackend) Execute(ctx context.Context, prompt string, opts ExecOptio
 	//
 	// The only positive proof available at this layer is a terminal
 	// ToolResult with status=="completed" for a finishing tool
-	// (goal_complete or `auro issue comment add`). We record the status
+	// (goal_complete). We record the status
 	// of the MOST RECENT such result (ordered, keyed per CallID) so a later
 	// failed delivery correctly overrides an earlier success — e.g.
 	// "progress comment completed → final comment failed → -32603" must stay
 	// failed, while "first attempt failed → retry completed → -32603" is a
 	// real completion.
 	var goalCompleteCallIDs sync.Map
-	var issueCommentCallIDs sync.Map
 	var finishingMu sync.Mutex
 	var lastFinishingResultStatus string // "", "completed", or "failed"
 
@@ -163,21 +162,11 @@ func (b *kiroBackend) Execute(ctx context.Context, prompt string, opts ExecOptio
 				if msg.Tool == "goal_complete" && msg.CallID != "" {
 					goalCompleteCallIDs.Store(msg.CallID, struct{}{})
 				}
-				// Recognize `auro issue comment add` by its command
-				// payload regardless of how the adapter titled the tool.
-				// GPT-5.6 Sol may label the shell tool something other than
-				// the aliases kiroToolNameFromTitle folds into "terminal"
-				// (e.g. "execute"/"run"), so gating on msg.Tool=="terminal"
-				// here would miss it entirely (issue #5509). We still require
-				// a CallID so the tool use can be correlated to its result.
-				if msg.CallID != "" && isKiroIssueCommentAddTool(msg) {
-					issueCommentCallIDs.Store(msg.CallID, struct{}{})
-				}
+
 			}
 			if msg.Type == MessageToolResult {
 				_, isGoal := goalCompleteCallIDs.LoadAndDelete(msg.CallID)
-				_, isComment := issueCommentCallIDs.LoadAndDelete(msg.CallID)
-				if isGoal || isComment {
+				if isGoal {
 					// Record this finishing tool's terminal outcome. The
 					// most recent result wins, so the guard sees the final
 					// delivery attempt's status and a later failure
@@ -535,77 +524,6 @@ func isKiroOversizedHistoryImage(err error) bool {
 	data := strings.ToLower(rpcErr.Data)
 	return strings.Contains(data, "image.source.base64.data") &&
 		strings.Contains(data, "image dimensions exceed max allowed size")
-}
-
-// isKiroIssueCommentAddTool reports whether a tool-use message is a
-// `auro issue comment add` invocation. It keys purely off the command
-// payload, not the normalized tool name: GPT-5.6 Sol adapters may title the
-// shell tool with a name that doesn't fold into "terminal" (the earlier
-// msg.Tool=="terminal" gate silently dropped those and left completed tasks
-// marked failed — see #5509). isKiroIssueCommentAddCommand is strict enough
-// that no non-shell tool's input will accidentally match.
-func isKiroIssueCommentAddTool(msg Message) bool {
-	command, _ := msg.Input["command"].(string)
-	return isKiroIssueCommentAddCommand(command)
-}
-
-func isKiroIssueCommentAddCommand(command string) bool {
-	parts := trimLeadingEnvAssignments(strings.Fields(command))
-	// Some runtimes route terminal calls through a shell wrapper such as
-	// `sh -c "auro issue comment add ..."`; unwrap a single such layer so
-	// the real invocation is still recognized.
-	if len(parts) >= 3 && isPOSIXShellName(parts[0]) && parts[1] == "-c" {
-		inner := strings.Trim(strings.Join(parts[2:], " "), "\"'")
-		parts = trimLeadingEnvAssignments(strings.Fields(inner))
-	}
-	if len(parts) < 4 {
-		return false
-	}
-	executable := strings.TrimPrefix(parts[0], "./")
-	if executable != "auro" && !strings.HasSuffix(executable, "/auro") {
-		return false
-	}
-	return parts[1] == "issue" && parts[2] == "comment" && parts[3] == "add"
-}
-
-// trimLeadingEnvAssignments drops leading `KEY=VALUE` tokens so an invocation
-// like `AURO_TOKEN=x auro issue comment add ...` is still recognized.
-func trimLeadingEnvAssignments(parts []string) []string {
-	for len(parts) > 0 && isEnvAssignment(parts[0]) {
-		parts = parts[1:]
-	}
-	return parts
-}
-
-// isEnvAssignment reports whether tok is a `NAME=value` shell env assignment.
-func isEnvAssignment(tok string) bool {
-	eq := strings.IndexByte(tok, '=')
-	if eq <= 0 {
-		return false
-	}
-	for i := 0; i < eq; i++ {
-		c := tok[i]
-		switch {
-		case c == '_', c >= 'A' && c <= 'Z', c >= 'a' && c <= 'z':
-		case i > 0 && c >= '0' && c <= '9':
-		default:
-			return false
-		}
-	}
-	return true
-}
-
-// isPOSIXShellName reports whether tok names a shell that takes `-c <command>`.
-func isPOSIXShellName(tok string) bool {
-	if i := strings.LastIndexByte(tok, '/'); i >= 0 {
-		tok = tok[i+1:]
-	}
-	switch tok {
-	case "sh", "bash", "zsh", "dash":
-		return true
-	default:
-		return false
-	}
 }
 
 func kiroToolNameFromTitle(title string) string {

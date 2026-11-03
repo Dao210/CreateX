@@ -11,7 +11,7 @@ import enIssues from "../../locales/en/execution.json";
 import { ModelDropdown } from "./model-dropdown";
 
 const TEST_RESOURCES = {
-  en: { common: enCommon, agents: enAgents, issues: enIssues },
+  en: { common: enCommon, agents: enAgents, execution: enIssues },
 };
 
 const CODEX_MODELS: RuntimeModelsResult = {

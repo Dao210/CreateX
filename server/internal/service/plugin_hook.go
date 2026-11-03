@@ -97,11 +97,7 @@ type HookInvocation struct {
 	// EventType is set only for the event trigger, and names what happened.
 	EventType string
 	Actor     HookActor
-	// IssueID is the issue this call is about, when there is one. It narrows the
-	// callback token so a handler answering about one issue cannot use the same
-	// grant to reach across the workspace.
-	IssueID pgtype.UUID
-	Input   any
+	Input     any
 	// DeliveryID is stable across retries of the same scheduled occurrence.
 	// PlannedAt is the canonical UTC cron occurrence, not delivery wall time.
 	DeliveryID string
@@ -113,23 +109,18 @@ type HookInvocation struct {
 // handler written against v1 should not have to care what else the host learns
 // how to send later.
 type hookRequestBody struct {
-	Version      int       `json:"version"`
-	InvocationID string    `json:"invocation_id"`
-	DeliveryID   string    `json:"delivery_id,omitempty"`
-	Attempt      int       `json:"attempt"`
-	OccurredAt   time.Time `json:"occurred_at"`
-	HookKey      string    `json:"hook_key"`
-	Trigger      string    `json:"trigger"`
-	EventType    string    `json:"event_type,omitempty"`
-	WorkspaceID  string    `json:"workspace_id"`
-	Installation string    `json:"installation_id"`
-	// IssueID is the issue this call is about, as resolved and permission-checked
-	// by the host. Sent because the alternative is every handler reading it out
-	// of client-supplied `input` — unvalidated, and absent entirely for the event
-	// trigger, where no client was involved at all.
-	IssueID string           `json:"issue_id,omitempty"`
-	Actor   hookRequestActor `json:"actor"`
-	Input   json.RawMessage  `json:"input,omitempty"`
+	Version      int              `json:"version"`
+	InvocationID string           `json:"invocation_id"`
+	DeliveryID   string           `json:"delivery_id,omitempty"`
+	Attempt      int              `json:"attempt"`
+	OccurredAt   time.Time        `json:"occurred_at"`
+	HookKey      string           `json:"hook_key"`
+	Trigger      string           `json:"trigger"`
+	EventType    string           `json:"event_type,omitempty"`
+	WorkspaceID  string           `json:"workspace_id"`
+	Installation string           `json:"installation_id"`
+	Actor        hookRequestActor `json:"actor"`
+	Input        json.RawMessage  `json:"input,omitempty"`
 	// Config is the installation's non-secret configuration, the values an
 	// administrator typed into the host-rendered form. Sent because the handler
 	// has no other way to read them — the Action API deliberately has no config
@@ -399,9 +390,6 @@ func (s *PluginService) buildHookBody(ctx context.Context, invocation HookInvoca
 	}
 	if invocation.PlannedAt.Valid {
 		body.Schedule = &hookRequestSchedule{PlannedAt: invocation.PlannedAt.Time.UTC()}
-	}
-	if invocation.IssueID.Valid {
-		body.IssueID = uuidString(invocation.IssueID)
 	}
 	body.Config = nonSecretConfig(invocation.Installation)
 	if invocation.Input != nil {

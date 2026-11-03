@@ -39,10 +39,6 @@ import { shouldAutoLink } from "@auro/ui/markdown";
 import { escapeMarkdownLabel } from "../utils/escape-markdown-label";
 import { BaseMentionExtension } from "./mention-extension";
 import { createMentionSuggestion, type MentionItem } from "./mention-suggestion";
-import {
-  createIssueIdentifierAutolinkExtension,
-  type IssueIdentifierResolver,
-} from "./issue-identifier-autolink";
 import { SlashCommandExtension } from "./slash-command-extension";
 import { createSlashCommandSuggestion, createBuiltinCommandSuggestion } from "./slash-command-suggestion";
 import type { BuiltinCommandSuggestionOptions } from "./slash-command-suggestion";
@@ -181,14 +177,7 @@ export interface EditorExtensionsOptions {
    * owns React Query access. Omit on composers with no issue context.
    */
   quickActionMenu?: BuiltinCommandSuggestionOptions;
-  /**
-   * Resolver for Linear-style bare issue-identifier autolinking. When present
-   * (and mentions are enabled), typing a boundary after `MUL-123` or pasting
-   * text with identifiers resolves them and swaps in real issue mentions. A
-   * ref so the editor is created once while the resolver reads live workspace
-   * context; the setup layer owns React Query + workspace access.
-   */
-  resolveIssueIdentifierRef?: RefObject<IssueIdentifierResolver | undefined>;
+
 }
 
 export function createEditorExtensions(
@@ -268,16 +257,6 @@ export function createEditorExtensions(
           ? { suggestion: createMentionSuggestion(options.queryClient, { mode: options.mentionMode, getContextItems: options.getMentionContextItems }) }
           : {}),
     }),
-    // Linear-style bare identifier → issue mention. Attached only when a
-    // resolver is provided AND mention creation is enabled (an editor that
-    // suppresses new mentions should not synthesise them from identifiers).
-    ...(!options.disableMentions && options.resolveIssueIdentifierRef
-      ? [
-          createIssueIdentifierAutolinkExtension({
-            resolveRef: options.resolveIssueIdentifierRef,
-          }),
-        ]
-      : []),
     SlashCommandExtension.configure({
       HTMLAttributes: { class: "slash-command" },
       suggestion: !options.enableSlashCommands

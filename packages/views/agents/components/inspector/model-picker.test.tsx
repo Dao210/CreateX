@@ -11,7 +11,7 @@ import enIssues from "../../../locales/en/execution.json";
 import { ModelPicker } from "./model-picker";
 
 const TEST_RESOURCES = {
-  en: { common: enCommon, agents: enAgents, issues: enIssues },
+  en: { common: enCommon, agents: enAgents, execution: enIssues },
 };
 
 // MUL-6961. The create-agent dropdown and this inspector picker are two

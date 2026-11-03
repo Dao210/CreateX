@@ -79,8 +79,6 @@ const (
 	// OutcomeFreshPending — a bare /clear was persisted for the next chat turn.
 	OutcomeFreshPending Outcome = "fresh_pending"
 	OutcomeChatStarted  Outcome = "chat_started"
-	// OutcomeIssueUsage — /issue was sent without its required title.
-	OutcomeIssueUsage Outcome = "issue_usage"
 	// OutcomeAgentOffline — landed, but the agent has no runtime bound.
 	OutcomeAgentOffline Outcome = "agent_offline"
 	// OutcomeAgentArchived — landed, but the agent is archived.

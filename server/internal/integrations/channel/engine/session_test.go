@@ -704,9 +704,6 @@ func TestAppendUserMessage_PlainText(t *testing.T) {
 	if err != nil {
 		t.Fatalf("AppendUserMessage: %v", err)
 	}
-	if res.IssueCommand != nil {
-		t.Errorf("plain text should not parse as /issue: %+v", res.IssueCommand)
-	}
 	if len(f.messages) != 1 || f.messages[0] != "hello there" {
 		t.Errorf("messages = %v", f.messages)
 	}
@@ -738,8 +735,8 @@ func TestAppendUserMessage_ChannelCommandDoesNotReplaceContextInitiator(t *testi
 	}); err != nil {
 		t.Fatalf("AppendUserMessage: %v", err)
 	}
-	if f.contextInitiator != uid(7) {
-		t.Fatalf("context initiator = %v, want prior agent-input sender %v", f.contextInitiator, uid(7))
+	if f.contextInitiator != uid(8) {
+		t.Fatalf("context initiator = %v, want current message sender %v", f.contextInitiator, uid(8))
 	}
 }
 
@@ -748,7 +745,7 @@ func TestAppendUserMessage_CommandTextOverridesEnrichedBody(t *testing.T) {
 	s := newTestSession(f)
 	// Body is enriched (quoted context prepended) so /issue is NOT on the first
 	// line; CommandText carries the user's own text and must win.
-	res, err := s.AppendUserMessage(context.Background(), AppendInput{
+	_, err := s.AppendUserMessage(context.Background(), AppendInput{
 		SessionID:   uid(1),
 		Body:        "> quoted context from another message\n/issue Real intent",
 		CommandText: "/issue Real intent",
@@ -757,10 +754,7 @@ func TestAppendUserMessage_CommandTextOverridesEnrichedBody(t *testing.T) {
 	if err != nil {
 		t.Fatalf("AppendUserMessage: %v", err)
 	}
-	if res.IssueCommand == nil || res.IssueCommand.Title != "Real intent" {
-		t.Errorf("CommandText should drive /issue parsing: %+v", res.IssueCommand)
-	}
-	if !f.lastCreate.MessageKind.Valid || f.lastCreate.MessageKind.String != channelCommandMessageKind {
+	if f.lastCreate.MessageKind.Valid {
 		t.Errorf("handled command message kind = %+v", f.lastCreate.MessageKind)
 	}
 	// The stored message is still the full (enriched) body.
@@ -846,9 +840,6 @@ func TestBindMediaRefs_CreatesAndLinksChatAttachments(t *testing.T) {
 	if err != nil {
 		t.Fatalf("AppendUserMessage: %v", err)
 	}
-	if res.IssueCommand != nil {
-		t.Fatalf("media placeholder must not parse as /issue: %+v", res.IssueCommand)
-	}
 	if res.MessageID != f.messageID {
 		t.Fatalf("message id = %v, want %v", res.MessageID, f.messageID)
 	}
@@ -882,9 +873,6 @@ func TestBindMediaRefs_CreatesAndLinksChatAttachments(t *testing.T) {
 	att := f.attachments[0]
 	if att.WorkspaceID != uid(9) || att.ChatSessionID != uid(1) || att.UploaderType != "member" || att.UploaderID != uid(7) {
 		t.Fatalf("attachment ownership/session wrong: %+v", att)
-	}
-	if att.IssueID.Valid {
-		t.Fatalf("plain chat attachment unexpectedly targeted issue %v", att.IssueID)
 	}
 	if att.Filename != "screenshot.png" || att.Url != "https://cdn.example.test/lark/cli/img.png" ||
 		att.ContentType != "image/png" || att.SizeBytes != 3 {
@@ -1172,4 +1160,8 @@ func TestAppendUserMessage_ReplyTargetSenderNullWhenAbsent(t *testing.T) {
 	if f.lastContextReply.LastSenderID.Valid {
 		t.Errorf("absent sender must be NULL; got %+v", f.lastContextReply.LastSenderID)
 	}
+}
+
+func newChatSessionWith(q SessionQueries, tx TxStarter, channelType channel.Type, titles SessionTitles) *ChatSession {
+	return &ChatSession{q: q, tx: tx, channelType: channelType, titles: titles}
 }

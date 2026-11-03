@@ -21,12 +21,7 @@
     "runtime_access_denied_toast": "Message not sent — this agent can't run on its private runtime. Make the runtime public, or rebind/copy the agent to a runtime its owner can use",
     "attachment_bind_failed_toast": "Message sent, but files were not attached. Please try again in a moment.",
     "add_tooltip": "Add",
-    "upload_file": "Image or files",
-    "project_context": "Project context",
-    "change_project_context": "Change project context",
-    "remove_project_context": "Remove project context",
-    "no_projects": "No projects yet",
-    "project_context_unsupported": "Project description won't apply — this agent's daemon needs an upgrade"
+    "upload_file": "Image or files"
   },
   "queue": {
     "title_one": "{{count}} queued message",
@@ -130,9 +125,6 @@
   },
   "empty_state": {
     "first_time_title": "Chat with your agents",
-    "first_time_intro": "✨ They know your world —",
-    "first_time_pillars": "issues, projects, skills",
-    "first_time_pillars_suffix": ".",
     "first_time_actions": "Ask for a summary, plan your day, or hand off a quick task.",
     "returning_title_named": "Hi, I'm {{name}}",
     "returning_title_default": "Welcome to Auro",
@@ -146,8 +138,8 @@
       "prompt": "What are you best at helping with? Give me a concise overview."
     },
     "first_task": {
-      "label": "Suggest a first issue",
-      "prompt": "Suggest three useful issues I could assign to you."
+      "label": "Suggest a first step",
+      "prompt": "Suggest three useful things you can help me do in this chat."
     },
     "recommend": {
       "label": "Recommend an action",
@@ -158,14 +150,9 @@
   "onboarding_cards": {
     "aria_label": "Ways to start",
     "cta": "Start",
-    "board": {
-      "title": "Get a board up in minutes",
-      "desc": "Tell me the goal — I'll create the project, split the issues, and set priorities.",
-      "prompt": "Turn our current goals into a project board"
-    },
     "delegate": {
       "title": "Hand me one thing first",
-      "desc": "A quick piece of research, say — results come back as an issue and a report.",
+      "desc": "Research a topic and share the findings in chat.",
       "prompt": "Take one thing off my plate: run a quick piece of research and send the results back as a report"
     },
     "digest": {
@@ -173,7 +160,12 @@
       "desc": "A morning summary of world progress, straight to your inbox.",
       "prompt": "Set up a daily automation that posts a morning summary of world progress"
     },
-    "digest_badge": "Daily 9:00"
+    "digest_badge": "Daily 9:00",
+    "plan": {
+      "title": "Plan a goal",
+      "desc": "Find a clear next step together",
+      "prompt": "Help me turn my current goal into a concrete plan"
+    }
   },
   "no_agent_banner": "You need an agent to start chatting.",
   "archived_agent_banner": "{{name}} has been archived — this conversation is read-only.",

@@ -29,7 +29,6 @@ vi.mock("@auro/core/api", () => ({
 function makeUpload(overrides: Partial<UploadResult> & { id: string; link: string; filename: string }): UploadResult {
   return {
     workspace_id: "ws-1",
-    issue_id: null,
     comment_id: null,
     chat_session_id: null,
     chat_message_id: null,

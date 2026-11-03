@@ -60,7 +60,7 @@ func TestRouter_RealServiceLookupFailure_ReleasesInsteadOfDenying(t *testing.T) 
 			h.inst.inst.AgentID = agentID
 			// The real policy, reached through the real service, with one
 			// query failing the way an unreachable database fails it.
-			h.router = NewRouter(h.issues,
+			h.router = NewRouter(
 				&service.TaskService{Queries: db.New(failQuery{inner: pool, match: tc.sql})},
 				h.reader, RouterConfig{Logger: discardLogger(), Lifecycle: h.lifecycle})
 			// A fresh Router holds no resolver sets, and Handle answers that

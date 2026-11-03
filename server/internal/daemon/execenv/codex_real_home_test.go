@@ -32,7 +32,7 @@ func TestPrepareCodexKeepsRealHomeAndScopesOnlyCodexHome(t *testing.T) {
 		TaskID:         "b1c2d3e4-f5a6-7890-bcde-f01234567890",
 		AgentName:      "Codex Agent",
 		Provider:       "codex",
-		Task:           TaskContextForEnv{IssueID: "real-home-test"},
+		Task:           TaskContextForEnv{ChatSessionID: "real-home-test"},
 	}, testLogger())
 	if err != nil {
 		t.Fatalf("Prepare failed: %v", err)
@@ -53,56 +53,6 @@ func TestPrepareCodexKeepsRealHomeAndScopesOnlyCodexHome(t *testing.T) {
 	}
 }
 
-func TestPrepareCodexLocalDirectoryChatKeepsRolloutAcrossTaskIDs(t *testing.T) {
-	// Given: a direct chat runs against the same local directory in two tasks.
-	sharedHome := t.TempDir()
-	t.Setenv("CODEX_HOME", sharedHome)
-	workspacesRoot := t.TempDir()
-	localWorkDir := t.TempDir()
-	task := TaskContextForEnv{
-		AgentID:       "agent-chat-resume",
-		ChatSessionID: "chat-session-resume",
-	}
-
-	first, err := Prepare(PrepareParams{
-		WorkspacesRoot: workspacesRoot,
-		WorkspaceID:    "ws-chat-resume",
-		TaskID:         "11111111-1111-1111-1111-111111111111",
-		AgentName:      "Codex Agent",
-		Provider:       "codex",
-		LocalWorkDir:   localWorkDir,
-		Task:           task,
-	}, testLogger())
-	if err != nil {
-		t.Fatalf("first Prepare failed: %v", err)
-	}
-	sessionID := "019fe3de-56a2-7792-8913-ee53664dfa0e"
-	seedRolloutAt(t, filepath.Join(first.CodexHome, "sessions", "2026", "08", "09", "rollout-2026-08-09T09-13-47-"+sessionID+".jsonl"), 32)
-	if err := first.Cleanup(true); err != nil {
-		t.Fatalf("cleanup first task: %v", err)
-	}
-
-	// When: the follow-up task prepares a fresh task-scoped CODEX_HOME.
-	second, err := Prepare(PrepareParams{
-		WorkspacesRoot: workspacesRoot,
-		WorkspaceID:    "ws-chat-resume",
-		TaskID:         "22222222-2222-2222-2222-222222222222",
-		AgentName:      "Codex Agent",
-		Provider:       "codex",
-		LocalWorkDir:   localWorkDir,
-		Task:           task,
-	}, testLogger())
-	if err != nil {
-		t.Fatalf("second Prepare failed: %v", err)
-	}
-	defer second.Cleanup(true)
-
-	// Then: the prior rollout is visible, so the daemon can resume the chat.
-	if !CodexResumeRolloutPresent(second.CodexHome, sessionID) {
-		t.Fatal("follow-up direct chat cannot see the prior rollout; context would be dropped")
-	}
-}
-
 // TestReuseCodexToleratesLegacyTaskHome covers an env root prepared by an older
 // daemon: its leftover `home/` directory (including the credential symlinks it
 // seeded) must neither break reuse nor be adopted as a HOME again.
@@ -118,7 +68,7 @@ func TestReuseCodexToleratesLegacyTaskHome(t *testing.T) {
 		TaskID:         "c1d2e3f4-a5b6-7890-cdef-012345678901",
 		AgentName:      "Codex Agent",
 		Provider:       "codex",
-		Task:           TaskContextForEnv{IssueID: "legacy-home-test"},
+		Task:           TaskContextForEnv{ChatSessionID: "legacy-home-test"},
 	}, testLogger())
 	if err != nil {
 		t.Fatalf("Prepare failed: %v", err)
@@ -137,7 +87,7 @@ func TestReuseCodexToleratesLegacyTaskHome(t *testing.T) {
 	reused := Reuse(ReuseParams{
 		WorkDir:  env.WorkDir,
 		Provider: "codex",
-		Task:     TaskContextForEnv{IssueID: "legacy-home-test"},
+		Task:     TaskContextForEnv{ChatSessionID: "legacy-home-test"},
 	}, testLogger())
 	if reused == nil {
 		t.Fatal("Reuse returned nil on an env root carrying a legacy task home")

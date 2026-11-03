@@ -28,13 +28,13 @@ const handlerTestManifest = `{
   "name": "Hello Panel",
   "version": "1.0.0",
   "author": { "name": "example" },
-  "scopes": ["issues:read", "comments:write", "storage:user"],
+  "scopes": ["tasks:read", "storage:workspace", "storage:user"],
   "config": {
     "repo": { "type": "string", "label": "Repo", "required": true },
     "token": { "type": "secret", "label": "Token" }
   },
   "contributes": {
-    "surfaces": [{ "key": "hello", "type": "issue_panel", "name": "Hello", "entry": "ui/main.js" }]
+    "surfaces": [{ "key": "hello", "type": "modal", "name": "Hello", "entry": "ui/main.js" }]
   }
 }`
 
@@ -47,7 +47,7 @@ const hookOnlyTestManifest = `{
   "name": "Hooked",
   "version": "1.0.0",
   "author": { "name": "example" },
-  "scopes": ["issues:read", "net:example.com"],
+  "scopes": ["tasks:read", "net:example.com"],
   "contributes": {
     "hooks": [{
       "key": "summarize",
@@ -159,7 +159,7 @@ func withLocalPluginSourceIn(t *testing.T, root string, manifest string) string 
 	previousSecrets := testHandler.PluginService.Secrets
 	testHandler.PluginService.LocalDir = root
 	testHandler.PluginService.Host = plugincontract.Capabilities{
-		SurfaceTypes:  map[string]bool{plugincontract.SurfaceIssuePanel: true, plugincontract.SurfaceSidebarPanel: true, plugincontract.SurfaceModal: true},
+		SurfaceTypes:  map[string]bool{plugincontract.SurfaceSidebarPanel: true, plugincontract.SurfaceModal: true},
 		HookTriggers:  map[string]bool{plugincontract.TriggerUI: true, plugincontract.TriggerManual: true, plugincontract.TriggerAgent: true, plugincontract.TriggerEvent: true, plugincontract.TriggerSchedule: true},
 		HookTransport: map[string]bool{plugincontract.TransportHTTP: true, plugincontract.TransportMCP: true},
 		ResourceTypes: map[string]bool{plugincontract.ResourceSkill: true},
@@ -431,7 +431,7 @@ func TestPluginInstallRequiresExactConsent(t *testing.T) {
 	cleanupPluginInstallations(t)
 	versionID := withLocalPluginSource(t, handlerTestManifest)
 
-	partial, _ := json.Marshal(map[string]any{"version_id": versionID, "granted_scopes": []string{"issues:read"}})
+	partial, _ := json.Marshal(map[string]any{"version_id": versionID, "granted_scopes": []string{"tasks:read"}})
 	recorder := httptest.NewRecorder()
 	testHandler.InstallPlugin(recorder, pluginHandlerRequest(http.MethodPost, "/plugins", partial, map[string]string{"id": testWorkspaceID}))
 	if recorder.Code != http.StatusConflict {
@@ -440,7 +440,7 @@ func TestPluginInstallRequiresExactConsent(t *testing.T) {
 
 	extra, _ := json.Marshal(map[string]any{
 		"version_id":     versionID,
-		"granted_scopes": []string{"issues:read", "comments:write", "storage:user", "issues:write"},
+		"granted_scopes": []string{"tasks:read", "storage:workspace", "storage:user", "tasks:write"},
 	})
 	recorder = httptest.NewRecorder()
 	testHandler.InstallPlugin(recorder, pluginHandlerRequest(http.MethodPost, "/plugins", extra, map[string]string{"id": testWorkspaceID}))
@@ -456,7 +456,7 @@ func TestPluginInstallConfigureAndUninstall(t *testing.T) {
 
 	install, _ := json.Marshal(map[string]any{
 		"version_id":     versionID,
-		"granted_scopes": []string{"issues:read", "comments:write", "storage:user"},
+		"granted_scopes": []string{"tasks:read", "storage:workspace", "storage:user"},
 	})
 	recorder := httptest.NewRecorder()
 	testHandler.InstallPlugin(recorder, pluginHandlerRequest(http.MethodPost, "/plugins", install, map[string]string{"id": testWorkspaceID}))
@@ -615,7 +615,7 @@ func TestPluginInstallRejectsUnshippedCapabilities(t *testing.T) {
 	// keeps the assertion true for good.
 	versionID := withLocalPluginSource(t, hookOnlyTestManifest)
 	testHandler.PluginService.Host = plugincontract.Capabilities{
-		SurfaceTypes:  map[string]bool{plugincontract.SurfaceIssuePanel: true},
+		SurfaceTypes:  map[string]bool{plugincontract.SurfaceModal: true},
 		HookTriggers:  map[string]bool{},
 		HookTransport: map[string]bool{},
 		ResourceTypes: map[string]bool{},
@@ -623,7 +623,7 @@ func TestPluginInstallRejectsUnshippedCapabilities(t *testing.T) {
 
 	body, _ := json.Marshal(map[string]any{
 		"version_id":     versionID,
-		"granted_scopes": []string{"issues:read", "net:example.com"},
+		"granted_scopes": []string{"tasks:read", "net:example.com"},
 	})
 	recorder := httptest.NewRecorder()
 	testHandler.InstallPlugin(recorder, pluginHandlerRequest(http.MethodPost, "/plugins", body, map[string]string{"id": testWorkspaceID}))
@@ -649,7 +649,7 @@ func TestPluginInstallAcceptsEveryCapabilityThisHostShips(t *testing.T) {
 
 	body, _ := json.Marshal(map[string]any{
 		"version_id":     versionID,
-		"granted_scopes": []string{"issues:read", "net:example.com"},
+		"granted_scopes": []string{"tasks:read", "net:example.com"},
 	})
 	recorder := httptest.NewRecorder()
 	testHandler.InstallPlugin(recorder, pluginHandlerRequest(http.MethodPost, "/plugins", body, map[string]string{"id": testWorkspaceID}))
@@ -671,7 +671,7 @@ func TestPluginInstallAcceptsAShippedSurface(t *testing.T) {
 
 	body, _ := json.Marshal(map[string]any{
 		"version_id":     versionID,
-		"granted_scopes": []string{"issues:read", "comments:write", "storage:user"},
+		"granted_scopes": []string{"tasks:read", "storage:workspace", "storage:user"},
 	})
 	recorder := httptest.NewRecorder()
 	testHandler.InstallPlugin(recorder, pluginHandlerRequest(http.MethodPost, "/plugins", body, map[string]string{"id": testWorkspaceID}))
@@ -700,7 +700,7 @@ func TestPluginUpgradePrunesSecretsTheNewManifestDropped(t *testing.T) {
 
 	install, _ := json.Marshal(map[string]any{
 		"version_id":     versionID,
-		"granted_scopes": []string{"issues:read", "comments:write", "storage:user"},
+		"granted_scopes": []string{"tasks:read", "storage:workspace", "storage:user"},
 	})
 	recorder := httptest.NewRecorder()
 	testHandler.InstallPlugin(recorder, pluginHandlerRequest(http.MethodPost, "/plugins", install, map[string]string{"id": testWorkspaceID}))
@@ -733,7 +733,7 @@ func TestPluginUpgradePrunesSecretsTheNewManifestDropped(t *testing.T) {
 
 	upgrade, _ := json.Marshal(map[string]any{
 		"version_id":     upgradedVersionID,
-		"granted_scopes": []string{"issues:read", "comments:write", "storage:user"},
+		"granted_scopes": []string{"tasks:read", "storage:workspace", "storage:user"},
 	})
 	recorder = httptest.NewRecorder()
 	testHandler.InstallPlugin(recorder, pluginHandlerRequest(http.MethodPost, "/plugins", upgrade, map[string]string{"id": testWorkspaceID}))

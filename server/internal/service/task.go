@@ -86,11 +86,6 @@ type TaskService struct {
 	analyticsContextOrder []string
 }
 
-type SourceContextObjectStore interface {
-	DeleteObject(ctx context.Context, key string) error
-	KeyFromURL(rawURL string) string
-}
-
 // ComposioOverlayBuilder is the seam TaskService uses to build the per-task
 // MCP overlay at enqueue time. Implemented by
 // internal/integrations/composio.Service.BuildTaskOverlay; tests provide an
@@ -477,9 +472,8 @@ func (s *TaskService) applyAttributionFallback(ctx context.Context, attr attribu
 // attributionCreateParams maps a resolved attribution onto the CreateAgentTask
 // provenance columns. originator_source is always stamped (never NULL for a new
 // row); delegation lineage and evidence are stamped only when present.
-func attributionCreateParams(attr attribution.Result) (source pgtype.Text, delegatedFrom pgtype.UUID, evidenceKind pgtype.Text, evidenceRef pgtype.UUID) {
+func attributionCreateParams(attr attribution.Result) (source pgtype.Text, evidenceKind pgtype.Text, evidenceRef pgtype.UUID) {
 	source = pgtype.Text{String: attr.Source.String(), Valid: true}
-	delegatedFrom = attr.DelegatedFromTaskID
 	evidenceKind = pgtype.Text{String: string(attr.EvidenceKind), Valid: attr.EvidenceKind != ""}
 	evidenceRef = attr.EvidenceRefID
 	return
@@ -730,9 +724,6 @@ func taskFailureReason(task db.AgentTaskQueue) string {
 	return "agent_error"
 }
 
-// QuickCreateContextType marks a task as a quick-create job.
-const QuickCreateContextType = "quick_create"
-
 // ErrChatTaskAgentArchived signals that EnqueueChatTask refused to
 // queue work because the destination agent has been archived. This
 // is a productizable state — surface it to the user as "this agent
@@ -839,7 +830,7 @@ func (s *TaskService) PrepareChatTaskEnqueue(
 			"agent_id", util.UUIDToString(agentID))
 		return PreparedChatTaskEnqueue{}, err
 	}
-	attrSource, _, attrEvidenceKind, _ := attributionCreateParams(attr)
+	attrSource, attrEvidenceKind, _ := attributionCreateParams(attr)
 	return PreparedChatTaskEnqueue{
 		accountableUser: attr.AccountableUserID,
 		attrSource:      attrSource, attrEvidenceKind: attrEvidenceKind,
@@ -1249,7 +1240,7 @@ func (s *TaskService) SendDirectChatMessage(
 	if err != nil {
 		return nil, err
 	}
-	attrSource, _, attrEvidenceKind, attrEvidenceRef := attributionCreateParams(attr)
+	attrSource, attrEvidenceKind, attrEvidenceRef := attributionCreateParams(attr)
 
 	var out DirectChatSendResult
 	if err := s.runInTx(ctx, func(qtx *db.Queries) error {

@@ -33,8 +33,8 @@ func TestPrepareIsolated_PermanentFIFOBlockThenImmediateRetry(t *testing.T) {
 		AgentName:      "isolation-test",
 		Provider:       "codex",
 		Task: TaskContextForEnv{
-			IssueID: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
-			AgentID: "ffffffff-1111-2222-3333-444444444444",
+			ChatSessionID: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+			AgentID:       "ffffffff-1111-2222-3333-444444444444",
 		},
 	}
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
@@ -49,7 +49,7 @@ func TestPrepareIsolated_PermanentFIFOBlockThenImmediateRetry(t *testing.T) {
 	if elapsed := time.Since(startedAt); elapsed > 3*time.Second {
 		t.Fatalf("PrepareIsolated took %s, want a bounded process termination", elapsed)
 	}
-	if _, err := os.Stat(PredictRootDir(RootDirParams{WorkspacesRoot: params.WorkspacesRoot, WorkspaceID: params.WorkspaceID, WorkspaceSlug: params.WorkspaceSlug, TaskID: params.TaskID, IssueIdentifier: params.IssueIdentifier})); err != nil {
+	if _, err := os.Stat(PredictRootDir(RootDirParams{WorkspacesRoot: params.WorkspacesRoot, WorkspaceID: params.WorkspaceID, WorkspaceSlug: params.WorkspaceSlug, TaskID: params.TaskID})); err != nil {
 		t.Fatalf("first helper did not reach environment preparation before timeout: %v", err)
 	}
 
@@ -79,7 +79,7 @@ func TestPrepareIsolated_PermanentFIFOBlockThenImmediateRetry(t *testing.T) {
 	if err != nil {
 		t.Fatalf("immediate retry PrepareIsolated: %v", err)
 	}
-	if env == nil || env.RootDir != PredictRootDir(RootDirParams{WorkspacesRoot: params.WorkspacesRoot, WorkspaceID: params.WorkspaceID, WorkspaceSlug: params.WorkspaceSlug, TaskID: params.TaskID, IssueIdentifier: params.IssueIdentifier}) {
+	if env == nil || env.RootDir != PredictRootDir(RootDirParams{WorkspacesRoot: params.WorkspacesRoot, WorkspaceID: params.WorkspaceID, WorkspaceSlug: params.WorkspaceSlug, TaskID: params.TaskID}) {
 		t.Fatalf("retry environment = %#v, want the predicted root", env)
 	}
 }

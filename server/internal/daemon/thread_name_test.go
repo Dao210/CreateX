@@ -9,9 +9,9 @@ func TestDeriveTaskThreadNamePrefersClaimedThreadName(t *testing.T) {
 	t.Parallel()
 
 	got := deriveTaskThreadName(Task{
-		ThreadName:            "  Fix login redirect  ",
-		TriggerCommentContent: "please look at this comment",
-		ChatMessage:           "chat fallback",
+		ThreadName: "  Fix login redirect  ",
+
+		ChatMessage: "chat fallback",
 	})
 	if got != "Fix login redirect" {
 		t.Fatalf("thread name = %q, want %q", got, "Fix login redirect")
@@ -21,9 +21,9 @@ func TestDeriveTaskThreadNamePrefersClaimedThreadName(t *testing.T) {
 func TestDeriveTaskThreadNameFallsBackToTaskContext(t *testing.T) {
 	t.Parallel()
 
-	got := deriveTaskThreadName(Task{QuickCreatePrompt: "create issue for billing sync"})
-	if got != "create issue for billing sync" {
-		t.Fatalf("thread name = %q, want quick-create prompt", got)
+	got := deriveTaskThreadName(Task{ChatMessage: "Review billing sync"})
+	if got != "Review billing sync" {
+		t.Fatalf("thread name = %q, want chat prompt", got)
 	}
 }
 

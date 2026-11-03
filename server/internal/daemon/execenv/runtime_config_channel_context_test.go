@@ -20,7 +20,7 @@ func TestBriefChatWorkflowDoesNotAssertAudience(t *testing.T) {
 		AgentID:         "9df55bf2-67de-4ae6-803f-4de2fbd45df1",
 		AgentName:       "Eve",
 	})
-	if !strings.Contains(out, "**You are in chat mode.**") {
+	if !strings.Contains(out, "This is a chat session.") {
 		t.Fatal("chat brief must still identify chat mode")
 	}
 	for _, retired := range []string{

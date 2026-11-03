@@ -71,10 +71,9 @@ func createForeignWorkspaceAgent(t *testing.T) string {
 	t.Helper()
 
 	workspaceID := dbfx.Insert(t, "workspace", testutil.Cols{
-		"name":         "Foreign Cancel WS",
-		"slug":         "foreign-cancel-ws",
-		"description":  "cross-tenant cancel test",
-		"issue_prefix": "FCW",
+		"name":        "Foreign Cancel WS",
+		"slug":        "foreign-cancel-ws",
+		"description": "cross-tenant cancel test",
 	})
 
 	runtimeID := dbfx.Insert(t, "agent_runtime", testutil.Cols{
@@ -328,8 +327,8 @@ func TestCancelTaskByUser_QueuedRemoveDeletesAttachment(t *testing.T) {
 func createStartedEmptyChatTask(t *testing.T, sessionID, agentID, content string) (taskID, userMessageID string) {
 	t.Helper()
 	dbfx.QueryRow(t, `
-		INSERT INTO agent_task_queue (agent_id, runtime_id, status, priority, issue_id, chat_session_id, started_at)
-		VALUES ($1, (SELECT runtime_id FROM agent WHERE id = $1), 'running', 0, NULL, $2, now())
+		INSERT INTO agent_task_queue (agent_id, runtime_id, status, priority, chat_session_id, started_at)
+		VALUES ($1, (SELECT runtime_id FROM agent WHERE id = $1), 'running', 0, $2, now())
 		RETURNING id
 	`, agentID, sessionID).Scan(&taskID)
 	t.Cleanup(func() { testPool.Exec(context.Background(), `DELETE FROM agent_task_queue WHERE id = $1`, taskID) })
@@ -529,8 +528,8 @@ func TestCancelTaskByUser_ChatTask_NonCreator_Returns403(t *testing.T) {
 
 	var taskID string
 	dbfx.QueryRow(t, `
-		INSERT INTO agent_task_queue (agent_id, runtime_id, status, priority, issue_id, chat_session_id)
-		VALUES ($1, (SELECT runtime_id FROM agent WHERE id = $1), 'running', 0, NULL, $2)
+		INSERT INTO agent_task_queue (agent_id, runtime_id, status, priority, chat_session_id)
+		VALUES ($1, (SELECT runtime_id FROM agent WHERE id = $1), 'running', 0, $2)
 		RETURNING id
 	`, agentID, sessionID).Scan(&taskID)
 	t.Cleanup(func() { testPool.Exec(context.Background(), `DELETE FROM agent_task_queue WHERE id = $1`, taskID) })
@@ -555,8 +554,8 @@ func TestCancelTaskByUser_ChatTaskWithTranscript_PersistsAssistantSnapshot(t *te
 
 	var taskID string
 	dbfx.QueryRow(t, `
-		INSERT INTO agent_task_queue (agent_id, runtime_id, status, priority, issue_id, chat_session_id, created_at)
-		VALUES ($1, (SELECT runtime_id FROM agent WHERE id = $1), 'running', 0, NULL, $2, now() - interval '5 seconds')
+		INSERT INTO agent_task_queue (agent_id, runtime_id, status, priority, chat_session_id, created_at)
+		VALUES ($1, (SELECT runtime_id FROM agent WHERE id = $1), 'running', 0, $2, now() - interval '5 seconds')
 		RETURNING id
 	`, agentID, sessionID).Scan(&taskID)
 	t.Cleanup(func() { testPool.Exec(context.Background(), `DELETE FROM agent_task_queue WHERE id = $1`, taskID) })
@@ -607,8 +606,8 @@ func TestCancelTaskByUser_ChatTaskWithoutTranscript_RestoresUserDraft(t *testing
 
 	var taskID string
 	dbfx.QueryRow(t, `
-		INSERT INTO agent_task_queue (agent_id, runtime_id, status, priority, issue_id, chat_session_id)
-		VALUES ($1, (SELECT runtime_id FROM agent WHERE id = $1), 'running', 0, NULL, $2)
+		INSERT INTO agent_task_queue (agent_id, runtime_id, status, priority, chat_session_id)
+		VALUES ($1, (SELECT runtime_id FROM agent WHERE id = $1), 'running', 0, $2)
 		RETURNING id
 	`, agentID, sessionID).Scan(&taskID)
 	t.Cleanup(func() { testPool.Exec(context.Background(), `DELETE FROM agent_task_queue WHERE id = $1`, taskID) })
@@ -757,8 +756,8 @@ func TestCancelTaskByUser_ChatTaskWithBoundAttachment_SurvivesCancelAndRebinds(t
 
 	var taskID string
 	dbfx.QueryRow(t, `
-		INSERT INTO agent_task_queue (agent_id, runtime_id, status, priority, issue_id, chat_session_id)
-		VALUES ($1, (SELECT runtime_id FROM agent WHERE id = $1), 'running', 0, NULL, $2)
+		INSERT INTO agent_task_queue (agent_id, runtime_id, status, priority, chat_session_id)
+		VALUES ($1, (SELECT runtime_id FROM agent WHERE id = $1), 'running', 0, $2)
 		RETURNING id
 	`, agentID, sessionID).Scan(&taskID)
 	t.Cleanup(func() { testPool.Exec(context.Background(), `DELETE FROM agent_task_queue WHERE id = $1`, taskID) })

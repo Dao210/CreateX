@@ -45,9 +45,6 @@ func TestRouterCORSContract(t *testing.T) {
 		router.ServeHTTP(rec, req)
 
 		for _, want := range []string{
-			handler.HeaderCommentsTruncated,
-			handler.HeaderTimelineTruncated,
-			handler.HeaderActiveRunsTruncated,
 			handler.HeaderAgentTasksNextCursor,
 		} {
 			if !headerListContains(rec.Header().Get("Access-Control-Expose-Headers"), want) {

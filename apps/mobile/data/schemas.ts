@@ -23,7 +23,6 @@ import type { Agent, AgentInvocationTarget, AgentTask, Attachment, ChatMessage, 
 export const AttachmentSchema: z.ZodType<Attachment> = z.object({
   id: z.string(),
   workspace_id: z.string().default(""),
-  issue_id: z.string().nullable().default(null),
   comment_id: z.string().nullable().default(null),
   chat_session_id: z.string().nullable().default(null),
   chat_message_id: z.string().nullable().default(null),
@@ -174,7 +173,6 @@ export const SendChatMessageResponseSchema: z.ZodType<SendChatMessageResponse> =
 // payload so the mobile cache shape stays interchangeable with web's.
 export const TaskMessagePayloadSchema: z.ZodType<TaskMessagePayload> = z.object({
   task_id: z.string(),
-  issue_id: z.string().default(""),
   chat_session_id: z.string().optional(),
   seq: z.number().default(0),
   // Enum drift defense: unknown server-side types fall back to "text" so
@@ -214,7 +212,6 @@ export const AgentTaskSchema: z.ZodType<AgentTask> = z.object({
   id: z.string(),
   agent_id: z.string().default(""),
   runtime_id: z.string().default(""),
-  issue_id: z.string().default(""),
   status: z
     .enum(["queued", "dispatched", "running", "completed", "failed", "cancelled"])
     .catch("queued"),
@@ -251,9 +248,8 @@ export const AgentTaskSchema: z.ZodType<AgentTask> = z.object({
   autopilot_run_id: z.string().optional(),
   parent_task_id: z.string().optional(),
   attempt: z.number().optional(),
-  trigger_comment_id: z.string().optional(),
   trigger_summary: z.string().optional(),
-  kind: z.enum(["comment", "autopilot", "chat", "quick_create", "direct"]).optional().catch("direct"),
+  kind: z.enum(["execution", "autopilot", "chat"]).optional().catch("execution"),
   work_dir: z.string().optional(),
 }).loose();
 
@@ -329,22 +325,6 @@ export const WorkspaceSchema: z.ZodType<Workspace> = z.object({
 export const WorkspaceListSchema = z.array(WorkspaceSchema).default([]);
 export const EMPTY_WORKSPACE_LIST: Workspace[] = [];
 
-/** Pin metadata only — display fields (title / status / icon) are NOT here,
- *  consumers derive them from `issueDetailOptions` / `projectDetailOptions`.
- *  Matches the design in packages/core/types/pin.ts. */
-export const PinnedItemSchema: z.ZodType<PinnedItem> = z.object({
-  id: z.string(),
-  workspace_id: z.string().default(""),
-  user_id: z.string().default(""),
-  item_type: z.enum(["issue", "project"]).catch("issue"),
-  item_id: z.string(),
-  position: z.number().default(0),
-  created_at: z.string().default(""),
-}).loose();
-
-export const PinListSchema = z.array(PinnedItemSchema).default([]);
-export const EMPTY_PIN_LIST: PinnedItem[] = [];
-
 export const InboxItemSchema: z.ZodType<InboxItem> = z.object({
   id: z.string(),
   workspace_id: z.string().default(""),
@@ -368,12 +348,8 @@ export const InboxItemSchema: z.ZodType<InboxItem> = z.object({
   severity: z
     .enum(["action_required", "attention", "info"])
     .catch("info"),
-  issue_id: z.string().nullable().default(null),
   title: z.string().default(""),
   body: z.string().nullable().default(null),
-  issue_status: z.string().nullable().default(null) as unknown as z.ZodType<
-    InboxItem["issue_status"]
-  >,
   read: z.boolean().default(false),
   archived: z.boolean().default(false),
   created_at: z.string().default(""),

@@ -68,7 +68,7 @@ function renderField(
     <I18nProvider
       locale="en"
       resources={{
-        en: { common: enCommon, agents: enAgents, issues: enIssues },
+        en: { common: enCommon, agents: enAgents, execution: enIssues },
       }}
     >
       <QueryClientProvider client={queryClient}>

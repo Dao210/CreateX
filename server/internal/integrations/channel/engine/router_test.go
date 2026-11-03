@@ -84,7 +84,6 @@ type fakeBinder struct {
 	ensureID     pgtype.UUID
 	ensureErr    error
 	appendResult AppendResult
-	parseIssue   bool
 	appendErr    error
 	appendDelay  time.Duration
 	bindErr      error
@@ -141,13 +140,7 @@ func (f *fakeBinder) AppendMessage(_ context.Context, p AppendParams) (AppendRes
 	delay := f.appendDelay
 	f.lastAppend = p
 	res, err := f.appendResult, f.appendErr
-	if f.parseIssue {
-		commandSource := p.Message.CommandText
-		if commandSource == "" {
-			commandSource = p.Message.Text
-		}
-		res.IssueCommand, _ = ParseIssueCommand(commandSource)
-	}
+
 	f.mu.Unlock()
 	if delay > 0 {
 		time.Sleep(delay)
@@ -725,8 +718,8 @@ func TestRouter_Ingested_InTxMark_FinalizeNone(t *testing.T) {
 	if !waitFor(time.Second, func() bool { return len(h.binder.boundMedia().MediaRefs) == 1 }) {
 		t.Fatalf("resolved media not bound after append: %+v", h.binder.boundMedia().MediaRefs)
 	}
-	if got := h.binder.boundMedia(); got.IssueID.Valid || got.Body != "hello" {
-		t.Fatalf("plain chat media target/body = issue:%v body:%q", got.IssueID, got.Body)
+	if got := h.binder.boundMedia(); got.Body != "hello" {
+		t.Fatalf("plain chat media target/body = body:%q", got.Body)
 	}
 }
 
@@ -1258,9 +1251,6 @@ func TestRouter_NewBodyIsFirstOrdinaryTurnAndEnqueuedAtomically(t *testing.T) {
 	}
 	if got := h.binder.lastStart.Message.Text; got != "/issue investigate deploy" {
 		t.Fatalf("first turn=%q", got)
-	}
-	if h.issues.called {
-		t.Fatal("/new body must not be reparsed as an /issue command")
 	}
 	if !h.tasks.wasPrepared() || !h.tasks.wasCalled() || h.tasks.calls() != 1 {
 		t.Fatalf("prepared=%v calls=%d", h.tasks.wasPrepared(), h.tasks.calls())

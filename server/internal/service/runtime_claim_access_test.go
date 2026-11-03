@@ -71,11 +71,11 @@ func newRuntimeClaimAccessFixture(
 		"owner_id":             agentOwnerID,
 		"max_concurrent_tasks": 5,
 	})
-	issueID := fx.Issue(t, "runtime claim access")
+	chatID := fx.ChatSession(t, agentID)
 	taskCols := testutil.Cols{
-		"runtime_id": taskRuntimeID,
-		"issue_id":   issueID,
-		"status":     taskStatus,
+		"runtime_id":      taskRuntimeID,
+		"chat_session_id": chatID,
+		"status":          taskStatus,
 	}
 	if taskStatus == "dispatched" {
 		taskCols["dispatched_at"] = testutil.Raw("now() - interval '10 minutes'")
@@ -305,7 +305,7 @@ func TestClaimTaskUsesCurrentAgentRuntimeWhenRuntimeIDIsOmitted(t *testing.T) {
 	fixture := newRuntimeClaimAccessFixture(t, "public", true, true, "queued")
 	svc := NewTaskService(db.New(fixture.pool), fixture.pool, nil, events.New())
 
-	claimed, err := svc.ClaimTask(ctx, fixture.agentID)
+	claimed, err := svc.claimTask(ctx, fixture.agentID, pgtype.UUID{})
 	if err != nil {
 		t.Fatalf("claim task: %v", err)
 	}

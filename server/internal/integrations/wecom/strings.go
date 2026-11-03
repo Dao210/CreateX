@@ -124,13 +124,9 @@ type copyPack struct {
 	// ChatStarted confirms /new, which is the other half of that split — a
 	// new conversation the next message enters. Two commands, two answers:
 	// telling a /clear user their conversation was replaced sends them
-	// looking for a thread that never moved. IssueUsage answers a bare
-	// /issue with the shape it wanted. All three are stated here rather than as
-	// package constants — the lint asserts it, and a Chinese literal in
-	// replier.go is a line no other locale can read.
+	// looking for a thread that never moved.
 	FreshPending string
 	ChatStarted  string
-	IssueUsage   string
 
 	// InvokeDenied answers a member who may not run this agent (a private
 	// agent belongs to its owner alone). It always goes to that member alone —
@@ -152,19 +148,6 @@ type copyPack struct {
 	// It names no one and carries no token, so it is safe in front of an
 	// audience of unknown size.
 	BindingSentPrivately string
-
-	// IssueCreatedPrefix leads the /issue confirmation; IssueTitleSeparator
-	// joins the identifier to the title when there is one.
-	IssueCreatedPrefix  string
-	IssueTitleSeparator string
-
-	// IssueDuplicatePrefix leads the answer for an /issue the engine refused
-	// because an active issue already matched. The identifier and title that
-	// follow belong to THAT issue, which is why the copy has to say so rather
-	// than reading like a confirmation: this case used to be answered with
-	// the created copy, so the person was shown a number somebody else opened,
-	// under a title they never wrote, for a report that was never filed.
-	IssueDuplicatePrefix string
 
 	// The ways a streaming reply ends in something other than an answer. Each
 	// one closes the loading bubble the question opened, so each one has to
@@ -229,38 +212,6 @@ func (c copyPack) label(t string) string {
 	return c.InboxTypeFallback
 }
 
-// issueCreated renders the /issue confirmation.
-//
-// The title is whatever the reporter typed, and this goes out as a markdown
-// body — so it goes through breakMemberLinks here, at the render boundary,
-// exactly as buildInboxMarkdown treats a title before putting it in a card.
-// Without it, "/issue 安全升级：请点击 [重置密码](https://evil.example) 完成验证"
-// comes back from the Auro bot, in the group, as a working link inside a
-// confirmation everyone has reason to trust. Our own copy fragments stay raw;
-// only the member-authored field is broken.
-func (c copyPack) issueCreated(identifier, title string) string {
-	title = breakMemberLinks(strings.TrimSpace(title))
-	if title == "" {
-		return c.IssueCreatedPrefix + identifier
-	}
-	return c.IssueCreatedPrefix + identifier + c.IssueTitleSeparator + title
-}
-
-// issueDuplicate renders the answer for an /issue the engine refused because
-// an active issue already matched. The identifier and title belong to THAT
-// issue, not to the message being answered.
-//
-// The title here belongs to somebody ELSE's issue, which makes breaking its
-// links more important rather than less: the reporter is being shown text they
-// did not write.
-func (c copyPack) issueDuplicate(identifier, title string) string {
-	out := c.IssueDuplicatePrefix + identifier
-	if t := breakMemberLinks(strings.TrimSpace(title)); t != "" {
-		out += c.IssueTitleSeparator + t
-	}
-	return out
-}
-
 // copyFor returns the pack for a locale, falling back to the deployment's.
 func copyFor(l Locale) copyPack {
 	if pack, ok := copyPacks[l]; ok {
@@ -275,16 +226,11 @@ var copyPacks = map[Locale]copyPack{
 		AgentArchived:        "⚠️ 该智能体已归档，无法回复。请联系工作区管理员。",
 		FreshPending:         "✅ 已准备从空上下文运行。你的下一条聊天消息仍会进入当前对话，但不会带上之前的上下文。",
 		ChatStarted:          "✅ 已新建 Auro 对话。你的下一条消息会进入该对话。",
-		IssueUsage:           "请填写任务标题，格式如下：\n\n`/issue <标题>`\n`[描述]`（可选）",
 		InvokeDenied:         "⚠️ 你没有权限运行该智能体。如需使用，请联系它的所有者。",
 		BindingPromptPrefix:  "👋 请先绑定你的 Auro 账号，才能与我对话：\n",
 		BindingPromptSuffix:  "\n（链接 15 分钟内有效）",
 		BindingPending:       "👋 绑定链接刚才已经发给你了，就在上方，请直接点击完成绑定。",
 		BindingSentPrivately: "👋 已把绑定链接私发给你，请在与我的单聊里点击完成绑定。",
-
-		IssueCreatedPrefix:   "✅ 已创建 ",
-		IssueTitleSeparator:  " — ",
-		IssueDuplicatePrefix: "⚠️ 未创建 —— 已存在进行中的 ",
 
 		StreamNoReply:          "（这轮没有需要回复的内容）",
 		StreamNoReplyWithFiles: "（这轮没有文字回复，附件在下面）",
@@ -297,18 +243,11 @@ var copyPacks = map[Locale]copyPack{
 
 		InboxDetailLink: "查看详情",
 		InboxTypeLabels: map[string]string{
-			"issue_assigned":     "任务指派",
-			"mentioned":          "提及你",
-			"status_changed":     "状态变更",
-			"comment_added":      "新评论",
-			"new_comment":        "新评论",
-			"reaction_added":     "表情反应",
-			"task_failed":        "task 失败",
-			"unassigned":         "取消指派",
-			"assignee_changed":   "指派人变更",
-			"priority_changed":   "优先级变更",
-			"due_date_changed":   "截止日期变更",
-			"start_date_changed": "开始日期变更",
+			"creation_ready":           "创作完成",
+			"character_milestone":      "角色成长",
+			"world_digest":             "世界摘要",
+			"autopilot_paused":         "自动化已暂停",
+			"autopilot_quota_exceeded": "自动化额度不足",
 		},
 		InboxTypeFallback: "新消息",
 	},
@@ -317,16 +256,11 @@ var copyPacks = map[Locale]copyPack{
 		AgentArchived:        "⚠️ This agent has been archived and can't reply. Please contact your workspace admin.",
 		FreshPending:         "✅ Fresh start ready. Your next message stays in this chat but runs without the earlier context.",
 		ChatStarted:          "✅ Started a new Auro chat. Your next message will enter it.",
-		IssueUsage:           "Please include an issue title. Use:\n\n`/issue <title>`\n`[description]` (optional)",
 		InvokeDenied:         "⚠️ You don't have permission to run this agent. Ask its owner if you need to use it.",
 		BindingPromptPrefix:  "👋 Link your Auro account before we can talk:\n",
 		BindingPromptSuffix:  "\n(the link is good for 15 minutes)",
 		BindingPending:       "👋 I already sent you a link — it is just above, tap it to finish linking.",
 		BindingSentPrivately: "👋 I've sent the link to your direct chat with me — tap it there to finish linking.",
-
-		IssueCreatedPrefix:   "✅ Created ",
-		IssueTitleSeparator:  " — ",
-		IssueDuplicatePrefix: "⚠️ Not created — an active issue already covers this: ",
 
 		StreamNoReply:          "(nothing to reply with this round)",
 		StreamNoReplyWithFiles: "(no text this round — the files follow)",
@@ -339,18 +273,11 @@ var copyPacks = map[Locale]copyPack{
 
 		InboxDetailLink: "View details",
 		InboxTypeLabels: map[string]string{
-			"issue_assigned":     "Assigned",
-			"mentioned":          "Mentioned",
-			"status_changed":     "Status changed",
-			"comment_added":      "New comment",
-			"new_comment":        "New comment",
-			"reaction_added":     "Reaction",
-			"task_failed":        "Run failed",
-			"unassigned":         "Unassigned",
-			"assignee_changed":   "Assignee changed",
-			"priority_changed":   "Priority changed",
-			"due_date_changed":   "Due date changed",
-			"start_date_changed": "Start date changed",
+			"creation_ready":           "Creation ready",
+			"character_milestone":      "Character progress",
+			"world_digest":             "World digest",
+			"autopilot_paused":         "Autopilot paused",
+			"autopilot_quota_exceeded": "Autopilot quota exceeded",
 		},
 		InboxTypeFallback: "Notification",
 	},

@@ -46,7 +46,7 @@ func createAutopilotAs(t *testing.T, userID, title string) string {
 	body := map[string]any{
 		"title":          title,
 		"assignee_id":    agentID,
-		"execution_mode": "create_issue",
+		"execution_mode": "run_only",
 	}
 	w := httptest.NewRecorder()
 	path := "/api/autopilots?workspace_id=" + testWorkspaceID
@@ -68,7 +68,14 @@ func createAutopilotAs(t *testing.T, userID, title string) string {
 		testPool.Exec(context.Background(), `DELETE FROM autopilot_run WHERE autopilot_id = $1`, ap.ID)
 		testPool.Exec(context.Background(), `DELETE FROM autopilot_trigger WHERE autopilot_id = $1`, ap.ID)
 		testPool.Exec(context.Background(), `DELETE FROM autopilot_collaborator WHERE autopilot_id = $1`, ap.ID)
-		testPool.Exec(context.Background(), `DELETE FROM autopilot WHERE id = $1`, ap.ID)
+		testPool.Exec(context.Background(), `WITH runs AS MATERIALIZED (SELECT id FROM autopilot_run WHERE autopilot_id=$1),
+ removed_deliveries AS (DELETE FROM webhook_delivery WHERE autopilot_id=$1),
+ removed_triggers AS (DELETE FROM autopilot_trigger WHERE autopilot_id=$1),
+ removed_versions AS (DELETE FROM autopilot_rule_version WHERE autopilot_id=$1),
+ removed_collaborators AS (DELETE FROM autopilot_collaborator WHERE autopilot_id=$1),
+ detached_tasks AS (UPDATE agent_task_queue SET autopilot_run_id=NULL WHERE autopilot_run_id IN (SELECT id FROM runs)),
+ removed_runs AS (DELETE FROM autopilot_run WHERE autopilot_id=$1)
+ DELETE FROM autopilot WHERE id=$1`, ap.ID)
 	})
 	return ap.ID
 }

@@ -19,7 +19,7 @@ func TestRuntimeHealthGatesClaimsAndStaleDispatchRecovery(t *testing.T) {
 	pool := newResolveOriginatorPool(t)
 	ctx := context.Background()
 	q := db.New(pool)
-	_, _, agentID, issueID := seedAttributionFixture(t, pool)
+	_, _, agentID, _ := seedAttributionFixture(t, pool)
 
 	var runtimeID string
 	if err := pool.QueryRow(ctx, `SELECT runtime_id::text FROM agent WHERE id = $1`, agentID).Scan(&runtimeID); err != nil {
@@ -27,15 +27,15 @@ func TestRuntimeHealthGatesClaimsAndStaleDispatchRecovery(t *testing.T) {
 	}
 	t.Cleanup(func() {
 		pool.Exec(context.Background(), `UPDATE agent_runtime SET status = 'online', last_seen_at = now() WHERE id = $1`, runtimeID)
-		pool.Exec(context.Background(), `DELETE FROM agent_task_queue WHERE issue_id = $1`, issueID)
+		pool.Exec(context.Background(), `DELETE FROM agent_task_queue WHERE agent_id = $1`, agentID)
 	})
 
 	var taskID string
 	if err := pool.QueryRow(ctx, `
-		INSERT INTO agent_task_queue (agent_id, runtime_id, issue_id, status, priority)
-		VALUES ($1, $2, $3, 'queued', 0)
+		INSERT INTO agent_task_queue (agent_id, runtime_id, status, priority)
+		VALUES ($1, $2, 'queued', 0)
 		RETURNING id
-	`, agentID, runtimeID, issueID).Scan(&taskID); err != nil {
+	`, agentID, runtimeID).Scan(&taskID); err != nil {
 		t.Fatalf("insert queued task: %v", err)
 	}
 

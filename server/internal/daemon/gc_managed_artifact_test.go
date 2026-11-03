@@ -201,32 +201,6 @@ func TestManagedArtifact_ActiveEnvRootKeepsSandboxBin(t *testing.T) {
 	assertKept(t, taskDir, sandboxBinRel+"/codex")
 }
 
-// local_directory tasks keep their envRoot forever, so the managed cache is the
-// only thing the GC may ever take from them. The fallback must still apply.
-func TestManagedArtifact_LocalDirectoryChatReclaimsSandboxBin(t *testing.T) {
-	t.Parallel()
-	chatID := "aaaaaaaa-0000-0000-0000-000000000006"
-	d := newGCTestDaemon(t, chatGCMux(chatID, "active"))
-
-	taskDir := createTaskDir(t, d.cfg.WorkspacesRoot, "ws", "local-chat", &execenv.GCMeta{
-		Kind:           execenv.GCKindChat,
-		ChatSessionID:  chatID,
-		WorkspaceID:    "ws",
-		LocalDirectory: true,
-		CompletedAt:    time.Now().Add(-24 * time.Hour),
-	})
-	writeFile(t, filepath.Join(taskDir, sandboxBinRel, "codex"), 4096)
-	writeFile(t, filepath.Join(taskDir, "logs/run.log"), 32)
-
-	action := d.shouldCleanTaskDir(context.Background(), taskDir)
-	if action != gcActionCleanManagedArtifacts {
-		t.Fatalf("want gcActionCleanManagedArtifacts, got %d", action)
-	}
-	d.applyGCAction(taskDir, action, &gcStats{byPattern: map[string]int{}})
-	assertGone(t, taskDir, sandboxBinRel)
-	assertKept(t, taskDir, "logs/run.log", ".gc_meta.json")
-}
-
 // Once the cache is gone, a long-lived active chat must stop re-deciding to
 // reclaim it. completed_at never moves again for a session that stays active,
 // so without a presence check the GC would take an env-root reservation and run

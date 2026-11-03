@@ -12,7 +12,6 @@ import {
 function message(seq: number, type: TaskMessagePayload["type"], content?: string): TaskMessagePayload {
   return {
     task_id: "task-1",
-    issue_id: "issue-1",
     seq,
     type,
     content,

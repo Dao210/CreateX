@@ -150,7 +150,6 @@ describe("EditorBubbleMenu accessibility", () => {
       "List",
       "Task list",
       "Quote",
-      "Create sub-issue from selection",
     ]) {
       expect(
         screen.getByLabelText(name, { selector: "button" }),

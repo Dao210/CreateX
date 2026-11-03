@@ -156,7 +156,6 @@ const baseTask: AgentTask = {
   id: "task-1",
   agent_id: "",
   runtime_id: "",
-  issue_id: "issue-1",
   status: "completed",
   priority: 0,
   dispatched_at: null,
@@ -252,7 +251,7 @@ describe("AgentTranscriptDialog", () => {
   it("shows what was asked, whole, under the header", () => {
     // The lists that open this dialog cut the ask to one line; here it wraps.
     const ask = "Merge the three split-out sub-issues back into this PR &amp; ship conditions, history and runaway protection together";
-    renderDialog(items, { task: { ...baseTask, trigger_comment_id: "comment-1", trigger_summary: ask } });
+    renderDialog(items, { task: { ...baseTask, trigger_summary: ask } });
 
     expect(screen.getByText("Trigger")).toBeInTheDocument();
     expect(

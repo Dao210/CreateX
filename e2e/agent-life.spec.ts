@@ -49,8 +49,7 @@ test.afterAll(async () => {
   await stopWorker();
   if (managedWorker) await run("make", ["down", "ARGS=--components life"], { timeout: 20_000 });
   if (other) await outsider.deleteWorkspace();
-  if (world) await api.deleteWorkspace();
-  await outsider?.cleanup(); await api?.cleanup(); await pool?.end();
+  if (world) await api.deleteWorkspace(); await pool?.end();
 });
 
 test("headless simulation, real snapshot viewer, workspace isolation and worker restart", async ({ page, request, baseURL }) => {

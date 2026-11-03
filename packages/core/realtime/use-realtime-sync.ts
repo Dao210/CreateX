@@ -281,7 +281,6 @@ export async function applyChatQuickActionsToCache(
 type ChatSessionUpdatedPayload = {
   chat_session_id: string;
   title?: string;
-  project_id?: string | null;
   pinned?: boolean;
   status?: "active" | "archived";
   updated_at?: string;
@@ -316,7 +315,6 @@ export function applyChatSessionUpdatedToCache(
         ? {
             ...s,
             title: payload.title ?? s.title,
-            ...("project_id" in payload ? { project_id: payload.project_id } : {}),
             pinned: payload.pinned ?? s.pinned,
             status: payload.status ?? s.status,
             updated_at: payload.updated_at ?? s.updated_at,
@@ -423,17 +421,7 @@ export function applyChatCancelFinalizedToCache(
   }
 }
 
-/**
- * Apply a workspace:updated event directly to the cached workspace list.
- * If the incoming `issue_prefix` differs from what's currently cached, also
- * invalidates issueKeys.all for that workspace, since every issue's rendered
- * identifier (`MUL-123`) is recomputed from the workspace prefix at read time.
- *
- * If the workspace isn't in the cached list (first observation), we
- * conservatively invalidate — the prefix is effectively "new" relative to
- * what's cached, so any issues already loaded under the old prefix would
- * be stale anyway.
- */
+/** Patch a known workspace; refetch when it is not in the cached list. */
 export function applyWorkspaceUpdatedToCache(
   qc: QueryClient,
   payload: WorkspaceUpdatedPayload,
@@ -821,13 +809,7 @@ export function useRealtimeSync(
     // Event types handled by specific handlers below -- skip generic refresh
     const specificEvents = new Set([
       "workspace:updated",
-      "issue:updated", "issue:created", "issue:deleted", "issue_attachments:changed", "issue_labels:changed", "issue_metadata:changed", "issue_properties:changed", "property:created", "property:updated", "inbox:new",
-      "comment:created", "comment:updated", "comment:deleted",
-      "comment:resolved", "comment:unresolved",
-      "activity:created",
-      "reaction:added", "reaction:removed",
-      "issue_reaction:added", "issue_reaction:removed",
-      "subscriber:added", "subscriber:removed",
+      "inbox:new",
       "daemon:heartbeat",
       // Chat events are handled explicitly below; do not double-invalidate.
       "chat:message", "chat:done", "chat:quick_actions", "chat:cancel_finalized", "chat:session_read",

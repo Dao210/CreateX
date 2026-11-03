@@ -26,30 +26,10 @@ export type { ThemeTokens } from "./protocol";
 export interface PluginContext {
   workspace: { id: string; name: string; slug: string };
   user: { id: string; name: string };
-  issue?: { id: string; identifier: string; title: string };
   /** Non-secret installation configuration. Secrets never reach the frame. */
   config: Record<string, unknown>;
   /** Domains this installation was granted via `net:` scopes. */
   granted_net_domains: string[];
-}
-
-export interface Issue {
-  id: string;
-  identifier: string;
-  title: string;
-  description?: string | null;
-  status: string;
-  priority: string;
-}
-
-export interface Comment {
-  id: string;
-  author_type: string;
-  author_id: string;
-  content: string;
-  type: string;
-  parent_id?: string;
-  created_at: string;
 }
 
 /** One completed hook call. `status` is the host's verdict, not the endpoint's. */
@@ -198,35 +178,11 @@ let cachedContext: PluginContext | null = null;
 
 export const auro = {
   context: {
-    /** Who is looking, where, and which issue this surface is mounted on. */
+    /** The current account and world for this surface. */
     async get(force = false): Promise<PluginContext> {
       if (cachedContext && !force) return cachedContext;
       cachedContext = await bridge.request<PluginContext>("GET", "/context");
       return cachedContext;
-    },
-  },
-
-  issue: {
-    /** Defaults to the issue this surface is mounted on. */
-    async get(issueId?: string): Promise<Issue> {
-      const id = issueId ?? (await requireIssueId());
-      return bridge.request<Issue>("GET", `/issues/${encodeURIComponent(id)}`);
-    },
-    async update(patch: { title?: string; description?: string }, issueId?: string): Promise<Issue> {
-      const id = issueId ?? (await requireIssueId());
-      return bridge.request<Issue>("PATCH", `/issues/${encodeURIComponent(id)}`, patch);
-    },
-    async comments(issueId?: string): Promise<Comment[]> {
-      const id = issueId ?? (await requireIssueId());
-      const result = await bridge.request<{ comments: Comment[] }>("GET", `/issues/${encodeURIComponent(id)}/comments`);
-      return result.comments ?? [];
-    },
-    async comment(input: { body: string; parentId?: string }, issueId?: string): Promise<Comment> {
-      const id = issueId ?? (await requireIssueId());
-      return bridge.request<Comment>("POST", `/issues/${encodeURIComponent(id)}/comments`, {
-        content: input.body,
-        parent_id: input.parentId,
-      });
     },
   },
 
@@ -249,10 +205,8 @@ export const auro = {
      * `ui` trigger.
      */
     async invoke(hookKey: string, input?: unknown): Promise<HookResult> {
-      const issue = (await auro.context.get()).issue;
       return bridge.request<HookResult>("POST", `/hooks/${encodeURIComponent(hookKey)}`, {
         trigger: "ui",
-        issue_id: issue?.id,
         input,
       });
     },
@@ -269,13 +223,5 @@ export const auro = {
     },
   },
 };
-
-async function requireIssueId(): Promise<string> {
-  const context = await auro.context.get();
-  if (!context.issue) {
-    throw new AuroPluginError(400, "This surface is not mounted on an issue; pass an issue id explicitly.");
-  }
-  return context.issue.id;
-}
 
 export default auro;

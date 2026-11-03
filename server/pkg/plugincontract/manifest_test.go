@@ -16,7 +16,7 @@ const validManifest = `{
   "version": "1.0.0",
   "author": { "name": "example", "url": "https://example.com" },
   "icon": "icon.svg",
-  "scopes": ["issues:read", "comments:write", "storage:user", "net:example.com"],
+  "scopes": ["tasks:read", "storage:workspace", "storage:user", "net:example.com"],
   "config": {
     "repo": { "type": "string", "label": "GitHub Repo", "required": true },
     "token": { "type": "secret", "label": "Access Token", "required": true },
@@ -24,7 +24,7 @@ const validManifest = `{
   },
   "contributes": {
     "surfaces": [{
-      "key": "hello", "type": "issue_panel", "name": "Hello",
+      "key": "hello", "type": "modal", "name": "Hello",
       "entry": "ui/main.js", "platforms": ["web", "desktop"]
     }],
     "hooks": [{
@@ -195,7 +195,7 @@ func TestParseManifestRejectsMalformedDocuments(t *testing.T) {
 		},
 		{
 			"unknown scope",
-			mutate(t, func(doc map[string]any) { doc["scopes"] = []any{"issues:read", "billing:write"} }),
+			mutate(t, func(doc map[string]any) { doc["scopes"] = []any{"tasks:read", "billing:write"} }),
 			"unsupported scope",
 		},
 		{
@@ -205,7 +205,7 @@ func TestParseManifestRejectsMalformedDocuments(t *testing.T) {
 		},
 		{
 			"duplicate scope",
-			mutate(t, func(doc map[string]any) { doc["scopes"] = []any{"issues:read", "issues:read"} }),
+			mutate(t, func(doc map[string]any) { doc["scopes"] = []any{"tasks:read", "tasks:read"} }),
 			"duplicate",
 		},
 		{
@@ -309,7 +309,7 @@ func TestParseManifestRejectsMalformedDocuments(t *testing.T) {
 			mutate(t, func(doc map[string]any) {
 				contributes := doc["contributes"].(map[string]any)
 				hooks := contributes["hooks"].([]any)
-				hooks[0].(map[string]any)["events"] = []any{"issue.created"}
+				hooks[0].(map[string]any)["events"] = []any{"task.completed"}
 			}),
 			"requires the event trigger",
 		},
@@ -397,7 +397,6 @@ func TestParseManifestRejectsOversizedDocument(t *testing.T) {
 
 func TestValidateScope(t *testing.T) {
 	valid := []string{
-		ScopeIssuesRead, ScopeIssuesWrite, ScopeCommentsRead, ScopeCommentsWrite,
 		ScopeTasksRead, ScopeTasksWrite, ScopeAgentsRead, ScopeMembersRead,
 		ScopeStorageUser, ScopeStorageWorkspace,
 		"net:example.com", "net:api.example.co.uk",
@@ -419,7 +418,7 @@ func TestValidateScope(t *testing.T) {
 }
 
 func TestNetDomainsOnlyReturnsNetScopes(t *testing.T) {
-	domains := NetDomains([]string{ScopeIssuesRead, "net:example.com", ScopeStorageUser, "net:api.example.com"})
+	domains := NetDomains([]string{"net:example.com", ScopeStorageUser, "net:api.example.com"})
 	if len(domains) != 2 || domains[0] != "example.com" || domains[1] != "api.example.com" {
 		t.Fatalf("NetDomains = %v", domains)
 	}
@@ -494,7 +493,7 @@ func TestCheckCapabilitiesReportsEveryUnavailableContribution(t *testing.T) {
 	}
 
 	full := Capabilities{
-		SurfaceTypes:  map[string]bool{SurfaceIssuePanel: true, SurfaceSidebarPanel: true, SurfaceModal: true},
+		SurfaceTypes:  map[string]bool{SurfaceSidebarPanel: true, SurfaceModal: true},
 		HookTriggers:  map[string]bool{TriggerUI: true, TriggerManual: true, TriggerAgent: true, TriggerEvent: true, TriggerSchedule: true},
 		HookTransport: map[string]bool{TransportHTTP: true, TransportMCP: true},
 		ResourceTypes: map[string]bool{ResourceSkill: true},
@@ -536,7 +535,7 @@ func containsString(values []string, want string) bool {
 }
 
 // An event subscription delivers the same content the Action API would have
-// required a scope to read: issue.* carries the description, comment.created
+// required a scope to read: issue.* carries the description, task.failed
 // carries the body. Without this check, subscribing was a way to receive what
 // reading was never granted.
 func TestEventSubscriptionRequiresTheMatchingReadScope(t *testing.T) {
@@ -565,14 +564,12 @@ func TestEventSubscriptionRequiresTheMatchingReadScope(t *testing.T) {
 		events  string
 		wantErr bool
 	}{
-		"issue event without issues:read":     {`["net:example.com"]`, `["issue.created"]`, true},
-		"issue event with issues:read":        {`["issues:read", "net:example.com"]`, `["issue.created"]`, false},
-		"comment event without comments:read": {`["issues:read", "net:example.com"]`, `["comment.created"]`, true},
-		"comment event with comments:read":    {`["comments:read", "net:example.com"]`, `["comment.created"]`, false},
+		"issue event without tasks:read":     {`["net:example.com"]`, `["task.completed"]`, true},
+		"issue event with tasks:read":        {`["tasks:read", "net:example.com"]`, `["task.completed"]`, false},
 		"task event without tasks:read":       {`["net:example.com"]`, `["task.failed"]`, true},
 		"task event with tasks:read":          {`["tasks:read", "net:example.com"]`, `["task.failed"]`, false},
 		"one of several events unscoped": {
-			`["issues:read", "net:example.com"]`, `["issue.created", "comment.created"]`, true,
+			`["net:example.com"]`, `["task.completed", "task.failed"]`, true,
 		},
 	} {
 		t.Run(name, func(t *testing.T) {

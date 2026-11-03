@@ -75,7 +75,7 @@ printf '%s\n' '{"type":"turn_end","message":{"role":"assistant","model":"test","
 		ID:             "task-pi-busy",
 		WorkspaceID:    "ws-pi",
 		RuntimeID:      "rt-pi",
-		IssueID:        "issue-pi",
+		ChatSessionID:  "issue-pi",
 		AgentID:        "agent-pi",
 		AuthToken:      "mat_pi_busy",
 		PriorSessionID: priorSessionID,
@@ -85,7 +85,7 @@ printf '%s\n' '{"type":"turn_end","message":{"role":"assistant","model":"test","
 		},
 	}
 
-	result, err := d.runTask(context.Background(), task, "pi", 0, logger)
+	result, err := d.runTask(context.Background(), testTaskStartClaim(task), "pi", 0, logger)
 	if err != nil {
 		t.Fatalf("runTask: %v", err)
 	}

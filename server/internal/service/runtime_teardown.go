@@ -85,6 +85,10 @@ func TeardownRuntime(ctx context.Context, qtx *db.Queries, runtimeID pgtype.UUID
 		return out, err
 	}
 
+	systemAgents, err := qtx.ListRuntimeSystemAgentsForDelete(ctx, runtimeID)
+	if err != nil {
+		return out, fmt.Errorf("lock system agents: %w", err)
+	}
 	lockedAgentIDs := make([]pgtype.UUID, len(lockedAgents))
 	for i, agent := range lockedAgents {
 		lockedAgentIDs[i] = agent.ID
@@ -132,6 +136,9 @@ func TeardownRuntime(ctx context.Context, qtx *db.Queries, runtimeID pgtype.UUID
 	if _, err := qtx.UnbindTasksFromRuntime(ctx, runtimeID); err != nil {
 		return out, fmt.Errorf("unbind task history: %w", err)
 	}
+	if err := qtx.UnbindChatSessionsFromRuntime(ctx, runtimeID); err != nil {
+		return out, fmt.Errorf("unbind chat history: %w", err)
+	}
 	remaining, err := qtx.CountTasksByRuntime(ctx, runtimeID)
 	if err != nil {
 		return out, fmt.Errorf("confirm task history detached: %w", err)
@@ -157,6 +164,17 @@ func TeardownRuntime(ctx context.Context, qtx *db.Queries, runtimeID pgtype.UUID
 	if err := pruneRuntimeSystemAgentChatDraftRestores(ctx, qtx, runtimeID); err != nil {
 		return out, fmt.Errorf("clean up chat draft restores: %w", err)
 	}
+	for _, agent := range systemAgents {
+		if err := DeleteAgentExecutionHistory(ctx, qtx, agent.ID); err != nil {
+			return out, err
+		}
+		if err := qtx.DeleteAgentExecutionBindings(ctx, agent.ID); err != nil {
+			return out, err
+		}
+	}
+	if err := qtx.DeleteRuntimeSystemAgentChatData(ctx, runtimeID); err != nil {
+		return out, fmt.Errorf("clean up system agent chats: %w", err)
+	}
 	if err := qtx.DeleteSystemAgentsByRuntime(ctx, runtimeID); err != nil {
 		return out, fmt.Errorf("clean up system agents: %w", err)
 	}
@@ -173,4 +191,24 @@ func pruneRuntimeSystemAgentChatDraftRestores(ctx context.Context, q *db.Queries
 		return err
 	}
 	return q.DeleteAgentBuilderDraftsBySystemRuntimeAgents(ctx, runtimeID)
+}
+
+// DeleteAgentExecutionHistory requires the caller to hold the agent row lock.
+// This fences enqueue while bounded batches remove the execution dependents.
+func DeleteAgentExecutionHistory(ctx context.Context, q *db.Queries, agentID pgtype.UUID) error {
+	if err := q.LockTaskUsageRollupForWorkspaceDelete(ctx); err != nil {
+		return err
+	}
+	for {
+		ids, err := q.ListTaskIDsByAgentFirstPage(ctx, db.ListTaskIDsByAgentFirstPageParams{AgentID: agentID, Limit: 256})
+		if err != nil {
+			return err
+		}
+		if len(ids) == 0 {
+			return nil
+		}
+		if err := q.DeleteTaskBatch(ctx, ids); err != nil {
+			return err
+		}
+	}
 }

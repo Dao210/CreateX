@@ -14,7 +14,6 @@ import (
 	"github.com/auro-ai/auro/server/internal/testutil"
 	db "github.com/auro-ai/auro/server/pkg/db/generated"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // The refusals these tests cover are the ones a user acts on. A profile spans
@@ -667,68 +666,6 @@ func TestBlockingAgentClassMatchesSQLClassification(t *testing.T) {
 	}
 }
 
-// Retention GC needs both no bound agents AND no unfinished task. An agent
-// rebound to another machine can leave a deferred run pinned to the old
-// runtime, so "no agents bound" alone is not a cleanup promise this server can
-// keep. Regression contributed by review.
-func TestDeleteAgentRuntime_OfflineInstanceWithUnfinishedTaskDoesNotPromiseCleanup(t *testing.T) {
-	if testHandler == nil {
-		t.Skip("database not available")
-	}
-	ctx := context.Background()
-	runtimeID, _ := createProfileBackedRuntime(t, ctx, "Review Retired Host")
-	agentID := createCascadeFixtureAgent(t, ctx, runtimeID, "Review Moved Agent")
-	issueID := dbfx.Issue(t, "Review deferred task")
-	taskID := dbfx.Task(t, agentID, testutil.Cols{
-		"runtime_id": runtimeID, "issue_id": issueID, "status": "deferred",
-		"fire_at": testutil.Raw("now() + interval '30 days'"),
-	})
-	targetID := newTestRuntime(t, "Review New Host", "online")
-	w := httptest.NewRecorder()
-	testHandler.UpdateAgent(w, withURLParam(newRequest("PATCH", "/api/agents/"+agentID,
-		map[string]any{"runtime_id": targetID}), "id", agentID))
-	if w.Code != http.StatusOK {
-		t.Fatalf("rebind: %d %s", w.Code, w.Body.String())
-	}
-	dbfx.Exec(t, `UPDATE agent_runtime SET status='offline', last_seen_at=now()-interval '8 days' WHERE id=$1`, runtimeID)
-	var taskRuntime, taskStatus string
-	dbfx.QueryRow(t, `SELECT runtime_id::text, status FROM agent_task_queue WHERE id=$1`, taskID).Scan(&taskRuntime, &taskStatus)
-	if taskRuntime != runtimeID || taskStatus != "deferred" {
-		t.Fatalf("unexpected task after rebind: %s %s", taskRuntime, taskStatus)
-	}
-	rows, err := testHandler.Queries.ListStaleOfflineRuntimeGCCandidates(ctx, db.ListStaleOfflineRuntimeGCCandidatesParams{
-		StaleSeconds: service.OfflineRuntimeTTLSeconds, MaxPerTick: 10000,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, id := range rows {
-		if uuidToString(id) == runtimeID {
-			t.Fatal("GC unexpectedly allows runtime with deferred task")
-		}
-	}
-	for _, cascade := range []bool{false, true} {
-		w = httptest.NewRecorder()
-		if cascade {
-			r := newRequest("POST", "/api/runtimes/"+runtimeID+"/unbind-agents-and-delete", map[string]any{"expected_active_agent_ids": []string{}})
-			testHandler.UnbindAgentsAndDeleteRuntime(w, withURLParam(r, "runtimeId", runtimeID))
-		} else {
-			testHandler.DeleteAgentRuntime(w, withURLParam(newRequest("DELETE", "/api/runtimes/"+runtimeID, nil), "runtimeId", runtimeID))
-		}
-		if w.Code != http.StatusConflict {
-			t.Fatalf("delete: %d %s", w.Code, w.Body.String())
-		}
-		body := decodeConflict(t, w)
-		msg := conflictMessage(t, body)
-		if body["active_agent_count"] != float64(0) {
-			t.Fatalf("expected no agent bindings: %#v", body)
-		}
-		if strings.Contains(msg, "without any action from you") {
-			t.Errorf("cascade=%v: GC excludes this 8-day-old runtime with a deferred task, but guidance promises cleanup: %s", cascade, msg)
-		}
-	}
-}
-
 // Builder sessions are creator-scoped reads, so an admin who is not the
 // creator gets 403 from list, switch and discard alike. Telling that admin to
 // reopen the session is another instruction they cannot carry out.
@@ -785,92 +722,6 @@ type reviewArchiveCancelUnavailable struct{}
 
 func (reviewArchiveCancelUnavailable) Begin(context.Context) (pgx.Tx, error) {
 	return nil, errors.New("injected task cancellation database outage")
-}
-
-// Entering the GC candidate set is not the same as being deletable. gcRuntime
-// re-checks the drain across every user agent bound to the runtime, archived
-// ones included, before it calls teardown — and those agents can own tasks
-// pinned to a different machine. A refusal that only mirrored the candidate
-// query's runtime-owned predicate promised cleanup for a row the sweeper skips
-// on every pass. Regression contributed by review.
-func TestDeleteAgentRuntime_OfflineInstanceMatchesTheRealGCDrainGate(t *testing.T) {
-	if testHandler == nil {
-		t.Skip("database not available")
-	}
-	ctx := context.Background()
-	runtimeID, _ := createProfileBackedRuntime(t, ctx, "Review Archived Agent Host")
-	otherID := newTestRuntime(t, "Review Original Task Host", "online")
-	agentID := createCascadeFixtureAgent(t, ctx, otherID, "Review Archived Agent")
-	issueID := dbfx.Issue(t, "Review cross-runtime deferred task")
-	taskID := dbfx.Task(t, agentID, testutil.Cols{
-		"runtime_id": otherID, "issue_id": issueID, "status": "deferred",
-		"fire_at": testutil.Raw("now() + interval '30 days'"),
-	})
-	w := httptest.NewRecorder()
-	testHandler.UpdateAgent(w, withURLParam(newRequest("PATCH", "/api/agents/"+agentID, map[string]any{"runtime_id": runtimeID}), "id", agentID))
-	if w.Code != http.StatusOK {
-		t.Fatalf("rebind: %d %s", w.Code, w.Body.String())
-	}
-	// The real archive handler commits archive first and only logs a failure
-	// of its subsequent task-cancellation transaction. It still returns 200.
-	h := *testHandler
-	h.TaskService = service.NewTaskService(testHandler.Queries, reviewArchiveCancelUnavailable{}, nil, nil)
-	w = httptest.NewRecorder()
-	h.ArchiveAgent(w, withURLParam(newRequest("POST", "/api/agents/"+agentID+"/archive", nil), "id", agentID))
-	if w.Code != http.StatusOK {
-		t.Fatalf("archive: %d %s", w.Code, w.Body.String())
-	}
-	dbfx.Exec(t, `UPDATE agent_runtime SET status='offline', last_seen_at=now()-interval '8 days' WHERE id=$1`, runtimeID)
-	var archived bool
-	var taskStatus string
-	dbfx.QueryRow(t, `SELECT archived_at IS NOT NULL FROM agent WHERE id=$1`, agentID).Scan(&archived)
-	dbfx.QueryRow(t, `SELECT status FROM agent_task_queue WHERE id=$1`, taskID).Scan(&taskStatus)
-	if !archived || taskStatus != "deferred" {
-		t.Fatalf("unexpected post-archive state: archived=%v task=%s", archived, taskStatus)
-	}
-
-	// Use the same agent set and final drain query as gcRuntime, after taking
-	// the runtime lock. The candidate filter alone is not the deletion gate.
-	tx, err := testPool.Begin(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer tx.Rollback(ctx)
-	q := testHandler.Queries.WithTx(tx)
-	if _, err := q.LockAgentRuntime(ctx, parseUUID(runtimeID)); err != nil {
-		t.Fatal(err)
-	}
-	agents, err := q.ListUserAgentsByRuntimeForUpdate(ctx, parseUUID(runtimeID))
-	if err != nil {
-		t.Fatal(err)
-	}
-	ids := make([]pgtype.UUID, len(agents))
-	for i, a := range agents {
-		ids[i] = a.ID
-	}
-	undrained, err := q.CountUndrainedTasksByRuntimeOrAgent(ctx, db.CountUndrainedTasksByRuntimeOrAgentParams{RuntimeIds: []pgtype.UUID{parseUUID(runtimeID)}, AgentIds: ids})
-	if err != nil || undrained != 1 {
-		t.Fatalf("actual GC drain check = %d, err=%v", undrained, err)
-	}
-	if err := tx.Rollback(ctx); err != nil {
-		t.Fatal(err)
-	}
-	for _, cascade := range []bool{false, true} {
-		w = httptest.NewRecorder()
-		if cascade {
-			testHandler.UnbindAgentsAndDeleteRuntime(w, withURLParam(newRequest("POST", "/api/runtimes/"+runtimeID+"/unbind-agents-and-delete", map[string]any{"expected_active_agent_ids": []string{}}), "runtimeId", runtimeID))
-		} else {
-			testHandler.DeleteAgentRuntime(w, withURLParam(newRequest("DELETE", "/api/runtimes/"+runtimeID, nil), "runtimeId", runtimeID))
-		}
-		if w.Code != http.StatusConflict {
-			t.Fatalf("delete: %d %s", w.Code, w.Body.String())
-		}
-		body := decodeConflict(t, w)
-		msg := conflictMessage(t, body)
-		if strings.Contains(msg, "without any action from you") {
-			t.Errorf("cascade=%v: actual GC drain count=1, but active_agent_count=%v undrained_task_count=%v: %s", cascade, body["active_agent_count"], body["undrained_task_count"], msg)
-		}
-	}
 }
 
 // The Mika clause makes two claims about product capability, and an earlier

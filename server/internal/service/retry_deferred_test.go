@@ -21,7 +21,7 @@ func TestCreateRetryTaskFireAtControlsDeferral(t *testing.T) {
 	pool := newResolveOriginatorPool(t)
 	ctx := context.Background()
 	q := db.New(pool)
-	_, _, agentID, issueID := seedAttributionFixture(t, pool)
+	_, _, agentID, _ := seedAttributionFixture(t, pool)
 
 	// agent_task_queue.runtime_id is NOT NULL; reuse the fixture agent's runtime.
 	var runtimeID string
@@ -33,10 +33,9 @@ func TestCreateRetryTaskFireAtControlsDeferral(t *testing.T) {
 	// which the schedule wants the next (final) retry deferred.
 	var parentID pgtype.UUID
 	if err := pool.QueryRow(ctx, `
-		INSERT INTO agent_task_queue (agent_id, runtime_id, issue_id, status, priority, attempt, max_attempts, failure_reason, session_id, work_dir, channel_context_revision)
-		VALUES ($1, $2, $3, 'failed', 0, 2, 2, 'agent_error.provider_network', 'src-session', '/tmp/src-workdir', 7)
+		INSERT INTO agent_task_queue (chat_session_id, agent_id, runtime_id, status, priority, attempt, max_attempts, failure_reason, session_id, work_dir, channel_context_revision) VALUES ((SELECT id FROM chat_session WHERE agent_id=$1 LIMIT 1), $1, $2, 'failed', 0, 2, 2, 'agent_error.provider_network', 'src-session', '/tmp/src-workdir', 7)
 		RETURNING id
-	`, agentID, runtimeID, issueID).Scan(&parentID); err != nil {
+	`, agentID, runtimeID).Scan(&parentID); err != nil {
 		t.Fatalf("insert parent task: %v", err)
 	}
 	t.Cleanup(func() {
@@ -96,7 +95,7 @@ func TestRuntimeOfflineRetryWaitsForHealthyRuntime(t *testing.T) {
 	pool := newResolveOriginatorPool(t)
 	ctx := context.Background()
 	q := db.New(pool)
-	_, _, agentID, issueID := seedAttributionFixture(t, pool)
+	_, _, agentID, _ := seedAttributionFixture(t, pool)
 
 	var runtimeID string
 	if err := pool.QueryRow(ctx, `SELECT runtime_id::text FROM agent WHERE id = $1`, agentID).Scan(&runtimeID); err != nil {
@@ -111,10 +110,9 @@ func TestRuntimeOfflineRetryWaitsForHealthyRuntime(t *testing.T) {
 
 	var parentID pgtype.UUID
 	if err := pool.QueryRow(ctx, `
-		INSERT INTO agent_task_queue (agent_id, runtime_id, issue_id, status, priority, attempt, max_attempts, session_id, work_dir)
-		VALUES ($1, $2, $3, 'running', 0, 1, 2, 'src-session', '/tmp/src-workdir')
+		INSERT INTO agent_task_queue (chat_session_id, agent_id, runtime_id, status, priority, attempt, max_attempts, session_id, work_dir) VALUES ((SELECT id FROM chat_session WHERE agent_id=$1 LIMIT 1), $1, $2, 'running', 0, 1, 2, 'src-session', '/tmp/src-workdir')
 		RETURNING id
-	`, agentID, runtimeID, issueID).Scan(&parentID); err != nil {
+	`, agentID, runtimeID).Scan(&parentID); err != nil {
 		t.Fatalf("insert parent task: %v", err)
 	}
 	t.Cleanup(func() {
@@ -275,7 +273,7 @@ func TestFailTaskProviderNetworkBudget(t *testing.T) {
 	pool := newResolveOriginatorPool(t)
 	ctx := context.Background()
 	q := db.New(pool)
-	_, _, agentID, issueID := seedAttributionFixture(t, pool)
+	_, _, agentID, _ := seedAttributionFixture(t, pool)
 	svc := &TaskService{Queries: q, TxStarter: pool, Bus: events.New()}
 
 	var runtimeID string
@@ -304,10 +302,9 @@ func TestFailTaskProviderNetworkBudget(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			var parentID pgtype.UUID
 			if err := pool.QueryRow(ctx, `
-				INSERT INTO agent_task_queue (agent_id, runtime_id, issue_id, status, priority, attempt, max_attempts, session_id, work_dir)
-				VALUES ($1, $2, $3, 'running', 0, $4, $5, 'src-session', '/tmp/src-workdir')
+				INSERT INTO agent_task_queue (chat_session_id, agent_id, runtime_id, status, priority, attempt, max_attempts, session_id, work_dir) VALUES ((SELECT id FROM chat_session WHERE agent_id=$1 LIMIT 1), $1, $2, 'running', 0, $3, $4, 'src-session', '/tmp/src-workdir')
 				RETURNING id
-			`, agentID, runtimeID, issueID, tc.attempt, tc.maxAttempts).Scan(&parentID); err != nil {
+			`, agentID, runtimeID, tc.attempt, tc.maxAttempts).Scan(&parentID); err != nil {
 				t.Fatalf("insert parent task: %v", err)
 			}
 			t.Cleanup(func() {

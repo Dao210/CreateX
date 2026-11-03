@@ -110,8 +110,8 @@ func classifyPoisonedOutput(output string) (string, bool) {
 // malformed base64, prompt-too-long, etc.). The conversation cannot be
 // resumed: every retry replays the same body and reproduces the same 400.
 // The classifier returns FailureReasonAPIInvalidRequest so GetLastTaskSession
-// excludes the task from the (agent_id, issue_id) resume lookup, and the
-// next task on the issue starts a fresh session instead of permanently
+// excludes the task from the chat-session resume lookup, and the
+// next task in the chat starts a fresh session instead of permanently
 // inheriting the bad state.
 //
 // Match shape: the Claude Code SDK and similar backends surface upstream

@@ -1,8 +1,6 @@
 "use client";
-
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Loader2, Plug } from "lucide-react";
 import { toast } from "sonner";
 import { useFeatureEnabled } from "@auro/core/config";
 import { PLUGINS_V1_FLAG } from "@auro/core/feature-flags";
@@ -81,14 +79,13 @@ export function useRunPluginHook() {
   const invoke = useInvokePluginHook();
   const [running, setRunning] = useState<string | null>(null);
 
-  const run = async (action: PluginHookAction, issueId?: string) => {
+  const run = async (action: PluginHookAction) => {
     setRunning(pluginHookActionKey(action));
     try {
       const result = await invoke.mutateAsync({
         installationId: action.installation.id,
         hookKey: action.hook.key,
         trigger: "manual",
-        issueId,
       });
       if (result.status === "ok") {
         toast.success(t(($) => $.plugins.hook_succeeded, { name: action.hook.name }));
@@ -113,48 +110,4 @@ export function useRunPluginHook() {
   };
 
   return { run, running };
-}
-
-interface PluginHookMenuItemsProps {
-  issueId: string;
-  /**
-   * The host menu's own Item component. Taken as a prop rather than imported so
-   * the same list renders in the dropdown and the context menu — the pattern
-   * `IssueActionsMenuItems` already uses, and the reason the two do not drift.
-   */
-  Item: React.ComponentType<{
-    onClick?: () => void;
-    disabled?: boolean;
-    children?: React.ReactNode;
-  }>;
-  Separator?: React.ComponentType<Record<string, never>>;
-}
-
-export function PluginHookMenuItems({ issueId, Item, Separator }: PluginHookMenuItemsProps) {
-  const actions = usePluginHookActions();
-  const { run, running } = useRunPluginHook();
-
-  if (actions.length === 0) return null;
-
-  return (
-    <>
-      {Separator ? <Separator /> : null}
-      {actions.map((action) => {
-        const key = pluginHookActionKey(action);
-        const isRunning = running === key;
-        return (
-          <Item key={key} disabled={isRunning} onClick={() => void run(action, issueId)}>
-            {isRunning ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plug className="h-3.5 w-3.5" />}
-            {/* The plugin's name, not just the action's: two installed plugins
-                may both contribute "Summarize", and a menu showing the same
-                word twice is a menu nobody can choose from. */}
-            <span className="truncate">{action.hook.name}</span>
-            <span className="ml-auto truncate pl-3 text-caption text-muted-foreground">
-              {action.installation.name}
-            </span>
-          </Item>
-        );
-      })}
-    </>
-  );
 }

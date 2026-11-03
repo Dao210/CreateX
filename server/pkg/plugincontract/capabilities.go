@@ -27,12 +27,8 @@ type Capabilities struct {
 // resources land with the agent integration.
 func HostCapabilities() Capabilities {
 	return Capabilities{
-		// issue_panel mounts in PluginPanelSection; modal opens from a manual
-		// hook action. sidebar_panel stays off — it has no host location, and
-		// enabling a surface the host cannot render installs a plugin that
-		// silently never appears, which is precisely what this gate prevents.
+		// Modal surfaces open from an explicit hook action.
 		SurfaceTypes: map[string]bool{
-			SurfaceIssuePanel: true,
 			SurfaceModal:      true,
 		},
 		// The agent trigger is not a call site the host drives: the hook is

@@ -119,10 +119,9 @@ func TestBuildDaemonWebSocketIdentityRejectsCrossWorkspaceRuntime(t *testing.T) 
 		t.Skip("database not available")
 	}
 	workspaceID := dbfx.Insert(t, "workspace", testutil.Cols{
-		"name":         "WS Lease Other Workspace",
-		"slug":         "ws-lease-" + uuid.NewString(),
-		"description":  "Cross-workspace lease test",
-		"issue_prefix": "HWL",
+		"name":        "WS Lease Other Workspace",
+		"slug":        "ws-lease-" + uuid.NewString(),
+		"description": "Cross-workspace lease test",
 	})
 	runtimeID := dbfx.Runtime(t, "WS lease cross workspace", testutil.Cols{
 		"workspace_id": workspaceID,

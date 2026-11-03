@@ -69,7 +69,6 @@ function makeTask(overrides: Partial<AgentTask> = {}): AgentTask {
     id: "task-1",
     agent_id: "agent-1",
     runtime_id: "rt-1",
-    issue_id: "",
     status: "queued",
     priority: 0,
     dispatched_at: null,

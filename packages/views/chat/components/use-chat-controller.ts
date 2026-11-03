@@ -159,7 +159,6 @@ export function useChatController(opts?: { isActive?: boolean }) {
   const selectedAgentId = useChatStore((s) => s.selectedAgentId);
   const setActiveSession = useChatStore((s) => s.setActiveSession);
   const setSelectedAgentId = useChatStore((s) => s.setSelectedAgentId);
-  const setSelectedProjectId = useChatStore((s) => s.setSelectedProjectId);
   const user = useAuthStore((s) => s.user);
   const { data: agents = [], isSuccess: agentsLoaded } = useQuery(
     agentListOptions(wsId),
@@ -624,16 +623,11 @@ export function useChatController(opts?: { isActive?: boolean }) {
       previousSessionId: activeSessionId,
       previousPendingTask: pendingTaskId,
     });
-    // A fresh chat has no project unless the user explicitly chooses one.
-    // The open session's project is server-owned history, not a default for
-    // the next session.
-    setSelectedProjectId(null);
     setActiveSession(null);
     requestInputFocus();
   }, [
     activeSessionId,
     pendingTaskId,
-    setSelectedProjectId,
     setActiveSession,
     requestInputFocus,
   ]);
@@ -649,14 +643,12 @@ export function useChatController(opts?: { isActive?: boolean }) {
         previousSessionId: activeSessionId,
       });
       setSelectedAgentId(agent.id);
-      setSelectedProjectId(null);
       setActiveSession(null);
       requestInputFocus();
     },
     [
       activeSessionId,
       setSelectedAgentId,
-      setSelectedProjectId,
       setActiveSession,
       requestInputFocus,
     ],

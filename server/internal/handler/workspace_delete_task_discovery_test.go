@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/auro-ai/auro/server/internal/testutil"
 	db "github.com/auro-ai/auro/server/pkg/db/generated"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -15,7 +16,7 @@ import (
 
 // workspaceDeletePathFixture builds the ownership shapes teardown has to handle:
 // one task reachable from the victim workspace only through agent_id, one only
-// through issue_id, one only through runtime_id, and one that belongs entirely to
+// through chat_session_id, one only through runtime_id, and one that belongs entirely to
 // a neighbour workspace and must survive.
 //
 // The tokens cover the three explicit task_token paths: one owned by the victim
@@ -27,15 +28,15 @@ type workspaceDeletePathFixture struct {
 	neighbourID string
 
 	victimAgent   string
-	victimIssue   string
+	victimChat    string
 	victimRuntime string
 
 	neighbourAgent   string
-	neighbourIssue   string
+	neighbourChat    string
 	neighbourRuntime string
 
 	taskViaAgent   string
-	taskViaIssue   string
+	taskViaChat    string
 	taskViaRuntime string
 	neighbourTask  string
 
@@ -45,14 +46,14 @@ type workspaceDeletePathFixture struct {
 	neighbourOnlyToken string
 }
 
-func insertDeletePathTask(t *testing.T, agentID, issueID, runtimeID string) string {
+func insertDeletePathTask(t *testing.T, agentID, chatID, runtimeID string) string {
 	t.Helper()
 	var id string
 	if err := testPool.QueryRow(context.Background(), `
-INSERT INTO agent_task_queue (agent_id, issue_id, runtime_id, status, completed_at)
+INSERT INTO agent_task_queue (agent_id, chat_session_id, runtime_id, status, completed_at)
 VALUES ($1, $2, $3, 'completed', now())
 RETURNING id
-`, agentID, issueID, runtimeID).Scan(&id); err != nil {
+`, agentID, chatID, runtimeID).Scan(&id); err != nil {
 		t.Fatalf("create task: %v", err)
 	}
 	return id
@@ -120,7 +121,7 @@ func TestDeleteWorkspaceTasks_IsSelfSufficientWithoutCascades(t *testing.T) {
 		return n
 	}
 	if n := count(`SELECT count(*) FROM agent_task_queue WHERE id = ANY($1::uuid[])`,
-		[]string{f.taskViaAgent, f.taskViaIssue, f.taskViaRuntime}); n != 0 {
+		[]string{f.taskViaAgent, f.taskViaChat, f.taskViaRuntime}); n != 0 {
 		t.Errorf("%d of the 3 ownership-path tasks survived the sweep", n)
 	}
 	if n := count(`SELECT count(*) FROM task_token WHERE id = ANY($1::uuid[])`,
@@ -156,9 +157,9 @@ func TestDeleteWorkspace_CollectsTasksThroughEveryOwnershipPath(t *testing.T) {
 	}
 
 	for name, id := range map[string]string{
-		"task reachable only via agent_id":   f.taskViaAgent,
-		"task reachable only via issue_id":   f.taskViaIssue,
-		"task reachable only via runtime_id": f.taskViaRuntime,
+		"task reachable only via agent_id":        f.taskViaAgent,
+		"task reachable only via chat_session_id": f.taskViaChat,
+		"task reachable only via runtime_id":      f.taskViaRuntime,
 	} {
 		if rowExists(t, "agent_task_queue", id) {
 			t.Errorf("%s survived workspace delete", name)
@@ -181,7 +182,7 @@ func TestDeleteWorkspace_CollectsTasksThroughEveryOwnershipPath(t *testing.T) {
 		t.Error("neighbour workspace task token was deleted")
 	}
 	if !rowExists(t, "agent", f.neighbourAgent) ||
-		!rowExists(t, "issue", f.neighbourIssue) ||
+		!rowExists(t, "chat_session", f.neighbourChat) ||
 		!rowExists(t, "agent_runtime", f.neighbourRuntime) {
 		t.Error("neighbour workspace objects were deleted")
 	}
@@ -217,9 +218,9 @@ func TestDeleteWorkspaceTasks_PagesPastTheBatchSize(t *testing.T) {
 	// see an empty page.
 	extraTasks := workspaceDeleteTaskPageSize*2 + workspaceDeleteTaskPageSize/2
 	if _, err := testPool.Exec(ctx, `
-INSERT INTO agent_task_queue (agent_id, issue_id, runtime_id, status, completed_at)
+INSERT INTO agent_task_queue (agent_id, chat_session_id, runtime_id, status, completed_at)
 SELECT $1, $2, $3, 'completed', now() FROM generate_series(1, $4::int)
-`, f.victimAgent, f.victimIssue, f.victimRuntime, extraTasks); err != nil {
+`, f.victimAgent, f.victimChat, f.victimRuntime, extraTasks); err != nil {
 		t.Fatalf("seed %d tasks: %v", extraTasks, err)
 	}
 
@@ -282,8 +283,8 @@ SELECT $1, $2, $3, 'completed', now() FROM generate_series(1, $4::int)
 	var remaining int
 	if err := tx.QueryRow(ctx, `
 SELECT count(*) FROM agent_task_queue
-WHERE agent_id = $1 OR issue_id = $2 OR runtime_id = $3
-`, f.victimAgent, f.victimIssue, f.victimRuntime).Scan(&remaining); err != nil {
+WHERE agent_id = $1 OR chat_session_id = $2 OR runtime_id = $3
+`, f.victimAgent, f.victimChat, f.victimRuntime).Scan(&remaining); err != nil {
 		t.Fatalf("count remaining: %v", err)
 	}
 	if remaining != 0 {
@@ -313,9 +314,9 @@ WITH new_agents AS (
     FROM generate_series(1, $4::int) g
     RETURNING id
 )
-INSERT INTO agent_task_queue (agent_id, issue_id, runtime_id, status, completed_at)
+INSERT INTO agent_task_queue (agent_id, chat_session_id, runtime_id, status, completed_at)
 SELECT id, $5, $2, 'completed', now() FROM new_agents
-`, f.victimID, f.victimRuntime, testUserID, extraAgents, f.neighbourIssue); err != nil {
+`, f.victimID, f.victimRuntime, testUserID, extraAgents, f.neighbourChat); err != nil {
 		t.Fatalf("seed %d agents: %v", extraAgents, err)
 	}
 
@@ -408,49 +409,6 @@ func TestSweepTasksForOwner_FailsClosedWhenTasksKeepArriving(t *testing.T) {
 	}
 }
 
-// TestAgentTaskQueueOwnerFKsStillExist guards the precondition the write fence
-// leans on. Blocking a concurrent enqueue depends on an INSERT taking FOR KEY
-// SHARE on the agent / issue / runtime it references, which is a property of these
-// foreign keys. The file header calls the legacy FKs an expand-phase safety net,
-// so if a later migration removes them this test is what turns a silently missing
-// fence into a red build — the replacement has to be an explicit protocol shared
-// with every enqueue path.
-func TestAgentTaskQueueOwnerFKsStillExist(t *testing.T) {
-	if testPool == nil {
-		t.Skip("database not available")
-	}
-	ctx := context.Background()
-
-	for column, referenced := range map[string]string{
-		"agent_id":   "agent",
-		"issue_id":   "issue",
-		"runtime_id": "agent_runtime",
-	} {
-		var exists bool
-		if err := testPool.QueryRow(ctx, `
-SELECT EXISTS (
-    SELECT 1
-    FROM pg_constraint c
-    JOIN pg_class child ON child.oid = c.conrelid
-    JOIN pg_class parent ON parent.oid = c.confrelid
-    JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = ANY (c.conkey)
-    WHERE c.contype = 'f'
-      AND child.relname = 'agent_task_queue'
-      AND parent.relname = $1
-      AND a.attname = $2
-      AND array_length(c.conkey, 1) = 1
-)
-`, referenced, column).Scan(&exists); err != nil {
-			t.Fatalf("look up FK on %s: %v", column, err)
-		}
-		if !exists {
-			t.Errorf("agent_task_queue.%s no longer has an FK to %s: the workspace-delete write fence "+
-				"relied on that FK's implicit FOR KEY SHARE to block concurrent enqueues, so it needs an "+
-				"explicit application-layer replacement before this FK goes away", column, referenced)
-		}
-	}
-}
-
 // TestDeleteWorkspaceTasks_FencesConcurrentEnqueueAndReassignment covers the two
 // races a per-batch sweep would otherwise lose:
 //
@@ -504,17 +462,17 @@ func TestDeleteWorkspaceTasks_FencesConcurrentEnqueueAndReassignment(t *testing.
 	}
 
 	blocked("enqueue for a locked agent", `
-INSERT INTO agent_task_queue (agent_id, issue_id, runtime_id, status, completed_at)
-VALUES ($1, $2, $3, 'completed', now())
-`, f.victimAgent, f.neighbourIssue, f.neighbourRuntime)
+INSERT INTO agent_task_queue (agent_id, chat_session_id, runtime_id, status, completed_at)
+SELECT $1, $2, $3, 'completed', now() WHERE lock_task_owner_rows($1,$3,$2)
+`, f.victimAgent, f.neighbourChat, f.neighbourRuntime)
 
 	blocked("enqueue against a locked runtime", `
-INSERT INTO agent_task_queue (agent_id, issue_id, runtime_id, status, completed_at)
-VALUES ($1, $2, $3, 'completed', now())
-`, f.neighbourAgent, f.neighbourIssue, f.victimRuntime)
+INSERT INTO agent_task_queue (agent_id, chat_session_id, runtime_id, status, completed_at)
+SELECT $1, $2, $3, 'completed', now() WHERE lock_task_owner_rows($1,$3,$2)
+`, f.neighbourAgent, f.neighbourChat, f.victimRuntime)
 
 	blocked("reassignment onto a locked runtime", `
-UPDATE agent_task_queue SET runtime_id = $1 WHERE id = $2
+UPDATE agent_task_queue SET runtime_id = $1 WHERE id = $2 AND lock_task_owner_rows(NULL,$1,NULL)
 `, f.victimRuntime, f.neighbourTask)
 
 	// A writer that has nothing to do with the workspace under teardown must
@@ -528,9 +486,96 @@ UPDATE agent_task_queue SET runtime_id = $1 WHERE id = $2
 		t.Fatalf("unrelated: set lock_timeout: %v", err)
 	}
 	if _, err := unrelated.Exec(ctx, `
-INSERT INTO agent_task_queue (agent_id, issue_id, runtime_id, status, completed_at)
-VALUES ($1, $2, $3, 'completed', now())
-`, f.neighbourAgent, f.neighbourIssue, f.neighbourRuntime); err != nil {
+INSERT INTO agent_task_queue (agent_id, chat_session_id, runtime_id, status, completed_at)
+SELECT $1, $2, $3, 'completed', now() WHERE lock_task_owner_rows($1,$3,$2)
+`, f.neighbourAgent, f.neighbourChat, f.neighbourRuntime); err != nil {
 		t.Errorf("neighbour-only enqueue was blocked by the victim's teardown locks: %v", err)
 	}
+}
+
+func newWorkspaceDeletePathFixture(t *testing.T, slugSuffix string) workspaceDeletePathFixture {
+	t.Helper()
+	ctx := context.Background()
+
+	victimSlug := "handler-tests-delete-paths-victim-" + slugSuffix
+	neighbourSlug := "handler-tests-delete-paths-neighbour-" + slugSuffix
+	_, _ = testPool.Exec(ctx, `DELETE FROM workspace WHERE slug = ANY($1::text[])`,
+		[]string{victimSlug, neighbourSlug})
+
+	newWorkspace := func(name, slug string) string {
+		var id string
+		if err := testPool.QueryRow(ctx, `
+INSERT INTO workspace (name, slug) VALUES ($1, $2) RETURNING id
+`, name, slug).Scan(&id); err != nil {
+			t.Fatalf("create workspace %s: %v", slug, err)
+		}
+		t.Cleanup(func() {
+			_, _ = testPool.Exec(context.Background(), `DELETE FROM workspace WHERE id = $1`, id)
+		})
+		return id
+	}
+	f := workspaceDeletePathFixture{
+		victimID:    newWorkspace("Delete Paths Victim "+slugSuffix, victimSlug),
+		neighbourID: newWorkspace("Delete Paths Neighbour "+slugSuffix, neighbourSlug),
+	}
+
+	if _, err := testPool.Exec(ctx, `
+INSERT INTO member (workspace_id, user_id, role) VALUES ($1, $2, 'owner')
+`, f.victimID, testUserID); err != nil {
+		t.Fatalf("create owner member: %v", err)
+	}
+
+	newRuntime := func(wsID, name string) string {
+		var id string
+		if err := testPool.QueryRow(ctx, `
+INSERT INTO agent_runtime (workspace_id, name, runtime_mode, provider, status, device_info, metadata, owner_id)
+VALUES ($1, $2, 'cloud', 'delete-test', 'offline', '', '{}'::jsonb, $3)
+RETURNING id
+`, wsID, name, testUserID).Scan(&id); err != nil {
+			t.Fatalf("create runtime %s: %v", name, err)
+		}
+		return id
+	}
+	newAgent := func(wsID, runtimeID, name string) string {
+		var id string
+		if err := testPool.QueryRow(ctx, `
+INSERT INTO agent (workspace_id, name, runtime_mode, runtime_config, runtime_id, owner_id)
+VALUES ($1, $2, 'cloud', '{}'::jsonb, $3, $4)
+RETURNING id
+`, wsID, name, runtimeID, testUserID).Scan(&id); err != nil {
+			t.Fatalf("create agent %s: %v", name, err)
+		}
+		return id
+	}
+	newChat := func(wsID, agentID, title string) string {
+		fx := testutil.New(testPool, wsID, testUserID)
+		return fx.ChatSession(t, agentID, testutil.Cols{"title": title})
+	}
+
+	f.victimRuntime = newRuntime(f.victimID, "victim runtime")
+	f.victimAgent = newAgent(f.victimID, f.victimRuntime, "victim agent")
+	f.victimChat = newChat(f.victimID, f.victimAgent, "victim issue")
+	f.neighbourRuntime = newRuntime(f.neighbourID, "neighbour runtime")
+	f.neighbourAgent = newAgent(f.neighbourID, f.neighbourRuntime, "neighbour agent")
+	f.neighbourChat = newChat(f.neighbourID, f.neighbourAgent, "neighbour issue")
+
+	f.taskViaAgent = insertDeletePathTask(t, f.victimAgent, f.neighbourChat, f.neighbourRuntime)
+	f.taskViaChat = insertDeletePathTask(t, f.neighbourAgent, f.victimChat, f.neighbourRuntime)
+	f.taskViaRuntime = insertDeletePathTask(t, f.neighbourAgent, f.neighbourChat, f.victimRuntime)
+	f.neighbourTask = insertDeletePathTask(t, f.neighbourAgent, f.neighbourChat, f.neighbourRuntime)
+
+	f.victimToken = insertDeletePathToken(t, "mul5999-victim-"+slugSuffix, f.taskViaAgent, f.victimAgent, f.victimID)
+	f.crossTaskToken = insertDeletePathToken(t, "mul5999-cross-task-"+slugSuffix, f.taskViaChat, f.neighbourAgent, f.neighbourID)
+	f.crossAgentToken = insertDeletePathToken(t, "mul5999-cross-agent-"+slugSuffix, f.neighbourTask, f.victimAgent, f.neighbourID)
+	f.neighbourOnlyToken = insertDeletePathToken(t, "mul5999-neighbour-"+slugSuffix, f.neighbourTask, f.neighbourAgent, f.neighbourID)
+
+	t.Cleanup(func() {
+		bg := context.Background()
+		_, _ = testPool.Exec(bg, `DELETE FROM task_token WHERE id = ANY($1::uuid[])`,
+			[]string{f.victimToken, f.crossTaskToken, f.crossAgentToken, f.neighbourOnlyToken})
+		_, _ = testPool.Exec(bg, `DELETE FROM agent_task_queue WHERE id = ANY($1::uuid[])`,
+			[]string{f.taskViaAgent, f.taskViaChat, f.taskViaRuntime, f.neighbourTask})
+	})
+
+	return f
 }

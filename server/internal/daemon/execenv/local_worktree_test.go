@@ -438,7 +438,7 @@ func TestWorktreeModeDeliversBranchWithoutSidecars(t *testing.T) {
 		AgentName:      "J",
 		Provider:       "claude",
 		LocalWorktree:  &LocalWorktreeParams{LocalPath: repo},
-		Task:           TaskContextForEnv{IssueID: "issue-1", AgentName: "J"},
+		Task:           TaskContextForEnv{ChatSessionID: "issue-1", AgentName: "J"},
 	}, worktreeTestLogger())
 	if err != nil {
 		t.Fatalf("Prepare: %v", err)
@@ -1102,7 +1102,6 @@ func TestPrepareLocalWorktreeRestartsAMergedConversationBranch(t *testing.T) {
 
 func TestLocalWorktreeConversation(t *testing.T) {
 	t.Parallel()
-	issueID := "01a056ac-0eda-797d-8ac2-b7d7a3935ae7"
 	chatID := "01a056ad-5b37-762a-a15f-390717f4dae1"
 	tests := []struct {
 		name    string
@@ -1110,8 +1109,6 @@ func TestLocalWorktreeConversation(t *testing.T) {
 		wantKey string
 		wantID  string
 	}{
-		{"issue identifier names the branch, issue id owns it", PrepareParams{IssueIdentifier: "MUL-6881", Task: TaskContextForEnv{IssueID: issueID}}, "MUL-6881", issueID},
-		{"issue without an identifier", PrepareParams{Task: TaskContextForEnv{IssueID: issueID}}, taskKey(issueID), issueID},
 		{"chat session", PrepareParams{Task: TaskContextForEnv{ChatSessionID: chatID}}, "chat-" + taskKey(chatID), chatID},
 		{"neither", PrepareParams{}, "", ""},
 	}
@@ -1755,15 +1752,15 @@ func TestIsolatedPrepareCarriesTheStateFinalizeNeeds(t *testing.T) {
 	turn := func(taskID string) *Environment {
 		t.Helper()
 		env, err := PrepareIsolated(ctx, preparationHelperTestCommand(), PrepareParams{
-			WorkspacesRoot:  workspacesRoot,
-			WorkspaceID:     testBranchOwner.WorkspaceID,
-			TaskID:          taskID,
-			IssueIdentifier: "MUL-6881",
-			Provider:        "claude",
-			AgentName:       "J",
+			WorkspacesRoot: workspacesRoot,
+			WorkspaceID:    testBranchOwner.WorkspaceID,
+			TaskID:         taskID,
+
+			Provider:  "claude",
+			AgentName: "J",
 			Task: TaskContextForEnv{
-				IssueID: testBranchOwner.ConversationID,
-				AgentID: testBranchOwner.AgentID,
+				ChatSessionID: testBranchOwner.ConversationID,
+				AgentID:       testBranchOwner.AgentID,
 			},
 			LocalWorktree: &LocalWorktreeParams{LocalPath: repo},
 		}, worktreeTestLogger())
@@ -1775,7 +1772,7 @@ func TestIsolatedPrepareCarriesTheStateFinalizeNeeds(t *testing.T) {
 
 	first := turn(turnOneTask)
 	wt := first.LocalWorktree
-	if wt.Branch != "agent/j/mul-6881" {
+	if wt.Branch != "agent/j/chat-000000000003" {
 		t.Fatalf("branch = %q", wt.Branch)
 	}
 	// The proofs Finalize makes all hang off state that crosses as JSON —
@@ -1790,8 +1787,8 @@ func TestIsolatedPrepareCarriesTheStateFinalizeNeeds(t *testing.T) {
 
 	// Finalize's record is the observable proof it had the state: the checkpoint
 	// must be the tip it delivered, not the baseline Prepare recorded.
-	delivered := gitRun(t, repo, "rev-parse", "agent/j/mul-6881")
-	ref, err := readUserStateRef(repo, "agent/j/mul-6881")
+	delivered := gitRun(t, repo, "rev-parse", "agent/j/chat-000000000003")
+	ref, err := readUserStateRef(repo, "agent/j/chat-000000000003")
 	if err != nil {
 		t.Fatalf("readUserStateRef: %v", err)
 	}
@@ -1808,7 +1805,7 @@ func TestIsolatedPrepareCarriesTheStateFinalizeNeeds(t *testing.T) {
 
 	// And the continuation the whole feature is for still holds across it.
 	second := turn(turnTwoTask)
-	if !second.LocalWorktree.Continued || second.LocalWorktree.Branch != "agent/j/mul-6881" {
+	if !second.LocalWorktree.Continued || second.LocalWorktree.Branch != "agent/j/chat-000000000003" {
 		t.Fatalf("turn two: branch = %q continued = %v", second.LocalWorktree.Branch, second.LocalWorktree.Continued)
 	}
 	if _, err := os.Stat(filepath.Join(second.WorkDir, "agent.txt")); err != nil {
@@ -1827,15 +1824,15 @@ func TestIsolatedPrepareKeepsTheReadOnlyBranchDrop(t *testing.T) {
 	defer cancel()
 
 	env, err := PrepareIsolated(ctx, preparationHelperTestCommand(), PrepareParams{
-		WorkspacesRoot:  workspacesRoot,
-		WorkspaceID:     testBranchOwner.WorkspaceID,
-		TaskID:          turnOneTask,
-		IssueIdentifier: "MUL-6881",
-		Provider:        "claude",
-		AgentName:       "J",
+		WorkspacesRoot: workspacesRoot,
+		WorkspaceID:    testBranchOwner.WorkspaceID,
+		TaskID:         turnOneTask,
+
+		Provider:  "claude",
+		AgentName: "J",
 		Task: TaskContextForEnv{
-			IssueID: testBranchOwner.ConversationID,
-			AgentID: testBranchOwner.AgentID,
+			ChatSessionID: testBranchOwner.ConversationID,
+			AgentID:       testBranchOwner.AgentID,
 		},
 		LocalWorktree: &LocalWorktreeParams{LocalPath: repo},
 	}, worktreeTestLogger())

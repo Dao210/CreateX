@@ -40,7 +40,7 @@ func setupWorkspaceMcpClaimFixture(t *testing.T, ctx context.Context, name, agen
 	t.Helper()
 
 	runtimeID := createClaimReclaimRuntime(t, ctx, name+" runtime")
-	agentID, issueID := createClaimReclaimAgentAndIssue(t, ctx, runtimeID, name+" agent")
+	agentID, issueID := createClaimReclaimAgentAndChat(t, ctx, runtimeID, name+" agent")
 	for _, serverID := range bind {
 		if _, err := testPool.Exec(ctx,
 			`INSERT INTO agent_mcp_server (agent_id, server_id) VALUES ($1, $2)`, agentID, serverID); err != nil {
@@ -58,7 +58,7 @@ func setupWorkspaceMcpClaimFixture(t *testing.T, ctx context.Context, name, agen
 
 	var taskID string
 	if err := testPool.QueryRow(ctx, `
-		INSERT INTO agent_task_queue (agent_id, runtime_id, issue_id, status, priority)
+		INSERT INTO agent_task_queue (agent_id, runtime_id, chat_session_id, status, priority)
 		VALUES ($1, $2, $3, 'queued', 0)
 		RETURNING id
 	`, agentID, runtimeID, issueID).Scan(&taskID); err != nil {

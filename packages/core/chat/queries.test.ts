@@ -12,7 +12,6 @@ import {
 
 const msg = (seq: number): TaskMessagePayload => ({
   task_id: "task-1",
-  issue_id: "issue-1",
   seq,
   type: "text",
   content: `m${seq}`,

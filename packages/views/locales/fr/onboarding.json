@@ -144,41 +144,18 @@
     "success_toast": "Vous êtes sur la liste. Nous vous écrirons dès que les runtimes cloud seront actifs.",
     "failed_toast": "Échec de l'inscription à la liste d'attente"
   },
-  "welcome_after_onboarding": {
-    "skip": {
-      "loading": "Configuration de votre monde…",
-      "title": "Bienvenue sur Weave a World !",
-      "subtitle": "Nous avons ajouté une tâche pour vous aider à connecter un runtime. Une fois prêt, commencez avec Mika depuis Runtimes.",
-      "got_it": "Compris",
-      "status_in_progress": "En cours",
-      "error_title": "Nous n'avons pas pu mettre cela en place",
-      "error_body": "Le guide de runtime n'a pas été créé. Vous pouvez réessayer, ou connecter un runtime depuis la page Runtimes quand vous le souhaitez.",
-      "retry": "Réessayer",
-      "dismiss": "Pas maintenant",
-      "cards": {
-        "install_runtime": {
-          "title": "Connecter un runtime",
-          "subtitle": "Installez Codex ou Kimi, puis démarrez la discussion guidée avec Mika depuis Runtimes."
-        }
-      }
-    }
-  },
   "step_workspace": {
     "eyebrow_first": "Votre premier monde",
     "eyebrow_resume": "Reprendre ou repartir de zéro",
     "headline_first": "Nommez votre monde.",
     "headline_resume": "Continuez avec {{name}}, ou créez-en un autre.",
-    "lede_first": "Un monde réunit vos tâches, vos agents et vos projets. Vous pourrez inviter des coéquipiers ou en créer d'autres plus tard.",
+    "lede_first": "Votre monde réunit agents, chats et créations. Vous pourrez inviter des membres plus tard.",
     "lede_resume": "Reprenez la configuration avec le monde que vous avez déjà, ou créez-en un nouveau à côté — vous pouvez appartenir à autant d'espaces que vous voulez.",
     "name_label": "Nom du monde",
     "name_placeholder": "Acme Inc, Mon labo, Projets perso…",
     "random_name": "Aléatoire",
     "url_label": "URL",
     "slug_placeholder": "acme",
-    "issue_prefix_label": "Préfixe des tâches",
-    "issue_prefix_prefix": "Les tâches ressembleront à ",
-    "issue_prefix_suffix": ". Vous pourrez le changer plus tard dans les paramètres.",
-    "issue_prefix_pending": "Définissez l'URL ci-dessus et les numéros de tâches la suivront — ou saisissez un préfixe ici.",
     "create_new_title": "Créer un monde",
     "hint_opening": "Ouverture de {{name}}.",
     "hint_creating": "Création de {{name}}.",
@@ -267,6 +244,6 @@
     "headline": "Rencontrez Mika, votre premier coéquipier agent.",
     "name": "Mika",
     "role": "Chef de cabinet",
-    "blurb": "Dites à Mika ce que vous voulez faire. Cela devient une tâche, avec le bon agent dessus."
+    "blurb": "Dites à Mika ce que vous voulez faire et avancez ensemble dans le chat."
   }
 }

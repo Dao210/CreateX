@@ -36,7 +36,6 @@ func newWorkspaceCreateTestCmd() *cobra.Command {
 	cmd.Flags().Bool("description-stdin", false, "")
 	cmd.Flags().String("context", "", "")
 	cmd.Flags().Bool("context-stdin", false, "")
-	cmd.Flags().String("issue-prefix", "", "")
 	cmd.Flags().String("output", "json", "")
 	return cmd
 }
@@ -78,12 +77,11 @@ func TestRunWorkspaceCreatePostsWorkspaceAndDoesNotSwitchDefault(t *testing.T) {
 		gotBody = body
 		w.WriteHeader(http.StatusCreated)
 		json.NewEncoder(w).Encode(map[string]any{
-			"id":           "33333333-3333-3333-3333-333333333333",
-			"name":         "Growth Team",
-			"slug":         "growth-team",
-			"description":  "Handles GTM work",
-			"context":      "Launch notes",
-			"issue_prefix": "GRO",
+			"id":          "33333333-3333-3333-3333-333333333333",
+			"name":        "Growth Team",
+			"slug":        "growth-team",
+			"description": "Handles GTM work",
+			"context":     "Launch notes",
 		})
 	}))
 	defer srv.Close()
@@ -98,11 +96,10 @@ func TestRunWorkspaceCreatePostsWorkspaceAndDoesNotSwitchDefault(t *testing.T) {
 
 	cmd := newWorkspaceCreateTestCmd()
 	for name, value := range map[string]string{
-		"name":         "Growth Team",
-		"slug":         "growth-team",
-		"description":  `Handles\nGTM work`,
-		"context":      "Launch notes",
-		"issue-prefix": "GRO",
+		"name":        "Growth Team",
+		"slug":        "growth-team",
+		"description": `Handles\nGTM work`,
+		"context":     "Launch notes",
 	} {
 		if err := cmd.Flags().Set(name, value); err != nil {
 			t.Fatalf("set --%s: %v", name, err)
@@ -127,9 +124,6 @@ func TestRunWorkspaceCreatePostsWorkspaceAndDoesNotSwitchDefault(t *testing.T) {
 	}
 	if gotBody["context"] != "Launch notes" {
 		t.Errorf("context = %v, want Launch notes", gotBody["context"])
-	}
-	if gotBody["issue_prefix"] != "GRO" {
-		t.Errorf("issue_prefix = %v, want GRO", gotBody["issue_prefix"])
 	}
 
 	var printed map[string]any
@@ -536,7 +530,7 @@ func TestResolveWorkspaceByIDOrSlug(t *testing.T) {
 func resetWorkspaceUpdateFlags(t *testing.T) {
 	t.Helper()
 	flags := workspaceUpdateCmd.Flags()
-	for _, name := range []string{"name", "description", "context", "issue-prefix"} {
+	for _, name := range []string{"name", "description", "context"} {
 		_ = flags.Set(name, "")
 		if f := flags.Lookup(name); f != nil {
 			f.Changed = false
@@ -580,7 +574,7 @@ func TestBuildWorkspaceUpdateBody(t *testing.T) {
 		if got, _ := body["name"].(string); got != "Acme Eng" {
 			t.Errorf("name = %v, want Acme Eng", body["name"])
 		}
-		for _, key := range []string{"description", "context", "issue_prefix"} {
+		for _, key := range []string{"description", "context"} {
 			if _, present := body[key]; present {
 				t.Errorf("%s should not appear when its flag was not set, got %v", key, body)
 			}
@@ -591,7 +585,6 @@ func TestBuildWorkspaceUpdateBody(t *testing.T) {
 		resetWorkspaceUpdateFlags(t)
 		setStringFlag(t, "name", "Acme")
 		setStringFlag(t, "description", `line1\nline2`)
-		setStringFlag(t, "issue-prefix", "ENG")
 
 		body, err := buildWorkspaceUpdateBody(workspaceUpdateCmd)
 		if err != nil {
@@ -603,9 +596,6 @@ func TestBuildWorkspaceUpdateBody(t *testing.T) {
 		// resolveTextFlag decodes \n in inline values.
 		if body["description"] != "line1\nline2" {
 			t.Errorf("description = %q, want decoded newline", body["description"])
-		}
-		if body["issue_prefix"] != "ENG" {
-			t.Errorf("issue_prefix = %v, want ENG", body["issue_prefix"])
 		}
 	})
 
@@ -635,34 +625,6 @@ func TestBuildWorkspaceUpdateBody(t *testing.T) {
 		want := "first\nsecond line with literal \\n"
 		if got["context"] != want {
 			t.Errorf("context = %q, want %q", got["context"], want)
-		}
-	})
-
-	t.Run("empty issue-prefix is rejected", func(t *testing.T) {
-		resetWorkspaceUpdateFlags(t)
-		setStringFlag(t, "issue-prefix", "")
-		// Force Changed=true so the flag is treated as "explicitly passed".
-		if f := workspaceUpdateCmd.Flags().Lookup("issue-prefix"); f != nil {
-			f.Changed = true
-		}
-
-		_, err := buildWorkspaceUpdateBody(workspaceUpdateCmd)
-		if err == nil {
-			t.Fatalf("expected error when --issue-prefix is empty")
-		}
-		if !strings.Contains(err.Error(), "cannot be empty") {
-			t.Errorf("error = %q, want it to mention 'cannot be empty'", err)
-		}
-	})
-
-	t.Run("whitespace-only issue-prefix is rejected", func(t *testing.T) {
-		resetWorkspaceUpdateFlags(t)
-		setStringFlag(t, "issue-prefix", "   ")
-		if f := workspaceUpdateCmd.Flags().Lookup("issue-prefix"); f != nil {
-			f.Changed = true
-		}
-		if _, err := buildWorkspaceUpdateBody(workspaceUpdateCmd); err == nil {
-			t.Fatalf("expected error when --issue-prefix is whitespace-only")
 		}
 	})
 

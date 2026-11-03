@@ -11,7 +11,7 @@ import (
 )
 
 // Hook invocation from a person: a button inside a surface (`ui`) or an entry in
-// the issue actions menu and command palette (`manual`).
+// the command palette (`manual`).
 //
 // Both block — but only this request. A person is waiting for an answer they
 // asked for, so returning immediately would mean returning nothing useful. What
@@ -24,7 +24,6 @@ type invokePluginHookRequest struct {
 	// is using, and the server checks the manifest declared it — a client
 	// cannot invent a trigger to reach a hook that never offered it.
 	Trigger string          `json:"trigger"`
-	IssueID string          `json:"issue_id,omitempty"`
 	Input   json.RawMessage `json:"input,omitempty"`
 }
 

@@ -25,7 +25,6 @@ import (
 	"github.com/auro-ai/auro/server/internal/handler"
 	"github.com/auro-ai/auro/server/internal/integrations/wecom"
 	"github.com/auro-ai/auro/server/internal/logger"
-	"github.com/auro-ai/auro/server/internal/maintenance"
 	obsmetrics "github.com/auro-ai/auro/server/internal/metrics"
 	"github.com/auro-ai/auro/server/internal/profiling"
 	"github.com/auro-ai/auro/server/internal/realtime"
@@ -723,10 +722,6 @@ func main() {
 
 	srv := newMainHTTPServer(mainHTTPAddress(port), r)
 	profilingServer := profiling.NewServer()
-	maintenanceServer, maintenanceErr := maintenance.NewServer(os.Getenv("MAINTENANCE_PORT"), maintenance.NewService(pool, maintenance.StatusCategory{}))
-	if maintenanceErr != nil {
-		slog.Error("maintenance listener disabled", "error", maintenanceErr)
-	}
 
 	// Start background workers.
 	sweepCtx, sweepCancel := context.WithCancel(context.Background())
@@ -859,15 +854,6 @@ func main() {
 		}()
 	}
 
-	if maintenanceServer != nil {
-		go func() {
-			slog.Info("maintenance server starting", "addr", maintenanceServer.Addr)
-			if err := maintenanceServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-				slog.Error("maintenance listener disabled", "error", err)
-			}
-		}()
-	}
-
 	go func() {
 		slog.Info("pprof server starting", "addr", profilingServer.Addr)
 		if err := profilingServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
@@ -901,17 +887,6 @@ func main() {
 	// finds no socket to deliver over.
 	shutdownSequence{
 		StopAutopilot: autopilotCancel,
-		DrainMaintenance: func() {
-			if maintenanceServer == nil {
-				return
-			}
-			ctx, cancel := context.WithTimeout(context.Background(), 16*time.Second)
-			defer cancel()
-			if err := maintenanceServer.Shutdown(ctx); err != nil {
-				slog.Error("maintenance shutdown interrupted", "error", err)
-				_ = maintenanceServer.Close()
-			}
-		},
 		DrainHTTP: func() {
 			apiShutdownCtx, apiShutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
 			if err := srv.Shutdown(apiShutdownCtx); err != nil {

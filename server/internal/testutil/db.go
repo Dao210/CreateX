@@ -15,7 +15,7 @@ type Cols map[string]any
 
 // Raw is a SQL expression inlined into the statement instead of being bound as
 // a parameter, for the defaults a fixture cannot express as a Go value —
-// `now() - interval '2 hours'`, or the next issue number in a workspace.
+// `now() - interval '2 hours'`, for example.
 //
 // It is inlined verbatim. Never build one out of anything but literals and
 // ids the fixture itself produced.
@@ -42,9 +42,8 @@ func New(pool *pgxpool.Pool, workspaceID, userID string) *Fixture {
 // Insert writes one row into table, registers its deletion with t.Cleanup and
 // returns the new row's id.
 //
-// Cleanup runs in reverse creation order, so a row inserted after the row it
-// references is deleted before it and foreign keys hold without the test
-// spelling out a teardown order.
+// Cleanup runs in reverse creation order so dependent fixture rows are
+// removed before their owners.
 func (f *Fixture) Insert(t TB, table string, cols Cols) string {
 	t.Helper()
 
@@ -165,44 +164,6 @@ func (f *Fixture) Member(t TB, workspaceID, userID, role string, over ...Cols) s
 	}, over))
 }
 
-// Issue inserts an issue owned by the fixture's workspace and user.
-//
-// number is derived from the workspace's existing issues rather than fixed, so
-// two issues built by the same test do not collide on the workspace's issue
-// numbering.
-func (f *Fixture) Issue(t TB, title string, over ...Cols) string {
-	t.Helper()
-	cols := merge(Cols{
-		"workspace_id": f.WorkspaceID,
-		"title":        title,
-		"status":       "todo",
-		"priority":     "none",
-		"creator_type": "member",
-		"creator_id":   f.UserID,
-		"position":     0,
-	}, over)
-	if _, ok := cols["number"]; !ok {
-		workspaceID, _ := cols["workspace_id"].(string)
-		cols["number"] = Raw(fmt.Sprintf(
-			"(SELECT COALESCE(MAX(number), 0) + 1 FROM issue WHERE workspace_id = %s)",
-			quoteLiteral(workspaceID)))
-	}
-	return f.Insert(t, "issue", cols)
-}
-
-// Comment inserts a comment on issueID.
-func (f *Fixture) Comment(t TB, issueID, content string, over ...Cols) string {
-	t.Helper()
-	return f.Insert(t, "comment", merge(Cols{
-
-		"workspace_id": f.WorkspaceID,
-		"author_type":  "member",
-		"author_id":    f.UserID,
-		"content":      content,
-		"type":         "comment",
-	}, over))
-}
-
 // Runtime inserts an online cloud runtime.
 func (f *Fixture) Runtime(t TB, name string, over ...Cols) string {
 	t.Helper()
@@ -249,39 +210,6 @@ func (f *Fixture) Task(t TB, agentID string, over ...Cols) string {
 		"agent_id": agentID,
 		"status":   "queued",
 		"priority": 0,
-	}, over))
-}
-
-// Squad inserts a squad led by leaderID.
-func (f *Fixture) Squad(t TB, name, leaderID string, over ...Cols) string {
-	t.Helper()
-	return f.Insert(t, "squad", merge(Cols{
-		"workspace_id": f.WorkspaceID,
-		"name":         name,
-		"description":  "",
-		"leader_id":    leaderID,
-		"creator_id":   f.UserID,
-	}, over))
-}
-
-// SquadMember adds an agent or member to a squad.
-func (f *Fixture) SquadMember(t TB, squadID, memberType, memberID string, over ...Cols) string {
-	t.Helper()
-	return f.Insert(t, "squad_member", merge(Cols{
-
-		"member_type": memberType,
-		"member_id":   memberID,
-	}, over))
-}
-
-// Project inserts a project.
-func (f *Fixture) Project(t TB, title string, over ...Cols) string {
-	t.Helper()
-	return f.Insert(t, "project", merge(Cols{
-		"workspace_id": f.WorkspaceID,
-		"title":        title,
-		"status":       "planned",
-		"priority":     "none",
 	}, over))
 }
 

@@ -21,12 +21,7 @@
     "runtime_access_denied_toast": "メッセージは送信されませんでした — このエージェントはプライベートランタイムで実行できません。ランタイムを公開にするか、所有者が利用できるランタイムへエージェントを再設定/コピーしてください",
     "attachment_bind_failed_toast": "メッセージは送信されましたが、ファイルを添付できませんでした。しばらくしてからもう一度お試しください。",
     "add_tooltip": "追加",
-    "upload_file": "画像・ファイル",
-    "project_context": "プロジェクトコンテキスト",
-    "change_project_context": "プロジェクトコンテキストを変更",
-    "remove_project_context": "プロジェクトコンテキストを削除",
-    "no_projects": "プロジェクトがまだありません",
-    "project_context_unsupported": "プロジェクトの説明は適用されません——このエージェントのデーモンのアップグレードが必要です"
+    "upload_file": "画像・ファイル"
   },
   "queue": {
     "title_other": "キュー内のメッセージ {{count}} 件",
@@ -127,9 +122,6 @@
   },
   "empty_state": {
     "first_time_title": "エージェントとチャット",
-    "first_time_intro": "✨ エージェントはあなたのワールドを把握しています —",
-    "first_time_pillars": "タスク、プロジェクト、スキル",
-    "first_time_pillars_suffix": "。",
     "first_time_actions": "要約を頼んだり、今日の予定を立てたり、簡単なタスクを任せたりしてみましょう。",
     "returning_title_named": "こんにちは、{{name}} です",
     "returning_title_default": "Auro へようこそ",
@@ -143,8 +135,8 @@
       "prompt": "あなたが得意な支援を簡潔に教えてください。"
     },
     "first_task": {
-      "label": "最初のイシューを提案",
-      "prompt": "あなたに割り当てられる実用的なイシューを3つ提案してください。"
+      "label": "最初の一歩を提案",
+      "prompt": "このチャットで手伝えることを3つ提案して。"
     },
     "recommend": {
       "label": "アクションを提案",
@@ -155,14 +147,9 @@
   "onboarding_cards": {
     "aria_label": "はじめ方",
     "cta": "開始",
-    "board": {
-      "title": "数分でタスクボードを整える",
-      "desc": "目標をひとこと。プロジェクトを作り、タスクに分けて優先度まで並べます。",
-      "prompt": "今の目標をプロジェクトボードに整理して"
-    },
     "delegate": {
       "title": "まず一件任せてみる",
-      "desc": "たとえば小さなリサーチ。結果はタスクとレポートで戻ります。",
+      "desc": "テーマを調査し、結果をチャットで共有します。",
       "prompt": "まず一件お願い：小さなリサーチをして、結果をレポートにまとめて返して"
     },
     "digest": {
@@ -170,7 +157,12 @@
       "desc": "毎日ワールドの進捗をまとめて、インボックスに届けます。",
       "prompt": "毎朝ワールドの進捗をまとめる日報の自動化を作って"
     },
-    "digest_badge": "毎日 9:00"
+    "digest_badge": "毎日 9:00",
+    "plan": {
+      "title": "目標を整理する",
+      "desc": "次の一歩を一緒に決める",
+      "prompt": "今の目標を具体的な行動計画にまとめて"
+    }
   },
   "no_agent_banner": "チャットを始めるにはエージェントが必要です。",
   "archived_agent_banner": "{{name}} はアーカイブされました。この会話は読み取り専用です。",

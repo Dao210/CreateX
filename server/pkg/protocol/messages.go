@@ -4,7 +4,6 @@ import "encoding/json"
 
 const (
 	DaemonCapabilitySkillBundlesV1      = "skill-bundles-v1"
-	DaemonCapabilityCoalescedCommentsV1 = "coalesced-comments-v1"
 	DaemonCapabilityExecutionManifestV1 = "execution-manifest-v1"
 	DaemonCapabilityAgentSkillV1        = "agent-skill-v1"
 	DaemonCapabilityRemoteMCPV1         = "remote-mcp-v1"
@@ -20,10 +19,6 @@ const (
 	// unblocked, which let exactly such a daemon through (MUL-5707). A daemon
 	// that implements the mode says so; one that does not, cannot.
 	DaemonCapabilityLocalWorktreeV1 = "local-worktree-v1"
-	// DaemonCapabilitySourceContextQuickCreateV1 advertises support for the
-	// two-section quick-create prompt that keeps a new instruction separate
-	// from immutable historical source context.
-	DaemonCapabilitySourceContextQuickCreateV1 = "source_context_quick_create_v1"
 
 	// DaemonCapabilityRPCV1 advertises that the daemon can carry
 	// request/response RPCs over the WebSocket control connection (MUL-4257).
@@ -56,29 +51,7 @@ const (
 	// work, so such a daemon keeps getting a fresh directory and the parent's
 	// stays untouched on disk.
 	DaemonCapabilityCheckoutKeepsWorkV1 = "checkout-keeps-work-v1"
-	// DaemonCapabilityJoinedWakeupsV1 advertises that the daemon renders the
-	// claim's wakeup_joined field into the prompt. Only such a claim takes
-	// along the inputs of wakeup rules that waited for this run; for any other
-	// daemon those rules keep their inputs and start a run of their own.
-	DaemonCapabilityJoinedWakeupsV1 = "joined-wakeups-v1"
-	// DaemonCapabilityTaskSupplementV1 advertises that this provider run can accept
-	// an additional text instruction without cancelling or starting a task.
-	// It is persisted when this exact task enters running; absence always means
-	// unsupported so mixed server/daemon versions fail closed.
-	DaemonCapabilityTaskSupplementV1 = "task-supplement-v1"
-
-	TaskSupplementFailureTurnNotStarted   = "turn_not_started"
-	TaskSupplementFailureProviderRejected = "provider_rejected"
-	TaskSupplementFailureTimeout          = "timeout"
-	TaskSupplementFailureTurnEnded        = "turn_ended"
-
-	// AppCapabilityChatDraftRestoreV1 is advertised (X-Client-Capabilities) by
-	// app clients that understand the durable draft-restore recovery path:
-	// chat:cancel_finalized as an invalidation hint plus the draft-restores
-	// endpoint. Cancelling a started-but-empty chat task defers the
-	// empty/non-empty judgment (#5219), so its cancel response carries no
-	// synchronous restore — a client without this capability would silently
-	// drop the user's prompt, and keeps the legacy synchronous restore instead.
+	// Clients advertise support for durable recovery of cancelled chat drafts.
 	AppCapabilityChatDraftRestoreV1 = "chat-draft-restore-v1"
 )
 
@@ -122,14 +95,6 @@ type RPCResponsePayload struct {
 type Message struct {
 	Type    string          `json:"type"`
 	Payload json.RawMessage `json:"payload"`
-}
-
-// TaskDispatchPayload is sent from server to daemon when a task is assigned.
-type TaskDispatchPayload struct {
-	TaskID      string `json:"task_id"`
-	IssueID     string `json:"issue_id"`
-	Title       string `json:"title"`
-	Description string `json:"description"`
 }
 
 // TaskAvailablePayload carries content-free task and supplement wakeup hints.
@@ -213,7 +178,6 @@ type TaskMessagePayload struct {
 	// CallID is an opaque tool-call identity scoped to one backend execution.
 	CallID  string         `json:"call_id,omitempty"`
 	TaskID  string         `json:"task_id"`
-	IssueID string         `json:"issue_id,omitempty"`
 	Seq     int            `json:"seq"`
 	Type    string         `json:"type"`              // "text", "tool_use", "tool_result", "error"
 	Tool    string         `json:"tool,omitempty"`    // tool name for tool_use/tool_result
@@ -376,9 +340,6 @@ type ChatSessionDeletedPayload struct {
 type ChatSessionUpdatedPayload struct {
 	ChatSessionID string `json:"chat_session_id"`
 	Title         string `json:"title"`
-	// ProjectID is set only by the project-context update path. The double
-	// pointer distinguishes an omitted field from an explicit JSON null.
-	ProjectID **string `json:"project_id,omitempty"`
 	// Pinned is set only by the pin/unpin path; nil on a plain rename so a
 	// receiver leaves the existing pin state untouched.
 	Pinned *bool `json:"pinned,omitempty"`

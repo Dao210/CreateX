@@ -820,10 +820,10 @@ func TestSessionContinuityNoticeMatchesSurface(t *testing.T) {
 		wantMentions string
 	}{
 		{
-			name:         "issue rebuilds from comments",
-			task:         Task{IssueID: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"},
+			name:         "chat rebuilds from stored history",
+			task:         Task{ChatSessionID: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"},
 			tellUser:     false,
-			wantMentions: "comment history",
+			wantMentions: "auro chat history",
 		},
 		{
 			// Slack has a history reader, so the conversation is recoverable —
@@ -892,11 +892,11 @@ func TestSessionContinuityNoticeMatchesSurface(t *testing.T) {
 	}
 
 	// The notice only renders when the resume actually failed.
-	if blocks := perTurnContextBlocks(Task{IssueID: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"}, promptOpts{}); strings.Contains(blocks, "Session Continuity Notice") {
+	if blocks := perTurnContextBlocks(Task{ChatSessionID: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"}, promptOpts{}); strings.Contains(blocks, "Session Continuity Notice") {
 		t.Errorf("continuity notice leaked into a run that resumed fine:\n%s", blocks)
 	}
 	lost := perTurnContextBlocks(Task{
-		IssueID:                       "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+		ChatSessionID:                 "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
 		PriorSessionResumeUnavailable: true,
 	}, promptOpts{})
 	if !strings.Contains(lost, "Session Continuity Notice") {
@@ -918,7 +918,7 @@ func TestBackendResumeContinuityNoticeSuppressedWhenPromptAlreadyHasIt(t *testin
 
 	// Live resume rejection the daemon cannot see pre-launch: the prompt says
 	// nothing, so the backend must.
-	fresh := Task{IssueID: "a1b2c3d4-e5f6-7890-abcd-ef1234567890", TriggerCommentID: "c0ffee00-0000-0000-0000-000000000000"}
+	fresh := Task{ChatSessionID: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"}
 	if got := backendResumeContinuityNotice(fresh); !strings.Contains(got, heading) {
 		t.Fatal("backend must disclose when the prompt does not")
 	}
@@ -5250,10 +5250,10 @@ func TestHandleTask_ReportsUsageBeforeCancel(t *testing.T) {
 	})
 
 	task := Task{
-		ID:        "task-abc",
-		RuntimeID: "rt-1",
-		IssueID:   "issue-xyz",
-		Agent:     &AgentData{Name: "test-agent"},
+		ID:            "task-abc",
+		RuntimeID:     "rt-1",
+		ChatSessionID: "issue-xyz",
+		Agent:         &AgentData{Name: "test-agent"},
 	}
 
 	d.handleTask(context.Background(), task, 0)
@@ -5353,10 +5353,10 @@ func TestHandleTask_ReportsUsageWhenCancelledByPoll(t *testing.T) {
 	})
 
 	task := Task{
-		ID:        "task-poll",
-		RuntimeID: "rt-1",
-		IssueID:   "issue-poll",
-		Agent:     &AgentData{Name: "test-agent"},
+		ID:            "task-poll",
+		RuntimeID:     "rt-1",
+		ChatSessionID: "issue-poll",
+		Agent:         &AgentData{Name: "test-agent"},
 	}
 
 	d.handleTask(context.Background(), task, 0)
@@ -6011,10 +6011,10 @@ func TestHandleTask_AcksCancelAfterPollCancelled(t *testing.T) {
 	})
 
 	task := Task{
-		ID:        "task-ack-poll",
-		RuntimeID: "rt-1",
-		IssueID:   "issue-ack-poll",
-		Agent:     &AgentData{Name: "test-agent"},
+		ID:            "task-ack-poll",
+		RuntimeID:     "rt-1",
+		ChatSessionID: "issue-ack-poll",
+		Agent:         &AgentData{Name: "test-agent"},
 	}
 
 	d.handleTask(context.Background(), task, 0)
@@ -6080,10 +6080,10 @@ func TestHandleTask_AcksCancelOnPostRunStatusCheck(t *testing.T) {
 	})
 
 	task := Task{
-		ID:        "task-ack-postrun",
-		RuntimeID: "rt-1",
-		IssueID:   "issue-ack-postrun",
-		Agent:     &AgentData{Name: "test-agent"},
+		ID:            "task-ack-postrun",
+		RuntimeID:     "rt-1",
+		ChatSessionID: "issue-ack-postrun",
+		Agent:         &AgentData{Name: "test-agent"},
 	}
 
 	d.handleTask(context.Background(), task, 0)

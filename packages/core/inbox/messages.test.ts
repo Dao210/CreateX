@@ -12,8 +12,7 @@ const content = {
 
 describe("creation and world inbox messages", () => {
   it.each(["creation_ready", "character_milestone", "world_digest"] as const)("shows %s without reopening retired task notifications", type => {
-    expect(isVisibleInboxItem({ type, issue_id: null })).toBe(true);
-    expect(isVisibleInboxItem({ type, issue_id: "retired-issue" })).toBe(false);
+    expect(isVisibleInboxItem({ type, })).toBe(true);
   });
   it("classifies categories and safely normalizes a URL filter", () => {
     expect(inboxCategory({ type: "world_digest" })).toBe("world");

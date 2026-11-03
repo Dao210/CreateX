@@ -485,8 +485,8 @@ func TestRevokeMember_InvocationTargetCleanupIsWorkspaceScoped(t *testing.T) {
 	testPool.Exec(ctx, `DELETE FROM workspace WHERE slug = 'xws-b-perm-test'`)
 	var wsB string
 	if err := testPool.QueryRow(ctx, `
-		INSERT INTO workspace (name, slug, description, issue_prefix)
-		VALUES ('XWS B', 'xws-b-perm-test', '', 'XWB')
+		INSERT INTO workspace (name, slug, description)
+		VALUES ('XWS B', 'xws-b-perm-test', '')
 		RETURNING id
 	`).Scan(&wsB); err != nil {
 		t.Fatalf("create workspace B: %v", err)

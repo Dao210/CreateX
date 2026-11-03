@@ -61,7 +61,6 @@ function createWrapper(qc: QueryClient) {
 function msg(taskId: string, seq: number, extra: Partial<TaskMessagePayload> = {}): TaskMessagePayload {
   return {
     task_id: taskId,
-    issue_id: "issue-1",
     seq,
     type: "tool_use",
     ...extra,

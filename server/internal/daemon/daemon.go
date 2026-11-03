@@ -6203,14 +6203,8 @@ func (d *Daemon) sendTerminalTaskReport(ctx context.Context, report terminalTask
 	}
 }
 
-// gcMetaForTask classifies a finished task and produces a GCMeta of the right
-// kind. The discriminator order matters: a task carrying both an issue_id
-// and a chat_session_id (theoretical, not produced today) should be treated
-// as a chat task because the chat session is the longer-lived parent record.
-//
-// Returns ok=false when the task has no recognizable parent (e.g. an
-// internal task with no IDs at all). The caller skips writing a meta file
-// in that case so the directory falls back to mtime-based orphan cleanup.
+// gcMetaForTask identifies the chat or automation run that owns the workdir.
+// Directories without a recognized parent use mtime-based orphan cleanup.
 func gcMetaForTask(task Task) (execenv.GCMeta, bool) {
 	meta := execenv.GCMeta{WorkspaceID: task.WorkspaceID, TaskID: task.ID}
 	switch {
@@ -8390,21 +8384,6 @@ func (d *Daemon) runTask(ctx context.Context, task Task, provider string, slot i
 		execOpts.SystemPrompt = runtimeBrief
 	}
 
-	// A quick-actions refresh task from a server that predates server-side
-	// generation (MUL-5573). This daemon no longer has a suggestion pass to run
-	// it with, and it must NOT fall through to the ordinary chat path below:
-	// the task carries no user message, so the agent would answer a prompt
-	// nobody wrote and that server would persist the result as a real assistant
-	// reply. Complete it empty instead — the same shape the retired pass
-	// produced on this task, which that server writes no row for. The user's
-	// refresh spinner resolves via the client's own timeout.
-	if task.RegenerateQuickActionsFor != "" {
-		taskLog.Warn("refusing quick-actions refresh task from an older server; complete the daemon upgrade by updating the server",
-			"target_task", task.RegenerateQuickActionsFor,
-		)
-		return TaskResult{Status: "completed", Comment: "", WorkDir: env.WorkDir, EnvRoot: env.RootDir}, nil
-	}
-
 	// Authenticate the localhost repo-checkout endpoint with the same
 	// task-scoped token the child receives. The endpoint derives identity and
 	// branch ownership from this in-memory record instead of trusting request
@@ -8584,7 +8563,7 @@ func (d *Daemon) runTask(ctx context.Context, task Task, provider string, slot i
 		// conclusion but emitted a known fallback marker (iteration limit,
 		// fallback meta message). Route through the blocked path with a
 		// specific failure_reason so the server can exclude this session
-		// from the (agent_id, issue_id) resume lookup — otherwise a manual
+		// from the chat-session resume lookup — otherwise a manual
 		// rerun would inherit the same poisoned session and reproduce the
 		// same bad output.
 		if reason, ok := classifyPoisonedOutput(result.Output); ok {
@@ -8681,7 +8660,7 @@ func (d *Daemon) runTask(ctx context.Context, task Task, provider string, slot i
 		//
 		// Classify upstream API 400 invalid_request_error failures with a
 		// dedicated failure_reason so GetLastTaskSession excludes the
-		// task from the (agent_id, issue_id) resume lookup. Without this
+		// task from the chat-session resume lookup. Without this
 		// classifier a corrupt image or oversized payload baked into the
 		// conversation permanently blocks the issue: every follow-up
 		// task resumes the same poisoned session and hits the same 400.

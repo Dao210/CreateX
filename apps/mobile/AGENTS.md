@@ -71,7 +71,7 @@ Use the existing helpers rather than rebuilding request or subscription plumbing
 
 - Keep listing subscriptions mounted for the workspace session in `RealtimeSubscriptions` in `app/(app)/[workspace]/_layout.tsx`. Record subscriptions belong to the owning screen, filter by record ID, and clean up on unmount/ID changes.
 - Use `useWSSubscriptions` and typed `ws.on`. When adding protocol events, update both `WSEventType` and `WSEventPayloadMap` in `packages/core/types/events.ts`; narrow unknown payloads rather than adding unchecked casts.
-- Updaters belong to the feature whose cache they change. That feature subscribes to relevant foreign events; for example, inbox owns its reactions to issue status/deletion events.
+- Updaters belong to the feature whose cache they change. That feature subscribes to relevant foreign events; for example, inbox owns its reactions to new message events.
 - Patch when the payload and cache shape make the result determinate. Invalidate when information is incomplete, list membership is uncertain, or an infrequent event makes refetching simpler. Use existing refresh helpers that handle in-flight request races.
 - Each feature refreshes its affected caches on reconnect, including any account-level projections it owns. Avoid a global refetch sweep or subscriptions with no mobile consumer.
 - Accept authoritative WS updates over local optimistic state. Do not add timestamp gates to protect optimistic patches without a demonstrated ordering problem.

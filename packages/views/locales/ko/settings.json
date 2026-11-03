@@ -1,150 +1,4 @@
 {
-  "issue_statuses": {
-    "title": "태스크 상태",
-    "loading": "상태를 불러오는 중…",
-    "add": "상태 추가",
-    "show_archived": "보관됨 표시 ({{count}})",
-    "archived_badge": "보관됨",
-    "archived_hint": "새로 지정할 수 없습니다. 이미 이 상태인 태스크는 그대로 유지됩니다.",
-    "reorder_failed": "새 순서를 저장하지 못했습니다.",
-    "actions": {
-      "move_up": "위로 이동",
-      "move_down": "아래로 이동",
-      "open": "{{name}} 작업",
-      "edit": "편집",
-      "archive": "보관",
-      "reorder": "{{name}} 순서 변경"
-    },
-    "reorder_hint": "카테고리 안에서 드래그하면 보드, 목록, 메뉴의 순서가 바뀝니다.",
-    "built_in_dialog": {},
-    "editor": {
-      "create_title": "새 상태",
-      "edit_title": "상태 편집",
-      "name": "이름",
-      "name_placeholder": "예: Code Review",
-      "key_hint": "API와 CLI에서는 {{key}}로 참조합니다.",
-      "created": "상태를 만들었습니다. API와 CLI에서는 {{key}}로 참조합니다.",
-      "category": "카테고리",
-      "category_locked": "상태를 만든 뒤에는 카테고리를 변경할 수 없습니다.",
-      "description": "설명",
-      "description_placeholder": "팀에게 이 상태가 의미하는 것",
-      "color": "색상",
-      "icon": "아이콘 모양",
-      "icon_shapes": {
-        "default": "기본값",
-        "dotted": "점선 원",
-        "circle": "원",
-        "half": "반원 채우기",
-        "three_quarters": "4분의 3 채우기",
-        "check": "체크",
-        "slash": "사선",
-        "cross": "엑스"
-      },
-      "cancel": "취소",
-      "save": "저장",
-      "saving": "저장 중…",
-      "save_failed": "상태를 저장하지 못했습니다."
-    },
-    "archive_dialog": {
-      "retry": "보관 다시 시도",
-      "title": "이 상태를 보관할까요?",
-      "description": "\"{{name}}\"의 모든 태스크를 다른 상태로 이동하세요. 비어 있을 때 보관할 수 있으며, 보관하면 보드와 상태 선택 목록에서 제거됩니다.",
-      "in_use_title": "보관 전에 태스크 이동",
-      "in_use": "아직 {{count}}개의 태스크가 이 상태를 사용합니다. 완료되거나 취소된 태스크도 다른 상태로 이동한 후 다시 시도하세요.",
-      "view_issues": "태스크 보기",
-      "archiving": "보관 중...",
-      "cancel": "취소",
-      "confirm": "보관",
-      "failed": "보관하지 못했습니다."
-    },
-    "category_labels": {
-      "unstarted": "시작 전",
-      "started": "시작됨",
-      "done": "완료",
-      "closed": "종료"
-    },
-    "categories": {
-      "unstarted": "백로그와 계획된 작업을 포함하여 아직 시작하지 않은 작업입니다.",
-      "started": "진행 중이거나 리뷰 또는 차단 상태인 작업입니다.",
-      "done": "완료된 작업입니다.",
-      "closed": "완료하지 않기로 한 작업입니다."
-    },
-    "built_in_descriptions": {
-      "backlog": "보류. 여기로 옮겨도 에이전트가 시작되지 않습니다.",
-      "todo": "대기 중. 여기로 옮기면 담당 에이전트가 시작됩니다.",
-      "in_progress": "진행 중.",
-      "in_review": "전달 완료, 리뷰 대기. 오토파일럿 실행을 마무리합니다.",
-      "blocked": "외부 의존성으로 중단됨.",
-      "done": "완료.",
-      "cancelled": "진행하지 않기로 함."
-    },
-    "pr_auto_complete_badge": "PR 병합 시 자동 설정",
-    "built_in_locked": "기본 상태는 시스템 동작에 쓰이므로 편집하거나 보관할 수 없습니다. 순서는 바꿀 수 있습니다."
-  },
-  "wakeups": {
-    "description": "모든 태스크에 적용되는 플랫폼 규칙입니다. 각 태스크의 깨우기 섹션에서 따로 바꿀 수 있습니다.",
-    "child_done_title": "하위 태스크가 끝나면",
-    "child_done_description": "한 단계가 끝나고 다음 단계가 기다리고 있으면 상위 태스크 담당자를 깨우고, 모든 하위 태스크가 끝나면 한 번 더 깨웁니다. 담당자가 멤버면 받은편지함으로 알립니다.",
-    "enabled": "기본으로 켜기",
-    "instruction": "기본 지시",
-    "instruction_hint": "깨운 에이전트에게 전달됩니다. 비워 두면 아래 기본 제공 지시를 사용합니다.",
-    "instruction_placeholder": "비워 두면 기본 제공 지시를 사용합니다",
-    "builtin": "기본 제공 지시",
-    "instruction_invalid": "지시는 4,000바이트 이내로 입력하세요.",
-    "save": "저장",
-    "saving": "저장 중…",
-    "save_error": "기본값을 저장하지 못했습니다.",
-    "customized_other": "진행 중인 태스크 {{count}}개가 자체 설정을 사용해 이 기본값을 따르지 않습니다.",
-    "admin_only": "소유자와 관리자만 기본값을 바꿀 수 있습니다.",
-    "load_error": "깨우기 기본값을 불러오지 못했습니다."
-  },
-  "quick_actions": {
-    "title": "퀵 액션",
-    "description": "태스크 사이드바에서 미리 설정한 에이전트와 프롬프트를 실행합니다.",
-    "add": "퀵 액션 만들기",
-    "search_placeholder": "퀵 액션 검색",
-    "loading": "퀵 액션을 불러오는 중…",
-    "no_results": "일치하는 퀵 액션이 없습니다",
-    "actions_open": "“{{name}}” 작업 메뉴 열기",
-    "columns": {
-      "name": "이름",
-      "target": "실행자",
-      "visibility": "공개 범위",
-      "usage": "사용",
-      "updated": "업데이트"
-    },
-    "empty_title": "퀵 액션이 없습니다",
-    "empty_hint": "예: 코드 검토 또는 테스트 작성.",
-    "archived": "보관됨",
-    "visibility_public": "팀",
-    "visibility_private": "나만",
-    "visibility_public_hint": "세계의 모든 사람",
-    "visibility_private_hint": "나만",
-    "field_visibility": "사용 범위",
-    "public_target_hint": "모두가 트리거할 수 있는 에이전트만 지정할 수 있습니다.",
-    "target_private": "비공개",
-    "target_missing": "실행자를 사용할 수 없음",
-    "archive": "보관",
-    "unarchive": "복원",
-    "edit": "편집",
-    "delete": "삭제",
-    "cancel": "취소",
-    "save": "저장",
-    "never_used": "사용 안 함",
-    "used_count": "{{count}}회 사용",
-    "create_title": "퀵 액션 만들기",
-    "edit_title": "퀵 액션 편집",
-    "dialog_description": "@멘션처럼 태스크 댓글로 실행됩니다.",
-    "field_name": "이름",
-    "field_name_placeholder": "코드 리뷰",
-    "field_target": "실행자",
-    "field_prompt": "프롬프트",
-    "field_prompt_placeholder": "이 태스크에 연결된 코드를 검토하고 정확성과 예외 상황을 중점적으로 확인하세요.",
-    "prompt_hint": "작성한 그대로 전달됩니다. 에이전트는 태스크를 이미 읽을 수 있습니다.",
-    "template_not_supported": "변수는 아직 지원되지 않습니다. {{token}}을(를) 제거하세요. 에이전트는 이미 이 태스크를 읽습니다.",
-    "delete_title": "이 퀵 액션을 삭제할까요?",
-    "delete_description": "모든 태스크 사이드바에서 사라집니다. 과거 실행 기록은 실행 로그에 남습니다. 다시 쓸 수 있다면 보관을 선택하세요."
-  },
   "auto_save": {
     "saving": "저장 중…",
     "saved": "저장됨",
@@ -186,14 +40,7 @@
     },
     "comments_title": "댓글 및 채팅",
     "region_title": "언어 및 지역",
-    "appearance_title": "모양",
-    "issue_fields_title": "태스크 생성 시 표시할 필드",
-    "issue_fields": {
-      "field": "필드",
-      "quick": "에이전트로 생성",
-      "manual": "수동 생성",
-      "unsupported": "에이전트로 생성할 때는 사용할 수 없습니다"
-    }
+    "appearance_title": "모양"
   },
   "shortcuts": {
     "title": "키보드 단축키",
@@ -229,10 +76,6 @@
         "label": "검색 열기",
         "description": "콘텐츠 검색 또는 명령 실행."
       },
-      "createIssue": {
-        "label": "태스크 만들기",
-        "description": "선호하는 태스크 만들기 흐름을 엽니다."
-      },
       "toggleSidebar": {
         "label": "왼쪽 사이드바 전환",
         "description": "왼쪽 사이드바를 표시하거나 숨깁니다."
@@ -240,10 +83,6 @@
       "toggleRightSidebar": {
         "label": "오른쪽 사이드바 전환",
         "description": "오른쪽 사이드바가 있는 페이지에서 사용할 수 있습니다."
-      },
-      "findInIssue": {
-        "label": "태스크에서 찾기",
-        "description": "열린 태스크 상세 내용에서 검색합니다."
       },
       "archiveInboxItem": {
         "label": "알림 보관",
@@ -268,14 +107,6 @@
       "goChat": {
         "label": "채팅으로 이동",
         "description": "세계 채팅을 엽니다."
-      },
-      "goIssues": {
-        "label": "태스크로 이동",
-        "description": "태스크 목록을 엽니다."
-      },
-      "goProjects": {
-        "label": "프로젝트로 이동",
-        "description": "프로젝트 목록을 엽니다."
       },
       "goAutopilots": {
         "label": "자동화로 이동",
@@ -315,25 +146,6 @@
       "close_dialog": "대화상자 또는 메뉴 닫기"
     }
   },
-  "issue": {
-    "opening": {
-      "title": "태스크 열기",
-      "click": "카드나 행을 클릭하면 열리는 곳",
-      "page": "전체 페이지",
-      "peek": "사이드 미리보기",
-      "hint": "Shift+클릭하면 다른 쪽으로 열립니다."
-    },
-    "description": "각 생성 방식의 툴바에 항상 표시할 필드를 선택합니다. 숨긴 필드는 ⋯ 메뉴에서 계속 사용할 수 있으며, 값이 있는 동안에는 자동으로 표시됩니다.",
-    "fields": {
-      "status": "상태",
-      "priority": "우선순위",
-      "assignee": "담당자",
-      "labels": "레이블",
-      "project": "프로젝트",
-      "due_date": "마감일",
-      "start_date": "시작일"
-    }
-  },
   "mcp": {
     "description": "추가 후 에이전트의 MCP 탭에서 할당하세요.",
     "servers_title": "공유 서버",
@@ -371,17 +183,12 @@
       "profile": "프로필",
       "preferences": "환경설정",
       "shortcuts": "단축키",
-      "issue": "태스크",
       "notifications": "알림",
       "tokens": "API 토큰",
       "general": "일반",
       "labs": "실험실",
       "members": "멤버",
       "labels": "레이블",
-      "issue_statuses": "태스크 상태",
-      "wakeups": "깨우기",
-      "properties": "속성",
-      "quick_actions": "퀵 액션",
       "plugins": "플러그인",
       "mcp": "MCP 서버",
       "billing": "결제 및 요금제",
@@ -454,10 +261,6 @@
       "secret_set": "저장됨 — 새 값을 입력하면 교체됩니다"
     },
     "scopes": {
-      "issues_read": "태스크 읽기",
-      "issues_write": "태스크 생성 및 수정",
-      "comments_read": "댓글 읽기",
-      "comments_write": "댓글 작성",
       "tasks_read": "에이전트 실행 읽기",
       "tasks_write": "에이전트 실행 시작 및 업데이트",
       "agents_read": "agent 목록 읽기",
@@ -492,79 +295,11 @@
       "review_upgrade": "확인 후 업그레이드"
     }
   },
-  "properties": {
-    "title": "속성",
-    "description": "태스크에 사용자 지정 필드를 추가합니다.",
-    "search_placeholder": "이름으로 필터...",
-    "new_property": "새 속성",
-    "show_archived": "보관된 항목 표시",
-    "columns": {
-      "name": "이름",
-      "type": "유형",
-      "options": "옵션",
-      "usage": "사용",
-      "updated": "업데이트"
-    },
-    "usage_count_other": "{{count}}개 태스크",
-    "loading": "속성을 불러오는 중...",
-    "empty": "아직 속성이 없습니다",
-    "empty_hint": "예: 심각도, 환경.",
-    "no_results": "일치하는 속성이 없습니다",
-    "save_failed": "속성을 저장하지 못했습니다",
-    "limit_hint": "활성 속성 {{count}}/{{max}}",
-    "archived_badge": "보관됨",
-    "types": {
-      "text": "텍스트",
-      "number": "숫자",
-      "select": "선택",
-      "multi_select": "다중 선택",
-      "date": "날짜",
-      "checkbox": "체크박스",
-      "url": "URL",
-      "actor": "멤버",
-      "multi_actor": "멤버(다중 선택)"
-    },
-    "actions": {
-      "open": "{{name}} 작업",
-      "edit": "편집",
-      "archive": "보관",
-      "unarchive": "복원"
-    },
-    "editor": {
-      "create_title": "새 속성",
-      "edit_title": "속성 편집",
-      "admin_hint": "세계 소유자와 관리자만 속성 정의를 관리할 수 있습니다.",
-      "icon": "아이콘",
-      "choose_icon": "아이콘 선택",
-      "remove_icon": "아이콘 제거",
-      "name": "이름",
-      "name_placeholder": "예: Severity",
-      "type": "유형",
-      "type_locked_hint": "생성 후에는 유형을 변경할 수 없습니다.",
-      "description": "설명",
-      "description_placeholder": "이 속성의 의미와 설정 시점",
-      "options": "옵션",
-      "option_name_placeholder": "옵션 이름",
-      "add_option": "옵션 추가",
-      "remove_option": "옵션 제거",
-      "cancel": "취소",
-      "save": "속성 저장",
-      "saving": "저장 중..."
-    },
-    "archive_dialog": {
-      "title": "속성을 보관할까요?",
-      "description": "\"{{name}}\"이(가) 선택기와 필터에서 숨겨집니다. 태스크의 기존 값은 유지되며 나중에 복원할 수 있습니다.",
-      "cancel": "취소",
-      "confirm": "속성 보관",
-      "failed": "속성을 보관하지 못했습니다"
-    }
-  },
   "labels": {
     "title": "레이블",
-    "description": "태스크 라벨과 skill 라벨은 서로 별개입니다.",
     "scopes": {
-      "issue": "태스크",
-      "skill": "스킬"
+      "skill": "스킬",
+      "agent": "에이전트"
     },
     "search_placeholder": "이름 또는 설명으로 필터링...",
     "new_label": "새 레이블",
@@ -751,7 +486,7 @@
   },
   "delete_workspace_dialog": {
     "title": "세계 삭제",
-    "description": "이 작업은 되돌릴 수 없습니다. 모든 태스크, 에이전트, 채팅, 실행 기록이 영구 삭제됩니다.",
+    "description": "되돌릴 수 없어요. 이 월드의 에이전트, 채팅, 창작물과 실행 기록이 영구 삭제돼요.",
     "type_to_confirm_prefix": "확인하려면 아래에",
     "type_to_confirm_suffix": "을(를) 입력하세요.",
     "cancel": "취소",

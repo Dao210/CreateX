@@ -18,21 +18,21 @@ import (
 // and workspace delete. Without the sweep, a labelled agent/skill leaves a
 // permanent, invisible orphan row once resource labels are enabled.
 
-// insertLabelRow creates a real issue_label so the seeded junction row is valid
+// insertLabelRow creates a real label so the seeded junction row is valid
 // regardless of whether a given database still carries the pre-release label_id
 // foreign key. Registers cleanup.
 func insertLabelRow(t *testing.T, ctx context.Context, workspaceID, resourceType string) string {
 	t.Helper()
 	var labelID string
 	if err := testPool.QueryRow(ctx, `
-		INSERT INTO issue_label (workspace_id, resource_type, name, color)
+		INSERT INTO label (workspace_id, resource_type, name, color)
 		VALUES ($1, $2, $3, '#3b82f6')
 		RETURNING id
 	`, workspaceID, resourceType, resourceType+"-"+uuid.NewString()[:8]).Scan(&labelID); err != nil {
-		t.Fatalf("insert issue_label: %v", err)
+		t.Fatalf("insert label: %v", err)
 	}
 	t.Cleanup(func() {
-		_, _ = testPool.Exec(context.Background(), `DELETE FROM issue_label WHERE id = $1`, labelID)
+		_, _ = testPool.Exec(context.Background(), `DELETE FROM label WHERE id = $1`, labelID)
 	})
 	return labelID
 }
@@ -345,4 +345,75 @@ func TestDeleteWorkspace_RollsBackResourceLabelCleanup(t *testing.T) {
 	if n := countSkillLabelAssignments(t, ctx, skillID); n != 1 {
 		t.Fatalf("skill_to_label rows after failed workspace delete = %d, want 1", n)
 	}
+}
+
+// seedIsolatedRuntime creates a fresh runtime in the shared test workspace
+// (so the seeded test user is owner/admin and passes canEditRuntime), and
+// returns its UUID. The runtime is auto-cleaned via t.Cleanup; tests that
+// successfully drive DeleteAgentRuntime through to the end will have already
+// deleted it, in which case the cleanup is a no-op.
+func seedIsolatedRuntime(t *testing.T, name string) string {
+	t.Helper()
+	ctx := context.Background()
+	var runtimeID string
+	if err := testPool.QueryRow(ctx, `
+		INSERT INTO agent_runtime (
+			workspace_id, daemon_id, name, runtime_mode, provider, status, device_info, metadata, last_seen_at
+		)
+		VALUES ($1, NULL, $2, 'cloud', 'isolated_test', 'online', 'isolated test runtime', '{}'::jsonb, now())
+		RETURNING id
+	`, testWorkspaceID, name).Scan(&runtimeID); err != nil {
+		t.Fatalf("seed runtime %q: %v", name, err)
+	}
+	t.Cleanup(func() {
+		// Best-effort cascading cleanup; ignore errors because the handler
+		// may have already removed the row in the happy path.
+		testPool.Exec(ctx, `DELETE FROM agent WHERE runtime_id = $1`, runtimeID)
+		testPool.Exec(ctx, `DELETE FROM agent_runtime WHERE id = $1`, runtimeID)
+	})
+	return runtimeID
+}
+
+// seedAgentOnRuntime creates an agent on the given runtime. If archived is
+// true the row is created with archived_at = now().
+func seedAgentOnRuntime(t *testing.T, runtimeID, name string, archived bool) string {
+	t.Helper()
+	ctx := context.Background()
+	var agentID string
+	if err := testPool.QueryRow(ctx, `
+		INSERT INTO agent (
+			workspace_id, name, description, runtime_mode, runtime_config,
+			runtime_id, visibility, max_concurrent_tasks, owner_id
+		)
+		VALUES ($1, $2, '', 'cloud', '{}'::jsonb, $3, 'workspace', 1, $4)
+		RETURNING id
+	`, testWorkspaceID, name, runtimeID, testUserID).Scan(&agentID); err != nil {
+		t.Fatalf("seed agent %q: %v", name, err)
+	}
+	if archived {
+		if _, err := testPool.Exec(ctx,
+			`UPDATE agent SET archived_at = now(), archived_by = $1 WHERE id = $2`,
+			testUserID, agentID,
+		); err != nil {
+			t.Fatalf("archive agent %q: %v", name, err)
+		}
+	}
+	t.Cleanup(func() {
+		// Squad rows referencing this agent could block a plain DELETE; nuke
+		// them first. Tests that complete through the handler will already
+		// have done this.
+		testPool.Exec(ctx, `DELETE FROM squad WHERE leader_id = $1`, agentID)
+		testPool.Exec(ctx, `DELETE FROM agent WHERE id = $1`, agentID)
+	})
+	return agentID
+}
+func agentExists(t *testing.T, agentID string) bool {
+	t.Helper()
+	var count int
+	if err := testPool.QueryRow(context.Background(),
+		`SELECT count(*) FROM agent WHERE id = $1`, agentID,
+	).Scan(&count); err != nil {
+		t.Fatalf("count agent %s: %v", agentID, err)
+	}
+	return count == 1
 }

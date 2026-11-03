@@ -75,25 +75,6 @@ describe("SourceContextPreviewSchema", () => {
 });
 
 describe("AgentTaskListSchema", () => {
-  it("preserves negotiated supplement capability, ordered coverage and permission", () => {
-    const parsed = AgentTaskListSchema.parse([{
-      id: "run",
-      supplement_capability: "task-supplement-v1",
-      supplement_comment_ids: ["comment-1", "comment-2"],
-      can_supplement: true,
-    }]);
-    expect(parsed[0]).toMatchObject({
-      supplement_capability: "task-supplement-v1",
-      supplement_comment_ids: ["comment-1", "comment-2"],
-      can_supplement: true,
-    });
-  });
-
-  it.each([true, false, undefined, null, "true", 1])("safely parses comment cancellation metadata: %s", (value) => {
-    const parsed = AgentTaskListSchema.parse([{ id: "run", cancelled_by_comment_change: value }]);
-    expect(parsed).toHaveLength(1);
-    expect(parsed[0]?.cancelled_by_comment_change).toBe(typeof value === "boolean" ? value : undefined);
-  });
 
   it("parses cancellation actor metadata without making it required", () => {
     const parsed = AgentTaskListSchema.parse([
@@ -111,7 +92,6 @@ describe("AgentTaskListSchema", () => {
     id: "task-1",
     agent_id: "agent-1",
     runtime_id: "runtime-1",
-    issue_id: "issue-1",
     status: "queued",
     priority: 0,
     dispatched_at: null,
@@ -120,58 +100,7 @@ describe("AgentTaskListSchema", () => {
     result: null,
     error: null,
     created_at: "2026-07-10T00:00:00Z",
-    trigger_comment_id: "comment-3",
   };
-
-  it("preserves planned and delivered comment IDs for a task run", () => {
-    const parsed = AgentTaskListSchema.parse([
-      {
-        ...task,
-        coalesced_comment_ids: ["comment-1", "comment-2"],
-        delivered_comment_ids: ["comment-1", "comment-2", "comment-3"],
-      },
-    ]);
-
-    expect(parsed[0]?.trigger_comment_id).toBe("comment-3");
-    expect(parsed[0]?.coalesced_comment_ids).toEqual([
-      "comment-1",
-      "comment-2",
-    ]);
-    expect(parsed[0]?.delivered_comment_ids).toEqual([
-      "comment-1",
-      "comment-2",
-      "comment-3",
-    ]);
-  });
-
-  it("accepts task payloads from older backends without comment coverage", () => {
-    const parsed = AgentTaskListSchema.parse([task]);
-    expect(parsed[0]?.coalesced_comment_ids).toBeUndefined();
-    expect(parsed[0]?.delivered_comment_ids).toBeUndefined();
-  });
-
-  it("degrades malformed optional coverage without dropping task rows", () => {
-    const parsed = AgentTaskListSchema.parse([
-      {
-        ...task,
-        coalesced_comment_ids: ["comment-1", 2],
-        delivered_comment_ids: "not-an-array",
-      },
-      {
-        ...task,
-        id: "task-2",
-        delivered_comment_ids: ["comment-2", "comment-3"],
-      },
-    ]);
-
-    expect(parsed).toHaveLength(2);
-    expect(parsed[0]?.coalesced_comment_ids).toBeUndefined();
-    expect(parsed[0]?.delivered_comment_ids).toBeUndefined();
-    expect(parsed[1]?.delivered_comment_ids).toEqual([
-      "comment-2",
-      "comment-3",
-    ]);
-  });
 
   it("accepts durable workdir metadata from newer backends", () => {
     const parsed = AgentTaskListSchema.parse([
@@ -598,27 +527,6 @@ describe("dashboard + runtime usage schema drift", () => {
   });
 });
 
-// A server that never heard of worktree mode also never sends this flag, and
-// it does not reject the mode either — it drops execution_mode and answers 201,
-// leaving the task to run in the user's working copy (#7113). So the absent
-// case has to parse as false, not as "unknown, probably fine".
-// An older server deletes a comment's replies with it and omits this field,
-// so absent or malformed must parse as false: the client then promises nothing
-// about replies and keeps the legacy delete route (#8296).
-describe("AppConfigSchema comment_delete_keep_replies_supported drift", () => {
-  it.each([
-    [undefined, false],
-    ["yes", false],
-    [true, true],
-  ])("%j parses as %s", (value, expected) => {
-    const parsed = AppConfigSchema.parse({
-      cdn_domain: "cdn.example.com",
-      comment_delete_keep_replies_supported: value,
-    });
-    expect(parsed.comment_delete_keep_replies_supported).toBe(expected);
-  });
-});
-
 describe("AppConfigSchema local_worktree_supported drift", () => {
   it("defaults to false when the server predates the signal", () => {
     const parsed = AppConfigSchema.parse({ cdn_domain: "cdn.example.com" });
@@ -756,7 +664,6 @@ describe("InboxItemListSchema", () => {
     recipient_id: "member-1",
     type: "new_comment",
     severity: "info",
-    issue_id: "issue-1",
     title: "Issue title",
     body: null,
     read: false,
@@ -768,8 +675,6 @@ describe("InboxItemListSchema", () => {
   it("parses a well-formed archived list and tolerates extra fields", () => {
     const parsed = parseWithFallback(
       [row({
-        issue_status: "in_progress",
-        issue_priority: "high",
         details: { comment_id: "c-1" },
         future_field: 1,
       })],
@@ -781,8 +686,6 @@ describe("InboxItemListSchema", () => {
     expect(parsed[0]).toMatchObject({
       id: "inbox-1",
       archived: true,
-      issue_status: "in_progress",
-      issue_priority: "high",
     });
   });
 
@@ -799,9 +702,8 @@ describe("InboxItemListSchema", () => {
   });
 
   it("accepts rows that omit the nullable optional fields", () => {
-    const { body, issue_id, ...withoutOptionals } = row();
+    const { body, ...withoutOptionals } = row();
     void body;
-    void issue_id;
     expect(
       parseWithFallback([withoutOptionals], InboxItemListSchema, EMPTY_INBOX_ITEMS, ENDPOINT),
     ).toHaveLength(1);
@@ -846,7 +748,6 @@ describe("AutopilotRunSchema", () => {
     trigger_id: null,
     source: "manual",
     status: "issue_created",
-    issue_id: "issue-1",
     task_id: null,
     triggered_at: "2026-07-14T00:00:00Z",
     completed_at: null,
@@ -1352,7 +1253,7 @@ describe("TaskMessageListSchema", () => {
     expect(parsed.every((m) => m.output === "ok")).toBe(true);
   });
 
-  const row = { task_id: "task-1", issue_id: "issue-1", seq: 1, type: "tool_result", output: "log line" };
+  const row = { task_id: "task-1", seq: 1, type: "tool_result", output: "log line" };
 
   // The whole point of the field: a server that never sends it is saying
   // "nobody measured this", and only `undefined` can carry that. A default of

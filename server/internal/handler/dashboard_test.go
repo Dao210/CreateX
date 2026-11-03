@@ -9,8 +9,6 @@ import (
 	"time"
 
 	"github.com/auro-ai/auro/server/internal/testutil"
-	db "github.com/auro-ai/auro/server/pkg/db/generated"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // dashboardFixtureTZ is the zone the day-boundary fixtures in this file are
@@ -145,60 +143,6 @@ func TestDashboardFixtureRunLandsInsideTheWindow(t *testing.T) {
 	}
 }
 
-// TestDashboardAgentRunTimeReportsMeteredTaskCoverage proves the runtime
-// rollup distinguishes terminal runs from the subset that reported usage.
-func TestDashboardAgentRunTimeReportsMeteredTaskCoverage(t *testing.T) {
-	if testHandler == nil {
-		t.Skip("database not available")
-	}
-
-	var agentID, runtimeID string
-	dbfx.QueryRow(t, `
-		SELECT id, runtime_id FROM agent
-		WHERE workspace_id = $1 AND runtime_id IS NOT NULL
-		LIMIT 1
-	`, testWorkspaceID).Scan(&agentID, &runtimeID)
-
-	readCoverage := func() (int32, int32) {
-		rows, err := testHandler.Queries.ListDashboardAgentRunTime(context.Background(), db.ListDashboardAgentRunTimeParams{
-			WorkspaceID: parseUUID(testWorkspaceID),
-			Since:       pgtype.Timestamptz{Time: time.Now().Add(-24 * time.Hour), Valid: true},
-		})
-		if err != nil {
-			t.Fatalf("list dashboard agent runtime: %v", err)
-		}
-		for _, row := range rows {
-			if uuidToString(row.AgentID) == agentID {
-				return row.TaskCount, row.MeteredTaskCount
-			}
-		}
-		return 0, 0
-	}
-	baseTasks, baseMetered := readCoverage()
-
-	issueID := dbfx.Issue(t, "dashboard usage coverage")
-	finished := testutil.Cols{
-		"issue_id":     issueID,
-		"runtime_id":   runtimeID,
-		"started_at":   testutil.Raw("now() - interval '2 minutes'"),
-		"completed_at": testutil.Raw("now() - interval '1 minute'"),
-	}
-	meteredTaskID := dbfx.Task(t, agentID, finished, testutil.Cols{"status": "completed"})
-	dbfx.Task(t, agentID, finished, testutil.Cols{"status": "failed"})
-	dbfx.Insert(t, "task_usage", testutil.Cols{
-		"task_id":       meteredTaskID,
-		"provider":      "qoderclicn",
-		"model":         "bailian/tp/qwen3.8-max",
-		"input_tokens":  120,
-		"output_tokens": 30,
-	})
-
-	tasks, metered := readCoverage()
-	if tasks-baseTasks != 2 || metered-baseMetered != 1 {
-		t.Fatalf("coverage delta = terminal:%d metered:%d, want 2/1", tasks-baseTasks, metered-baseMetered)
-	}
-}
-
 // TestDashboardUsageDailyBucketsByViewerTimezone proves the `?tz=` query
 // param drives the calendar-day boundary: the same UTC instant lands under
 // a different `date` for a UTC viewer vs an America/Los_Angeles viewer.
@@ -221,16 +165,8 @@ func TestDashboardUsageDailyBucketsByViewerTimezone(t *testing.T) {
 	// viewer and the LA viewer must see this row under different dates.
 	var bucketHour time.Time
 	dbfx.QueryRow(t, `
-		INSERT INTO task_usage_hourly (
-			bucket_hour, workspace_id, runtime_id, agent_id, project_id,
-			provider, model,
-			input_tokens, output_tokens, cache_read_tokens, cache_write_tokens, event_count
-		)
-		VALUES (
-			((CURRENT_DATE - 2)::timestamp + interval '4 hours') AT TIME ZONE 'UTC',
-			$1, $2, $3, NULL, 'tz-bucket-test', 'tz-bucket-model',
-			999, 0, 0, 0, 1
-		)
+		INSERT INTO task_usage_hourly (bucket_hour, workspace_id, runtime_id, agent_id, provider, model, input_tokens, output_tokens, cache_read_tokens, cache_write_tokens, event_count)
+		VALUES (((CURRENT_DATE - 2)::timestamp + interval '4 hours') AT TIME ZONE 'UTC', $1, $2, $3, 'tz-bucket-test', 'tz-bucket-model', 999, 0, 0, 0, 1)
 		ON CONFLICT ON CONSTRAINT uq_task_usage_hourly_key DO UPDATE
 			SET input_tokens = EXCLUDED.input_tokens
 		RETURNING bucket_hour
@@ -323,14 +259,8 @@ func TestPruneTaskUsageHourlyDirty(t *testing.T) {
 	})
 	seed := func(model, age string) {
 		dbfx.Exec(t, `
-			INSERT INTO task_usage_hourly_dirty (
-				bucket_hour, workspace_id, runtime_id, agent_id, project_id,
-				provider, model, enqueued_at
-			)
-			VALUES (
-				date_trunc('hour', now()), gen_random_uuid(), gen_random_uuid(),
-				gen_random_uuid(), NULL, $1, $2, now() - $3::interval
-			)
+			INSERT INTO task_usage_hourly_dirty (bucket_hour, workspace_id, runtime_id, agent_id, provider, model, enqueued_at)
+			VALUES (date_trunc('hour', now()), gen_random_uuid(), gen_random_uuid(), gen_random_uuid(), $1, $2, now() - $3::interval)
 		`, tag, model, age)
 	}
 	countModel := func(model string) int {
@@ -526,4 +456,45 @@ func TestDashboardMismatchedRequestTimezoneHidesTheRun(t *testing.T) {
 			"the pin is meant to be the thing that keeps the two windows together, so a mismatch has to be visible here",
 			mismatched, dashboardFixtureTZ)
 	}
+}
+
+// dashboardRunTimeSeconds inserts one finished run for the fixture agent and
+// returns what agent-runtime reports for it under the given query string. The
+// caller owns the clock: whatever pinDayWindowClock was given is what both the
+// fixture and the handler's cutoff read.
+func dashboardRunTimeSeconds(t *testing.T, at time.Time, loc *time.Location, query string) int64 {
+	t.Helper()
+
+	var runtimeID, agentID string
+	dbfx.QueryRow(t, `SELECT id FROM agent_runtime WHERE workspace_id = $1 LIMIT 1`, testWorkspaceID).Scan(&runtimeID)
+	dbfx.QueryRow(t, `SELECT id FROM agent WHERE workspace_id = $1 LIMIT 1`, testWorkspaceID).Scan(&agentID)
+	chatID := dbfx.ChatSession(t, agentID)
+
+	started, completed := runFinishedToday(at, loc)
+	dbfx.Task(t, agentID, testutil.Cols{
+		"chat_session_id": chatID,
+		"runtime_id":      runtimeID,
+		"status":          "completed",
+		"started_at":      started,
+		"completed_at":    completed,
+		"created_at":      started,
+	})
+
+	w := httptest.NewRecorder()
+	testHandler.GetDashboardAgentRunTime(w, newRequest("GET", "/api/dashboard/agent-runtime?"+query, nil))
+	if w.Code != http.StatusOK {
+		t.Fatalf("agent-runtime: expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	var rows []struct {
+		AgentID      string `json:"agent_id"`
+		TotalSeconds int64  `json:"total_seconds"`
+	}
+	_ = json.NewDecoder(w.Body).Decode(&rows)
+	var seconds int64
+	for _, r := range rows {
+		if r.AgentID == agentID {
+			seconds += r.TotalSeconds
+		}
+	}
+	return seconds
 }

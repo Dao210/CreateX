@@ -23,16 +23,11 @@ import (
 //   - NeedsBinding: mint a single-use binding token, reply with the link to
 //     the in-product redeem page (/telegram/bind).
 //   - AgentOffline / AgentArchived: a status notice.
-//   - FreshPending / ChatStarted / IssueUsage: command confirmation or corrective guidance.
-//   - Ingested with an /issue result: creation or duplicate confirmation.
-//   - Dropped addressed /issue commands: an authorization/status refusal.
+//   - FreshPending / ChatStarted: command confirmation or corrective guidance.
 
 const (
-	msgFreshPending   = "✅ Fresh start ready. Your next chat message will run without previous context."
-	msgChatStarted    = "✅ Started a new Auro chat. Your next message will enter it."
-	msgIssueUsage     = "Please include an issue title. Use:\n\n/issue <title>\n[description] (optional)"
-	msgIssueNotMember = "You're not a member of this Auro workspace, so I can't file an issue for you. Ask a workspace admin to invite you, then send the command again."
-	msgIssueDisabled  = "This Telegram bot isn't connected to Auro (or was disconnected). Ask a workspace admin to reconnect it."
+	msgFreshPending = "✅ Fresh start ready. Your next chat message will run without previous context."
+	msgChatStarted  = "✅ Started a new Auro chat. Your next message will enter it."
 )
 
 // bindingMinter is the binding-token surface the replier needs.

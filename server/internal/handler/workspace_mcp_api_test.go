@@ -398,8 +398,8 @@ func TestAddAgentMcpServer_RejectsServerFromAnotherWorkspace(t *testing.T) {
 	ctx := context.Background()
 	var otherWorkspaceID, otherServerID string
 	if err := testPool.QueryRow(ctx, `
-		INSERT INTO workspace (name, slug, description, issue_prefix)
-		VALUES ('Other WS', 'ws-mcp-other', '', 'OTH')
+		INSERT INTO workspace (name, slug, description)
+		VALUES ('Other WS', 'ws-mcp-other', '')
 		RETURNING id
 	`).Scan(&otherWorkspaceID); err != nil {
 		t.Fatalf("create other workspace: %v", err)

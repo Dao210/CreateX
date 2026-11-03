@@ -194,7 +194,6 @@ func TestReply_CommandOutcomes_PostGuidance(t *testing.T) {
 		want    string
 	}{
 		{engine.OutcomeFreshPending, copyFor(DefaultLocale).FreshPending},
-		{engine.OutcomeIssueUsage, copyFor(DefaultLocale).IssueUsage},
 	} {
 		t.Run(string(tc.outcome), func(t *testing.T) {
 			r, inst, conn := newReplierWithConn(t)

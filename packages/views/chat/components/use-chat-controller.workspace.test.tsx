@@ -4,13 +4,12 @@ import { act, cleanup, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createChatStore, registerChatStore } from "@auro/core/chat";
 import { setCurrentWorkspace } from "@auro/core/platform";
-import type { ChatSession, Project, StorageAdapter } from "@auro/core/types";
+import type { ChatSession, StorageAdapter } from "@auro/core/types";
 import { useChatController } from "./use-chat-controller";
 
 const route = vi.hoisted(() => ({ workspaceId: "ws-source", isActive: true }));
 const data = vi.hoisted(() => ({
   sessions: {} as Record<string, ChatSession[]>,
-  projects: {} as Record<string, Project[]>,
 }));
 
 vi.mock("@auro/core/hooks", () => ({
@@ -36,9 +35,6 @@ vi.mock("@tanstack/react-query", async (importOriginal) => ({
     const wsId = queryKey[1] as string;
     if (queryKey.includes("sessions")) {
       return { data: data.sessions[wsId] ?? [], isSuccess: true };
-    }
-    if (queryKey[0] === "projects") {
-      return { data: data.projects[wsId] ?? [], isSuccess: true };
     }
     if (queryKey.includes("draft-restores") || queryKey.includes("pending-task")) {
       return { data: null, isSuccess: true };
@@ -77,7 +73,6 @@ describe("useChatController workspace rehydration", () => {
   let queryClient: QueryClient;
   const sourceSession = session("source-session", "ws-source");
   const targetSession = session("target-session", "ws-target");
-  const targetProject = { id: "target-project", workspace_id: "ws-target" } as Project;
 
   function wrapper({ children }: { children: ReactNode }) {
     return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
@@ -87,12 +82,10 @@ describe("useChatController workspace rehydration", () => {
     route.workspaceId = "ws-source";
     route.isActive = true;
     data.sessions = { "ws-source": [sourceSession], "ws-target": [targetSession] };
-    data.projects = { "ws-source": [], "ws-target": [targetProject] };
     await act(async () => setCurrentWorkspace("source", "ws-source"));
     const values = new Map<string, string>([
       ["auro:chat:activeSessionId:source", sourceSession.id],
       ["auro:chat:activeSessionId:target", targetSession.id],
-      ["auro:chat:selectedProjectId:target", targetProject.id],
     ]);
     storage = {
       getItem: (key) => values.get(key) ?? null,
@@ -113,8 +106,6 @@ describe("useChatController workspace rehydration", () => {
   function expectTargetSelection() {
     expect(store.getState().activeSessionId).toBe(targetSession.id);
     expect(storage.getItem("auro:chat:activeSessionId:target")).toBe(targetSession.id);
-    expect(store.getState().selectedProjectId).toBe(targetProject.id);
-    expect(storage.getItem("auro:chat:selectedProjectId:target")).toBe(targetProject.id);
     expect(storage.getItem("auro:chat:activeSessionId:source")).toBe(sourceSession.id);
   }
 
@@ -155,13 +146,10 @@ describe("useChatController workspace rehydration", () => {
     expectTargetSelection();
 
     data.sessions["ws-target"] = [];
-    data.projects["ws-target"] = [];
     rerender();
 
     expect(store.getState().activeSessionId).toBeNull();
-    expect(store.getState().selectedProjectId).toBeNull();
     expect(storage.getItem("auro:chat:activeSessionId:target")).toBeNull();
-    expect(storage.getItem("auro:chat:selectedProjectId:target")).toBeNull();
     expect(storage.getItem("auro:chat:activeSessionId:source")).toBe(sourceSession.id);
   });
 });

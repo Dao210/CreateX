@@ -12,13 +12,6 @@ import { useT } from "../../i18n";
  * who are already onboarded never reach this screen; they're gated
  * out earlier by `!hasOnboarded`.
  *
- * Layout: two-column editorial hero on lg+, single column below.
- * Left = wordmark + serif headline + lede + CTA; right = a stack of
- * mock issue cards that show what human/agent collaboration looks
- * like on the board — the thing the user is about to create. The
- * right column is an illustration, not content: hidden below lg so
- * the headline and CTA stay the focus on narrow viewports.
- *
  * `onSkip`, when provided, renders a secondary ghost CTA that marks
  * onboarding complete server-side and sends the user straight to
  * their existing workspace. OnboardingFlow only passes it when the
@@ -61,9 +54,9 @@ export function StepWelcome({
   };
 
   return (
-    <div className="animate-onboarding-enter flex h-full min-h-[640px] flex-col lg:flex-row">
+    <div className="animate-onboarding-enter flex h-full min-h-[640px] flex-col ">
       {/* Left — prose + CTA */}
-      <div className="flex flex-col lg:flex-1">
+      <div className="flex flex-col flex-1">
         <DragStrip />
         <div className="flex flex-1 flex-col justify-center px-6 pb-12 sm:px-10 md:px-20 lg:px-20 xl:px-24">
           <div className="flex w-full max-w-[540px] flex-col gap-8">
@@ -119,30 +112,7 @@ export function StepWelcome({
         </div>
       </div>
 
-      {/* Right — mock issue cards illustration. Hidden on < lg.
-          Flex row on lg+ with `items-stretch` (default) makes both
-          columns take the container's full height, so the muted bg
-          fills the viewport edge-to-edge. `justify-center` inside
-          centers the mock cards vertically, mirroring the left
-          column's copy-center layout. */}
-      <div className="hidden border-l bg-muted/40 lg:flex lg:flex-1 lg:flex-col lg:overflow-hidden">
-        <DragStrip />
-        <div className="flex flex-1 flex-col items-center justify-center gap-7 px-8 py-8">
-          
-        </div>
-      </div>
+
     </div>
   );
 }
-
-
-/**
- * A day in a solo user's multi-agent workspace. Five activity cards
- * woven through 3 shared issues (MCA-42 appears 3×) so the reader can
- * *see* agents referencing each other's work — the product's
- * "one workspace, shared context" thesis rendered concretely.
- *
- * Cards use slight rotations + indents to feel like a hand-stacked
- * pile rather than a neat feed, which matches the editorial-hero
- * aesthetic of the left column.
- */

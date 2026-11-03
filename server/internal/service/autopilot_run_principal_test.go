@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/auro-ai/auro/server/internal/events"
 	"github.com/auro-ai/auro/server/internal/testutil"
@@ -131,7 +132,7 @@ func (f principalFixture) dispatch(t *testing.T, autopilotID, triggerID string) 
 	if err != nil {
 		t.Fatalf("load autopilot: %v", err)
 	}
-	run, err := f.svc.DispatchAutopilot(context.Background(), ap, util.MustParseUUID(triggerID), "schedule", nil)
+	run, err := f.svc.DispatchAutopilotForPlan(context.Background(), ap, util.MustParseUUID(triggerID), "schedule", nil, time.Now())
 	if err != nil {
 		t.Fatalf("DispatchAutopilot: %v", err)
 	}

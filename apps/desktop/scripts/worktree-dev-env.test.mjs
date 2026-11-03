@@ -41,10 +41,10 @@ describe("worktree-dev-env", () => {
   });
 
   it("never reuses 5173 even when the offset is 0", () => {
-    // POSIX cksum("/tmp/auro-3494") === 1189739000, % 1000 === 0
-    expect(offsetForPath("/tmp/auro-3494")).toBe(0);
-    expect(rendererPortForPath("/tmp/auro-3494")).toBe(5174);
-    expect(rendererPortForPath("/tmp/auro-3494")).not.toBe(5173);
+    // This fixture has an offset of zero.
+    expect(offsetForPath("/tmp/auro-offset-1413")).toBe(0);
+    expect(rendererPortForPath("/tmp/auro-offset-1413")).toBe(5174);
+    expect(rendererPortForPath("/tmp/auro-offset-1413")).not.toBe(5173);
   });
 
   it("skips 6000, which Chromium refuses to load (ERR_UNSAFE_PORT)", () => {

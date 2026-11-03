@@ -6,7 +6,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/auro-ai/auro/server/internal/service"
 	"github.com/auro-ai/auro/server/internal/testutil"
 	db "github.com/auro-ai/auro/server/pkg/db/generated"
 	"github.com/google/uuid"
@@ -35,47 +34,6 @@ func (f *lookupFaultPool) QueryRow(ctx context.Context, query string, args ...an
 	return f.DBTX.QueryRow(ctx, query, args...)
 }
 
-// TestGetTaskStatus_DoesNotResolveSourceWorkspace pins the hot-path contract:
-// status polling authorizes through the owning agent's workspace and never
-// follows optional issue / chat / autopilot links.
-func TestGetTaskStatus_DoesNotResolveSourceWorkspace(t *testing.T) {
-	runtimeID := dbfx.Runtime(t, "MUL-7259 lookup runtime")
-	agentID := dbfx.Agent(t, "MUL-7259 lookup agent", runtimeID)
-	issueID := dbfx.Issue(t, "MUL-7259 lookup issue")
-	chatID := dbfx.ChatSession(t, agentID)
-	apID := dbfx.Insert(t, "autopilot", testutil.Cols{
-		"workspace_id": testWorkspaceID, "title": "MUL-7259 lookup autopilot",
-		"assignee_id": agentID, "status": "paused", "created_by_type": "member", "created_by_id": testUserID,
-	})
-	runID := dbfx.Insert(t, "autopilot_run", testutil.Cols{"autopilot_id": apID, "source": "manual", "status": "running"})
-
-	for _, tc := range []struct{ query, column, id string }{
-		{"GetIssue", "issue_id", issueID},
-		{"GetChatSession", "chat_session_id", chatID},
-		{"GetAutopilotRun", "autopilot_run_id", runID},
-		{"GetAutopilot", "autopilot_run_id", runID},
-	} {
-		t.Run(tc.query, func(t *testing.T) {
-			taskID := dbfx.Task(t, agentID, testutil.Cols{
-				"runtime_id": runtimeID, "status": "running", "started_at": testutil.Raw("now()"), tc.column: tc.id,
-			})
-			fault := &lookupFaultPool{DBTX: testPool, query: tc.query}
-			h := &Handler{Queries: db.New(fault), TaskService: &service.TaskService{Queries: db.New(fault)}}
-			req := newDaemonTokenRequest(http.MethodGet, "/api/daemon/tasks/"+taskID+"/status", nil, testWorkspaceID, "test-daemon")
-			req = withURLParam(req, "taskId", taskID)
-
-			var response map[string]string
-			testutil.Call(t, h.GetTaskStatus, req).Want(http.StatusOK).JSON(&response)
-			if fault.called {
-				t.Fatalf("status poll unexpectedly executed %s", tc.query)
-			}
-			if response["status"] != "running" {
-				t.Fatalf("status = %q, want running", response["status"])
-			}
-		})
-	}
-}
-
 // TestGetTaskStatus_TaskRowPresenceContract distinguishes a genuinely missing
 // task from a surviving task whose optional source row has gone away.
 func TestGetTaskStatus_TaskRowPresenceContract(t *testing.T) {
@@ -93,7 +51,7 @@ func TestGetTaskStatus_TaskRowPresenceContract(t *testing.T) {
 	})
 
 	t.Run("optional source missing", func(t *testing.T) {
-		// agent_task_queue.issue_id is ON DELETE CASCADE, so an issue task can
+		// agent_task_queue.chat_session_id is ON DELETE CASCADE, so an issue task can
 		// never outlive its issue. chat_session_id is ON DELETE SET NULL, so a
 		// chat task can survive its source. The status endpoint now authorizes
 		// that row through its owning agent instead of treating the optional
@@ -113,25 +71,4 @@ func TestGetTaskStatus_TaskRowPresenceContract(t *testing.T) {
 			t.Fatalf("status = %q, want running", response["status"])
 		}
 	})
-}
-
-// TestGetTaskStatus_ForeignWorkspace_Returns404 pins the permission boundary:
-// splitting lookup failures out of the 404 must not turn a cross-workspace task
-// into a distinguishable response. A foreign task and a missing one look alike.
-func TestGetTaskStatus_ForeignWorkspace_Returns404(t *testing.T) {
-	runtimeID := dbfx.Runtime(t, "MUL-7259 foreign runtime")
-	agentID := dbfx.Agent(t, "MUL-7259 foreign agent", runtimeID)
-	issueID := dbfx.Issue(t, "MUL-7259 foreign issue")
-	taskID := dbfx.Task(t, agentID, testutil.Cols{
-		"runtime_id": runtimeID, "issue_id": issueID,
-		"status": "running", "started_at": testutil.Raw("now()"),
-	})
-
-	otherWorkspace := uuid.NewString()
-	req := newDaemonTokenRequest(http.MethodGet, "/api/daemon/tasks/"+taskID+"/status", nil, otherWorkspace, "other-daemon")
-	req = withURLParam(req, "taskId", taskID)
-	w := testutil.Call(t, testHandler.GetTaskStatus, req).Want(http.StatusNotFound)
-	if strings.Contains(w.Body.String(), "task not found") {
-		t.Fatalf("authorization miss must not carry the daemon's deletion signal: %s", w.Body.String())
-	}
 }

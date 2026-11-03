@@ -50,7 +50,14 @@ func seedAutopilot(t *testing.T, queries *db.Queries, title, creatorType string,
 		testPool.Exec(context.Background(),
 			`DELETE FROM inbox_item WHERE workspace_id = $1 AND details->>'autopilot_id' = $2`,
 			testWorkspaceID, util.UUIDToString(ap.ID))
-		testPool.Exec(context.Background(), `DELETE FROM autopilot WHERE id = $1`, ap.ID)
+		testPool.Exec(context.Background(), `WITH runs AS MATERIALIZED (SELECT id FROM autopilot_run WHERE autopilot_id=$1),
+ removed_deliveries AS (DELETE FROM webhook_delivery WHERE autopilot_id=$1),
+ removed_triggers AS (DELETE FROM autopilot_trigger WHERE autopilot_id=$1),
+ removed_versions AS (DELETE FROM autopilot_rule_version WHERE autopilot_id=$1),
+ removed_collaborators AS (DELETE FROM autopilot_collaborator WHERE autopilot_id=$1),
+ detached_tasks AS (UPDATE agent_task_queue SET autopilot_run_id=NULL WHERE autopilot_run_id IN (SELECT id FROM runs)),
+ removed_runs AS (DELETE FROM autopilot_run WHERE autopilot_id=$1)
+ DELETE FROM autopilot WHERE id=$1`, ap.ID)
 	})
 	return ap
 }
@@ -299,4 +306,13 @@ func TestAutopilotFailureMonitor_BelowThresholdNoOp(t *testing.T) {
 	if len(inboxEvents) != 0 {
 		t.Fatalf("expected no inbox events, got %d", len(inboxEvents))
 	}
+}
+
+func inboxItemsForRecipient(t *testing.T, queries *db.Queries, recipientID string) []db.InboxItem {
+	t.Helper()
+	rows, err := queries.ListInboxItems(context.Background(), db.ListInboxItemsParams{WorkspaceID: util.MustParseUUID(testWorkspaceID), RecipientType: "member", RecipientID: util.MustParseUUID(recipientID)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return rows
 }

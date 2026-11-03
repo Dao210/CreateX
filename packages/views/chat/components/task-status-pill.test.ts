@@ -12,7 +12,6 @@ describe("pickStageKeys", () => {
       effectiveTaskStatus("deferred", [
         {
           task_id: "task-1",
-          issue_id: "",
           seq: 1,
           type: "thinking",
           created_at: "2026-07-01T00:00:00Z",

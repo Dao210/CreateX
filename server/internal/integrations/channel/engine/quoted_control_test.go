@@ -106,20 +106,3 @@ func TestRouter_SelectedNewRetryEnqueuesOnce(t *testing.T) {
 		t.Fatalf("selected quote was dropped or duplicated: starts=%d tasks=%d", h.binder.startCalls, h.tasks.calls())
 	}
 }
-
-func TestRouter_SelectedNewSkipRunStillPersists(t *testing.T) {
-	h := newHarness(t)
-	defer h.router.Drain(context.Background())
-	h.media.noMedia = true
-	msg := p2pMessage(t)
-	msg.Text = "> selected body"
-	msg.CommandText = "/new"
-	msg.HasSelectedContext = true
-	msg.SkipAgentRun = true
-	if err := h.router.Handle(context.Background(), msg); err != nil {
-		t.Fatal(err)
-	}
-	if !h.binder.lastStart.PersistMessage || h.binder.lastStart.Message.Text != msg.Text || h.tasks.wasCalled() || h.tasks.wasPrepared() {
-		t.Fatal("skip-run must retain selected input without starting a task")
-	}
-}

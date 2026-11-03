@@ -30,9 +30,7 @@ endpoint-specific concurrency rules.
   installation itself. Authentication happens at the surface, before a shared
   resource service runs.
 - Collection endpoints use opaque cursor pagination with `limit` (default 50,
-  maximum 200) and return `next_cursor`. The migrated comment endpoint keeps
-  its existing newest-200 compatibility window until its dedicated pagination
-  slice lands; it is not a precedent for new collections.
+  maximum 200) and return `next_cursor`.
 - Create, trigger, replay, and retry operations must durably deduplicate an
   `Idempotency-Key` (maximum 255 bytes) before the operation is documented as
   idempotent. Merely accepting the header is insufficient.
@@ -45,11 +43,8 @@ endpoint-specific concurrency rules.
   migrated operations remain `planned` until a durable audit sink is wired;
   the ledger does not imply that a boolean marker performs an audit write.
 
-## Rollout ledger
+## Current surface
 
-The migrated slice is Issue read/content update and Comment read/create. Context
-and Storage remain Plugin extensions; Hook and invocation delivery remain on
-the bridge. Projects, Members, Issue search/create/transition, Agents, Squads,
-Skills, Tasks/Runs, and Autopilots are subsequent vertical slices. Each slice
-adds its Public contract first, then explicitly opts the safe Plugin subset into
-the capability ledger.
+Context and key-value Storage are Plugin extensions. Hook invocation and
+delivery use the plugin bridge. The capability ledger and OpenAPI document
+list the endpoints available in this version.

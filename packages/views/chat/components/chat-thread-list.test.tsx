@@ -58,7 +58,7 @@ vi.mock("@tanstack/react-query", async (importOriginal) => {
 
 import { ChatThreadList } from "./chat-thread-list";
 
-const TEST_RESOURCES = { en: { chat: enChat, issues: enIssues } };
+const TEST_RESOURCES = { en: { chat: enChat, execution: enIssues } };
 
 function makeSession(overrides: Partial<ChatSession> & Pick<ChatSession, "id">): ChatSession {
   return {

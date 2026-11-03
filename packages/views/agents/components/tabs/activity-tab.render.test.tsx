@@ -195,7 +195,7 @@ describe("ActivityTab server pagination", () => {
 
 function historyTask(index: number): AgentTask {
   return {
-    id: String(index), agent_id: "agent-1", runtime_id: "runtime-1", issue_id: "",
+    id: String(index), agent_id: "agent-1", runtime_id: "runtime-1",
     status: "completed", priority: 0, dispatched_at: null, started_at: null,
     completed_at: new Date(Date.now() - index * 60000).toISOString(),
     created_at: new Date(Date.now() - index * 60000).toISOString(),

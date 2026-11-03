@@ -14,8 +14,8 @@ vi.mock("@tanstack/react-query", () => ({ useQuery: ({ queryKey }: { queryKey: s
 vi.mock("@auro/core/inbox/mutations", () => ({ useMarkInboxRead: () => ({ mutate: state.markRead }), useMarkInboxUnread: () => ({ mutate: vi.fn() }), useArchiveInbox: () => ({ mutate: state.archive }), useUnarchiveInbox: () => ({ mutate: state.restore }), useMarkAllInboxRead: () => ({ mutate: vi.fn() }) }));
 vi.mock("../../modals/use-autopilot-quota-recovery", () => ({ useAutopilotQuotaRecovery: () => state.recover }));
 
-function item(id: string, type: InboxItem["type"], issue_id: string | null = null): InboxItem {
-  return { id, type, issue_id, title: id, body: `${id} body`, workspace_id: "ws-1", recipient_type: "member", recipient_id: "u", actor_type: "system", actor_id: null, severity: "info", issue_status: null, read: false, archived: false, details: null, created_at: "2026-10-25T00:00:00Z" };
+function item(id: string, type: InboxItem["type"], _retiredContext: string | null = null): InboxItem {
+  return { id, type, title: id, body: `${id} body`, workspace_id: "ws-1", recipient_type: "member", recipient_id: "u", actor_type: "system", actor_id: null, severity: "info", read: false, archived: false, details: null, created_at: "2026-10-25T00:00:00Z" };
 }
 beforeEach(() => { vi.clearAllMocks(); state.items = []; state.archived = []; state.available = true; state.params = new URLSearchParams(); });
 describe("system notification inbox", () => {

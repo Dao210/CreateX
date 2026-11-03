@@ -112,7 +112,6 @@ function RunRow({ run, agentId, agentName }: { run: AutopilotRun; agentId: strin
         id: run.task_id,
         agent_id: agentId,
         runtime_id: "",
-        issue_id: "",
         status:
           run.status === "running" ? "running" :
           run.status === "completed" ? "completed" :

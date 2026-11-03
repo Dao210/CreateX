@@ -59,7 +59,7 @@ func TestPrepareDeniesReasonixAskTool(t *testing.T) {
 		AgentName:      "Reasonix Agent",
 		Provider:       "reasonix",
 		ReasonixEnv:    reasonixEnvWith(t, ""),
-		Task:           TaskContextForEnv{IssueID: "b1b2c3d4-e5f6-7890-abcd-ef1234567890"},
+		Task:           TaskContextForEnv{ChatSessionID: "b1b2c3d4-e5f6-7890-abcd-ef1234567890"},
 	}, testLogger())
 	if err != nil {
 		t.Fatalf("Prepare failed: %v", err)
@@ -90,7 +90,7 @@ func TestReuseRewritesReasonixAskDeny(t *testing.T) {
 		AgentName:      "Reasonix Agent",
 		Provider:       "reasonix",
 		ReasonixEnv:    reasonixEnvWith(t, "[permissions]\ndeny = [\"bash\"]\n"),
-		Task:           TaskContextForEnv{IssueID: "c1b2c3d4-e5f6-7890-abcd-ef1234567890"},
+		Task:           TaskContextForEnv{ChatSessionID: "c1b2c3d4-e5f6-7890-abcd-ef1234567890"},
 	}
 	env, err := Prepare(params, testLogger())
 	if err != nil {

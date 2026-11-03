@@ -1,15 +1,11 @@
+
 import { act, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@auro/core/api";
 import { configStore } from "@auro/core/config";
 import { BILLING_WORKSPACE_SUBSCRIPTIONS_FLAG } from "@auro/core/feature-flags";
-import type {
-  AutopilotQuotaUsage,
-  IssueLimitUsage,
-  WorkspaceSubscriptionEntitlements,
-  WorkspaceSubscriptionSummary,
-} from "@auro/core/types";
+import type { AutopilotQuotaUsage, WorkspaceSubscriptionEntitlements, WorkspaceSubscriptionSummary } from "@auro/core/types";
 import { renderWithI18n } from "../../test/i18n";
 
 const mocks = vi.hoisted(() => ({
@@ -21,7 +17,6 @@ const mocks = vi.hoisted(() => ({
   refetch: vi.fn(),
   refetchSummary: vi.fn(),
   refetchUsage: vi.fn(),
-  refetchIssueLimitUsage: vi.fn(),
   refetchPrices: vi.fn(),
   openExternal: vi.fn(),
   workspaceId: "workspace-1",
@@ -92,10 +87,6 @@ const mocks = vi.hoisted(() => ({
       purchaseSeats: false,
     },
   } as WorkspaceSubscriptionSummary,
-  issueLimitUsage: {
-    used: 11,
-    limit: 17,
-  } as IssueLimitUsage,
   usage: {
     action: "enforce" as "off" | "observe" | "enforce",
     used: 3 as number | null,
@@ -120,9 +111,6 @@ vi.mock("@auro/core/billing", () => ({
   }),
   workspaceSubscriptionSummaryOptions: (wsId: string) => ({
     queryKey: ["workspace-subscriptions", wsId, "summary"],
-  }),
-  issueLimitUsageOptions: (wsId: string) => ({
-    queryKey: ["workspace-subscriptions", wsId, "issue-limit-usage"],
   }),
   useCreateWorkspaceSubscriptionCheckout: () => ({
     mutateAsync: mocks.checkout,
@@ -173,7 +161,6 @@ vi.mock("../../navigation", () => ({
 }));
 
 vi.mock("../../platform", () => ({ openExternal: mocks.openExternal }));
-
 import { BillingTab, formatStripeMinorAmount } from "./billing-tab";
 
 function setSeatCapacity({
@@ -271,10 +258,6 @@ describe("BillingTab", () => {
         purchaseSeats: false,
       },
     });
-    Object.assign(mocks.issueLimitUsage, {
-      used: 11,
-      limit: 17,
-    });
     Object.assign(mocks.usage, {
       action: "enforce",
       used: 3,
@@ -311,15 +294,6 @@ describe("BillingTab", () => {
           dataUpdatedAt: mocks.summaryDataUpdatedAt,
           isFetchedAfterMount: mocks.summaryFetchedAfterMount,
           refetch: mocks.refetchSummary,
-        };
-      }
-      if (queryKey?.[queryKey.length - 1] === "issue-limit-usage") {
-        return {
-          data: mocks.issueLimitUsage,
-          isPending: false,
-          isFetching: false,
-          isError: false,
-          refetch: mocks.refetchIssueLimitUsage,
         };
       }
       if (queryKey?.[queryKey.length - 1] === "usage") {
@@ -377,7 +351,6 @@ describe("BillingTab", () => {
     renderWithI18n(<BillingTab />);
 
     expect(screen.getByRole("heading", { name: "Billing" })).toBeInTheDocument();
-    expect(screen.getByText("11 / 17")).toBeInTheDocument();
     expect(screen.getByText("5 / 7")).toBeInTheDocument();
     expect(screen.getByText("3 completed · 2 in progress")).toBeInTheDocument();
     expect(screen.getByText("$10.00 per human seat")).toBeInTheDocument();
@@ -680,8 +653,7 @@ describe("BillingTab", () => {
       ).toBeInTheDocument();
       expect(screen.queryByText("Pro is active")).not.toBeInTheDocument();
       expect(screen.queryByText("Unlimited")).not.toBeInTheDocument();
-      expect(screen.getByText("11 / 17")).toBeInTheDocument();
-      expect(screen.getByText("5 / 7")).toBeInTheDocument();
+        expect(screen.getByText("5 / 7")).toBeInTheDocument();
       const summaryOptions = mocks.useQuery.mock.calls
         .map(([options]) => options)
         .find(
@@ -715,7 +687,7 @@ describe("BillingTab", () => {
       renderWithI18n(<BillingTab />);
 
       expect(screen.getByText("Pro is active")).toBeInTheDocument();
-      expect(screen.getAllByText("Unlimited")).toHaveLength(2);
+      expect(screen.getAllByText("Unlimited")).toHaveLength(1);
       expect(screen.queryByText("5 / 7")).not.toBeInTheDocument();
     } finally {
       vi.useRealTimers();
@@ -1315,7 +1287,6 @@ describe("BillingTab", () => {
     renderWithI18n(<BillingTab />);
 
     expect(screen.queryByText("Unlimited")).not.toBeInTheDocument();
-    expect(screen.getByText("11 / 17")).toBeInTheDocument();
     expect(screen.getByText("5 / 7")).toBeInTheDocument();
     expect(
       screen.getByText(
@@ -1374,7 +1345,7 @@ describe("BillingTab", () => {
     expect(
       screen.getByRole("button", { name: "Manage billing" }),
     ).toBeInTheDocument();
-    expect(screen.getAllByText("Unlimited")).toHaveLength(2);
+    expect(screen.getAllByText("Unlimited")).toHaveLength(1);
     expect(screen.queryByText("5 / 7")).not.toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "Upgrade to Pro" }),

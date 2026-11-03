@@ -118,7 +118,7 @@ func TestPrepare_WritesWorkspacesRootMarker(t *testing.T) {
 		TaskID:         "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
 		AgentName:      "Test Agent",
 		Task: TaskContextForEnv{
-			IssueID: "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+			ChatSessionID: "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
 		},
 	}, testLogger())
 	if err != nil {
@@ -145,7 +145,7 @@ func TestReuse_SelfHealsWorkspacesRootMarker(t *testing.T) {
 		WorkspaceID:    "ws-reuse-001",
 		TaskID:         "b2c3d4e5-f6a7-8901-bcde-f23456789012",
 		AgentName:      "Reuse Agent",
-		Task:           TaskContextForEnv{IssueID: "b2c3d4e5-f6a7-8901-bcde-f23456789012"},
+		Task:           TaskContextForEnv{ChatSessionID: "b2c3d4e5-f6a7-8901-bcde-f23456789012"},
 	}, testLogger())
 	if err != nil {
 		t.Fatalf("Prepare failed: %v", err)
@@ -160,7 +160,7 @@ func TestReuse_SelfHealsWorkspacesRootMarker(t *testing.T) {
 	reused := Reuse(ReuseParams{
 		WorkspacesRoot: root,
 		WorkDir:        env.WorkDir,
-		Task:           TaskContextForEnv{IssueID: "b2c3d4e5-f6a7-8901-bcde-f23456789012"},
+		Task:           TaskContextForEnv{ChatSessionID: "b2c3d4e5-f6a7-8901-bcde-f23456789012"},
 	}, testLogger())
 	if reused == nil {
 		t.Fatal("Reuse returned nil for an existing workdir")

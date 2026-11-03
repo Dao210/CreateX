@@ -66,15 +66,15 @@ func newActingFixture(t *testing.T, label string) actingFixture {
 	orderingHuman := plainMember(t, "ordering-human")
 	title := fmt.Sprintf("acting member %s %d", label, time.Now().UnixNano())
 	autopilotID := dbfx.Insert(t, "autopilot", testutil.Cols{
-		"workspace_id":         testWorkspaceID,
-		"title":                title,
-		"assignee_id":          agentID,
-		"assignee_type":        "agent",
-		"execution_mode":       "create_issue",
-		"issue_title_template": title,
-		"status":               "active",
-		"created_by_type":      "member",
-		"created_by_id":        orderingHuman,
+		"workspace_id":   testWorkspaceID,
+		"title":          title,
+		"assignee_id":    agentID,
+		"assignee_type":  "agent",
+		"execution_mode": "run_only",
+
+		"status":          "active",
+		"created_by_type": "member",
+		"created_by_id":   orderingHuman,
 	})
 	// Rows the handlers themselves write, which dbfx cannot register: cleanup
 	// runs in reverse registration order, so these go before the autopilot.
@@ -331,13 +331,19 @@ func TestCreateAutopilot_StampsTheOrderingHuman(t *testing.T) {
 	var ap AutopilotResponse
 	testutil.Call(t, testHandler.CreateAutopilot, caller.request("POST", "/api/autopilots?workspace_id="+testWorkspaceID,
 		map[string]any{
-			"title":                title,
-			"assignee_id":          agentID,
-			"execution_mode":       "create_issue",
-			"issue_title_template": title,
+			"title":          title,
+			"assignee_id":    agentID,
+			"execution_mode": "run_only",
 		})).Want(http.StatusCreated).JSON(&ap)
 	dbfx.Cleanup(t, `DELETE FROM autopilot_rule_version WHERE autopilot_id = $1`, ap.ID)
-	dbfx.Cleanup(t, `DELETE FROM autopilot WHERE id = $1`, ap.ID)
+	dbfx.Cleanup(t, `WITH runs AS MATERIALIZED (SELECT id FROM autopilot_run WHERE autopilot_id=$1),
+ removed_deliveries AS (DELETE FROM webhook_delivery WHERE autopilot_id=$1),
+ removed_triggers AS (DELETE FROM autopilot_trigger WHERE autopilot_id=$1),
+ removed_versions AS (DELETE FROM autopilot_rule_version WHERE autopilot_id=$1),
+ removed_collaborators AS (DELETE FROM autopilot_collaborator WHERE autopilot_id=$1),
+ detached_tasks AS (UPDATE agent_task_queue SET autopilot_run_id=NULL WHERE autopilot_run_id IN (SELECT id FROM runs)),
+ removed_runs AS (DELETE FROM autopilot_run WHERE autopilot_id=$1)
+ DELETE FROM autopilot WHERE id=$1`, ap.ID)
 
 	var createdBy string
 	dbfx.QueryRow(t, `SELECT created_by_id FROM autopilot WHERE id = $1`, ap.ID).Scan(&createdBy)
@@ -384,7 +390,7 @@ func TestCreateAutopilot_NoOrderingHumanRefused(t *testing.T) {
 		map[string]any{
 			"title":          title,
 			"assignee_id":    agentID,
-			"execution_mode": "create_issue",
+			"execution_mode": "run_only",
 		})).Want(http.StatusForbidden).JSON(&body)
 	if body.Code != autopilotNoOriginatorCode {
 		t.Errorf("error code = %q, want %q", body.Code, autopilotNoOriginatorCode)
@@ -421,7 +427,7 @@ func TestCreateAutopilot_OrderingHumanMustBeAWorkspaceMember(t *testing.T) {
 		map[string]any{
 			"title":          title,
 			"assignee_id":    agentID,
-			"execution_mode": "create_issue",
+			"execution_mode": "run_only",
 		})).Want(http.StatusForbidden).JSON(&body)
 	if body.Code != autopilotActorNotMemberCode {
 		t.Errorf("error code = %q, want %q", body.Code, autopilotActorNotMemberCode)

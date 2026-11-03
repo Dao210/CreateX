@@ -29,10 +29,10 @@ func seedRerunTask(t *testing.T, pool *pgxpool.Pool, agentID, runtimeID, issueID
 	t.Helper()
 	var id pgtype.UUID
 	if err := pool.QueryRow(context.Background(), `
-		INSERT INTO agent_task_queue (agent_id, runtime_id, issue_id, status, priority)
-		VALUES ($1, $2, $3, $4, 0)
+		INSERT INTO agent_task_queue (agent_id, runtime_id, status, priority)
+		VALUES ($1, $2, $3, 0)
 		RETURNING id
-	`, agentID, runtimeID, issueID, status).Scan(&id); err != nil {
+	`, agentID, runtimeID, status).Scan(&id); err != nil {
 		t.Fatalf("insert %s task: %v", status, err)
 	}
 	t.Cleanup(func() { pool.Exec(context.Background(), `DELETE FROM agent_task_queue WHERE id = $1`, id) })

@@ -7,13 +7,6 @@ const E2E_RUN_ID = process.env.E2E_RUN_ID ?? `${Date.now().toString(36)}-${proce
 const DEFAULT_E2E_EMAIL = `e2e-${E2E_WORKER}-${E2E_RUN_ID}@auro.ai`;
 const DEFAULT_E2E_WORKSPACE = `e2e-workspace-${E2E_WORKER}-${E2E_RUN_ID}`;
 
-async function waitForIssuesPage(page: Page) {
-  await waitForPageText(page, "New Issue");
-  await expect(page.getByRole("button", { name: "New Issue" })).toBeVisible({
-    timeout: 15000,
-  });
-}
-
 export async function waitForPageText(page: Page, text: string, timeout = 30000) {
   await page.waitForFunction(
     (expected) => document.body?.innerText.includes(expected),
@@ -24,12 +17,12 @@ export async function waitForPageText(page: Page, text: string, timeout = 30000)
 
 export async function reloadAppPage(page: Page) {
   await page.reload({ waitUntil: "domcontentloaded" });
-  await waitForPageText(page, "Issues");
+  await waitForCreationsPage(page);
 }
 
 /**
  * Log in as the default E2E user and ensure the workspace exists first.
- * Authenticates via API (send-code → DB read → verify-code), then injects
+ * Seeds a verification fixture, authenticates through the API, then injects
  * the token into localStorage so the browser session is authenticated.
  *
  * Returns the E2E workspace slug so callers can build workspace-scoped URLs.
@@ -51,14 +44,14 @@ export async function loginAsDefault(page: Page): Promise<string> {
   await page.addInitScript((t) => {
     localStorage.setItem("auro_token", t);
   }, token);
-  await page.goto(`/${workspace.slug}/issues`, { waitUntil: "domcontentloaded" });
-  await waitForIssuesPage(page);
+  await page.goto(`/${workspace.slug}/me`, { waitUntil: "domcontentloaded" });
+  await waitForCreationsPage(page);
   return workspace.slug;
 }
 
 /**
  * Create a TestApiClient logged in as the default E2E user.
- * Call api.cleanup() in afterEach to remove test data created during the test.
+ * Delete test-created worlds explicitly during teardown.
  */
 export async function createTestApi(): Promise<TestApiClient> {
   const api = new TestApiClient();
@@ -68,17 +61,6 @@ export async function createTestApi(): Promise<TestApiClient> {
   return api;
 }
 
-export async function preferManualCreateMode(page: Page) {
-  await page.evaluate(() => {
-    localStorage.setItem(
-      "auro_create_mode",
-      JSON.stringify({ state: { lastMode: "manual" }, version: 0 }),
-    );
-  });
-  await reloadAppPage(page);
-  await waitForIssuesPage(page);
-}
-
 export async function openWorkspaceMenu(page: Page) {
   // Click the workspace switcher button (has ChevronDown icon)
   const workspaceButton = page.getByRole("button", { name: /E2E Workspace/ }).first();
@@ -86,4 +68,8 @@ export async function openWorkspaceMenu(page: Page) {
   await workspaceButton.click();
   // Wait for dropdown to appear
   await expect(page.locator('[class*="popover"]')).toBeVisible();
+}
+
+async function waitForCreationsPage(page: Page) {
+  await expect(page.getByRole("heading", { name: "My Creations", exact: true })).toBeVisible({ timeout: 30000 });
 }

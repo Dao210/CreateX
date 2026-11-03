@@ -194,25 +194,8 @@ type TaskContextForEnv struct {
 	AutopilotDescription    string
 	AutopilotSource         string
 	AutopilotTriggerPayload string
-	// non-empty for quick-create tasks
-	// true when THIS TASK runs the agent in the squad-leader role (may exit silently on no_action); derived from the claim's is_leader_task / squad_id, never sniffed from instructions text (MUL-5811)
-	// WorkspaceContext is the workspace-level system prompt (workspace.context
-	// in the DB). Rendered into the brief as `## Workspace Context` when
-	// non-empty so every agent in the workspace sees the same shared context,
-	// regardless of issue / chat / autopilot / quick-create.
+	// WorkspaceContext is shared system context for chat and automation runs.
 	WorkspaceContext string
-	// IssueStatuses is the workspace's active CUSTOM status catalog from the
-	// claim payload (MUL-6460), in catalog order. Rendered into the brief's
-	// status-command line so agents can see and use statuses beyond the seven
-	// built-ins. Like WorkspaceContext, this is durable workspace configuration,
-	// not per-turn state: it may legitimately change brief bytes when an admin
-	// edits the catalog between runs of a resumed session, exactly as a
-	// Workspace Context edit does. Empty — including on old servers that never
-	// send the field — renders the built-in-only line byte-identical to before.
-
-	// IssueStatusesOmitted is the count of active custom statuses the server's
-	// cap dropped from IssueStatuses, so the brief can disclose truncation
-	// instead of presenting a partial catalog as complete.
 
 	// ConnectedApps lists per-run external app capabilities mounted through
 	// MCP overlays. Rendered briefly so the agent can map app names such as
@@ -1077,10 +1060,8 @@ func hydrateCodexSkills(codexHome string, workspaceSkills []SkillContextForEnv, 
 type GCMetaKind string
 
 const (
-	GCKindIssue        GCMetaKind = "issue"
 	GCKindChat         GCMetaKind = "chat"
 	GCKindAutopilotRun GCMetaKind = "autopilot_run"
-	GCKindQuickCreate  GCMetaKind = "quick_create"
 )
 
 // GCMeta is persisted to .gc_meta.json inside the env root so the GC loop
@@ -1089,10 +1070,6 @@ const (
 // TaskID is also persisted for every new task so local reports never need to
 // recover task identity from the directory name; for quick-create it doubles
 // as the parent ID used by the GC status endpoint.
-//
-// Older meta files (pre-v2) lack the Kind field; readers must default empty
-// Kind to GCKindIssue for backward compatibility — only IssueID was written
-// before, and only issue-centric tasks ever produced a meta file.
 type GCMeta struct {
 	Kind GCMetaKind `json:"kind,omitempty"`
 
@@ -1135,9 +1112,7 @@ func WriteGCMeta(envRoot string, meta GCMeta, logger *slog.Logger) error {
 	return os.WriteFile(filepath.Join(envRoot, gcMetaFile), data, 0o644)
 }
 
-// ReadGCMeta reads GC metadata from a task directory root. Pre-v2 meta files
-// (no kind field) are normalized to GCKindIssue so the legacy issue path
-// keeps working without a migration.
+// ReadGCMeta reads GC metadata from a task directory root.
 func ReadGCMeta(envRoot string) (*GCMeta, error) {
 	data, err := os.ReadFile(filepath.Join(envRoot, gcMetaFile))
 	if err != nil {
@@ -1147,9 +1122,7 @@ func ReadGCMeta(envRoot string) (*GCMeta, error) {
 	if err := json.Unmarshal(data, &meta); err != nil {
 		return nil, err
 	}
-	if meta.Kind == "" {
-		meta.Kind = GCKindIssue
-	}
+
 	return &meta, nil
 }
 

@@ -3,7 +3,6 @@ package service
 import (
 	"errors"
 	"fmt"
-	"strings"
 	"testing"
 	"time"
 
@@ -128,24 +127,6 @@ func TestAgentReadinessVerdict(t *testing.T) {
 	if !profile.Blocked() || profile.Reason != dispatch.ReasonRuntimeProfileMissing {
 		t.Fatalf("missing DSH profile: got %+v, want blocked/runtime_profile_missing", profile)
 	}
-	if !RuntimeBlockedNeedsNotice(profile.Reason) {
-		t.Error("missing DSH profile would leave no durable trace on the issue")
-	}
-	// The notice must describe the profile, not a broken CLI, and must not hand
-	// the user a command with a placeholder in it to paste.
-	notice := RuntimeUnusableNotice("Kit", profile)
-	if !strings.Contains(notice, "runtime profile") {
-		t.Errorf("notice does not name the missing profile: %q", notice)
-	}
-	for _, wrong := range []string{"cannot be executed", "postinstall", "<bundle>", "```"} {
-		if strings.Contains(notice, wrong) {
-			t.Errorf("notice contains %q, which belongs to the unrunnable-CLI repair: %q", wrong, notice)
-		}
-	}
-	// The unrunnable-CLI notice keeps its own text and its fenced command.
-	if unusableNotice := RuntimeUnusableNotice("Kit", unusable); !strings.Contains(unusableNotice, "node install.cjs") {
-		t.Errorf("unusable-CLI notice lost its repair command: %q", unusableNotice)
-	}
 	// The installing claim is bounded, not trusted. A withdraw cannot be
 	// guaranteed — the verdict is built before the runtime ids it needs are
 	// known, the corrective Deregister is best-effort and runs on a cancelled
@@ -193,42 +174,5 @@ func TestAgentReadinessVerdict(t *testing.T) {
 		if got.Blocked() {
 			t.Errorf("%s: got %+v, want the plain offline verdict", name, got)
 		}
-	}
-}
-
-// The notice is the only thing a user sees when an assignment or an
-// agent-authored mention is refused, so it has to carry the repair command when
-// there is one and stay actionable when there is not.
-func TestRuntimeUnusableNotice(t *testing.T) {
-	withRepair := RuntimeUnusableNotice("Mika", AgentVerdict{
-		Repair: &RuntimeRepair{Package: "@anthropic-ai/claude-code", Command: "cd '/pkg' && node install.cjs"},
-	})
-	if !strings.Contains(withRepair, "Mika") || !strings.Contains(withRepair, "cd '/pkg' && node install.cjs") {
-		t.Errorf("notice must name the agent and the repair command:\n%s", withRepair)
-	}
-	// The fence is labelled with the shell the command was written for: a
-	// Windows repair shown as bash is how a user ends up pasting `cd 'C:\...'`
-	// into PowerShell.
-	if !strings.Contains(withRepair, "```bash") {
-		t.Errorf("a bash repair must be fenced as bash:\n%s", withRepair)
-	}
-	windows := RuntimeUnusableNotice("Mika", AgentVerdict{
-		Repair: &RuntimeRepair{Command: "Set-Location 'C:\\pkg'\nnode install.cjs", Shell: "powershell"},
-	})
-	if !strings.Contains(windows, "```powershell") {
-		t.Errorf("a PowerShell repair must be fenced as powershell:\n%s", windows)
-	}
-
-	withoutRepair := RuntimeUnusableNotice("Mika", AgentVerdict{})
-	if strings.Contains(withoutRepair, "```") {
-		t.Errorf("no repair command is known, so none may be shown:\n%s", withoutRepair)
-	}
-	if !strings.Contains(withoutRepair, "Reinstall") {
-		t.Errorf("notice must still say what to do:\n%s", withoutRepair)
-	}
-
-	accessDenied := RuntimeUnusableNotice("Mika", AgentVerdict{Reason: dispatch.ReasonRuntimeAccessDenied})
-	if !strings.Contains(accessDenied, "public") || !strings.Contains(accessDenied, "rebind/copy") {
-		t.Errorf("access-denied notice must include both recovery paths:\n%s", accessDenied)
 	}
 }

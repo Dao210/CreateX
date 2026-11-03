@@ -60,13 +60,12 @@ describe("surface bridge", () => {
   });
 
   it("forwards an allowed request with the installation that owns the channel", async () => {
-    const { port } = connectedBridge({ installationId: "installation-1", bridgeToken: TOKEN, issueId: "issue-1" });
+    const { port } = connectedBridge({ installationId: "installation-1", bridgeToken: TOKEN });
     port.postMessage({ id: "r1", kind: "action", method: "GET", path: "/context" });
 
     await vi.waitFor(() => expect(mockCall).toHaveBeenCalledWith("installation-1", expect.objectContaining({
       method: "GET",
       path: "/context",
-      issueId: "issue-1",
     })));
   });
 

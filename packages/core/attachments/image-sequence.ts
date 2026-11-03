@@ -329,7 +329,7 @@ export interface ImageSequenceItem {
   blockId?: string;
 }
 
-/** One renderable unit: an issue description, a comment, a chat message. */
+/** One renderable message or document block. */
 export interface ImageSequenceBlock {
   /** Caller-chosen identity, copied onto each item as `blockId`. */
   id?: string;
@@ -337,9 +337,8 @@ export interface ImageSequenceBlock {
   attachments?: ReadonlyArray<Attachment> | null;
   /**
    * Whether the surface renders this block's unreferenced attachments as cards
-   * under it. Defaults to true. An issue description renders none, and its
-   * `attachments` is the whole issue's list (comment uploads keep `issue_id`),
-   * so there it only resolves the body's references.
+   * under it. Defaults to true. Set false when attachments should only
+   * resolve the body's references.
    */
   standalone?: boolean;
 }

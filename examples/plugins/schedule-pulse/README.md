@@ -5,8 +5,8 @@ endpoint every five minutes. The handler records each unique `delivery_id` in
 workspace storage **before** it answers, so a retry of the same planned wake
 does not look like a second pulse.
 
-The issue panel reads that storage row. After install you should see the count
-go up about once every five minutes, not on every HTTP attempt.
+Inspect the storage row through the plugin storage API. Its count increases
+about once every five minutes; HTTP retries reuse the delivery identity.
 
 ## What it verifies
 
@@ -16,8 +16,6 @@ go up about once every five minutes, not on every HTTP attempt.
 | At-least-once delivery | Persists `delivery_id` first; a retry with the same id returns `{duplicate: true}` |
 | Plugin actor | Writes as the installation through the callback token, into `storage:workspace` |
 | Consent | `net:pulse.example.com` is the only outbound host; schedule is not a data scope |
-
-It does not create issues. That is a later Plugin Action API, not this trigger.
 
 ## Running the handler
 
@@ -39,7 +37,7 @@ Without that opt-in the host refuses a private address.
 
 ## Why storage, not a log
 
-A log line cannot prove idempotency. The panel shows `count`, `delivery_id`,
+A log line cannot prove idempotency. The storage row contains `count`, `delivery_id`,
 `planned_at`, and `attempt`. If the host retries the same plan, `attempt`
 changes and `count` does not.
 

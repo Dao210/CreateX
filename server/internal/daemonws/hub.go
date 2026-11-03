@@ -447,13 +447,6 @@ func (h *Hub) NotifyTaskAvailable(runtimeID, taskID string) {
 	h.notifyTask(protocol.EventDaemonTaskAvailable, runtimeID, taskID, "")
 }
 
-// NotifyTaskSupplementAvailable wakes only the daemon that owns runtimeID;
-// the task ID lets that daemon wake the matching in-flight run without polling
-// or disturbing the machine-level new-task claim loop.
-func (h *Hub) NotifyTaskSupplementAvailable(runtimeID, taskID string) {
-	h.notifyTask(protocol.EventDaemonTaskSupplementAvailable, runtimeID, taskID, "")
-}
-
 // NotifyRuntimeProfilesChanged asks connected daemons in workspaceID to pull
 // runtime profiles after a create, update, disable, or delete.
 func (h *Hub) NotifyRuntimeProfilesChanged(workspaceID, profileID string) {
@@ -483,7 +476,7 @@ func (h *Hub) NotifyRuntimeGone(runtimeID string) {
 }
 
 func (h *Hub) notifyTask(eventType, runtimeID, taskID, eventID string) {
-	if h == nil || runtimeID == "" || (eventType == protocol.EventDaemonTaskSupplementAvailable && taskID == "") {
+	if h == nil || runtimeID == "" {
 		return
 	}
 	data, err := taskWakeupFrame(eventType, runtimeID, taskID)
@@ -615,9 +608,9 @@ func (h *Hub) DeliverDaemonRuntime(scopeID string, frame []byte, eventID string)
 		M.WakeupReceivedTotal.Add(1)
 	}
 	switch msg.Type {
-	case protocol.EventDaemonTaskAvailable, protocol.EventDaemonTaskSupplementAvailable:
+	case protocol.EventDaemonTaskAvailable:
 		var payload protocol.TaskAvailablePayload
-		if err := json.Unmarshal(msg.Payload, &payload); err != nil || payload.RuntimeID == "" || (msg.Type == protocol.EventDaemonTaskSupplementAvailable && payload.TaskID == "") {
+		if err := json.Unmarshal(msg.Payload, &payload); err != nil || payload.RuntimeID == "" {
 			slog.Debug("daemon websocket relay: invalid task wakeup payload", "type", msg.Type, "error", err, "scope_id", scopeID, "event_id", eventID)
 			M.WakeupDeliveredMiss.Add(1)
 			return

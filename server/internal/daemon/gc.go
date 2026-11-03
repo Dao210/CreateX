@@ -225,13 +225,6 @@ func (d *Daemon) gcWorkspace(ctx context.Context, wsDir string, stats *gcStats) 
 	}
 }
 
-const issueGCBatchSize = 500
-
-type issueGCCandidate struct {
-	taskDir string
-	meta    *execenv.GCMeta
-}
-
 // applyGCAction performs one decision and updates cycle stats. Each mutation
 // atomically reserves the env root because a task can start while the server
 // reconciliation request is in flight.
@@ -542,23 +535,8 @@ func (d *Daemon) gcDecisionAutopilotRun(ctx context.Context, taskDir string, met
 		return gcActionSkip
 	}
 
-	// Terminal states per the autopilot_run CHECK constraint:
-	//   completed, failed, skipped — the run finished its own work.
-	//   issue_created            — the run produced an issue task that owns
-	//                              its own workdir; this run's workdir is
-	//                              dead weight from here on.
-	// Non-terminal: pending, running. Skip until they reach a terminal state
-	// rather than trying to bound them by mtime — long autopilots are real.
-	//
-	// An autopilot run's workdir is never reused: unlike issue/chat tasks there
-	// is no PriorWorkDir path that hands a later run the same directory, so every
-	// run gets a fresh one. Whatever the run produced already lives server-side
-	// (and an issue_created run handed its work to an issue task that owns its own
-	// envRoot). So the moment the run reaches a terminal state the directory is
-	// dead weight and we reclaim it immediately, without waiting out GCTTL — the
-	// same reasoning gcDecisionQuickCreate applies to quick-create dirs. The
-	// active-env-root short-circuit in shouldCleanTaskDir still protects a run
-	// that is mid-flight, so this can't pull the rug from under live work.
+	// Each automation run owns a fresh workdir. Reclaim it after a terminal
+	// outcome; the active-root guard still protects a live execution.
 	if isAutopilotRunTerminal(status.Status) {
 		d.logger.Info("gc: eligible for cleanup",
 			"dir", filepath.Base(taskDir),
@@ -572,12 +550,12 @@ func (d *Daemon) gcDecisionAutopilotRun(ctx context.Context, taskDir string, met
 }
 
 // isAutopilotRunTerminal mirrors the run.status CHECK in
-// migrations/042_autopilot.up.sql. Non-terminal states are pending/running;
+// migrations/001_application_schema.up.sql. Non-terminal states are pending/running;
 // every other value the schema allows is a final resting state from the
 // daemon's POV (the run is no longer producing work in this workdir).
 func isAutopilotRunTerminal(status string) bool {
 	switch status {
-	case "completed", "failed", "skipped", "issue_created":
+	case "completed", "failed", "skipped":
 		return true
 	default:
 		return false

@@ -189,12 +189,6 @@ func (m *TypingIndicatorManager) OnIngested(ctx context.Context, inst engine.Res
 	if m.senders == nil || m.streams == nil || !sessionID.Valid {
 		return
 	}
-	// A standalone /issue is answered by the replier and deliberately never
-	// triggers an agent run, so no chat-done event would ever arrive to close
-	// a bubble opened for it.
-	if msg.SkipAgentRun {
-		return
-	}
 	wm, err := wecomMsgFromRaw(msg)
 	if err != nil {
 		m.log.WarnContext(ctx, "wecom typing: cannot read the inbound envelope",
@@ -335,30 +329,14 @@ func (m *TypingIndicatorManager) Register(bus *events.Bus) {
 // handler, a sweeper tick — and a slow pool would hold up the enqueue itself.
 // The two things this needs are both on the event.
 //
-// Two kinds of run reach this subscriber and only one owns a bubble:
-//
-//   - A chat run has a chat_session_id and a NULL issue_id (CreateChatTask
-//     inserts issue_id as NULL), so an empty issue_id on the payload is what
-//     says "this is a turn in a conversation".
-//   - Everything else — /issue, autopilot, a rerun from the web UI — carries an
-//     issue id. Those runs answer somewhere else entirely, and one of them
-//     taking a WeCom bubble would seal a stranger's question with an answer
-//     nobody in the room asked for, and leave the real turn with nowhere to
-//     land.
+// Only a chat session can own a waiting bubble. Agent-only automation has no session.
 func (m *TypingIndicatorManager) handleTaskQueued(e events.Event) {
 	if m.streams == nil {
 		return
 	}
-	payload, ok := e.Payload.(map[string]any)
-	if !ok {
-		return
-	}
-	if issueID, _ := payload["issue_id"].(string); issueID != "" {
-		return
-	}
 	sessionID, ok := sessionIDFromEvent(e)
 	if !ok {
-		return // an issue / autopilot run, with no chat session and no bubble
+		return // an agent-only run has no chat session or bubble
 	}
 	taskID := taskIDFromEvent(e)
 	if taskID == "" {
@@ -418,7 +396,7 @@ func (m *TypingIndicatorManager) handleTaskFailed(e events.Event) {
 	}
 	sessionID, ok := m.sessionFor(e)
 	if !ok {
-		return // an issue / autopilot run, with no chat session and no bubble
+		return // an agent-only run has no chat session or bubble
 	}
 	taskID := taskIDFromEvent(e)
 	// This run is over whatever the gates below decide. Drop it from the queue
@@ -443,8 +421,7 @@ func (m *TypingIndicatorManager) handleTaskFailed(e events.Event) {
 	// as one. Under the batch identity the engine handed down, a bound round
 	// was WeCom's by construction. Binding off task:queued it is not: a
 	// question typed in Auro on this same session publishes an event with
-	// the same chat_session_id and the same NULL issue_id — CreateChatTask
-	// writes NULL for every chat task — so the browser's run can hold the
+	// the same chat_session_id, so the browser's run can hold the
 	// room's bubble. Skipping the gate for it put a web run's error text in
 	// front of everyone in the chat.
 	//

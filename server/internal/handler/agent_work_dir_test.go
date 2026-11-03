@@ -239,13 +239,12 @@ func TestStableIDSuffixMatchesDaemon(t *testing.T) {
 		taskID         = "5c57b65b-ee7a-4603-a72d-b659c34a1dc3"
 	)
 	daemonRoot := execenv.PredictRootDir(execenv.RootDirParams{
-		WorkspacesRoot:  workspacesRoot,
-		WorkspaceID:     workspaceID,
-		WorkspaceSlug:   "asset-feed",
-		TaskID:          taskID,
-		IssueIdentifier: "MUL-6063",
+		WorkspacesRoot: workspacesRoot,
+		WorkspaceID:    workspaceID,
+		WorkspaceSlug:  "asset-feed",
+		TaskID:         taskID,
 	})
-	expected := workspacesRoot + "/asset-feed-" + taskDirSegment(workspaceID) + "/mul-6063-" + taskDirSegment(taskID)
+	expected := workspacesRoot + "/asset-feed-" + taskDirSegment(workspaceID) + "/task-" + taskDirSegment(taskID)
 	if daemonRoot != expected {
 		t.Fatalf("daemon PredictRootDir = %q, handler-side suffix expectation = %q", daemonRoot, expected)
 	}

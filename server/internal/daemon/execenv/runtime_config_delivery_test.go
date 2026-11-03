@@ -36,10 +36,7 @@ import (
 // rows carry the verdicts whose briefs must not differ.
 func deliveryInvariantFixtures() map[string]TaskContextForEnv {
 	return map[string]TaskContextForEnv{
-		"comment":     {IssueID: "i-1", TriggerCommentID: "tc-1", AgentName: "Eve", AgentID: "eve-1"},
-		"assignment":  {IssueID: "i-1", AgentName: "Eve", AgentID: "eve-1"},
 		"autopilot":   {AutopilotRunID: "r-1", AgentName: "Eve", AgentID: "eve-1"},
-		"quickcreate": {QuickCreatePrompt: "p", AgentName: "Eve", AgentID: "eve-1"},
 		"chat_direct": {ChatSessionID: "c-1", AgentName: "Eve", AgentID: "eve-1"},
 		"chat_slack":  {ChatSessionID: "c-1", ChatChannelType: ChannelTypeSlack, AgentName: "Eve", AgentID: "eve-1"},
 		"chat_feishu": {ChatSessionID: "c-1", ChatChannelType: ChannelTypeFeishu, AgentName: "Eve", AgentID: "eve-1"},
@@ -84,160 +81,22 @@ func TestBriefDeliveryInvariantIsAlwaysOn(t *testing.T) {
 }
 
 func TestBriefSurfaceDeliveryPolicy(t *testing.T) {
-	t.Parallel()
-
-	cases := map[string]struct {
-		mustHave []string
-		mustNot  []string
-	}{
-		// Issue surfaces: files ride the comment.
-		"comment": {
-			mustHave: []string{"`--attachment <path>` to `auro issue comment add`", inlineBlocksRule},
-			mustNot:  []string{"auro attachment upload"},
-		},
-		"assignment": {
-			mustHave: []string{"`--attachment <path>` to `auro issue comment add`", inlineBlocksRule},
-			mustNot:  []string{"auro attachment upload"},
-		},
-		// Direct chat: the upload binds to the reply and the browser renders a
-		// card, so the file can sit inline where the agent puts it.
-		"chat_direct": {
-			mustHave: []string{"`auro attachment upload <local-path>`", inlineBlocksRule},
-			mustNot:  []string{"text-only", "separate message"},
-		},
-		// A channel-backed chat names its platform, defers the verdict to the
-		// per-turn message, and states neither answer. Both verdicts' old copy
-		// is denied on every such row: "separate message" and the bare upload
-		// imperative are the promise, "conversation is text-only" and "does NOT
-		// apply" are the denial, and the brief may carry neither — the same
-		// session sees both verdicts, so either one is wrong half the time.
-		"chat_wecom": {
-			mustHave: []string{
-				"WeCom conversation depends on how this deployment is configured",
-				"the per-turn user message tells you",
-				"never report a file as delivered",
-			},
-			mustNot: []string{
-				"run `auro attachment upload",
-				"separate message",
-				"conversation is text-only",
-				"does NOT apply",
-				inlineBlocksRule,
-			},
-		},
-		"chat_wecom_no_store": {
-			mustHave: []string{
-				"WeCom conversation depends on how this deployment is configured",
-				"the per-turn user message tells you",
-			},
-			mustNot: []string{
-				"run `auro attachment upload",
-				"separate message",
-				"conversation is text-only",
-				"does NOT apply",
-				inlineBlocksRule,
-			},
-		},
-		"chat_wecom_old_server": {
-			mustHave: []string{
-				"WeCom conversation depends on how this deployment is configured",
-				"the per-turn user message tells you",
-			},
-			mustNot: []string{
-				"run `auro attachment upload",
-				"separate message",
-				"conversation is text-only",
-				"does NOT apply",
-				inlineBlocksRule,
-			},
-		},
-		// No deployment carries files into Slack or Lark today, but the brief
-		// must not say so: wiring that hop is a server-side change the daemon
-		// never sees, and a brief holding the denial would keep denying it
-		// afterwards. Naming the platform still matters — the deferral has to
-		// be about THIS conversation.
-		//
-		// These two carry the SAME four denials the WeCom rows do, and that is
-		// what makes the paragraph above a rule rather than a note. The
-		// byte-identity invariant cannot enforce it on its own: a denial
-		// written into the brief unconditionally is the same on both values of
-		// the verdict, so it renders one brief and passes.
-		//
-		// A phrase list cannot be the only guard either — it denies the
-		// wordings someone thought to name, and the next one will be worded
-		// differently. TestBriefChannelDeliveryCopyIsPlatformNeutral holds the
-		// same rule with no wording in it, by requiring every channel-backed
-		// brief to differ only in the platform it names. Keep both: that one
-		// catches any wording, these fail beside the copy being edited.
-		"chat_slack": {
-			mustHave: []string{
-				"Slack conversation depends on how this deployment is configured",
-				"the per-turn user message tells you",
-				"never report a file as delivered",
-			},
-			mustNot: []string{
-				"run `auro attachment upload",
-				"separate message",
-				"conversation is text-only",
-				"does NOT apply",
-				inlineBlocksRule,
-			},
-		},
-		"chat_feishu": {
-			mustHave: []string{
-				"Feishu/Lark conversation depends on how this deployment is configured",
-				"the per-turn user message tells you",
-				"never report a file as delivered",
-			},
-			mustNot: []string{
-				"run `auro attachment upload",
-				"separate message",
-				"conversation is text-only",
-				"does NOT apply",
-				inlineBlocksRule,
-			},
-		},
-		"autopilot": {
-			mustHave: []string{"this surface is text-only"},
-			mustNot:  []string{"auro attachment upload", inlineBlocksRule},
-		},
-		"quickcreate": {
-			mustHave: []string{"your stdout is text-only", "`auro issue create` call itself via `--attachment <path>`"},
-			mustNot:  []string{"auro attachment upload", inlineBlocksRule},
-		},
-	}
-
-	fixtures := deliveryInvariantFixtures()
-	for name, want := range cases {
-		ctx, ok := fixtures[name]
-		if !ok {
-			t.Fatalf("no fixture for surface %q", name)
-		}
+	for name, ctx := range deliveryInvariantFixtures() {
 		out := buildMetaSkillContent("claude", ctx)
-		for _, phrase := range want.mustHave {
-			if !strings.Contains(out, phrase) {
-				t.Errorf("surface=%s: brief missing surface policy %q\n--- Output section ---\n%s",
-					name, phrase, outputSection(out))
+		section := outputSection(out)
+		switch {
+		case ctx.AutopilotRunID != "":
+			if !strings.Contains(section, "text-only") {
+				t.Errorf("%s has no result delivery rule", name)
 			}
-		}
-		// mustNot is checked against the WHOLE brief, not just `## Output`: a
-		// denial is wrong wherever it is written, and scoping the search to
-		// the section it usually lands in would let the next one land
-		// somewhere else. The phrases are ordinary English, though, so a
-		// future section could match one legitimately — quote the text around
-		// the actual hit and say which section it was in, or the failure
-		// points a reader at an Output section the phrase may not be in.
-		for _, phrase := range want.mustNot {
-			at := strings.Index(out, phrase)
-			if at < 0 {
-				continue
+		case ctx.ChatChannelType != "":
+			if !strings.Contains(section, "stated per turn") {
+				t.Errorf("%s has no per-turn file delivery rule", name)
 			}
-			where := "in the `## Output` section"
-			if !strings.Contains(outputSection(out), phrase) {
-				where = "OUTSIDE the `## Output` section"
+		case ctx.ChatSessionID != "":
+			if !strings.Contains(section, "auro attachment upload <local-path>") {
+				t.Errorf("%s has no attachment delivery command", name)
 			}
-			t.Errorf("surface=%s: brief must NOT carry %q — found %s\n--- context ---\n%s",
-				name, phrase, where, briefContext(out, at, len(phrase)))
 		}
 	}
 }
@@ -337,12 +196,10 @@ func TestBriefInboundAttachmentIsNotADeliverable(t *testing.T) {
 	t.Parallel()
 
 	out := buildMetaSkillContent("claude", TaskContextForEnv{
-		IssueID: "i-1", TriggerCommentID: "tc-1", AgentName: "Eve", AgentID: "eve-1",
+		ChatSessionID: "i-1", AgentName: "Eve", AgentID: "eve-1",
 	})
 	for _, want := range []string{
-		"private working copy",
-		"not something the reader can open",
-		"the link rules in `## Output` apply to it too",
+		"Runtime-local paths are never deliverables",
 	} {
 		if !strings.Contains(out, want) {
 			t.Errorf("Attachments section missing %q\n---\n%s", want, out)

@@ -151,12 +151,4 @@ describe("useTabSelectionShortcut", () => {
 
     expect(unsubscribe).toHaveBeenCalledOnce();
   });
-
-  it("does not subscribe in a dedicated issue window", () => {
-    const { onSelectTabShortcut } = stubDesktopAPI("issue");
-
-    render(<Probe />);
-
-    expect(onSelectTabShortcut).not.toHaveBeenCalled();
-  });
 });

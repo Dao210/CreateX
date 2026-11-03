@@ -259,10 +259,8 @@ type actorDisplayLookup struct {
 type actorDisplayLookupState struct {
 	members       map[string]string
 	agents        map[string]string
-	squads        map[string]string
 	membersLoaded bool
 	agentsLoaded  bool
-	squadsLoaded  bool
 }
 
 func loadActorDisplayLookup(ctx context.Context, client *cli.APIClient) actorDisplayLookup {

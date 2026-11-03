@@ -2,13 +2,16 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
 	"github.com/auro-ai/auro/server/internal/events"
+	"github.com/auro-ai/auro/server/internal/testutil"
 	"github.com/auro-ai/auro/server/internal/util"
 	db "github.com/auro-ai/auro/server/pkg/db/generated"
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 // TestClaimTasksForRuntimes_MultiRuntimeDrain verifies the machine-level batch
@@ -229,4 +232,35 @@ func TestClaimTasksForRuntimes_EmptyInputs(t *testing.T) {
 	if got, err := svc.ClaimTasksForRuntimes(ctx, []pgtype.UUID{util.MustParseUUID(rt1)}, 0); err != nil || got != nil {
 		t.Fatalf("maxTasks=0: got=%v err=%v, want nil,nil", got, err)
 	}
+}
+
+func batchClaimFixture(t *testing.T, ctx context.Context, pool *pgxpool.Pool) (rt1, rt2 string) {
+	t.Helper()
+	fx := testutil.New(pool, "", "")
+	suffix := time.Now().UnixNano()
+	fx.UserID = fx.User(t, "Batch claim", fmt.Sprintf("batch-claim-%d@example.invalid", suffix))
+	fx.WorkspaceID = fx.Workspace(t, "Batch claim", fmt.Sprintf("batch-claim-%d", suffix))
+	fx.Member(t, fx.WorkspaceID, fx.UserID, "owner")
+	rt1 = fx.Runtime(t, "Batch runtime 1", testutil.Cols{"daemon_id": "batch-daemon", "provider": "batch_provider_1"})
+	rt2 = fx.Runtime(t, "Batch runtime 2", testutil.Cols{"daemon_id": "batch-daemon", "provider": "batch_provider_2"})
+	a1 := fx.Agent(t, "Batch agent 1", rt1, testutil.Cols{"max_concurrent_tasks": 5})
+	a2 := fx.Agent(t, "Batch agent 2", rt2, testutil.Cols{"max_concurrent_tasks": 5})
+	for i, pair := range [][2]string{{a1, rt1}, {a1, rt1}, {a2, rt2}} {
+		chat := fx.ChatSession(t, pair[0])
+		fx.Task(t, pair[0], testutil.Cols{"runtime_id": pair[1], "chat_session_id": chat, "created_at": testutil.Raw(fmt.Sprintf("now()+interval '%d milliseconds'", i))})
+	}
+	return
+}
+func deferredBatchFixture(t *testing.T, ctx context.Context, pool *pgxpool.Pool) (runtimeID, taskID string) {
+	t.Helper()
+	fx := testutil.New(pool, "", "")
+	suffix := time.Now().UnixNano()
+	fx.UserID = fx.User(t, "Deferred claim", fmt.Sprintf("deferred-%d@example.invalid", suffix))
+	fx.WorkspaceID = fx.Workspace(t, "Deferred claim", fmt.Sprintf("deferred-%d", suffix))
+	fx.Member(t, fx.WorkspaceID, fx.UserID, "owner")
+	runtimeID = fx.Runtime(t, "Deferred runtime", testutil.Cols{"daemon_id": "deferred-daemon", "provider": "deferred_provider"})
+	agent := fx.Agent(t, "Deferred agent", runtimeID)
+	chat := fx.ChatSession(t, agent)
+	taskID = fx.Task(t, agent, testutil.Cols{"runtime_id": runtimeID, "chat_session_id": chat, "status": "deferred", "fire_at": testutil.Raw("now()-interval '1 minute'")})
+	return
 }

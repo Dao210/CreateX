@@ -89,9 +89,6 @@ vi.mock("@auro/views/workspace/use-workspace-seen", () => ({
   useWorkspaceSeen: () => state.workspaceSeen,
 }));
 
-vi.mock("@auro/views/workspace/welcome-after-onboarding", () => ({
-  WelcomeAfterOnboarding: () => null,
-}));
 
 vi.mock("@auro/views/layout", () => ({
   WorkspacePresencePrefetch: () => null,
@@ -133,7 +130,7 @@ function renderLayout() {
   qc.setQueryData(["workspace-list"], state.wsList);
   const result = render(
     <QueryClientProvider client={qc}>
-      <MemoryRouter initialEntries={["/acme/issues"]}>
+      <MemoryRouter initialEntries={["/acme/me"]}>
         <Routes>
           <Route path=":workspaceSlug/*" element={<WorkspaceRouteLayout />}>
             <Route path="*" element={<div data-testid="outlet" />} />
@@ -161,18 +158,6 @@ beforeEach(() => {
 });
 
 describe("WorkspaceRouteLayout", () => {
-  it("mounts SourceBackfillModal when no WindowOverlay is active", () => {
-    const { queryByTestId } = renderLayout();
-    expect(queryByTestId(state.modalAriaLabel)).not.toBeNull();
-    expect(state.modalRenders).toBeGreaterThan(0);
-  });
-
-  it("suppresses SourceBackfillModal while a WindowOverlay is active", () => {
-    state.overlay = { type: "new-workspace" };
-    const { queryByTestId } = renderLayout();
-    expect(queryByTestId(state.modalAriaLabel)).toBeNull();
-    expect(state.modalRenders).toBe(0);
-  });
 
   it("keeps workspace content mounted when a background refetch fails", async () => {
     const { queryByTestId, queryClient } = renderLayout();
@@ -264,7 +249,7 @@ describe("WorkspaceRouteLayout workspace singleton lifecycle", () => {
  *
  * The guard it shipped with (slug equality) could not see that successor when
  * both tabs belonged to the SAME workspace: the "+" button opens
- * /<slug>/issues in the active workspace, so the incoming layout carried the
+ * /<slug>/me in the active workspace, so the incoming layout carried the
  * same slug, its write deduped to a no-op, and the outgoing cleanup cleared
  * the singleton out from under it. Every request the new tab fired then went
  * out without X-Workspace-Slug and came back 400, and the shell dropped its
@@ -291,7 +276,7 @@ describe("WorkspaceRouteLayout across a tab swap", () => {
     qc.setQueryData(["workspace-list"], state.wsList);
     return (
       <QueryClientProvider client={qc}>
-        <MemoryRouter initialEntries={[`/${slug}/issues`]}>
+        <MemoryRouter initialEntries={[`/${slug}/me`]}>
           <Routes>
             <Route path=":workspaceSlug/*" element={<WorkspaceRouteLayout />}>
               <Route path="*" element={<ChildQuery />} />

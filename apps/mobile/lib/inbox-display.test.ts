@@ -12,10 +12,8 @@ function item(overrides: Partial<InboxItem>): InboxItem {
     actor_id: "agent-1",
     type: "new_comment",
     severity: "info",
-    issue_id: "issue-1",
     title: "Issue title",
     body: null,
-    issue_status: null,
     read: false,
     archived: false,
     created_at: "2026-06-15T08:00:00Z",
@@ -32,7 +30,6 @@ describe("getInboxDisplayTitle", () => {
     expect(
       getInboxDisplayTitle(
         item({
-          issue_id: null,
           type: "autopilot_quota_exceeded",
           title: "Autopilot quota exceeded (100/100)",
         }),
@@ -44,7 +41,6 @@ describe("getInboxDisplayTitle", () => {
     expect(
       getInboxDisplayTitle(
         item({
-          issue_id: null,
           type: "autopilot_paused",
           title: "Paused after repeated failures",
         }),
@@ -60,7 +56,6 @@ describe("getAutopilotQuotaBody", () => {
   it("formats the machine reset timestamp for the device locale", () => {
     const body = getAutopilotQuotaBody(
       item({
-        issue_id: null,
         type: "autopilot_quota_exceeded",
         body: "Raw fallback 2026-09-01T00:00:00Z",
         details: {
@@ -80,7 +75,6 @@ describe("getAutopilotQuotaBody", () => {
     expect(
       getAutopilotQuotaBody(
         item({
-          issue_id: null,
           type: "autopilot_quota_exceeded",
           body: "Readable server fallback",
           details: { limit: "100" },

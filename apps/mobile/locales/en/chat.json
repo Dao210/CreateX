@@ -8,8 +8,6 @@
     "no_agents": "No agents in this world",
     "archived": "This chat is archived",
     "runtime_required": "Agent needs a runtime",
-    "replying_to": "Replying to {{name}}",
-    "cancel_reply": "Cancel reply",
     "mention": "Mention someone or an issue",
     "upload_image": "Upload image",
     "upload_file": "Upload file",

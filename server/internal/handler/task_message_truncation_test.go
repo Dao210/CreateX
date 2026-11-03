@@ -80,7 +80,7 @@ func TestCreateTaskMessagesKeepsTruncationTriState(t *testing.T) {
 
 	want := []*bool{&yes, &no, nil}
 	for i, row := range created {
-		got := taskMessageToPayload(db.TaskMessage(row), taskID, "").OutputTruncated
+		got := taskMessageToPayload(db.TaskMessage(row), taskID).OutputTruncated
 		switch {
 		case want[i] == nil && got != nil:
 			t.Fatalf("seq %d: payload says truncated=%v, want omitted — an unmeasured output must not report a value", row.Seq, *got)

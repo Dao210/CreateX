@@ -12,7 +12,7 @@ import (
 )
 
 // ---------------------------------------------------------------------------
-// Label commands — workspace-scoped CRUD for labels (issues and skills).
+// Label commands — workspace-scoped CRUD for labels (agents and skills).
 // ---------------------------------------------------------------------------
 
 var labelCmd = &cobra.Command{
@@ -54,8 +54,8 @@ var labelDeleteCmd = &cobra.Command{
 }
 
 func validateLabelResourceType(value string) error {
-	if value != "issue" && value != "skill" {
-		return fmt.Errorf("resource type must be issue or skill")
+	if value != "agent" && value != "skill" {
+		return fmt.Errorf("resource type must be agent or skill")
 	}
 	return nil
 }
@@ -69,12 +69,12 @@ func init() {
 
 	labelListCmd.Flags().String("output", "table", "Output format: table or json")
 	labelListCmd.Flags().Bool("full-id", false, "Show full UUIDs in table output")
-	labelListCmd.Flags().String("resource-type", "", "Filter by resource type: issue or skill (default: issue)")
+	labelListCmd.Flags().String("resource-type", "", "Filter by resource type: agent or skill (default: agent)")
 	labelGetCmd.Flags().String("output", "json", "Output format: table or json")
 
 	labelCreateCmd.Flags().String("name", "", "Label name (required)")
 	labelCreateCmd.Flags().String("color", "", "Hex color like #3b82f6 (required)")
-	labelCreateCmd.Flags().String("resource-type", "issue", "Resource type: issue or skill")
+	labelCreateCmd.Flags().String("resource-type", "agent", "Resource type: agent or skill")
 	labelCreateCmd.Flags().String("description", "", "Label description")
 	labelCreateCmd.Flags().String("output", "json", "Output format: table or json")
 

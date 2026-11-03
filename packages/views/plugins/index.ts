@@ -1,8 +1,6 @@
-export { PluginPanelSection } from "./plugin-panel-section";
 export { PluginSurfaceFrame } from "./plugin-surface-frame";
 export { buildSurfaceFrameDocument } from "./surface-document";
 export {
-  PluginHookMenuItems,
   collectManualHookActions,
   pluginHookActionKey,
   usePluginHookActions,
@@ -10,7 +8,6 @@ export {
 } from "./plugin-hook-actions";
 export type { PluginHookAction } from "./plugin-hook-actions";
 export {
-  PluginModalMenuItems,
   PluginModalSurface,
   collectModalSurfaces,
   pluginModalKey,

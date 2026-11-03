@@ -65,7 +65,6 @@ function pdfAttachment(id: string): Attachment {
   return {
     id,
     workspace_id: "workspace-1",
-    issue_id: null,
     comment_id: null,
     chat_session_id: "session-1",
     chat_message_id: null,
@@ -898,7 +897,7 @@ describe("ChatMessageList onboarding starter cards", () => {
   it("renders the three cards under the opening and hides that turn's chips", async () => {
     renderCards();
     expect(
-      await screen.findByRole("button", { name: "Get a board up in minutes" }),
+      await screen.findByRole("button", { name: "Plan a goal" }),
     ).toBeEnabled();
     expect(screen.getByRole("button", { name: "Hand me one thing first" })).toBeEnabled();
     expect(
@@ -913,18 +912,18 @@ describe("ChatMessageList onboarding starter cards", () => {
     const onQuickAction = vi.fn();
     renderCards({ onQuickAction });
     fireEvent.click(
-      await screen.findByRole("button", { name: "Get a board up in minutes" }),
+      await screen.findByRole("button", { name: "Plan a goal" }),
     );
     expect(onQuickAction).toHaveBeenCalledWith({
-      label: "Get a board up in minutes",
-      prompt: "Turn our current goals into a project board",
+      label: "Plan a goal",
+      prompt: "Help me turn my current goal into a concrete plan",
     });
   });
 
   it("follows the chips' disabled rule while a task runs", async () => {
     renderCards({ quickActionsDisabled: true });
     expect(
-      await screen.findByRole("button", { name: "Get a board up in minutes" }),
+      await screen.findByRole("button", { name: "Plan a goal" }),
     ).toBeDisabled();
   });
 
@@ -932,7 +931,7 @@ describe("ChatMessageList onboarding starter cards", () => {
     renderCards({ messages: [{ ...opening, message_kind: "message" as const }] });
     expect(await screen.findByRole("button", { name: "LLM chip" })).toBeEnabled();
     expect(
-      screen.queryByRole("button", { name: "Get a board up in minutes" }),
+      screen.queryByRole("button", { name: "Plan a goal" }),
     ).toBeNull();
   });
 
@@ -948,7 +947,7 @@ describe("ChatMessageList onboarding starter cards", () => {
     };
     renderCards({ messages: [opening, followUp] });
     expect(
-      await screen.findByRole("button", { name: "Get a board up in minutes" }),
+      await screen.findByRole("button", { name: "Plan a goal" }),
     ).toBeEnabled();
     expect(screen.getByRole("button", { name: "Later chip" })).toBeEnabled();
   });

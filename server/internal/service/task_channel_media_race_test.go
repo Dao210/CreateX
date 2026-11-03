@@ -323,10 +323,10 @@ func TestEnqueueChatTaskDefersWhenMediaMessageCommitsDuringEnqueue(t *testing.T)
 		Bus: events.New(),
 	}
 
-	task, err := svc.EnqueueChatTask(ctx, db.ChatSession{
+	task, err := svc.enqueueChatTask(ctx, db.ChatSession{
 		ID:      util.MustParseUUID(chatSessionID),
 		AgentID: util.MustParseUUID(agentID),
-	}, util.MustParseUUID(userID), false)
+	}, util.MustParseUUID(userID), false, 0, false, pgtype.UUID{}, 0)
 	if err != nil {
 		t.Fatalf("EnqueueChatTask: %v", err)
 	}
@@ -426,10 +426,10 @@ func TestEnqueueChatTaskLocksOutAConcurrentArchiveButNotInboundMessages(t *testi
 		Bus: events.New(),
 	}
 
-	task, err := svc.EnqueueChatTask(ctx, db.ChatSession{
+	task, err := svc.enqueueChatTask(ctx, db.ChatSession{
 		ID:      util.MustParseUUID(chatSessionID),
 		AgentID: util.MustParseUUID(agentID),
-	}, util.MustParseUUID(userID), false)
+	}, util.MustParseUUID(userID), false, 0, false, pgtype.UUID{}, 0)
 	if err != nil {
 		t.Fatalf("EnqueueChatTask: %v", err)
 	}

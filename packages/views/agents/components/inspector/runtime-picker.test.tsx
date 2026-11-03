@@ -21,7 +21,7 @@ vi.mock("../../../runtimes/components/provider-logo", () => ({
 import { RuntimePicker } from "./runtime-picker";
 
 const TEST_RESOURCES = {
-  en: { common: enCommon, agents: enAgents, issues: enIssues },
+  en: { common: enCommon, agents: enAgents, execution: enIssues },
 };
 
 const ME = "user-me";

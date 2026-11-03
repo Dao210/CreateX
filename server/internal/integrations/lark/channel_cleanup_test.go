@@ -151,6 +151,8 @@ func TestDeleteChannelInstallationsBySystemRuntimeAgents(t *testing.T) {
 		_, _ = pool.Exec(ctx, `DELETE FROM channel_outbound_card_message WHERE chat_session_id = ANY($1)`, []string{ccChatArch, ccChatLive})
 		_, _ = pool.Exec(ctx, `DELETE FROM channel_inbound_message_dedup WHERE message_id = 'msg_cc_dedup'`)
 		_, _ = pool.Exec(ctx, `DELETE FROM channel_inbound_audit WHERE channel_event_id = ANY($1)`, []string{ccAuditArch, ccAuditLive})
+		_, _ = pool.Exec(ctx, `DELETE FROM agent WHERE workspace_id=$1`, ccWS)
+		_, _ = pool.Exec(ctx, `DELETE FROM agent_runtime WHERE workspace_id=$1`, ccWS)
 		_, _ = pool.Exec(ctx, `DELETE FROM workspace WHERE id = $1`, ccWS)
 	}
 	clean()
@@ -197,6 +199,8 @@ func TestDeleteWorkspace_SweepsChannelInstallations(t *testing.T) {
 		_, _ = pool.Exec(ctx, `DELETE FROM channel_outbound_card_message WHERE chat_session_id = $1`, ccChatWs)
 		_, _ = pool.Exec(ctx, `DELETE FROM channel_inbound_message_dedup WHERE message_id = 'msg_cc_dedup'`)
 		_, _ = pool.Exec(ctx, `DELETE FROM channel_inbound_audit WHERE channel_event_id = $1`, ccAuditWs)
+		_, _ = pool.Exec(ctx, `DELETE FROM agent WHERE workspace_id=$1`, ccWSDel)
+		_, _ = pool.Exec(ctx, `DELETE FROM agent_runtime WHERE workspace_id=$1`, ccWSDel)
 		_, _ = pool.Exec(ctx, `DELETE FROM workspace WHERE id = $1`, ccWSDel)
 	}
 	clean()
@@ -215,6 +219,13 @@ VALUES ($1, $2, 'cc agent del', 'local', $3)`, ccAgentDel, ccWSDel, ccRuntimeDel
 
 	id := seedFullInstallation(t, ctx, pool, ccWSDel, ccAgentDel, ccAppWs, ccChatWs, ccTokenWs, ccAuditWs)
 
+	queries := db.New(pool)
+	if err := queries.DeleteWorkspaceLeafData(ctx, util.MustParseUUID(ccWSDel)); err != nil {
+		t.Fatal(err)
+	}
+	if err := queries.DeleteWorkspaceCommunicationRoots(ctx, util.MustParseUUID(ccWSDel)); err != nil {
+		t.Fatal(err)
+	}
 	if err := q.DeleteWorkspace(ctx, util.MustParseUUID(ccWSDel)); err != nil {
 		t.Fatalf("DeleteWorkspace: %v", err)
 	}

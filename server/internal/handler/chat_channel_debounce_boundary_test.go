@@ -8,6 +8,7 @@ import (
 
 	db "github.com/auro-ai/auro/server/pkg/db/generated"
 	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // appendChannelUserMessage writes an inbound channel message the way
@@ -36,7 +37,7 @@ func flushChannelChatRun(t *testing.T, ctx context.Context, sessionID string) db
 	if err != nil {
 		t.Fatalf("load chat session: %v", err)
 	}
-	task, err := testHandler.TaskService.EnqueueChatTask(ctx, sess, parseUUID(testUserID), false)
+	task, err := testHandler.TaskService.EnqueueChannelChatTask(ctx, sess, parseUUID(testUserID), false, 1, pgtype.UUID{}, 0)
 	if err != nil {
 		t.Fatalf("EnqueueChatTask: %v", err)
 	}
@@ -116,7 +117,7 @@ func TestChannelChat_ReplyLandingInsideDebounceWindowStillAnswersTheNextMessage(
 	stranded := appendChannelUserMessage(t, ctx, sessionID, "挺好的 正常了")
 
 	// Turn 1 finishes inside that window and writes its reply.
-	if _, err := testHandler.TaskService.CompleteTask(ctx, first.ID, completeResult(t, "通了。"), "", "", "", false, "", ""); err != nil {
+	if _, _, err := testHandler.TaskService.CompleteTaskWithTransition(ctx, first.ID, completeResult(t, "通了。"), "", "", "", false, "", ""); err != nil {
 		t.Fatalf("complete turn 1: %v", err)
 	}
 

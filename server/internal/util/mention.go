@@ -5,7 +5,7 @@ import "regexp"
 // Mention represents a parsed @mention from markdown content.
 type Mention struct {
 	Type string // "member", "agent", "issue", or "all"
-	ID   string // user_id, agent_id, issue_id, or "all"
+	ID   string // user_id, agent_id, or "all"
 }
 
 // MentionRe matches [@Label](mention://type/id) or [Label](mention://issue/id) in markdown.

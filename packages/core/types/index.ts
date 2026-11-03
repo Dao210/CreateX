@@ -1,95 +1,5 @@
-export type { Issue, IssueStatus, BuiltInIssueStatus, IssuePriority, IssueAssigneeType, IssueMetadata, IssueMetadataValue, IssueReaction, SourceContextAttachment, SourceContextAuthor, SourceContextIssueSnapshot, SourceContextCommentSnapshot, SourceContextSnapshot, SourceContextLimitUsage, SourceContextPreview, SourceContextAuthorState, IssueSourceContext,
-  IssueDuplicateOf,
-} from "./issue";
-export type {
-  IssueStatusCategory,
-  IssueStatusEntry,
-  IssueStatusIcon,
-  ListIssueStatusesResponse,
-  CreateIssueStatusRequest,
-  UpdateIssueStatusRequest,
-} from "./issue-status";
-export type {
-  Agent,
-  AgentConversationStarter,
-  AgentStatus,
-  AgentRuntimeMode,
-  AgentVisibility,
-  AgentPermissionMode,
-  AgentInvocationTarget,
-  AgentInvocationTargetInput,
-  AgentTask,
-  TaskUsage,
-  TaskAttribution,
-  AttributionUser,
-  TaskCancellationActor,
-  TaskEvidence,
-  AgentActivityBucket,
-  AgentRunCount,
-  WorkspaceWorkingAgent,
-  WorkspaceWorkingAgentType,
-  WorkspaceWorkingAgentMineRelation,
-  TaskFailureReason,
-  AgentRuntime,
-  RuntimeDevice,
-  RuntimeProfile,
-  RuntimeProtocolFamily,
-  RuntimeProfileType,
-  RuntimeProfileVisibility,
-  CreateRuntimeProfileRequest,
-  UpdateRuntimeProfileRequest,
-  CreateAgentRequest,
-  AgentBuilderRuntimeSwitch,
-  AgentBuilderSession,
-  AgentBuilderSessionSummary,
-  AgentPermissionScope,
-  StoredAgentDraft,
-  UpdateAgentRequest,
-  AgentEnvResponse,
-  UpdateAgentEnvRequest,
-  Skill,
-  SkillSummary,
-  AgentSkillSummary,
-  DisabledRuntimeSkill,
-  SetAgentRuntimeSkillEnabledRequest,
-  SkillFile,
-  CreateSkillRequest,
-  SkillImportResult,
-  UpdateSkillRequest,
-  SetAgentSkillsRequest,
-  RuntimeUsage,
-  RuntimeHourlyActivity,
-  RuntimeUsageByAgent,
-  RuntimeUsageByHour,
-  DashboardUsageDaily,
-  DashboardUsageByAgent,
-  DashboardAgentRunTime,
-  DashboardRunTimeDaily,
-  DashboardFailureDaily,
-  DashboardFailureByAgent,
-  RuntimeUpdate,
-  RuntimeUpdateStatus,
-  RuntimeModel,
-  RuntimeModelServiceTier,
-  RuntimeModelThinking,
-  RuntimeUnavailableModel,
-  RuntimeModelThinkingLevel,
-  RuntimeModelListRequest,
-  RuntimeModelListStatus,
-  RuntimeModelsResult,
-  RuntimeLocalSkillStatus,
-  RuntimeLocalSkillImportAction,
-  RuntimeLocalSkillImportConflict,
-  RuntimeLocalSkillSummary,
-	RuntimeLocalMcpServerSummary,
-  RuntimeLocalSkillListRequest,
-  CreateRuntimeLocalSkillImportRequest,
-  RuntimeLocalSkillImportRequest,
-  RuntimeLocalSkillsResult,
-  RuntimeLocalSkillImportResult,
-  IssueUsageSummary,
-  MikaBootstrapResponse,
-} from "./agent";
+
+export type { Agent, AgentConversationStarter, AgentStatus, AgentRuntimeMode, AgentVisibility, AgentPermissionMode, AgentInvocationTarget, AgentInvocationTargetInput, AgentTask, TaskUsage, TaskAttribution, AttributionUser, TaskCancellationActor, TaskEvidence, AgentActivityBucket, AgentRunCount, WorkspaceWorkingAgent, WorkspaceWorkingAgentType, WorkspaceWorkingAgentMineRelation, TaskFailureReason, AgentRuntime, RuntimeDevice, RuntimeProfile, RuntimeProtocolFamily, RuntimeProfileType, RuntimeProfileVisibility, CreateRuntimeProfileRequest, UpdateRuntimeProfileRequest, CreateAgentRequest, AgentBuilderRuntimeSwitch, AgentBuilderSession, AgentBuilderSessionSummary, AgentPermissionScope, StoredAgentDraft, UpdateAgentRequest, AgentEnvResponse, UpdateAgentEnvRequest, Skill, SkillSummary, AgentSkillSummary, DisabledRuntimeSkill, SetAgentRuntimeSkillEnabledRequest, SkillFile, CreateSkillRequest, SkillImportResult, UpdateSkillRequest, SetAgentSkillsRequest, RuntimeUsage, RuntimeHourlyActivity, RuntimeUsageByAgent, RuntimeUsageByHour, DashboardUsageDaily, DashboardUsageByAgent, DashboardAgentRunTime, DashboardRunTimeDaily, DashboardFailureDaily, DashboardFailureByAgent, RuntimeUpdate, RuntimeUpdateStatus, RuntimeModel, RuntimeModelServiceTier, RuntimeModelThinking, RuntimeUnavailableModel, RuntimeModelThinkingLevel, RuntimeModelListRequest, RuntimeModelListStatus, RuntimeModelsResult, RuntimeLocalSkillStatus, RuntimeLocalSkillImportAction, RuntimeLocalSkillImportConflict, RuntimeLocalSkillSummary, RuntimeLocalMcpServerSummary, RuntimeLocalSkillListRequest, CreateRuntimeLocalSkillImportRequest, RuntimeLocalSkillImportRequest, RuntimeLocalSkillsResult, RuntimeLocalSkillImportResult, MikaBootstrapResponse } from "./agent";
 export { RUNTIME_PROFILE_PROTOCOL_FAMILIES, RUNTIME_PROFILE_RUNTIME_TYPES } from "./agent";
 export type { Workspace, WorkspaceRepo, WorkspaceMcpServer, Member, MemberRole, User, MemberWithUser, Invitation, ShareLink, ShareLinkInfo } from "./workspace";
 export type {
@@ -118,29 +28,7 @@ export type {
 } from "./plugin";
 export type { InboxItem, InboxSeverity, InboxItemType, InboxWorkspaceUnread, ArchivedInboxPage, ArchivedInboxFacets } from "./inbox";
 export type { NotificationGroupKey, NotificationGroupValue, NotificationPreferences, NotificationPreferenceResponse } from "./notification-preference";
-export type { Comment, CommentType, CommentAuthorType, CommentSupplementReceipt, CommentSupplementStatus, CommentTriggerPreview, CommentTriggerPreviewAgent, CommentTriggerSource, CommentTriggerOutcome, CommentTriggerStatus, Reaction } from "./comment";
-export type { Label, LabelResourceType, CreateLabelRequest, UpdateLabelRequest, ListLabelsResponse, IssueLabelsResponse, ResourceLabelsResponse } from "./label";
-export type { IssueProperty, IssuePropertyType, ScalarIssuePropertyType, IssuePropertyOption, IssuePropertyConfig, IssuePropertyValue, IssuePropertyValues, CreatePropertyRequest, UpdatePropertyRequest, ListPropertiesResponse, IssuePropertiesResponse, IssuePropertyActorKind, IssuePropertyActorRef, PropertyFilterOp, PropertyOperatorFilter, PropertyFilterValue } from "./property";
-export { ISSUE_PROPERTY_TYPES, isKnownPropertyType, ISSUE_PROPERTY_ACTOR_KINDS, MAX_ISSUE_PROPERTY_ACTOR_VALUES, isActorPropertyType, isFilterablePropertyType, isScalarPropertyType, formatActorRef, parseActorRef, actorRefsFromValue, actorRefValuesFromValue, hasUnknownActorRef, isPropertyOperatorFilter, isKnownPropertyFilterOp, propertyFilterValueKey, PROPERTY_FILTER_OP_SYMBOLS, PROPERTY_FILTER_OPS_BY_TYPE } from "./property";
-export type {
-  QuickAction,
-  QuickActionVisibility,
-  QuickActionAssigneeType,
-  QuickActionStatus,
-  CreateQuickActionRequest,
-  UpdateQuickActionRequest,
-  ListQuickActionsResponse,
-} from "./quick-action";
-export {
-  QUICK_ACTION_SIDEBAR_LIMIT,
-  QUICK_ACTION_TEMPLATE_TOKEN_RE,
-  findQuickActionTemplateToken,
-} from "./quick-action";
-export type {
-  TimelineEntry,
-  AssigneeFrequencyEntry,
-} from "./activity";
-export type { IssueSubscriber } from "./subscriber";
+export type { Label, LabelResourceType, CreateLabelRequest, UpdateLabelRequest, ListLabelsResponse, ResourceLabelsResponse } from "./label";
 export type * from "./events";
 export type * from "./api";
 export type { Attachment } from "./attachment";
@@ -172,42 +60,7 @@ export type {
   ChatDraftRestoresResponse,
 } from "./chat";
 export type { StorageAdapter } from "./storage";
-export type {
-  Project,
-  ProjectStatus,
-  ProjectPriority,
-  CreateProjectRequest,
-  UpdateProjectRequest,
-  ListProjectsResponse,
-  ProjectResource,
-  ProjectResourceType,
-  ProjectResourceRef,
-  GithubRepoResourceRef,
-  LocalDirectoryResourceRef,
-  LocalDirectoryExecutionMode,
-  CreateProjectResourceRequest,
-  UpdateProjectResourceRequest,
-  ListProjectResourcesResponse,
-} from "./project";
-export type { PinnedItem, PinnedItemType, CreatePinRequest, ReorderPinsRequest } from "./pin";
-export type {
-  GitHubInstallation,
-  GitHubMergeableState,
-  GitHubPullRequest,
-  GitHubPullRequestChecksConclusion,
-  GitHubPullRequestChecksRollup,
-  GitHubPullRequestMergeable,
-  GitHubPullRequestMergeStateStatus,
-  GitHubPullRequestState,
-  IssuePullRequestsResponse,
-  PRAutoComplete,
-  PRAutoCompleteState,
-  PullRequestLinkSource,
-  ListGitHubInstallationsResponse,
-  GitHubRepository,
-  ListGitHubRepositoriesResponse,
-  GitHubConnectResponse,
-} from "./github";
+export type { GitHubInstallation, ListGitHubInstallationsResponse, GitHubRepository, ListGitHubRepositoriesResponse, GitHubConnectResponse } from "./github";
 export type {
   VCSProvider,
   VCSConnection,
@@ -255,89 +108,5 @@ export type {
   RegisterTelegramRequest,
   RedeemTelegramBindingTokenResponse,
 } from "./telegram";
-export type {
-  Autopilot,
-  AutopilotStatus,
-  AutopilotExecutionMode,
-  AutopilotAssigneeType,
-  AutopilotSubscriber,
-  AutopilotSubscriberInput,
-  AutopilotCollaborator,
-  AutopilotCollaboratorsResponse,
-  AutopilotTrigger,
-  AutopilotTriggerKind,
-  AutopilotRun,
-  AutopilotRunStatus,
-  AutopilotRunSource,
-  AutopilotQuotaUsage,
-  WebhookEventFilter,
-  CreateAutopilotRequest,
-  UpdateAutopilotRequest,
-  CreateAutopilotTriggerRequest,
-  UpdateAutopilotTriggerRequest,
-  ListAutopilotsResponse,
-  CronPreviewResponse,
-  GetAutopilotResponse,
-  ListAutopilotRunsResponse,
-  WebhookDelivery,
-  WebhookDeliveryStatus,
-  WebhookSignatureStatus,
-  ListWebhookDeliveriesResponse,
-} from "./autopilot";
-export type {
-  Squad,
-  SquadMember,
-  SquadMemberType,
-  SquadMemberPreview,
-  SquadActivityLog,
-  SquadActivityOutcome,
-  CreateSquadRequest,
-  UpdateSquadRequest,
-  AddSquadMemberRequest,
-  RemoveSquadMemberRequest,
-  UpdateSquadMemberRoleRequest,
-  CreateSquadActivityLogRequest,
-  SquadMemberStatusValue,
-  SquadActiveIssueBrief,
-  SquadMemberStatus,
-  SquadMemberStatusListResponse,
-} from "./squad";
-export type {
-  BillingBalance,
-  BillingTransaction,
-  BillingTransactionsPage,
-  BillingTxType,
-  BillingTxSource,
-  BillingBatch,
-  BillingBatchesPage,
-  BillingBatchSourceType,
-  BillingTopup,
-  BillingTopupsPage,
-  BillingTopupStatus,
-  BillingPriceTier,
-  CreateBillingCheckoutSessionRequest,
-  CreateBillingCheckoutSessionResponse,
-  BillingCheckoutSessionStatus,
-  CreateBillingPortalSessionResponse,
-  WorkspaceSubscriptionInterval,
-  WorkspaceEntitlementLimitMode,
-  WorkspaceEntitlementLimit,
-  WorkspaceSubscriptionEntitlements,
-  WorkspaceSubscriptionSummary,
-  IssueLimitUsage,
-  WorkspaceSeatCapacity,
-  WorkspaceSeatPurchaseSummary,
-  WorkspaceSubscriptionPrice,
-  WorkspaceSubscriptionPrices,
-  CreateWorkspaceSubscriptionCheckoutRequest,
-  CreateWorkspaceSubscriptionCheckoutResponse,
-  PreviewWorkspaceSeatPurchaseRequest,
-  WorkspaceSeatPurchasePreview,
-  PurchaseWorkspaceSeatsRequest,
-  PurchaseWorkspaceSeatsResponse,
-  WorkspaceSubscriptionSeatReconcileResult,
-  CreateWorkspaceSubscriptionPortalResponse,
-} from "./billing";
-export type { IssueWakeup, IssueWakeupInput, SystemWakeup, WorkspaceSystemWakeup, WakeupPreview, IssueWakeupSummaryRow, WakeupCondition, WakeupPausedReason, WakeupRun, PausedWakeup, WakeupSource } from "./issue-wakeup";
-
-export type { WorkspaceWakeup, WorkspaceWakeupPage, WorkspaceWakeupFilters, WakeupScope } from "./issue-wakeup";
+export type { Autopilot, AutopilotStatus, AutopilotExecutionMode, AutopilotAssigneeType, AutopilotCollaborator, AutopilotCollaboratorsResponse, AutopilotTrigger, AutopilotTriggerKind, AutopilotRun, AutopilotRunStatus, AutopilotRunSource, AutopilotQuotaUsage, WebhookEventFilter, CreateAutopilotRequest, UpdateAutopilotRequest, CreateAutopilotTriggerRequest, UpdateAutopilotTriggerRequest, ListAutopilotsResponse, CronPreviewResponse, GetAutopilotResponse, ListAutopilotRunsResponse, WebhookDelivery, WebhookDeliveryStatus, WebhookSignatureStatus, ListWebhookDeliveriesResponse } from "./autopilot";
+export type { BillingBalance, BillingTransaction, BillingTransactionsPage, BillingBatch, BillingBatchesPage, BillingTopup, BillingTopupsPage, BillingPriceTier, CreateBillingCheckoutSessionRequest, CreateBillingCheckoutSessionResponse, BillingCheckoutSessionStatus, CreateBillingPortalSessionResponse, WorkspaceSubscriptionInterval, WorkspaceEntitlementLimit, WorkspaceSubscriptionEntitlements, WorkspaceSubscriptionSummary, WorkspaceSeatCapacity, WorkspaceSeatPurchaseSummary, WorkspaceSubscriptionPrice, WorkspaceSubscriptionPrices, CreateWorkspaceSubscriptionCheckoutRequest, CreateWorkspaceSubscriptionCheckoutResponse, PreviewWorkspaceSeatPurchaseRequest, WorkspaceSeatPurchasePreview, PurchaseWorkspaceSeatsRequest, PurchaseWorkspaceSeatsResponse, WorkspaceSubscriptionSeatReconcileResult, CreateWorkspaceSubscriptionPortalResponse } from "./billing";

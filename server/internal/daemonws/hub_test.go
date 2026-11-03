@@ -17,8 +17,7 @@ import (
 
 func TestNotifyTaskAvailable(t *testing.T) {
 	for eventType, notify := range map[string]func(*Hub, string, string){
-		protocol.EventDaemonTaskAvailable:           (*Hub).NotifyTaskAvailable,
-		protocol.EventDaemonTaskSupplementAvailable: (*Hub).NotifyTaskSupplementAvailable,
+		protocol.EventDaemonTaskAvailable: (*Hub).NotifyTaskAvailable,
 	} {
 		t.Run(eventType, func(t *testing.T) {
 			M.Reset()
@@ -237,8 +236,7 @@ func TestNotifyRuntimeProfilesChangedIndexesAllAuthorizedWorkspaces(t *testing.T
 
 func TestRelayNotifierPublishesDaemonRuntimeScope(t *testing.T) {
 	for eventType, notify := range map[string]func(*RelayNotifier, string, string){
-		protocol.EventDaemonTaskAvailable:           (*RelayNotifier).NotifyTaskAvailable,
-		protocol.EventDaemonTaskSupplementAvailable: (*RelayNotifier).NotifyTaskSupplementAvailable,
+		protocol.EventDaemonTaskAvailable: (*RelayNotifier).NotifyTaskAvailable,
 	} {
 		t.Run(eventType, func(t *testing.T) {
 			M.Reset()
@@ -347,8 +345,7 @@ func TestRelayNotifierPublishesWorkspacesChanged(t *testing.T) {
 
 func TestRelayNotifierDedupsLocalRedisLoopback(t *testing.T) {
 	for eventType, notify := range map[string]func(*RelayNotifier, string, string){
-		protocol.EventDaemonTaskAvailable:           (*RelayNotifier).NotifyTaskAvailable,
-		protocol.EventDaemonTaskSupplementAvailable: (*RelayNotifier).NotifyTaskSupplementAvailable,
+		protocol.EventDaemonTaskAvailable: (*RelayNotifier).NotifyTaskAvailable,
 	} {
 		t.Run(eventType, func(t *testing.T) {
 			M.Reset()

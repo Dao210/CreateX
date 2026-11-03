@@ -186,7 +186,7 @@ describe("WSClient frame validation", () => {
     expect(onAny).not.toHaveBeenCalled();
     expect(onRunning).not.toHaveBeenCalled();
 
-    const payload = { task_id: "task-1", agent_id: "agent-1", issue_id: "issue-1" };
+    const payload = { task_id: "task-1", agent_id: "agent-1", };
     const message = { type: "task:running", payload, actor_id: "actor-1" };
     socket.receive(message);
 

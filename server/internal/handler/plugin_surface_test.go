@@ -208,7 +208,7 @@ func TestPluginSurfaceHostExposesOnlySurfaceDocuments(t *testing.T) {
 }
 
 func TestPluginSurfaceCSPComesOnlyFromGrantedNetScopes(t *testing.T) {
-	csp := pluginSurfaceCSP([]string{"issues:read", "net:api.example.test", "storage:user", "net:evil.test; script-src *"})
+	csp := pluginSurfaceCSP([]string{"tasks:read", "net:api.example.test", "storage:user", "net:evil.test; script-src *"})
 	for _, directive := range []string{
 		"default-src 'none'",
 		"script-src 'unsafe-inline'",
@@ -220,13 +220,13 @@ func TestPluginSurfaceCSPComesOnlyFromGrantedNetScopes(t *testing.T) {
 			t.Fatalf("CSP missing %q: %s", directive, csp)
 		}
 	}
-	if strings.Contains(csp, "issues:read") || strings.Contains(csp, "connect-src https:;") {
+	if strings.Contains(csp, "tasks:read") || strings.Contains(csp, "connect-src https:;") {
 		t.Fatalf("CSP widened beyond net grants: %s", csp)
 	}
 	if strings.Contains(csp, "evil.test") || strings.Contains(csp, "script-src *") {
 		t.Fatalf("invalid stored net scope escaped into CSP: %s", csp)
 	}
-	if noNetwork := pluginSurfaceCSP([]string{"issues:read"}); !strings.Contains(noNetwork, "connect-src 'none'") {
+	if noNetwork := pluginSurfaceCSP([]string{"tasks:read"}); !strings.Contains(noNetwork, "connect-src 'none'") {
 		t.Fatalf("no-network CSP = %s", noNetwork)
 	}
 }

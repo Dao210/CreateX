@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/auro-ai/auro/server/internal/storage"
+	"github.com/auro-ai/auro/server/internal/testutil"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 )
@@ -198,10 +199,10 @@ func serveAvatarRequest(t *testing.T, sig, key string) *httptest.ResponseRecorde
 // have written it: the attachment row's id IS the object filename.
 type avatarObjectOpts struct {
 	contentType string
-	// boundToIssue attaches the row to a real issue — the shape a private
+	// boundToChat attaches the row to a real issue — the shape a private
 	// image attachment has, and the shape that must never become a public
 	// avatar.
-	boundToIssue bool
+	boundToChat bool
 	// foreignWorkspace seeds the object in a freshly created workspace the
 	// fixture user is not a member of.
 	foreignWorkspace bool
@@ -214,8 +215,8 @@ func seedForeignWorkspace(t *testing.T) string {
 	slug := "avatar-foreign-" + uuid.NewString()[:8]
 	var id string
 	if err := testPool.QueryRow(context.Background(), `
-		INSERT INTO workspace (name, slug, description, issue_prefix)
-		VALUES ($1, $1, '', 'AVF')
+		INSERT INTO workspace (name, slug, description)
+		VALUES ($1, $1, '')
 		RETURNING id::text
 	`, slug).Scan(&id); err != nil {
 		t.Fatalf("seed workspace: %v", err)
@@ -240,16 +241,16 @@ func seedAvatarObject(t *testing.T, opts avatarObjectOpts) string {
 	if opts.foreignWorkspace {
 		workspaceID = seedForeignWorkspace(t)
 	}
-	var issueID any
-	if opts.boundToIssue {
-		issueID = seedIssueForAvatarTest(t, workspaceID)
+	var chatID any
+	if opts.boundToChat {
+		chatID = testutil.New(testPool, workspaceID, testUserID).ChatSession(t, dbfx.Agent(t, "Avatar agent", handlerTestRuntimeID(t)))
 	}
 	key := "workspaces/" + workspaceID + "/" + id.String() + ".png"
 	if _, err := testPool.Exec(context.Background(), `
-		INSERT INTO attachment (id, workspace_id, uploader_type, uploader_id, filename, url, content_type, size_bytes, issue_id)
+		INSERT INTO attachment (id, workspace_id, uploader_type, uploader_id, filename, url, content_type, size_bytes, chat_session_id)
 		VALUES ($1, $2, 'member', $3, 'avatar.png', $4, $5, 10, $6)
 	`, id.String(), workspaceID, testUserID,
-		"https://cdn.example.com/"+key, opts.contentType, issueID); err != nil {
+		"https://cdn.example.com/"+key, opts.contentType, chatID); err != nil {
 		t.Fatalf("seed attachment row: %v", err)
 	}
 	t.Cleanup(func() {
@@ -344,7 +345,7 @@ func TestServeAvatar_ProxiesPrivateHostBody(t *testing.T) {
 // is still an issue attachment, so it stays unreachable.
 func TestServeAvatar_RejectsForeignWorkspaceAttachment(t *testing.T) {
 	withAvatarStorage(t, &mockStorageNoCdn{}, "")
-	key := seedAvatarObject(t, avatarObjectOpts{foreignWorkspace: true, boundToIssue: true})
+	key := seedAvatarObject(t, avatarObjectOpts{foreignWorkspace: true, boundToChat: true})
 
 	if w := serveAvatarRequest(t, signAvatarKey(key), key); w.Code != http.StatusNotFound {
 		t.Fatalf("status = %d, want 404 for another workspace's attachment", w.Code)
@@ -403,7 +404,7 @@ func acceptAvatarURL(t *testing.T, raw, current string) (string, int) {
 // the value at all, so the escalation is stopped before anything is persisted.
 func TestAcceptAvatarURL_RejectsBoundAttachment(t *testing.T) {
 	withAvatarStorage(t, &mockStorageNoCdn{}, "")
-	key := seedAvatarObject(t, avatarObjectOpts{boundToIssue: true})
+	key := seedAvatarObject(t, avatarObjectOpts{boundToChat: true})
 
 	_, status := acceptAvatarURL(t, "https://cdn.example.com/"+key, "")
 	if status != http.StatusForbidden {
@@ -433,7 +434,7 @@ func TestAcceptAvatarURL_AcceptsStandaloneUpload(t *testing.T) {
 // resubmit).
 func TestAcceptAvatarURL_AcceptsUnchangedResend(t *testing.T) {
 	withAvatarStorage(t, &mockStorageNoCdn{}, "")
-	key := seedAvatarObject(t, avatarObjectOpts{boundToIssue: true})
+	key := seedAvatarObject(t, avatarObjectOpts{boundToChat: true})
 	raw := "https://cdn.example.com/" + key
 
 	if _, status := acceptAvatarURL(t, raw, raw); status != http.StatusOK {

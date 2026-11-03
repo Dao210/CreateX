@@ -819,6 +819,17 @@ func deleteWorkspaceTasks(ctx context.Context, qtx *db.Queries, workspaceID pgty
 		}
 	}
 
+	if err := sweepTasksForOwner(ctx, "chat", workspaceID,
+		func(ctx context.Context, ws pgtype.UUID, limit int32) ([]pgtype.UUID, error) {
+			return qtx.ListWorkspaceChatTaskIDsFirstPage(ctx, db.ListWorkspaceChatTaskIDsFirstPageParams{WorkspaceID: ws, Limit: limit})
+		},
+		func(ctx context.Context, ws, cursor pgtype.UUID, limit int32) ([]pgtype.UUID, error) {
+			return qtx.ListWorkspaceChatTaskIDsPage(ctx, db.ListWorkspaceChatTaskIDsPageParams{WorkspaceID: ws, ID: cursor, Limit: limit})
+		},
+		qtx.DetachTaskBatchReferences, qtx.DeleteTaskBatch); err != nil {
+		return err
+	}
+
 	return nil
 }
 

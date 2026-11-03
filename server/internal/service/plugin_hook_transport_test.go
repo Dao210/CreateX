@@ -88,18 +88,18 @@ func hookTestInstallation(t *testing.T, endpoint, netScope string, triggers []st
 		"description": "d",
 		"version": "1.0.0",
 		"author": {"name": "example"},
-		"scopes": ["issues:read", "net:%s"],
+		"scopes": ["tasks:read", "net:%s"],
 		"contributes": {"hooks": [{
 			"key": "summarize",
 			"name": "Summarize",
 			"description": "Summarize the thread.",
 			"triggers": %s,
-			"events": ["issue.created"],
+			"events": ["task.completed"],
 			"transport": {"type": "http", "url": "%s"}
 		}]}
 	}`, netScope, string(triggerJSON), endpoint)
 
-	scopes, err := json.Marshal([]string{"issues:read", "net:" + netScope})
+	scopes, err := json.Marshal([]string{"tasks:read", "net:" + netScope})
 	if err != nil {
 		t.Fatalf("marshal scopes: %v", err)
 	}
@@ -194,7 +194,7 @@ func TestHookRefusesWhenNoNetScopeGranted(t *testing.T) {
 	harness := newHookTestServer(t)
 	service := hookTestService(t, harness)
 	installation := hookTestInstallation(t, harness.server.URL+"/hooks/summarize", "example.com", []string{plugincontract.TriggerManual})
-	installation.GrantedScopes = []byte(`["issues:read"]`)
+	installation.GrantedScopes = []byte(`["tasks:read"]`)
 
 	hook, err := FindHook(installation, "summarize")
 	if err != nil {

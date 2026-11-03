@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { act, renderHook, waitFor } from "@testing-library/react";
-import type { Agent, ChatPendingTask, ChatSession, Project } from "@auro/core/types";
+import type { Agent, ChatPendingTask, ChatSession } from "@auro/core/types";
 
 interface QueuedRestore {
   id: string;
@@ -75,7 +75,6 @@ const h = vi.hoisted(() => {
     // useQuery reads these so each test can vary the loaded data.
     sessions: [] as ChatSession[],
     agents: [] as Agent[],
-    projects: [] as Project[],
     pendingTask: null as ChatPendingTask | null,
     draftRestores: null as
       | { restores: { id: string; chat_session_id: string; content: string }[] }
@@ -98,6 +97,10 @@ vi.mock("@auro/core/workspace/queries", () => ({
 // Steerable per test: the invoke rule is what decides whether an OPEN session's
 // agent is still runnable. Default true so every existing case is unaffected.
 const invokableAgentIds = vi.hoisted(() => ({ current: null as string[] | null }));
+vi.mock("@auro/core/permissions", () => ({
+ canChooseChatAgent: (agent: {id:string}) => invokableAgentIds.current === null || invokableAgentIds.current.includes(agent.id),
+}));
+
 vi.mock("@auro/core/api", () => ({
   ApiError: class ApiError extends Error {
     constructor(
@@ -161,13 +164,12 @@ vi.mock("@tanstack/react-query", async (importOriginal) => {
     ...actual,
     useQuery: (options: { queryKey?: unknown[] }) => {
       const key = options.queryKey ?? [];
-      if (key.includes("agents")) return { data: h.agents };
+      if (key.includes("agents")) return { data: h.agents, isSuccess: true };
       if (key.includes("members")) {
-        return { data: [{ user_id: "user-1", role: "admin" }] };
+        return { data: [{ user_id: "user-1", role: "admin" }], isSuccess: true };
       }
       if (key.includes("runtimes")) return { data: [] };
       if (key.includes("sessions")) return { data: h.sessions, isSuccess: true };
-      if (key.includes("projects")) return { data: h.projects, isSuccess: true };
       if (key.includes("pending-task")) return { data: h.pendingTask };
       if (key.includes("draft-restores")) return { data: h.draftRestores };
       return { data: null };
@@ -234,7 +236,6 @@ function setup(
   h.store.selectedProjectId = null;
   h.sessions = sessions;
   h.agents = agents;
-  h.projects = [];
   h.pendingTask = pendingTask;
   const { result } = renderHook(() => useChatController());
   // Ignore any render-time store writes (self-heal etc.); we assert only the

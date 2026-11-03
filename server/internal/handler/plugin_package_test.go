@@ -32,9 +32,9 @@ const packageTestManifest = `{
   "name": "Published Panel",
   "version": "%VERSION%",
   "author": { "name": "example" },
-  "scopes": ["issues:read"],
+  "scopes": ["tasks:read"],
   "contributes": {
-    "surfaces": [{ "key": "hello", "type": "issue_panel", "name": "Hello", "entry": "ui/main.js" }]
+    "surfaces": [{ "key": "hello", "type": "modal", "name": "Hello", "entry": "ui/main.js" }]
   }
 }`
 
@@ -106,7 +106,7 @@ func publishUploadedBundle(t *testing.T, manifest, script string) service.Plugin
 
 func installPublishedVersion(t *testing.T, versionID string) string {
 	t.Helper()
-	body, _ := json.Marshal(map[string]any{"version_id": versionID, "granted_scopes": []string{"issues:read"}})
+	body, _ := json.Marshal(map[string]any{"version_id": versionID, "granted_scopes": []string{"tasks:read"}})
 	recorder := httptest.NewRecorder()
 	testHandler.InstallPlugin(recorder, pluginHandlerRequest(http.MethodPost, "/plugins", body, map[string]string{"id": testWorkspaceID}))
 	if recorder.Code != http.StatusCreated {
@@ -335,7 +335,7 @@ func withHostCapabilities(t *testing.T) {
 	t.Helper()
 	previous := testHandler.PluginService.Host
 	testHandler.PluginService.Host = plugincontract.Capabilities{
-		SurfaceTypes:  map[string]bool{plugincontract.SurfaceIssuePanel: true, plugincontract.SurfaceSidebarPanel: true, plugincontract.SurfaceModal: true},
+		SurfaceTypes:  map[string]bool{plugincontract.SurfaceSidebarPanel: true, plugincontract.SurfaceModal: true},
 		HookTriggers:  map[string]bool{plugincontract.TriggerUI: true, plugincontract.TriggerManual: true, plugincontract.TriggerAgent: true, plugincontract.TriggerEvent: true},
 		HookTransport: map[string]bool{plugincontract.TransportHTTP: true, plugincontract.TransportMCP: true},
 		ResourceTypes: map[string]bool{plugincontract.ResourceSkill: true},

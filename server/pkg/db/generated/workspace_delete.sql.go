@@ -16,6 +16,20 @@ WITH batch AS MATERIALIZED (
     SELECT id FROM unnest($1::uuid[]) AS t(id)
 ),
 
+detached_messages AS (UPDATE chat_message SET task_id=NULL WHERE task_id IN (SELECT id FROM batch)),
+detached_attachments AS (UPDATE attachment SET task_id=NULL WHERE task_id IN (SELECT id FROM batch)),
+detached_runs AS (UPDATE autopilot_run SET task_id=NULL WHERE task_id IN (SELECT id FROM batch)),
+detached_lineage AS (
+ UPDATE agent_task_queue SET
+ parent_task_id=CASE WHEN parent_task_id=ANY($1::uuid[]) THEN NULL ELSE parent_task_id END,
+ retry_of_task_id=CASE WHEN retry_of_task_id=ANY($1::uuid[]) THEN NULL ELSE retry_of_task_id END,
+ chat_input_task_id=CASE WHEN chat_input_task_id=ANY($1::uuid[]) THEN NULL ELSE chat_input_task_id END
+ WHERE (parent_task_id=ANY($1::uuid[]) OR retry_of_task_id=ANY($1::uuid[]) OR chat_input_task_id=ANY($1::uuid[]))
+ AND id NOT IN (SELECT id FROM batch)
+),
+deleted_outbound_messages AS (DELETE FROM channel_outbound_message WHERE task_id IN (SELECT id FROM batch)),
+deleted_reply_deliveries AS (DELETE FROM channel_reply_delivery WHERE task_id IN (SELECT id FROM batch)),
+
 deleted_task_usage AS (
     DELETE FROM task_usage WHERE task_id IN (SELECT id FROM batch)
 ),
@@ -61,7 +75,19 @@ func (q *Queries) DeleteTaskTokensByAgent(ctx context.Context, agentID pgtype.UU
 }
 
 const deleteWorkspaceAdministration = `-- name: DeleteWorkspaceAdministration :exec
-WITH game_overrides_deleted AS (
+WITH life_worlds AS MATERIALIZED (
+    SELECT id FROM life_world WHERE workspace_id = $1
+), removed_life_actions AS (
+    DELETE FROM life_action WHERE world_id IN (SELECT id FROM life_worlds)
+), removed_life_events AS (
+    DELETE FROM life_event WHERE world_id IN (SELECT id FROM life_worlds)
+), removed_life_resources AS (
+    DELETE FROM life_resource WHERE world_id IN (SELECT id FROM life_worlds)
+), removed_life_agents AS (
+    DELETE FROM life_agent WHERE world_id IN (SELECT id FROM life_worlds)
+), removed_life_worlds AS (
+    DELETE FROM life_world WHERE id IN (SELECT id FROM life_worlds)
+), game_overrides_deleted AS (
     DELETE FROM game_world_override WHERE workspace_id = $1
 ),
 
@@ -270,6 +296,10 @@ ws_skills AS MATERIALIZED (
 
 ws_sessions AS MATERIALIZED (
     SELECT id FROM chat_session WHERE workspace_id = $1
+    UNION
+    SELECT binding.chat_session_id FROM channel_chat_session_binding binding
+    JOIN channel_installation installation ON installation.id=binding.installation_id
+    WHERE installation.workspace_id=$1
 ),
 
 ws_autopilots AS MATERIALIZED (
@@ -416,6 +446,10 @@ deleted_channel_inbound_dedup AS (
 deleted_channel_inbound_audit AS (
     DELETE FROM channel_inbound_audit
     WHERE installation_id IN (SELECT id FROM ws_channel_installations)
+),
+
+deleted_labels AS (
+    DELETE FROM label WHERE workspace_id = $1
 ),
 
 deleted_channel_user_bindings AS (
@@ -743,6 +777,67 @@ type ListWorkspaceAgentIDPageParams struct {
 
 func (q *Queries) ListWorkspaceAgentIDPage(ctx context.Context, arg ListWorkspaceAgentIDPageParams) ([]pgtype.UUID, error) {
 	rows, err := q.db.Query(ctx, listWorkspaceAgentIDPage, arg.WorkspaceID, arg.ID, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []pgtype.UUID{}
+	for rows.Next() {
+		var id pgtype.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listWorkspaceChatTaskIDsFirstPage = `-- name: ListWorkspaceChatTaskIDsFirstPage :many
+SELECT t.id FROM agent_task_queue t JOIN chat_session c ON c.id = t.chat_session_id
+WHERE c.workspace_id = $1 ORDER BY t.id LIMIT $2 FOR UPDATE OF t
+`
+
+type ListWorkspaceChatTaskIDsFirstPageParams struct {
+	WorkspaceID pgtype.UUID `json:"workspace_id"`
+	Limit       int32       `json:"limit"`
+}
+
+func (q *Queries) ListWorkspaceChatTaskIDsFirstPage(ctx context.Context, arg ListWorkspaceChatTaskIDsFirstPageParams) ([]pgtype.UUID, error) {
+	rows, err := q.db.Query(ctx, listWorkspaceChatTaskIDsFirstPage, arg.WorkspaceID, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []pgtype.UUID{}
+	for rows.Next() {
+		var id pgtype.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listWorkspaceChatTaskIDsPage = `-- name: ListWorkspaceChatTaskIDsPage :many
+SELECT t.id FROM agent_task_queue t JOIN chat_session c ON c.id = t.chat_session_id
+WHERE c.workspace_id = $1 AND t.id > $2 ORDER BY t.id LIMIT $3 FOR UPDATE OF t
+`
+
+type ListWorkspaceChatTaskIDsPageParams struct {
+	WorkspaceID pgtype.UUID `json:"workspace_id"`
+	ID          pgtype.UUID `json:"id"`
+	Limit       int32       `json:"limit"`
+}
+
+func (q *Queries) ListWorkspaceChatTaskIDsPage(ctx context.Context, arg ListWorkspaceChatTaskIDsPageParams) ([]pgtype.UUID, error) {
+	rows, err := q.db.Query(ctx, listWorkspaceChatTaskIDsPage, arg.WorkspaceID, arg.ID, arg.Limit)
 	if err != nil {
 		return nil, err
 	}

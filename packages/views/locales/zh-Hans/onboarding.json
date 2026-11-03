@@ -144,41 +144,18 @@
     "success_toast": "已加入候补名单。云运行时上线时会通过邮件通知你。",
     "failed_toast": "加入候补名单失败"
   },
-  "welcome_after_onboarding": {
-    "skip": {
-      "loading": "正在为你准备世界...",
-      "title": "欢迎来到织个世界！",
-      "subtitle": "我们建了一个任务帮你连接运行时。准备好后，在 \"运行时\" 页面就能开始使用 Mika。",
-      "got_it": "知道了",
-      "status_in_progress": "进行中",
-      "error_title": "没能帮你准备好",
-      "error_body": "运行时引导任务没有创建成功。可以重试，也可以随时在\"运行时\"页面自己连接。",
-      "retry": "重试",
-      "dismiss": "暂不",
-      "cards": {
-        "install_runtime": {
-          "title": "连接一个运行时",
-          "subtitle": "安装 Codex 或 Kimi，然后从 \"运行时\" 页面进入 Mika 的引导对话。"
-        }
-      }
-    }
-  },
   "step_workspace": {
     "eyebrow_first": "你的第一个世界",
     "eyebrow_resume": "继续，或重新开始",
     "headline_first": "给世界起个名字。",
     "headline_resume": "继续 {{name}}，或新建一个。",
-    "lede_first": "世界是任务、智能体和项目所在的地方。之后可以邀请同事，或再开一个世界。",
+    "lede_first": "世界里有智能体、聊天和创作，你可以随时邀请成员加入。",
     "lede_resume": "用已有的世界继续，或者另建一个新的——你可以同时属于多个世界。",
     "name_label": "世界名称",
     "name_placeholder": "Acme Inc、我的实验室、个人项目...",
     "random_name": "随机",
     "url_label": "URL",
     "slug_placeholder": "acme",
-    "issue_prefix_label": "任务前缀",
-    "issue_prefix_prefix": "任务编号会像这样 ",
-    "issue_prefix_suffix": "。之后可以在设置里修改。",
-    "issue_prefix_pending": "填好上面的 URL，任务编号会跟着它生成；也可以直接在这里输入前缀。",
     "create_new_title": "创建一个新世界",
     "hint_opening": "正在打开 {{name}}。",
     "hint_creating": "正在创建 {{name}}。",
@@ -265,6 +242,6 @@
     "headline": "认识一下 Mika，你的第一个智能体队友。",
     "name": "Mika",
     "role": "参谋长",
-    "blurb": "把你想做的事告诉 Mika，它会变成一个任务，并交给合适的智能体处理。"
+    "blurb": "告诉 Mika 你的目标，在聊天中一起完成。"
   }
 }

@@ -38,7 +38,7 @@ func lockRollupSingleton(t *testing.T) {
 	t.Helper()
 	ctx := context.Background()
 	// Advisory locks are per-session, so pin one connection for the lock's
-	// lifetime (same idiom as internal/taskusagebackfill/backfill.go).
+	// lifetime (same idiom as cmd/backfill_task_usage_hourly/main.go).
 	conn, err := testPool.Acquire(ctx)
 	if err != nil {
 		t.Fatalf("acquire rollup-guard connection: %v", err)

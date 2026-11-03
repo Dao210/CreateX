@@ -2,12 +2,15 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/auro-ai/auro/server/internal/auth"
 	"github.com/auro-ai/auro/server/internal/handler"
 	"github.com/auro-ai/auro/server/internal/testutil"
 )
@@ -130,4 +133,19 @@ func TestAutopilotWritesIgnoreForgedAgentIdentity(t *testing.T) {
 			t.Fatalf("update status = %d, want 200 — the ordering human may write this autopilot", resp.StatusCode)
 		}
 	})
+}
+
+func mintAgentTaskToken(t *testing.T, agentID, taskID, boundUserID string) string {
+	t.Helper()
+	raw := fmt.Sprintf("mat_test_%s_%d", strings.ReplaceAll(agentID, "-", ""), time.Now().UnixNano())
+	if _, err := testPool.Exec(context.Background(), `
+		INSERT INTO task_token (token_hash, task_id, agent_id, workspace_id, user_id, expires_at)
+		VALUES ($1, $2, $3, $4, $5, now() + interval '1 hour')
+	`, auth.HashToken(raw), taskID, agentID, testWorkspaceID, boundUserID); err != nil {
+		t.Fatalf("mint task token: %v", err)
+	}
+	t.Cleanup(func() {
+		testPool.Exec(context.Background(), `DELETE FROM task_token WHERE token_hash = $1`, auth.HashToken(raw))
+	})
+	return raw
 }

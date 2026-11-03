@@ -1,10 +1,9 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { PinnedItem } from "@auro/core/types";
 import { renderWithI18n } from "../test/i18n";
 import { AppSidebar } from "./app-sidebar";
 
-const { agents, detail, deletePin, invitationApi, navigation, pins, sidebarState, summary, workspaces, viewDetails } = vi.hoisted(() => ({
+const { agents, detail, invitationApi, navigation, pins, sidebarState, summary, workspaces, viewDetails } = vi.hoisted(() => ({
   agents: {
     current: [] as {
       id: string;
@@ -24,7 +23,7 @@ const { agents, detail, deletePin, invitationApi, navigation, pins, sidebarState
     invalidateQueries: vi.fn(),
     mutations: [] as Array<Record<string, unknown>>,
   },
-  navigation: { current: { pathname: "/acme/issues", search: "" } },
+  navigation: { current: { pathname: "/acme/me", search: "" } },
   summary: { current: [] as { workspace_id: string; count: number }[] },
   workspaces: {
     current: [] as { id: string; name: string; slug: string; avatar_url: string | null }[],
@@ -41,7 +40,7 @@ const { agents, detail, deletePin, invitationApi, navigation, pins, sidebarState
         position: 0,
         created_at: "2026-05-06T00:00:00Z",
       },
-    ] as PinnedItem[],
+    ],
   },
 }));
 
@@ -130,7 +129,7 @@ vi.mock("@auro/core/paths", async (importOriginal) => ({
   useWorkspacePaths: () => ({
     inbox: () => "/acme/inbox",
     root: () => "/acme/me",
-    issues: () => "/acme/issues",
+    issues: () => "/acme/me",
     projects: () => "/acme/projects",
     autopilots: () => "/acme/autopilots",
     agents: () => "/acme/agents",
@@ -140,8 +139,9 @@ vi.mock("@auro/core/paths", async (importOriginal) => ({
     siege: () => "/acme/siege",
     tanks: () => "/acme/tanks",
     me: () => "/acme/me",
+    life: () => "/acme/life",
     settings: () => "/acme/settings",
-    issueDetail: (id: string) => `/acme/issues/${id}`,
+    issueDetail: (id: string) => `/acme/me/${id}`,
     projectDetail: (id: string) => `/acme/projects/${id}`,
     agentDetail: (id: string) => `/acme/agents/${id}`,
     chatWithAgent: (id: string) => `/acme/chat?agent=${id}`,
@@ -173,8 +173,6 @@ vi.mock("@auro/core/inbox/queries", () => ({
     new Set(entries.filter((s) => s.count > 0).map((s) => s.workspace_id)),
 }));
 vi.mock("@auro/core/modals", () => ({ useModalStore: { getState: () => ({ modal: null, open: vi.fn() }) } }));
-vi.mock("@auro/core/pins/mutations", () => ({ useDeletePin: () => ({ mutate: deletePin }), useReorderPins: () => ({ mutate: vi.fn() }) }));
-vi.mock("@auro/core/pins/queries", () => ({ pinListOptions: () => ({ queryKey: ["pins"] }) }));
 vi.mock("@auro/core/workspace/queries", () => ({
   agentListOptions: (wsId: string) => ({ queryKey: ["agents", wsId] }),
   myInvitationListOptions: () => ({ queryKey: ["invitations"] }),
@@ -204,7 +202,7 @@ vi.mock("@tanstack/react-query", async (importOriginal) => ({
 describe("mobile sheet dismissal", () => {
   beforeEach(() => {
     sidebarState.setOpenMobile.mockClear();
-    navigation.current = { pathname: "/acme/issues", search: "" };
+    navigation.current = { pathname: "/acme/me", search: "" };
   });
 
   it("dismisses the sheet once the route changes", () => {
@@ -304,7 +302,7 @@ describe("navigation item presentation", () => {
     expect(tanks?.textContent).toContain("Tank Defense");
     expect(tanks?.getAttribute("data-active")).toBe("true");
     expect(container.querySelector('button[data-href="/acme/siege"]')?.getAttribute("data-active")).not.toBe("true");
-    navigation.current.pathname = "/acme/issues";
+    navigation.current.pathname = "/acme/me";
   });
 
   it("links the footer profile row to the personal profile page", () => {
@@ -343,7 +341,7 @@ describe("navigation item presentation", () => {
     expect(worldSettings()).not.toHaveAttribute("data-active", "true");
     expect(accountSettings()).toHaveAccessibleName("Ada Lovelace · Account settings");
     expect(accountSettings()).toHaveAttribute("data-active", "true");
-    navigation.current = { pathname: "/acme/issues", search: "" };
+    navigation.current = { pathname: "/acme/me", search: "" };
   });
 });
 
@@ -357,7 +355,7 @@ describe("work group agents", () => {
 
   beforeEach(() => {
     agents.current = [];
-    navigation.current = { pathname: "/acme/issues", search: "" };
+    navigation.current = { pathname: "/acme/me", search: "" };
   });
 
   it("omits the retired chat entry", () => {
@@ -405,7 +403,7 @@ describe("Pending invitation self-heal", () => {
     invitationApi.mutations.length = 0;
     invitationApi.accept.mockRejectedValue(new Error("invitation is not pending"));
     invitationApi.decline.mockRejectedValue(new Error("invitation is not pending"));
-    navigation.current.pathname = "/acme/issues";
+    navigation.current.pathname = "/acme/me";
     workspaces.current = [];
   });
 
@@ -432,3 +430,9 @@ describe("Pending invitation self-heal", () => {
     expect(invitationApi.decline).toHaveBeenCalledTimes(1);
   });
 });
+
+
+vi.mock("@auro/core/admin", async (importOriginal) => ({
+ ...(await importOriginal<typeof import("@auro/core/admin")>()),
+ useWorldGames: () => ({data:{games:["tanks","siege","life"].map(gameId=>({gameId,available:true,visible:true}))}}),
+}));

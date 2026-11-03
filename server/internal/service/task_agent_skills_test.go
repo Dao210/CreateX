@@ -241,3 +241,7 @@ func TestLoadAgentSkillBundles_FailsClosedOnReadFailure(t *testing.T) {
 		t.Fatalf("returned %d bundles / %d refs alongside an error, want none", len(bundles), len(refs))
 	}
 }
+
+type noRow struct{}
+
+func (noRow) Scan(...any) error { return pgx.ErrNoRows }

@@ -10,7 +10,7 @@ import { chatKeys, taskMessagesOptions, useTaskMessages } from "./queries";
 vi.mock("../api", () => ({ api: { listTaskMessages: vi.fn() } }));
 afterEach(() => { cleanup(); vi.clearAllMocks(); });
 const id = "4a2e8d1c-7f9b-4e2a-9c1d-123456789abc";
-const msg = (seq: number): TaskMessagePayload => ({ task_id: id, issue_id: "issue", type: "text", content: `part${seq}`, seq });
+const msg = (seq: number): TaskMessagePayload => ({ task_id: id, type: "text", content: `part${seq}`, seq });
 
 describe("useTaskMessages", () => {
   it("defers historical transcript requests and backfills cached data when opened", async () => {

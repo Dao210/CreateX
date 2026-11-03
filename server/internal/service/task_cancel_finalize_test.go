@@ -49,10 +49,10 @@ func createCancelFinalizeFixture(t *testing.T, ctx context.Context, pool *pgxpoo
 
 	var workspaceID string
 	if err := pool.QueryRow(ctx, `
-		INSERT INTO workspace (name, slug, description, issue_prefix)
-		VALUES ($1, $2, $3, $4)
+		INSERT INTO workspace (name, slug, description)
+		VALUES ($1, $2, $3)
 		RETURNING id
-	`, "Cancel Finalize Test", slug, "temporary cancel finalize test workspace", "CFT").Scan(&workspaceID); err != nil {
+	`, "Cancel Finalize Test", slug, "temporary cancel finalize test workspace").Scan(&workspaceID); err != nil {
 		t.Fatalf("create workspace: %v", err)
 	}
 	if _, err := pool.Exec(ctx, `

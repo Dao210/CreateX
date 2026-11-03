@@ -84,10 +84,10 @@ func TestHandleTask_LogsFullTaskIDSoConcurrentRunsStayDistinct(t *testing.T) {
 
 	for _, id := range []string{collidingTaskIDA, collidingTaskIDB} {
 		d.handleTask(context.Background(), Task{
-			ID:        id,
-			RuntimeID: "rt-1",
-			IssueID:   "issue-log-correlation",
-			Agent:     &AgentData{Name: "test-agent"},
+			ID:            id,
+			RuntimeID:     "rt-1",
+			ChatSessionID: "issue-log-correlation",
+			Agent:         &AgentData{Name: "test-agent"},
 		}, 0)
 	}
 

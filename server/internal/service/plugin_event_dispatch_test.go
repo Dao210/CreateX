@@ -44,7 +44,7 @@ func TestEventDispatchNeverBlocksThePublisher(t *testing.T) {
 
 	started := time.Now()
 	bus.Publish(events.Event{
-		Type:        protocol.EventIssueCreated,
+		Type:        protocol.EventTaskCompleted,
 		WorkspaceID: "00000000-0000-4000-8000-000000000001",
 		ActorType:   "member",
 		Payload:     map[string]any{"issue": map[string]any{"id": "00000000-0000-4000-8000-000000000002"}},
@@ -72,9 +72,9 @@ func TestEventDispatchShedsLoadRatherThanGrowingWithoutBound(t *testing.T) {
 	// Well past the queue depth. Every call must return, none may panic, and
 	// Dispatch must stay safe after the pool has stopped.
 	for i := 0; i < dispatchQueueDepth*3; i++ {
-		dispatcher.Dispatch(plugincontract.EventIssueCreated, "00000000-0000-4000-8000-000000000001", nil)
+		dispatcher.Dispatch(plugincontract.EventTaskCompleted, "00000000-0000-4000-8000-000000000001", nil)
 	}
-	dropped := dispatcher.Dropped()
+	dropped := dispatcher.dropped
 	if dropped == 0 {
 		t.Fatal("nothing was dropped past the queue depth — the queue is unbounded")
 	}
@@ -86,7 +86,7 @@ func TestEventDispatchShedsLoadRatherThanGrowingWithoutBound(t *testing.T) {
 
 // The bus vocabulary and the plugin vocabulary are deliberately separate. This
 // pins the mapping, including the one event that has no internal equivalent:
-// issue.status_changed is derived from an issue:updated carrying
+// task.started is derived from an issue:updated carrying
 // status_changed=true, so a plugin can subscribe to the specific thing it cares
 // about instead of filtering every field change itself.
 func TestEventBridgeMapsInternalEventsToThePublishedVocabulary(t *testing.T) {
@@ -95,26 +95,11 @@ func TestEventBridgeMapsInternalEventsToThePublishedVocabulary(t *testing.T) {
 	SubscribePluginEvents(bus, recordingSink(func(eventType string) { seen = append(seen, eventType) }))
 
 	workspace := "00000000-0000-4000-8000-000000000001"
-	bus.Publish(events.Event{Type: protocol.EventIssueCreated, WorkspaceID: workspace})
-	bus.Publish(events.Event{Type: protocol.EventCommentCreated, WorkspaceID: workspace})
 	bus.Publish(events.Event{Type: protocol.EventTaskRunning, WorkspaceID: workspace})
 	bus.Publish(events.Event{Type: protocol.EventTaskCompleted, WorkspaceID: workspace})
 	bus.Publish(events.Event{Type: protocol.EventTaskFailed, WorkspaceID: workspace})
-	// A plain field edit is issue.updated only.
-	bus.Publish(events.Event{Type: protocol.EventIssueUpdated, WorkspaceID: workspace, Payload: map[string]any{"title_changed": true}})
-	// A status change is BOTH, so a subscriber to either sees it.
-	bus.Publish(events.Event{Type: protocol.EventIssueUpdated, WorkspaceID: workspace, Payload: map[string]any{"status_changed": true}})
+	want := []string{plugincontract.EventTaskStarted, plugincontract.EventTaskCompleted, plugincontract.EventTaskFailed}
 
-	want := []string{
-		plugincontract.EventIssueCreated,
-		plugincontract.EventCommentCreated,
-		plugincontract.EventTaskStarted,
-		plugincontract.EventTaskCompleted,
-		plugincontract.EventTaskFailed,
-		plugincontract.EventIssueUpdated,
-		plugincontract.EventIssueUpdated,
-		plugincontract.EventIssueStatusChanged,
-	}
 	if len(seen) != len(want) {
 		t.Fatalf("dispatched %v, want %v", seen, want)
 	}
@@ -150,7 +135,7 @@ func TestEventDispatchStampsThePluginActor(t *testing.T) {
 		Installation: installation,
 		Hook:         hook,
 		Trigger:      plugincontract.TriggerEvent,
-		EventType:    plugincontract.EventIssueCreated,
+		EventType:    plugincontract.EventTaskCompleted,
 		Actor:        HookActor{Type: "plugin", ID: installation.ID},
 	}); err != nil {
 		t.Fatalf("event hook call: %v", err)
@@ -164,8 +149,8 @@ func TestEventDispatchStampsThePluginActor(t *testing.T) {
 	if body.Actor.Type != "plugin" {
 		t.Fatalf("actor.type = %q, want plugin: an event hook has no person behind it", body.Actor.Type)
 	}
-	if body.EventType != plugincontract.EventIssueCreated {
-		t.Fatalf("event_type = %q, want %q", body.EventType, plugincontract.EventIssueCreated)
+	if body.EventType != plugincontract.EventTaskCompleted {
+		t.Fatalf("event_type = %q, want %q", body.EventType, plugincontract.EventTaskCompleted)
 	}
 	if body.Trigger != plugincontract.TriggerEvent {
 		t.Fatalf("trigger = %q, want event", body.Trigger)
@@ -235,7 +220,7 @@ func TestEventDispatchTreatsMissingFlagsAsDisabled(t *testing.T) {
 	t.Cleanup(dispatcher.Close)
 	dispatcher.runGuarded(dispatchJob{
 		installation: db.PluginInstallation{WorkspaceID: testInstallationID(t)},
-		eventType:    plugincontract.EventIssueCreated,
+		eventType:    plugincontract.EventTaskCompleted,
 	})
 
 	select {
@@ -269,7 +254,7 @@ func TestPublishingDoesNotParseThePayload(t *testing.T) {
 	SubscribePluginEvents(bus, recordingSink(func(string) {}))
 
 	bus.Publish(events.Event{
-		Type:        protocol.EventIssueCreated,
+		Type:        protocol.EventTaskCompleted,
 		WorkspaceID: "00000000-0000-4000-8000-000000000001",
 		Payload:     countingPayload{marshals: &marshals},
 	})

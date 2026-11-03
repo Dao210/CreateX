@@ -1,150 +1,4 @@
 {
-  "issue_statuses": {
-    "title": "タスクステータス",
-    "loading": "ステータスを読み込み中…",
-    "add": "ステータスを追加",
-    "show_archived": "アーカイブ済みを表示（{{count}}）",
-    "archived_badge": "アーカイブ済み",
-    "archived_hint": "新規の割り当てには使えません。すでにこのステータスのタスクはそのままです。",
-    "reorder_failed": "並び順を保存できませんでした。",
-    "actions": {
-      "move_up": "上に移動",
-      "move_down": "下に移動",
-      "open": "{{name}} の操作",
-      "edit": "編集",
-      "archive": "アーカイブ",
-      "reorder": "{{name}} を並べ替え"
-    },
-    "reorder_hint": "カテゴリ内でドラッグすると、ボード・一覧・メニューの順序が変わります。",
-    "built_in_dialog": {},
-    "editor": {
-      "create_title": "新しいステータス",
-      "edit_title": "ステータスを編集",
-      "name": "名前",
-      "name_placeholder": "例: Code Review",
-      "key_hint": "API と CLI では {{key}} として参照されます。",
-      "created": "ステータスを作成しました。API と CLI では {{key}} として参照されます。",
-      "category": "カテゴリ",
-      "category_locked": "ステータスの作成後はカテゴリを変更できません。",
-      "description": "説明",
-      "description_placeholder": "チームにとってこのステータスが意味すること",
-      "color": "色",
-      "icon": "アイコンの形",
-      "icon_shapes": {
-        "default": "デフォルト",
-        "dotted": "点線の円",
-        "circle": "円",
-        "half": "半分塗りつぶし",
-        "three_quarters": "4分の3塗りつぶし",
-        "check": "チェック",
-        "slash": "斜線",
-        "cross": "バツ"
-      },
-      "cancel": "キャンセル",
-      "save": "保存",
-      "saving": "保存中…",
-      "save_failed": "ステータスを保存できませんでした。"
-    },
-    "archive_dialog": {
-      "retry": "アーカイブを再試行",
-      "title": "このステータスをアーカイブしますか？",
-      "description": "「{{name}}」のすべてのタスクを別のステータスに移動してください。空になってからアーカイブすると、ボードとステータスの選択肢から削除されます。",
-      "in_use_title": "アーカイブ前にタスクを移動",
-      "in_use": "このステータスを使用中のタスクは {{count}} 件です。完了・キャンセル済みのタスクも別のステータスに移動してから、もう一度お試しください。",
-      "view_issues": "タスクを表示",
-      "archiving": "アーカイブ中...",
-      "cancel": "キャンセル",
-      "confirm": "アーカイブ",
-      "failed": "アーカイブできませんでした。"
-    },
-    "category_labels": {
-      "unstarted": "未着手",
-      "started": "開始済み",
-      "done": "完了",
-      "closed": "終了"
-    },
-    "categories": {
-      "unstarted": "バックログや計画済みを含む、まだ始まっていない作業。",
-      "started": "進行中、レビュー中、またはブロック中の作業。",
-      "done": "完了した作業。",
-      "closed": "完了しないことになった作業。"
-    },
-    "built_in_descriptions": {
-      "backlog": "保留。ここに移動してもエージェントは起動しません。",
-      "todo": "待機中。ここに移動すると担当エージェントが起動します。",
-      "in_progress": "作業中。",
-      "in_review": "納品済み、レビュー待ち。オートパイロットの実行を完了します。",
-      "blocked": "外部依存でブロック中。",
-      "done": "完了。",
-      "cancelled": "見送り。"
-    },
-    "pr_auto_complete_badge": "PR のマージで自動設定",
-    "built_in_locked": "組み込みステータスはシステムの動作に使われるため、編集やアーカイブはできません。並び順は変更できます。"
-  },
-  "wakeups": {
-    "description": "すべてのタスクに適用されるプラットフォームのルールです。各タスクの「ウェイクアップ」セクションで個別に変更できます。",
-    "child_done_title": "サブタスクが終わったとき",
-    "child_done_description": "あるステージが終わり、後のステージが待っているときに親タスクの担当者を起こし、すべてのサブタスクが終わったときにもう一度起こします。担当者がメンバーの場合は受信トレイに通知します。",
-    "enabled": "既定でオン",
-    "instruction": "既定の指示",
-    "instruction_hint": "起こしたエージェントに送られます。空欄のままなら下の組み込みの指示を使います。",
-    "instruction_placeholder": "空欄なら組み込みの指示を使います",
-    "builtin": "組み込みの指示",
-    "instruction_invalid": "指示は 4,000 バイト以内にしてください。",
-    "save": "保存",
-    "saving": "保存中…",
-    "save_error": "既定値を保存できませんでした。",
-    "customized_other": "進行中の {{count}} 件のタスクが個別の設定を使っており、この既定値に従いません。",
-    "admin_only": "既定値を変更できるのはオーナーと管理者だけです。",
-    "load_error": "ウェイクアップの既定値を読み込めませんでした。"
-  },
-  "quick_actions": {
-    "title": "クイックアクション",
-    "description": "タスクのサイドバーから、設定済みのエージェントとプロンプトを実行します。",
-    "add": "クイックアクションを作成",
-    "search_placeholder": "クイックアクションを検索",
-    "loading": "クイックアクションを読み込んでいます…",
-    "no_results": "一致するクイックアクションはありません",
-    "actions_open": "「{{name}}」のアクションメニューを開く",
-    "columns": {
-      "name": "名前",
-      "target": "実行者",
-      "visibility": "公開範囲",
-      "usage": "使用回数",
-      "updated": "更新日"
-    },
-    "empty_title": "クイックアクションがありません",
-    "empty_hint": "例：コードレビューやテストの作成。",
-    "archived": "アーカイブ済み",
-    "visibility_public": "チーム",
-    "visibility_private": "自分のみ",
-    "visibility_public_hint": "ワールドの全員",
-    "visibility_private_hint": "自分だけ",
-    "field_visibility": "使用できる範囲",
-    "public_target_hint": "全員が実行できるエージェントのみ指定できます。",
-    "target_private": "非公開",
-    "target_missing": "実行者が利用できません",
-    "archive": "アーカイブ",
-    "unarchive": "復元",
-    "edit": "編集",
-    "delete": "削除",
-    "cancel": "キャンセル",
-    "save": "保存",
-    "never_used": "未使用",
-    "used_count": "{{count}} 回使用",
-    "create_title": "クイックアクションを作成",
-    "edit_title": "クイックアクションを編集",
-    "dialog_description": "@メンションと同じく、タスクのコメントとして実行されます。",
-    "field_name": "名前",
-    "field_name_placeholder": "コードレビュー",
-    "field_target": "実行者",
-    "field_prompt": "プロンプト",
-    "field_prompt_placeholder": "このタスクに関連するコードをレビューし、正確性とエッジケースを重点的に確認してください。",
-    "prompt_hint": "そのまま送られます。タスクの内容は既に読めます。",
-    "template_not_supported": "変数はまだサポートされていません。{{token}} を削除してください。エージェントはこのタスクを既に読めます。",
-    "delete_title": "このクイックアクションを削除しますか？",
-    "delete_description": "すべてのタスクのサイドバーから消えます。過去の記録は実行ログに残ります。後で使う可能性があればアーカイブを選んでください。"
-  },
   "auto_save": {
     "saving": "保存中…",
     "saved": "保存済み",
@@ -186,14 +40,7 @@
     },
     "comments_title": "コメントとチャット",
     "region_title": "言語と地域",
-    "appearance_title": "外観",
-    "issue_fields_title": "タスク作成時に表示するフィールド",
-    "issue_fields": {
-      "field": "フィールド",
-      "quick": "エージェントで作成",
-      "manual": "手動作成",
-      "unsupported": "エージェントでの作成では使用できません"
-    }
+    "appearance_title": "外観"
   },
   "shortcuts": {
     "title": "キーボードショートカット",
@@ -229,10 +76,6 @@
         "label": "検索を開く",
         "description": "コンテンツの検索やコマンドの実行。"
       },
-      "createIssue": {
-        "label": "タスクを作成",
-        "description": "優先するタスク作成フローを開きます。"
-      },
       "toggleSidebar": {
         "label": "左サイドバーを切り替え",
         "description": "左サイドバーの表示を切り替えます。"
@@ -240,10 +83,6 @@
       "toggleRightSidebar": {
         "label": "右サイドバーを切り替え",
         "description": "右サイドバーのあるページで使用できます。"
-      },
-      "findInIssue": {
-        "label": "タスク内を検索",
-        "description": "開いているタスクの詳細を検索します。"
       },
       "archiveInboxItem": {
         "label": "通知をアーカイブ",
@@ -268,14 +107,6 @@
       "goChat": {
         "label": "チャットへ移動",
         "description": "ワールドのチャットを開きます。"
-      },
-      "goIssues": {
-        "label": "タスクへ移動",
-        "description": "タスク一覧を開きます。"
-      },
-      "goProjects": {
-        "label": "プロジェクトへ移動",
-        "description": "プロジェクト一覧を開きます。"
       },
       "goAutopilots": {
         "label": "自動化へ移動",
@@ -315,25 +146,6 @@
       "close_dialog": "ダイアログまたはメニューを閉じる"
     }
   },
-  "issue": {
-    "opening": {
-      "title": "タスクを開く",
-      "click": "カードや行をクリックしたときに開く画面",
-      "page": "ページ全体",
-      "peek": "サイドプレビュー",
-      "hint": "Shift+クリックでもう一方で開きます。"
-    },
-    "description": "各作成ダイアログのツールバーに常時表示するフィールドを選択します。非表示のフィールドは ⋯ メニューから引き続き使用でき、値がある間は自動的に表示されます。",
-    "fields": {
-      "status": "ステータス",
-      "priority": "優先度",
-      "assignee": "担当者",
-      "labels": "ラベル",
-      "project": "プロジェクト",
-      "due_date": "期限",
-      "start_date": "開始日"
-    }
-  },
   "mcp": {
     "description": "追加後、エージェントの MCP タブで割り当てます。",
     "servers_title": "共有サーバー",
@@ -371,17 +183,12 @@
       "profile": "プロフィール",
       "preferences": "環境設定",
       "shortcuts": "ショートカット",
-      "issue": "タスク",
       "notifications": "通知",
       "tokens": "API トークン",
       "general": "一般",
       "labs": "ラボ",
       "members": "メンバー",
       "labels": "ラベル",
-      "issue_statuses": "タスクステータス",
-      "wakeups": "ウェイクアップ",
-      "properties": "プロパティ",
-      "quick_actions": "クイックアクション",
       "plugins": "プラグイン",
       "mcp": "MCP サーバー",
       "billing": "請求とプラン",
@@ -454,10 +261,6 @@
       "secret_set": "保存済み — 新しい値を入力すると置き換わります"
     },
     "scopes": {
-      "issues_read": "タスクを読み取る",
-      "issues_write": "タスクを作成・編集する",
-      "comments_read": "コメントを読み取る",
-      "comments_write": "コメントを投稿する",
       "tasks_read": "エージェントの実行を読み取る",
       "tasks_write": "エージェントの実行を開始・更新する",
       "agents_read": "agent 一覧を読み取る",
@@ -492,79 +295,11 @@
       "review_upgrade": "確認してアップグレード"
     }
   },
-  "properties": {
-    "title": "プロパティ",
-    "description": "タスクにカスタム項目を追加します。",
-    "search_placeholder": "名前で絞り込み...",
-    "new_property": "新規プロパティ",
-    "show_archived": "アーカイブ済みを表示",
-    "columns": {
-      "name": "名前",
-      "type": "タイプ",
-      "options": "オプション",
-      "usage": "使用数",
-      "updated": "更新日時"
-    },
-    "usage_count_other": "{{count}} 件のタスク",
-    "loading": "プロパティを読み込み中...",
-    "empty": "プロパティはまだありません",
-    "empty_hint": "例：重大度、環境。",
-    "no_results": "一致するプロパティがありません",
-    "save_failed": "プロパティを保存できませんでした",
-    "limit_hint": "{{count}}/{{max}} 個の有効なプロパティ",
-    "archived_badge": "アーカイブ済み",
-    "types": {
-      "text": "テキスト",
-      "number": "数値",
-      "select": "選択",
-      "multi_select": "複数選択",
-      "date": "日付",
-      "checkbox": "チェックボックス",
-      "url": "URL",
-      "actor": "メンバー",
-      "multi_actor": "メンバー（複数選択）"
-    },
-    "actions": {
-      "open": "{{name}} の操作",
-      "edit": "編集",
-      "archive": "アーカイブ",
-      "unarchive": "復元"
-    },
-    "editor": {
-      "create_title": "新規プロパティ",
-      "edit_title": "プロパティを編集",
-      "admin_hint": "プロパティ定義を管理できるのはワールドのオーナーと管理者のみです。",
-      "icon": "アイコン",
-      "choose_icon": "アイコンを選択",
-      "remove_icon": "アイコンを削除",
-      "name": "名前",
-      "name_placeholder": "例: Severity",
-      "type": "タイプ",
-      "type_locked_hint": "作成後にタイプは変更できません。",
-      "description": "説明",
-      "description_placeholder": "このプロパティの意味と設定するタイミング",
-      "options": "オプション",
-      "option_name_placeholder": "オプション名",
-      "add_option": "オプションを追加",
-      "remove_option": "オプションを削除",
-      "cancel": "キャンセル",
-      "save": "プロパティを保存",
-      "saving": "保存中..."
-    },
-    "archive_dialog": {
-      "title": "プロパティをアーカイブしますか？",
-      "description": "「{{name}}」はピッカーとフィルターから非表示になります。タスク上の既存の値は保持され、後で復元できます。",
-      "cancel": "キャンセル",
-      "confirm": "プロパティをアーカイブ",
-      "failed": "プロパティをアーカイブできませんでした"
-    }
-  },
   "labels": {
     "title": "ラベル",
-    "description": "タスクと skill のラベルは別々です。",
     "scopes": {
-      "issue": "タスク",
-      "skill": "Skill"
+      "skill": "Skill",
+      "agent": "エージェント"
     },
     "search_placeholder": "名前または説明で絞り込み...",
     "new_label": "新しいラベル",
@@ -751,7 +486,7 @@
   },
   "delete_workspace_dialog": {
     "title": "ワールドを削除",
-    "description": "この操作は元に戻せません。すべてのタスク、エージェント、チャット、実行履歴が完全に削除されます。",
+    "description": "元に戻せません。このワールドのエージェント、チャット、作品、実行履歴が完全に削除されます。",
     "type_to_confirm_prefix": "確認するには、下に",
     "type_to_confirm_suffix": " と入力してください。",
     "cancel": "キャンセル",

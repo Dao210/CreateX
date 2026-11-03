@@ -2040,14 +2040,9 @@ type claimBuildFailure struct {
 //     exactly as the chat-input load does (MUL-4351). This is the reachable
 //     case and the one worth fixing.
 //   - The row is GONE (ErrNoRows). Cancel: the task can never run, and
-//     preserving it would spin in the reclaim loop forever. Legacy FKs
-//     currently keep every one of these states from arising —
-//     agent_task_queue.issue_id ON DELETE CASCADE,
-//     agent_task_queue.chat_session_id ON DELETE SET NULL, and
-//     autopilot_run.autopilot_id ON DELETE CASCADE feeding
-//     agent_task_queue.autopilot_run_id ON DELETE SET NULL — so this branch is
-//     defensive. It is what protects the claim path when those FKs are dropped
-//     for the repo's no-FK rule.
+//     preserving it would spin in the reclaim loop forever. Application-level
+//     deletion cleans dependents transactionally; this guard also handles
+//     missing source data without relying on foreign keys.
 func (h *Handler) rejectClaimSourceLoad(ctx context.Context, task *db.AgentTaskQueue, err error, source, sourceID string) *claimBuildFailure {
 	if errors.Is(err, pgx.ErrNoRows) {
 		slog.Error("task claim: source row is missing; cancelling task",
@@ -2250,14 +2245,9 @@ func (h *Handler) buildClaimedTaskResponse(r *http.Request, task *db.AgentTaskQu
 		resp.DispatchedAt = &generation
 		resp.StartClaimSupported = true
 	}
-	// Claim-only capability: this server resolves the squad-leader role on the
-	// wire (is_leader_task / squad_id), so the daemon must not re-derive it
-	// from the briefing text. Set unconditionally — on every claim, leader or
-	// not — because its absence is what tells an upgraded daemon it is talking
-	// to a server too old to have answered the question (MUL-5811).
 	// Agent-trigger plugin hooks, as tools. A failure here degrades to no
 	// tools rather than failing the claim: a plugin that cannot be listed must
-	// not stop an agent from working on the issue.
+	// not stop an agent from executing the run.
 	if h.PluginService != nil && h.pluginsV1Enabled(r.Context()) {
 		if tools, toolErr := h.PluginService.AgentHookTools(r.Context(), parseUUID(runtimeWorkspaceID)); toolErr != nil {
 			slog.Warn("plugins: could not list agent hook tools", "workspace_id", runtimeWorkspaceID, "error", toolErr)
@@ -2500,14 +2490,6 @@ func (h *Handler) buildClaimedTaskResponse(r *http.Request, task *db.AgentTaskQu
 		}
 		resp.ChatSessionID = uuidToString(cs.ID)
 		resp.ThreadName = cs.Title
-		// Legacy compatibility: agent creation no longer creates intro chats,
-		// but historical is_agent_intro sessions can still be resumed. Such a
-		// session carries no user message on its opening turn, so flag it for
-		// the historical self-introduction prompt (MUL-4230). The column stays true for the
-		// session's whole life, so gate the intro prompt on the session still
-		// having zero human messages — otherwise every follow-up turn after the
-		// creator replies would re-run the "introduce yourself" prompt and the
-		// agent keeps repeating the same introduction (MUL-4259).
 
 		// A task-level delivery snapshot, not the Chat's historical binding,
 		// decides whether this run is operating for an external audience.
@@ -2705,7 +2687,7 @@ func (h *Handler) buildClaimedTaskResponse(r *http.Request, task *db.AgentTaskQu
 		// same transaction as the task, so this only fires on genuinely
 		// corrupt state — cancel the just-dispatched task and reject the claim
 		// rather than run the agent with nothing to answer (MUL-4351).
-		if task.ChatInputTaskID.Valid && !resp.ChatIntro && strings.TrimSpace(resp.ChatMessage) == "" {
+		if task.ChatInputTaskID.Valid && strings.TrimSpace(resp.ChatMessage) == "" {
 			slog.Error("chat claim: task-owned direct task has no user input; cancelling",
 				"task_id", uuidToString(task.ID),
 				"chat_session_id", uuidToString(cs.ID),
@@ -4258,10 +4240,7 @@ func (h *Handler) GetAutopilotRunGCCheck(w http.ResponseWriter, r *http.Request)
 	})
 }
 
-// GetTaskGCCheck returns the agent_task_queue status for quick-create cleanup.
-// Quick-create tasks have no parent record (no issue_id at WriteGCMeta time,
-// no chat session, no autopilot run) so the daemon keys GC directly on the
-// task row itself.
+// GetTaskGCCheck returns execution status for workdir retention checks.
 func (h *Handler) GetTaskGCCheck(w http.ResponseWriter, r *http.Request) {
 	taskID := chi.URLParam(r, "taskId")
 	task, ok := h.requireDaemonTaskAccess(w, r, taskID)

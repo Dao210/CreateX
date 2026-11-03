@@ -32,12 +32,8 @@
   },
   "notifications": {
     "title": "通知",
-    "issues": "任务",
     "inbox": "收件箱",
     "chat": "聊天",
-    "mentions": "提及",
-    "assignments": "分配给我的",
-    "status_changes": "状态变更",
     "saved": "通知设置已保存"
   },
   "workspace": {
@@ -66,15 +62,6 @@
   },
   "email_fixed": "邮箱在注册时设置，无法在这里修改。",
   "groups": {
-    "assignments": "分配给我的",
-    "assignments_description": "任务分配给我或取消分配给我时。",
-    "status_changes": "状态变更",
-    "comments": "评论",
-    "comments_description": "你订阅的任务有新评论时。",
-    "mentions": "提及",
-    "mentions_description": "有人用 @ 提到你时，包括 @all 和 @squad。",
-    "updates": "任务更新",
-    "updates_description": "标题、描述、标签、优先级或截止日期变更时。",
     "agent_activity": "智能体动态",
     "agent_activity_description": "智能体运行失败时。",
     "inbox_notifications": "收件箱通知",
@@ -84,7 +71,5 @@
     "creation_updates": "创作进展",
     "world_digests": "世界摘要",
     "world_description": "包含当前世界所有成员的公开创作和居民里程碑。"
-  },
-  "groups.assignments_description": "任务分配给我或取消分配给我时。",
-  "groups.mentions_description": "有人用 @ 提到你时，包括 @all 和 @squad。"
+  }
 }

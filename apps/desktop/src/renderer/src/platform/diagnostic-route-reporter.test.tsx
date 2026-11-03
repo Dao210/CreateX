@@ -44,7 +44,7 @@ beforeEach(() => {
   overlayState.overlay = null;
   tabState.slug = "acme";
   tabState.tabId = "tab-1";
-  tabState.url = "/acme/issues";
+  tabState.url = "/acme/me";
   Object.defineProperty(window, "desktopAPI", {
     configurable: true,
     value: { setRendererRouteContext },
@@ -61,7 +61,7 @@ describe("DiagnosticRouteReporter", () => {
 
     expect(setRendererRouteContext).toHaveBeenCalledWith({
       surface: "tab",
-      path: "/:slug/issues",
+      path: "/:slug/me",
     });
   });
 
@@ -76,15 +76,15 @@ describe("DiagnosticRouteReporter", () => {
   it("publishes the same route to the in-renderer freeze watchdog", () => {
     render(<DiagnosticRouteReporter />);
 
-    expect(getDiagnosticRoute()).toBe("/:slug/issues");
+    expect(getDiagnosticRoute()).toBe("/:slug/me");
   });
 
-  it("keeps the issue id out of telemetry", () => {
-    tabState.url = "/acme/issues/8db920bc-f982-4d38-95f3-56ec43cbefa8";
+  it("keeps the agent id out of telemetry", () => {
+    tabState.url = "/acme/agents/8db920bc-f982-4d38-95f3-56ec43cbefa8";
 
     render(<DiagnosticRouteReporter />);
 
-    expect(getDiagnosticRoute()).toBe("/:slug/issues/:id");
+    expect(getDiagnosticRoute()).toBe("/:slug/agents/:id");
   });
 
   it("reports the login surface before a user exists", () => {

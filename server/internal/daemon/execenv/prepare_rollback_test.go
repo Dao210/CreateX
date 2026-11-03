@@ -47,8 +47,8 @@ func TestPrepareRollsBackSidecarsWhenPrepareFailsInPlace(t *testing.T) {
 		LocalWorkDir:   userDir,
 		McpConfig:      json.RawMessage(`{"fetch":{"command":"uvx","args":["mcp-server-fetch"]}}`),
 		Task: TaskContextForEnv{
-			IssueID: "11111111-2222-3333-4444-555555555555",
-			AgentID: "99999999-8888-7777-6666-555555555555",
+			ChatSessionID: "11111111-2222-3333-4444-555555555555",
+			AgentID:       "99999999-8888-7777-6666-555555555555",
 		},
 	}, testLogger())
 	if err == nil {
@@ -103,9 +103,9 @@ func TestPrepareRollsBackWhenWriteContextFilesFailsAfterMarker(t *testing.T) {
 		AgentName:      "Test Agent",
 		LocalWorkDir:   userDir,
 		Task: TaskContextForEnv{
-			IssueID:     "33333333-4444-5555-6666-777777777777",
-			AgentID:     "77777777-6666-5555-4444-333333333333",
-			AgentSkills: []SkillContextForEnv{{Name: "Go Conventions", Content: "Follow Go conventions."}},
+			ChatSessionID: "33333333-4444-5555-6666-777777777777",
+			AgentID:       "77777777-6666-5555-4444-333333333333",
+			AgentSkills:   []SkillContextForEnv{{Name: "Go Conventions", Content: "Follow Go conventions."}},
 		},
 	}, testLogger())
 	if err == nil {
@@ -137,8 +137,8 @@ func TestPrepareSucceedsInPlaceAndLeavesMarker(t *testing.T) {
 		AgentName:      "Test Agent",
 		LocalWorkDir:   userDir,
 		Task: TaskContextForEnv{
-			IssueID: "22222222-3333-4444-5555-666666666666",
-			AgentID: "88888888-7777-6666-5555-444444444444",
+			ChatSessionID: "22222222-3333-4444-5555-666666666666",
+			AgentID:       "88888888-7777-6666-5555-444444444444",
 		},
 	}, testLogger())
 	if err != nil {

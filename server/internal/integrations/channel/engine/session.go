@@ -622,11 +622,6 @@ func (s *ChatSession) AppendUserMessage(ctx context.Context, in AppendInput) (Ap
 	}
 	defer tx.Rollback(ctx)
 	qtx := s.q.WithTx(tx)
-	commandSource := in.CommandText
-	if commandSource == "" {
-		commandSource = in.Body
-	}
-	cmd, _ := ParseIssueCommand(commandSource)
 	// Context paths acquire chat_session before binding and generation. This
 	// also keeps the later TouchChatSession update from introducing the reverse
 	// binding -> chat_session edge against task enqueue.
@@ -652,9 +647,9 @@ func (s *ChatSession) AppendUserMessage(ctx context.Context, in AppendInput) (Ap
 	if err != nil {
 		return AppendResult{}, fmt.Errorf("check public chat history: %w", err)
 	}
-	becameVisible := cmd == nil && !hadPublicUserMessage && !currentSession.ExplicitlyCreatedAt.Valid
+	becameVisible := !hadPublicUserMessage && !currentSession.ExplicitlyCreatedAt.Valid
 	initializedTitle := ""
-	if cmd == nil {
+	{
 		title := deriveFirstMessageTitle(chatTitleSource(in.Body, in.CommandText, in.ForceFresh), in.MediaPendingSeconds > 0)
 		if becameVisible {
 			if _, err := qtx.ReplaceImplicitChatSessionTitle(ctx, db.ReplaceImplicitChatSessionTitleParams{ID: in.SessionID, Title: title}); err != nil {
@@ -694,7 +689,7 @@ func (s *ChatSession) AppendUserMessage(ctx context.Context, in AppendInput) (Ap
 	}
 	// A channel command is excluded from agent input, so it must not replace
 	// the principal used to recover earlier unowned agent-visible messages.
-	if contextRevision > 0 && cmd == nil {
+	if contextRevision > 0 {
 		if _, err := qtx.SetChannelChatContextInitiator(ctx, db.SetChannelChatContextInitiatorParams{
 			ChatSessionID: in.SessionID, Revision: contextRevision, InitiatorUserID: in.Sender,
 		}); err != nil {
@@ -724,7 +719,6 @@ func (s *ChatSession) AppendUserMessage(ctx context.Context, in AppendInput) (Ap
 		ChatSessionID:           in.SessionID,
 		Role:                    "user",
 		Content:                 in.Body,
-		MessageKind:             textOrNullIf(cmd != nil, channelCommandMessageKind),
 		ChannelMediaPendingSecs: pgtype.Float8{Float64: in.MediaPendingSeconds, Valid: in.MediaPendingSeconds > 0},
 		ChannelIngested:         pgtype.Bool{Bool: true, Valid: true},
 		ChannelContextRevision:  pgtype.Int8{Int64: contextRevision, Valid: contextRevision > 0},
@@ -786,7 +780,6 @@ func (s *ChatSession) AppendUserMessage(ctx context.Context, in AppendInput) (Ap
 	}
 	return AppendResult{
 		MessageID:       msg.ID,
-		IssueCommand:    cmd,
 		DedupMarked:     markedInTx,
 		ContextRevision: contextRevision,
 		PendingContexts: pendingContexts,
@@ -862,13 +855,6 @@ func (s *ChatSession) MarkPendingFreshWithDedup(
 	return nil
 }
 
-// BindMediaRefs creates attachment rows owned by IssueID when present, otherwise
-// links them to the existing durable chat message. It also clears the message's
-// media-pending marker. A failure rolls back the attachment rows, then clears
-// the marker separately so the placeholder can be promoted immediately for
-// graceful degradation.
-// BindMediaRefs preserves the established error-only API used by adapter test
-// doubles and direct callers.
 func (s *ChatSession) BindMediaRefs(ctx context.Context, in BindMediaInput) error {
 	_, err := s.BindMediaRefsWithResult(ctx, in)
 	return err

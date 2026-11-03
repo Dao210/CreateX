@@ -13,7 +13,7 @@ const state = vi.hoisted(() => ({
   workspacesBySlug: {} as Record<string, { id: string; slug: string } | null>,
   workspaceError: false,
   hasBeenSeen: false,
-  pathname: "/acme/issues",
+  pathname: "/acme/me",
   replace: vi.fn(),
 }));
 
@@ -60,9 +60,6 @@ vi.mock("@auro/views/workspace/no-access-page", () => ({
   NoAccessPage: () => <div data-testid="no-access" />,
 }));
 
-vi.mock("@auro/views/workspace/welcome-after-onboarding", () => ({
-  WelcomeAfterOnboarding: () => null,
-}));
 
 vi.mock("@auro/views/workspace/use-workspace-seen", () => ({
   useWorkspaceSeen: () => state.hasBeenSeen,
@@ -117,7 +114,7 @@ beforeEach(() => {
   state.workspacesBySlug = {};
   state.workspaceError = false;
   state.hasBeenSeen = false;
-  state.pathname = "/acme/issues";
+  state.pathname = "/acme/me";
 });
 
 describe("WorkspaceLayout", () => {
@@ -154,7 +151,7 @@ describe("WorkspaceLayout", () => {
  */
 describe("WorkspaceLayout workspace singleton", () => {
   it("adopts the workspace when its slug is the routed one", async () => {
-    state.pathname = "/acme/issues";
+    state.pathname = "/acme/me";
     state.workspacesBySlug = { acme: { id: "ws-acme", slug: "acme" } };
 
     renderLayout("acme");

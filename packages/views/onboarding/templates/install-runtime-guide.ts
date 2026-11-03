@@ -35,22 +35,11 @@ For English users, the fastest first path is Codex:
 
 Codex reference: https://developers.openai.com/codex/cli
 
-Mika will turn one real goal into an issue, start it with the right agent, and suggest reusable specialists when your workflow needs them.`;
+You can then open a chat with an agent to begin working.`;
 
 const zh = `欢迎来到 Auro。
 
-智能体需要先连上运行时才能执行工作。运行时还没准备好时,你也可以先把 Auro 当作轻量项目管理工具体验起来。
-
-## 先体验项目管理功能
-
-运行时安装前,你可以先做这些事:
-
-1. 为当前工作创建一个项目。
-2. 新建几个任务,并在 backlog、todo、in_progress、done 之间流转。
-3. 给任务加优先级、标签、评论和订阅。
-4. 用收件箱追踪分配给你的事项和 @mention。
-
-这样你先熟悉项目管理层。连上运行时后,智能体会直接在这些任务上开始工作。
+智能体需要先连接运行时才能执行工作。
 
 ## 安装第一个 Agent 运行时
 
@@ -76,22 +65,11 @@ const zh = `欢迎来到 Auro。
 
 Kimi CLI 官方文档:https://moonshotai.github.io/kimi-cli/zh/guides/getting-started.html
 
-Mika 会把一个真实目标转化为任务，交给合适的智能体启动执行，并在工作流需要时建议添加可复用的 specialist。`;
+连接后，即可与智能体聊天并开始工作。`;
 
 const ko = `Auro에 오신 것을 환영합니다.
 
-agent가 작업을 실행하려면 먼저 runtime이 필요합니다. runtime을 설치하는 동안에도 Auro를 가벼운 프로젝트 관리 워크스페이스로 먼저 사용할 수 있습니다.
-
-## 먼저 Auro를 사용해 보기
-
-runtime이 준비되기 전에는 다음을 해볼 수 있습니다:
-
-1. 현재 작업을 위한 project를 만듭니다.
-2. 태스크 몇 개를 만들고 backlog, todo, in_progress, done 사이에서 이동해 봅니다.
-3. priority, label, comment, subscription을 추가합니다.
-4. Inbox에서 나에게 배정된 작업과 mention을 확인합니다.
-
-이렇게 프로젝트 관리 계층을 먼저 익힐 수 있습니다. runtime이 연결되면 agent가 같은 태스크에서 바로 작업을 시작합니다.
+에이전트가 작업을 실행하려면 먼저 런타임을 연결해야 합니다.
 
 ## 첫 agent runtime 설치하기
 
@@ -118,22 +96,11 @@ runtime이 준비되기 전에는 다음을 해볼 수 있습니다:
 
 Codex 참고 문서: https://developers.openai.com/codex/cli
 
-Mika가 실제 목표 하나를 태스크로 만들고 적합한 에이전트와 실행을 시작하며, 워크플로에 필요할 때 재사용 가능한 specialist를 제안합니다.`;
+연결한 뒤 에이전트와 채팅을 시작할 수 있습니다.`;
 
 const ja = `Auro へようこそ。
 
-agent が作業を実行するには、まず runtime が必要です。runtime をインストールしている間も、Auro を軽量なプロジェクト管理ワークスペースとして先に使うことができます。
-
-## まず Auro を使ってみる
-
-runtime が準備できる前に、次のことを試せます:
-
-1. いまの仕事のための project を作る。
-2. タスクをいくつか作り、backlog、todo、in_progress、done の間で動かしてみる。
-3. priority、label、comment、subscription を追加する。
-4. Inbox で自分への割り当てや mention を確認する。
-
-これでまずプロジェクト管理のレイヤーに慣れることができます。runtime を接続すると、agent が同じタスクから作業を始められます。
+エージェントが作業を実行するには、まずランタイムを接続します。
 
 ## 最初の agent runtime をインストールする
 
@@ -160,6 +127,6 @@ runtime が準備できる前に、次のことを試せます:
 
 Codex のリファレンス: https://developers.openai.com/codex/cli
 
-Mika は実際の目標を 1 つのタスクにし、適切なエージェントで実行を開始し、ワークフローに必要なときは再利用可能な specialist を提案します。`;
+接続後はエージェントとのチャットから作業を始められます。`;
 
 export const INSTALL_RUNTIME_GUIDE_BODY = { en, zh, ko, ja } as const;

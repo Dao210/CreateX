@@ -470,7 +470,7 @@ func TestRuntimeGC_RuntimeLockRejectsConcurrentEnqueue(t *testing.T) {
 	}
 	writerDone := make(chan error, 1)
 	go func() {
-		_, err := db.New(writer).CreateAgentTask(ctx, db.CreateAgentTaskParams{
+		_, err := db.New(writer).CreateChatTask(ctx, db.CreateChatTaskParams{
 			AgentID:   parseUUID(agentID),
 			RuntimeID: parseUUID(runtimeID),
 			Priority:  0,

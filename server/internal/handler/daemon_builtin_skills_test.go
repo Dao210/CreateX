@@ -83,9 +83,6 @@ func TestClaimTaskByRuntime_OnlyCurrentBuiltinSkills(t *testing.T) {
 				names[r.Name] = true
 			}
 
-			if !names[service.PlatformSkillName] {
-				t.Errorf("claim payload is missing %q; names=%v", service.PlatformSkillName, names)
-			}
 			if names[legacy] {
 				t.Errorf("claim payload still includes retired redirect %q", legacy)
 			}

@@ -650,7 +650,6 @@ function makeAttachment(id: string, overrides: Partial<Attachment> = {}): Attach
   return {
     id,
     workspace_id: "ws-1",
-    issue_id: null,
     comment_id: null,
     chat_session_id: null,
     chat_message_id: null,

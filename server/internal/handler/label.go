@@ -82,7 +82,7 @@ type UpdateLabelRequest struct {
 	Color       *string `json:"color"`
 }
 
-const defaultLabelResourceType = "skill"
+const defaultLabelResourceType = "agent"
 
 func parseLabelResourceType(raw string) (string, error) {
 	value := strings.TrimSpace(raw)

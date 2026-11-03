@@ -25,7 +25,7 @@ const skillPluginManifest = `{
   "name": "Skilled",
   "version": "1.0.0",
   "author": { "name": "example" },
-  "scopes": ["issues:read"],
+  "scopes": ["tasks:read"],
   "contributes": {
     "resources": [{ "type": "skill", "key": "pr-review", "entry": "skills/pr-review/SKILL.md" }]
   }
@@ -55,7 +55,7 @@ func installSkillPlugin(t *testing.T, root, manifest string) string {
 	versionID := withLocalPluginSourceIn(t, root, manifest)
 	body, _ := json.Marshal(map[string]any{
 		"version_id":     versionID,
-		"granted_scopes": []string{"issues:read"},
+		"granted_scopes": []string{"tasks:read"},
 	})
 	recorder := httptest.NewRecorder()
 	testHandler.InstallPlugin(recorder, pluginHandlerRequest(http.MethodPost, "/plugins", body, map[string]string{"id": testWorkspaceID}))
@@ -147,7 +147,7 @@ func TestPluginSkillUpgradePrunesWhatTheManifestDropped(t *testing.T) {
   "name": "Skilled",
   "version": "2.0.0",
   "author": { "name": "example" },
-  "scopes": ["issues:read"],
+  "scopes": ["tasks:read"],
   "contributes": {
     "resources": [{ "type": "skill", "key": "code-review", "entry": "skills/code-review/SKILL.md" }]
   }
@@ -185,7 +185,7 @@ func TestPluginSkillWillNotOverwriteAHumanAuthoredSkill(t *testing.T) {
 	versionID := withLocalPluginSourceIn(t, root, skillPluginManifest)
 	body, _ := json.Marshal(map[string]any{
 		"version_id":     versionID,
-		"granted_scopes": []string{"issues:read"},
+		"granted_scopes": []string{"tasks:read"},
 	})
 	recorder := httptest.NewRecorder()
 	testHandler.InstallPlugin(recorder, pluginHandlerRequest(http.MethodPost, "/plugins", body, map[string]string{"id": testWorkspaceID}))

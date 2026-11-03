@@ -1,6 +1,7 @@
 -- name: CreateChatSession :one
 INSERT INTO chat_session (workspace_id, agent_id, creator_id, title, runtime_id, id)
-VALUES ($1, $2, $3, $4, (SELECT runtime_id FROM agent WHERE id = $2), COALESCE(sqlc.narg('id')::uuid, gen_random_uuid()))
+SELECT $1, $2, $3, $4, (SELECT runtime_id FROM agent WHERE id = $2), COALESCE(sqlc.narg('id')::uuid, gen_random_uuid())
+WHERE lock_task_owner_rows($2, NULL, NULL)
 RETURNING *;
 
 
@@ -342,7 +343,17 @@ FOR UPDATE;
 
 
 -- name: DeleteChatSession :exec
-DELETE FROM chat_session WHERE id = $1 AND workspace_id = $2;
+WITH target AS MATERIALIZED (
+    SELECT cs.id FROM chat_session cs WHERE cs.id = $1 AND cs.workspace_id = $2
+), removed_attachments AS (
+    DELETE FROM attachment WHERE chat_session_id IN (SELECT id FROM target)
+        OR chat_message_id IN (SELECT id FROM chat_message WHERE chat_session_id IN (SELECT id FROM target))
+), removed_messages AS (
+    DELETE FROM chat_message WHERE chat_session_id IN (SELECT id FROM target)
+), detached_tasks AS (
+    UPDATE agent_task_queue SET chat_session_id = NULL WHERE chat_session_id IN (SELECT id FROM target)
+)
+DELETE FROM chat_session WHERE id IN (SELECT id FROM target);
 
 
 
@@ -569,11 +580,12 @@ RETURNING task.*;
 
 
 -- name: DeleteUserChatMessageByTask :one
-DELETE FROM chat_message
-WHERE task_id = $1
-  AND role = 'user'
-  AND message_kind <> 'onboarding_kickoff'
-RETURNING *;
+WITH target AS MATERIALIZED (
+    SELECT cm.id FROM chat_message cm WHERE cm.task_id = $1 AND cm.role = 'user' AND cm.message_kind <> 'onboarding_kickoff'
+), removed_attachments AS (
+    DELETE FROM attachment WHERE chat_message_id IN (SELECT id FROM target)
+)
+DELETE FROM chat_message WHERE id IN (SELECT id FROM target) RETURNING *;
 
 
 
@@ -587,7 +599,6 @@ SET task_id = (
     WHERE successor.chat_session_id = chat_message.chat_session_id
       AND successor.status = 'queued'
       AND successor.chat_input_task_id = successor.id
-      AND successor.regenerate_quick_actions_for IS NULL
       AND successor.id <> $1
     ORDER BY successor.priority DESC, successor.created_at ASC, successor.id ASC
     LIMIT 1
@@ -617,7 +628,6 @@ WHERE message.chat_session_id = $1
           FROM agent_task_queue AS head
           WHERE head.chat_session_id = $1
             AND head.status IN ('queued', 'dispatched', 'running', 'waiting_local_directory', 'deferred')
-            AND head.regenerate_quick_actions_for IS NULL
           ORDER BY
             CASE
               WHEN head.status IN ('dispatched', 'running', 'waiting_local_directory') THEN 0
@@ -653,7 +663,6 @@ WHERE message.chat_session_id = $1
           FROM agent_task_queue AS head
           WHERE head.chat_session_id = $1
             AND head.status IN ('queued', 'dispatched', 'running', 'waiting_local_directory', 'deferred')
-            AND head.regenerate_quick_actions_for IS NULL
           ORDER BY
             CASE
               WHEN head.status IN ('dispatched', 'running', 'waiting_local_directory') THEN 0
@@ -741,7 +750,6 @@ WITH latest_visible AS (
                   FROM agent_task_queue AS head
                   WHERE head.chat_session_id = claimed_input.chat_session_id
                     AND head.status IN ('queued', 'dispatched', 'running', 'waiting_local_directory', 'deferred')
-                    AND head.regenerate_quick_actions_for IS NULL
                   ORDER BY
                     CASE
                       WHEN head.status IN ('dispatched', 'running', 'waiting_local_directory') THEN 0
@@ -791,13 +799,11 @@ WHERE queued_input.chat_session_id = $1
       AND queued_task.chat_session_id = queued_input.chat_session_id
       AND queued_task.status = 'queued'
       AND queued_task.chat_input_task_id = queued_task.id
-      AND queued_task.regenerate_quick_actions_for IS NULL
       AND queued_task.id = (
         SELECT head.id
         FROM agent_task_queue AS head
         WHERE head.chat_session_id = queued_input.chat_session_id
           AND head.status IN ('queued', 'dispatched', 'running', 'waiting_local_directory', 'deferred')
-          AND head.regenerate_quick_actions_for IS NULL
         ORDER BY
           CASE
             WHEN head.status IN ('dispatched', 'running', 'waiting_local_directory') THEN 0
@@ -832,7 +838,6 @@ WHERE message.chat_session_id = $1
           FROM agent_task_queue AS head
           WHERE head.chat_session_id = $1
             AND head.status IN ('queued', 'dispatched', 'running', 'waiting_local_directory', 'deferred')
-            AND head.regenerate_quick_actions_for IS NULL
           ORDER BY
             CASE
               WHEN head.status IN ('dispatched', 'running', 'waiting_local_directory') THEN 0
@@ -887,7 +892,7 @@ SELECT
     sqlc.narg('fire_at')::timestamptz,
     sqlc.narg('channel_context_revision')::bigint,
     COALESCE(sqlc.narg('id')::uuid, gen_random_uuid())
-WHERE lock_task_owner_rows($1, $2)
+WHERE lock_task_owner_rows($1, $2, $4)
 RETURNING *;
 
 
@@ -968,6 +973,7 @@ WHERE session_id NOT IN (SELECT session_id FROM retired_sessions)
       AND COALESCE(failure_reason, '') NOT IN ('iteration_limit', 'agent_fallback_message', 'api_invalid_request', 'codex_semantic_inactivity', 'agent_error.context_overflow', 'codex_resume_oversized')
       AND NOT (COALESCE(error, '') ILIKE '%400%' AND COALESCE(error, '') ILIKE '%invalid_request_error%')
       AND NOT (COALESCE(error, '') ILIKE '%could not resolve authentication method%')
+      AND NOT (COALESCE(error, '') ILIKE '%image dimensions exceed max allowed size%' AND COALESCE(error, '') ILIKE '%image.source.base64.data%')
       AND NOT (COALESCE(error, '') ~* 'must not be empty|must be non-?empty|must have non-?empty|non-?empty content|cannot be empty|should not be empty'
                AND COALESCE(error, '') ~* 'role[^a-z0-9]{0,2}assistant|assistant message|message at position|messages\.[0-9]|messages\[[0-9]')
     )
@@ -999,7 +1005,6 @@ SELECT EXISTS (
   SELECT 1 FROM agent_task_queue
   WHERE chat_session_id = $1
     AND status IN ('queued', 'dispatched', 'running', 'waiting_local_directory', 'deferred')
-    AND regenerate_quick_actions_for IS NULL
 ) AS has_pending;
 
 
@@ -1009,7 +1014,6 @@ SELECT EXISTS (
 -- name: GetPendingChatTask :one
 SELECT id, status, created_at FROM agent_task_queue
 WHERE chat_session_id = $1 AND status IN ('queued', 'dispatched', 'running', 'waiting_local_directory')
-  AND regenerate_quick_actions_for IS NULL
 ORDER BY created_at DESC
 LIMIT 1;
 
@@ -1036,7 +1040,6 @@ LEFT JOIN LATERAL (
 ) AS message ON TRUE
 WHERE task.chat_session_id = $1
   AND task.status IN ('queued', 'dispatched', 'running', 'waiting_local_directory', 'deferred')
-  AND task.regenerate_quick_actions_for IS NULL
 ORDER BY
     CASE
       WHEN task.status IN ('dispatched', 'running', 'waiting_local_directory') THEN 0
@@ -1063,7 +1066,6 @@ WITH target AS MATERIALIZED (
       FROM agent_task_queue AS active
       WHERE active.chat_session_id = sqlc.arg('chat_session_id')
         AND active.status IN ('dispatched', 'running', 'waiting_local_directory')
-        AND active.regenerate_quick_actions_for IS NULL
     )
   FOR UPDATE
 ), demoted AS (
@@ -1088,7 +1090,6 @@ SELECT
     FROM agent_task_queue AS active
     WHERE active.chat_session_id = sqlc.arg('chat_session_id')
       AND active.status IN ('dispatched', 'running', 'waiting_local_directory')
-      AND active.regenerate_quick_actions_for IS NULL
     ORDER BY active.created_at ASC, active.id ASC
     LIMIT 1
   )::uuid AS active_task_id
@@ -1104,7 +1105,6 @@ FROM agent_task_queue atq
 JOIN chat_session cs ON cs.id = atq.chat_session_id
 WHERE atq.chat_session_id IS NOT NULL
   AND atq.status IN ('queued', 'dispatched', 'running', 'waiting_local_directory', 'deferred')
-  AND atq.regenerate_quick_actions_for IS NULL
   AND cs.workspace_id = $1
   AND cs.creator_id = $2
 ORDER BY atq.created_at DESC;
@@ -1120,7 +1120,6 @@ SELECT EXISTS (
   JOIN chat_session cs ON cs.id = atq.chat_session_id
   WHERE atq.chat_session_id IS NOT NULL
     AND atq.status IN ('queued', 'dispatched', 'running', 'waiting_local_directory', 'deferred')
-    AND atq.regenerate_quick_actions_for IS NULL
     AND cs.workspace_id = sqlc.arg(workspace_id)
     AND cs.creator_id = sqlc.arg(creator_id)
     AND cs.agent_id = ANY(sqlc.arg(agent_ids)::uuid[])

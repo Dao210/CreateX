@@ -135,10 +135,7 @@ type CallbackGrant struct {
 	Trigger        string
 	// Actor is who the resulting writes belong to, decided when the hook was
 	// dispatched. A handler cannot choose to write as somebody else.
-	Actor HookActor
-	// IssueID narrows an event callback to the issue that produced it. Zero
-	// when the invocation had no issue.
-	IssueID   pgtype.UUID
+	Actor     HookActor
 	ExpiresAt time.Time
 }
 
@@ -186,7 +183,6 @@ func (c *CallbackTokens) Issue(ctx context.Context, invocation HookInvocation) (
 		HookKey:        invocation.Hook.Key,
 		Trigger:        invocation.Trigger,
 		Actor:          invocation.Actor,
-		IssueID:        invocation.IssueID,
 		ExpiresAt:      time.Now().Add(callbackTokenTTL),
 	}
 

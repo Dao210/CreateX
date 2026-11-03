@@ -141,9 +141,9 @@ CREATE TABLE agent_task_queue (
     chat_input_task_id uuid,
     chat_finalize_deferred_at timestamp with time zone,
     originator_source text,
-    delegated_from_task_id uuid,
+
     retry_of_task_id uuid,
-    rerun_of_task_id uuid,
+
     rule_version_id uuid,
     trigger_evidence_kind text,
     trigger_evidence_ref_id uuid,
@@ -151,7 +151,6 @@ CREATE TABLE agent_task_queue (
     session_rollout_missing boolean DEFAULT false NOT NULL,
     retired_session_id text,
     quick_actions_disabled boolean DEFAULT false NOT NULL,
-    regenerate_quick_actions_for uuid,
     branch_name text,
     durable_work_dir text,
     channel_context_revision bigint,
@@ -905,31 +904,6 @@ CREATE TABLE life_world (
     CONSTRAINT life_world_tick_ms_check CHECK (((tick_ms >= 100) AND (tick_ms <= 60000)))
 );
 
-CREATE TABLE maintenance_job (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    job_type text NOT NULL,
-    job_version integer NOT NULL,
-    scope_key text NOT NULL,
-    idempotency_key text NOT NULL,
-    request_hash text NOT NULL,
-    status text NOT NULL,
-    revision bigint DEFAULT 0 NOT NULL,
-    dry_run boolean DEFAULT true NOT NULL,
-    options jsonb NOT NULL,
-    parameters jsonb DEFAULT '{}'::jsonb NOT NULL,
-    checkpoint jsonb DEFAULT '{}'::jsonb NOT NULL,
-    progress jsonb DEFAULT '{}'::jsonb NOT NULL,
-    result jsonb DEFAULT '{}'::jsonb NOT NULL,
-    last_error text DEFAULT ''::text NOT NULL,
-    next_allowed_at timestamp with time zone DEFAULT now() NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    completed_at timestamp with time zone,
-    CONSTRAINT maintenance_job_check CHECK (((jsonb_typeof(options) = 'object'::text) AND (jsonb_typeof(parameters) = 'object'::text) AND (jsonb_typeof(checkpoint) = 'object'::text) AND (jsonb_typeof(progress) = 'object'::text) AND (jsonb_typeof(result) = 'object'::text))),
-    CONSTRAINT maintenance_job_job_version_check CHECK ((job_version > 0)),
-    CONSTRAINT maintenance_job_status_check CHECK ((status = ANY (ARRAY['ready'::text, 'paused'::text, 'completed'::text, 'cancelled'::text])))
-);
-
 CREATE TABLE mcp_activity (
     id uuid NOT NULL,
     service_id text NOT NULL,
@@ -1651,12 +1625,25 @@ BEGIN
 END;
 $$;
 
-CREATE FUNCTION lock_task_owner_rows(p_agent_id uuid, p_runtime_id uuid) RETURNS boolean
+CREATE FUNCTION lock_agent_owner_rows(p_workspace_id uuid, p_runtime_id uuid) RETURNS boolean
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    PERFORM 1 FROM workspace WHERE id = p_workspace_id FOR KEY SHARE;
+    IF NOT FOUND THEN RETURN FALSE; END IF;
+    IF p_runtime_id IS NULL THEN RETURN TRUE; END IF;
+    PERFORM 1 FROM agent_runtime WHERE id = p_runtime_id AND workspace_id = p_workspace_id FOR KEY SHARE;
+    RETURN FOUND;
+END;
+$$;
+
+CREATE FUNCTION lock_task_owner_rows(p_agent_id uuid, p_runtime_id uuid, p_chat_session_id uuid) RETURNS boolean
     LANGUAGE plpgsql
     AS $$
 DECLARE
     required int := (CASE WHEN p_agent_id IS NULL THEN 0 ELSE 1 END)
-                  + (CASE WHEN p_runtime_id IS NULL THEN 0 ELSE 1 END);
+                  + (CASE WHEN p_runtime_id IS NULL THEN 0 ELSE 1 END)
+                  + (CASE WHEN p_chat_session_id IS NULL THEN 0 ELSE 1 END);
     resolved int;
     distinct_workspaces int;
     locked int;
@@ -1669,6 +1656,8 @@ BEGIN
         SELECT a.workspace_id FROM agent a WHERE a.id = p_agent_id
         UNION ALL
         SELECT r.workspace_id FROM agent_runtime r WHERE r.id = p_runtime_id
+        UNION ALL
+        SELECT c.workspace_id FROM chat_session c WHERE c.id = p_chat_session_id
     )
     SELECT count(*), count(DISTINCT workspace_id)
     INTO resolved, distinct_workspaces
@@ -1683,6 +1672,8 @@ BEGIN
             SELECT a.workspace_id FROM agent a WHERE a.id = p_agent_id
             UNION
             SELECT r.workspace_id FROM agent_runtime r WHERE r.id = p_runtime_id
+            UNION
+            SELECT c.workspace_id FROM chat_session c WHERE c.id = p_chat_session_id
         )
         ORDER BY w.id
         FOR KEY SHARE
@@ -1704,6 +1695,10 @@ BEGIN
         IF FOUND THEN locked := locked + 1; END IF;
     END IF;
 
+    IF p_chat_session_id IS NOT NULL THEN
+        PERFORM 1 FROM chat_session WHERE id = p_chat_session_id FOR KEY SHARE;
+        IF FOUND THEN locked := locked + 1; END IF;
+    END IF;
     RETURN locked = required;
 END;
 $$;

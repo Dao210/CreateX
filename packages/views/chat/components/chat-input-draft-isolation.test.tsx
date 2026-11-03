@@ -194,7 +194,6 @@ function makeUpload(id: string, filename: string): UploadResult {
     id,
     filename,
     workspace_id: "ws-1",
-    issue_id: null,
     comment_id: null,
     chat_session_id: null,
     chat_message_id: null,

@@ -47,7 +47,7 @@
 // Architectural boundaries (frozen from Elon's 二审, MUL-2671 §4.8):
 //
 //  1. Issue creation goes through internal/service.IssueService.Create —
-//     this package never calls qtx.CreateIssue directly.
+//     the shared engine owns chat execution.
 //  2. Inbound message ingestion uses the shared engine.ChatSession, NOT
 //     the HTTP `SendChatMessage` handler. Group chat_sessions have multi-
 //     member creator semantics that the HTTP handler's single-creator

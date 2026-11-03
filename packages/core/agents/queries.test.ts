@@ -15,7 +15,7 @@ function client() {
 }
 function page(ids: string[], nextCursor: string | null = null) {
   const tasks = ids.map((id): AgentTask => ({
-    id, agent_id: "agent-1", runtime_id: "runtime-1", issue_id: "",
+    id, agent_id: "agent-1", runtime_id: "runtime-1",
     status: "completed", priority: 0, dispatched_at: null, started_at: null,
     completed_at: "2026-09-24T00:00:00Z", created_at: "2026-09-24T00:00:00Z",
     result: null, error: null,

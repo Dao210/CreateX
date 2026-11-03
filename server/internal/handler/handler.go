@@ -180,7 +180,6 @@ type DaemonPendingWorkNotifier interface {
 // DaemonTaskSupplementNotifier sends a content-free wakeup for one exact run.
 // The daemon still pulls and authenticates the durable supplement over HTTP.
 type DaemonTaskSupplementNotifier interface {
-	NotifyTaskSupplementAvailable(runtimeID, taskID string)
 }
 
 // RuntimeGoneNotifier invalidates a runtime that was deleted while its daemon
@@ -810,7 +809,7 @@ func requestUserID(r *http.Request) string {
 // fall back to "member".
 //
 // This fallback is NOT a security boundary and must not be read as one. Both
-// ids are observable by any workspace member (GET /api/issues/{id}/task-runs
+// ids are observable by any workspace member (GET /api/agents/{id}/tasks
 // returns the pair), so requiring both proves nothing on its own — the older
 // comment here claimed it "closes the impersonation path", and it did not.
 // What closes it is the Auth / DaemonAuth middleware stripping both headers

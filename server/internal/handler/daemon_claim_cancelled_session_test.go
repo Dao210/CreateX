@@ -613,7 +613,7 @@ func TestTerminalReports_TakeChatSessionLockBeforeTask(t *testing.T) {
 		"complete": func(taskID string) error {
 			callCtx, cancel := raceCtx()
 			defer cancel()
-			_, err := testHandler.TaskService.CompleteTask(callCtx, parseUUID(taskID),
+			_, _, err := testHandler.TaskService.CompleteTaskWithTransition(callCtx, parseUUID(taskID),
 				[]byte(`"done"`), "turn2-session", "/tmp/turn2-workdir", "", false, "", "")
 			return err
 		},
@@ -708,7 +708,7 @@ func TestCancelAndPin_ConcurrentWithTerminalReport(t *testing.T) {
 			other: func(taskID string) error {
 				callCtx, cancel := raceCtx()
 				defer cancel()
-				_, err := testHandler.TaskService.CompleteTask(callCtx, parseUUID(taskID),
+				_, _, err := testHandler.TaskService.CompleteTaskWithTransition(callCtx, parseUUID(taskID),
 					[]byte(`"done"`), "turn2-session", "/tmp/turn2-workdir", "", false, "", "")
 				return err
 			},

@@ -59,7 +59,6 @@ type dispatchJob struct {
 	installation db.PluginInstallation
 	hook         plugincontract.Hook
 	eventType    string
-	issueID      pgtype.UUID
 	payload      any
 }
 
@@ -226,7 +225,6 @@ func (d *PluginEventDispatcher) run(job dispatchJob) {
 
 	// Only now, past the flag: the id is needed to narrow the callback grant,
 	// and finding it means parsing the payload.
-	job.issueID = issueIDFromPayload(job.payload)
 
 	installations, err := d.service.Queries.ListWorkspacePluginInstallations(ctx, job.installation.WorkspaceID)
 	if err != nil {
@@ -276,9 +274,8 @@ func (d *PluginEventDispatcher) deliver(ctx context.Context, installation db.Plu
 		EventType:    job.eventType,
 		// An event has no person behind it. Writes it produces are the
 		// plugin's own, attributed to the installation.
-		Actor:   HookActor{Type: "plugin", ID: installation.ID},
-		IssueID: job.issueID,
-		Input:   job.payload,
+		Actor: HookActor{Type: "plugin", ID: installation.ID},
+		Input: job.payload,
 	}
 
 	for attempt := 1; attempt <= hookEventAttempts; attempt++ {

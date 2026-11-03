@@ -301,7 +301,7 @@ func TestConcurrentIsolatedPreparesOnOneRepo(t *testing.T) {
 				TaskID:         taskID,
 				Provider:       "claude",
 				AgentName:      "J",
-				Task:           TaskContextForEnv{IssueID: "issue-" + taskID},
+				Task:           TaskContextForEnv{ChatSessionID: "issue-" + taskID},
 				LocalWorktree:  &LocalWorktreeParams{LocalPath: repo},
 			}, logger)
 			results <- result{env: env, err: err}

@@ -89,7 +89,7 @@ func TestPreparationHelperRoundTripsReuse(t *testing.T) {
 		WorkspaceID:    "ws-helper-reuse",
 		TaskID:         "99999999-8888-7777-6666-555555555555",
 		Provider:       "claude",
-		Task:           TaskContextForEnv{IssueID: "issue-helper-reuse"},
+		Task:           TaskContextForEnv{ChatSessionID: "issue-helper-reuse"},
 	}
 	env, err := PrepareIsolated(ctx, preparationHelperTestCommand(), params, logger)
 	if err != nil {
@@ -100,16 +100,7 @@ func TestPreparationHelperRoundTripsReuse(t *testing.T) {
 		WorkDir:        env.WorkDir,
 		Provider:       params.Provider,
 		Task: TaskContextForEnv{
-			IssueID:         "issue-helper-reuse",
-			NewCommentCount: 1,
-			ProjectID:       "project-helper-reuse",
-			ProjectResources: []ProjectResourceForEnv{
-				{
-					ID:           "resource-helper-reuse",
-					ResourceType: "github_repo",
-					ResourceRef:  json.RawMessage(`{"url":"https://github.com/auro-ai/auro"}`),
-				},
-			},
+			ChatSessionID: "issue-helper-reuse",
 		},
 	}, logger)
 	if err != nil {
@@ -141,7 +132,7 @@ func TestPreparationHelperAcceptsFieldsFromAnOlderParent(t *testing.T) {
 		Reuse: &ReuseParams{
 			WorkDir:  workDir,
 			Provider: "claude",
-			Task:     TaskContextForEnv{IssueID: "issue-helper-old-parent"},
+			Task:     TaskContextForEnv{ChatSessionID: "issue-helper-old-parent"},
 		},
 	})
 	if err != nil {
@@ -266,7 +257,7 @@ func TestPreparationHelperPreservesOpenclawTimeoutKind(t *testing.T) {
 		TaskID:         "11111111-2222-3333-4444-555555555555",
 		Provider:       "openclaw",
 		OpenclawBin:    shim,
-		Task:           TaskContextForEnv{IssueID: "issue-helper-openclaw-timeout"},
+		Task:           TaskContextForEnv{ChatSessionID: "issue-helper-openclaw-timeout"},
 	}, logger)
 	if err == nil {
 		t.Fatal("expected preparation to fail when the openclaw CLI outlasts its deadline")
@@ -318,11 +309,10 @@ func TestPrepareIsolatedKeepsTheClaimWithTheParent(t *testing.T) {
 	)
 
 	rootParams := RootDirParams{
-		WorkspacesRoot:  workspacesRoot,
-		WorkspaceID:     workspaceID,
-		WorkspaceSlug:   "Readable Workspace",
-		TaskID:          taskID,
-		IssueIdentifier: "MUL-6063",
+		WorkspacesRoot: workspacesRoot,
+		WorkspaceID:    workspaceID,
+		WorkspaceSlug:  "Readable Workspace",
+		TaskID:         taskID,
 	}
 	claim, err := ClaimEnvRoot(rootParams)
 	if err != nil {
@@ -331,14 +321,14 @@ func TestPrepareIsolatedKeepsTheClaimWithTheParent(t *testing.T) {
 	defer claim.Release()
 
 	env, err := PrepareIsolated(context.Background(), preparationHelperTestCommand(), PrepareParams{
-		WorkspacesRoot:    workspacesRoot,
-		WorkspaceID:       workspaceID,
-		WorkspaceSlug:     "Readable Workspace",
-		TaskID:            taskID,
-		IssueIdentifier:   "MUL-6063",
+		WorkspacesRoot: workspacesRoot,
+		WorkspaceID:    workspaceID,
+		WorkspaceSlug:  "Readable Workspace",
+		TaskID:         taskID,
+
 		AgentName:         "Isolated",
 		EnvRootPreclaimed: true,
-		Task:              TaskContextForEnv{IssueID: taskID},
+		Task:              TaskContextForEnv{ChatSessionID: taskID},
 	}, nil)
 	if err != nil {
 		t.Fatalf("PrepareIsolated: %v", err)
@@ -444,7 +434,7 @@ func TestPrepareIsolatedFailsLoudlyWhenPreclaimIsNotDeclared(t *testing.T) {
 		TaskID:         taskID,
 		AgentName:      "Forgetful",
 		// EnvRootPreclaimed deliberately left false while the parent holds it.
-		Task: TaskContextForEnv{IssueID: taskID},
+		Task: TaskContextForEnv{ChatSessionID: taskID},
 	}, nil)
 	if err == nil {
 		t.Fatal("preparation ran without declaring the parent's claim")

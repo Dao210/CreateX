@@ -65,11 +65,11 @@ func TestHandleTask_DoesNotCallStartTaskItself(t *testing.T) {
 	})
 
 	task := Task{
-		ID:          "task-no-start",
-		WorkspaceID: "ws-no-start",
-		RuntimeID:   "rt-1",
-		IssueID:     "issue-no-start",
-		Agent:       &AgentData{Name: "test-agent"},
+		ID:            "task-no-start",
+		WorkspaceID:   "ws-no-start",
+		RuntimeID:     "rt-1",
+		ChatSessionID: "issue-no-start",
+		Agent:         &AgentData{Name: "test-agent"},
 	}
 
 	d.handleTask(context.Background(), task, 0)
@@ -137,17 +137,17 @@ func TestRunTask_StartTaskCalledAfterWorkdirOnDisk(t *testing.T) {
 	}
 
 	task := Task{
-		ID:          taskID,
-		WorkspaceID: workspaceID,
-		RuntimeID:   "rt-1",
-		IssueID:     "issue-runtask",
-		AgentID:     "agent-runtask",
-		Agent:       &AgentData{ID: "agent-runtask", Name: "test-agent"},
+		ID:            taskID,
+		WorkspaceID:   workspaceID,
+		RuntimeID:     "rt-1",
+		ChatSessionID: "issue-runtask",
+		AgentID:       "agent-runtask",
+		Agent:         &AgentData{ID: "agent-runtask", Name: "test-agent"},
 	}
 
 	taskLog := slog.New(slog.NewTextHandler(io.Discard, nil))
 	// The Run() failure is expected; we only assert the pre-Run ordering.
-	_, _ = d.runTask(context.Background(), task, "claude", 0, taskLog)
+	_, _ = d.runTask(context.Background(), testTaskStartClaim(task), "claude", 0, taskLog)
 
 	if !startCalled.Load() {
 		t.Fatal("runTask did not call /start — Fix A's StartTask placement is missing")
@@ -210,12 +210,12 @@ printf '%s\n' '{"type":"result","subtype":"success","is_error":false,"session_id
 	}
 
 	task := Task{
-		ID:          taskID,
-		WorkspaceID: workspaceID,
-		RuntimeID:   "rt-1",
-		IssueID:     "issue-private-temp",
-		AgentID:     "agent-private-temp",
-		AuthToken:   "mat_private_temp",
+		ID:            taskID,
+		WorkspaceID:   workspaceID,
+		RuntimeID:     "rt-1",
+		ChatSessionID: "issue-private-temp",
+		AgentID:       "agent-private-temp",
+		AuthToken:     "mat_private_temp",
 		Agent: &AgentData{
 			ID:   "agent-private-temp",
 			Name: "test-agent",
@@ -229,7 +229,7 @@ printf '%s\n' '{"type":"result","subtype":"success","is_error":false,"session_id
 	}
 
 	taskLog := slog.New(slog.NewTextHandler(io.Discard, nil))
-	result, err := d.runTask(context.Background(), task, "claude", 0, taskLog)
+	result, err := d.runTask(context.Background(), testTaskStartClaim(task), "claude", 0, taskLog)
 	if err != nil {
 		t.Fatalf("runTask(): %v", err)
 	}
@@ -444,12 +444,12 @@ printf '%s\n' '{"type":"result","subtype":"success","is_error":false,"session_id
 	}
 
 	task := Task{
-		ID:          taskID,
-		WorkspaceID: workspaceID,
-		RuntimeID:   "rt-1",
-		IssueID:     "issue-temp-base",
-		AgentID:     "agent-temp-base",
-		AuthToken:   "mat_temp_base",
+		ID:            taskID,
+		WorkspaceID:   workspaceID,
+		RuntimeID:     "rt-1",
+		ChatSessionID: "issue-temp-base",
+		AgentID:       "agent-temp-base",
+		AuthToken:     "mat_temp_base",
 		Agent: &AgentData{
 			ID:   "agent-temp-base",
 			Name: "test-agent",
@@ -463,7 +463,7 @@ printf '%s\n' '{"type":"result","subtype":"success","is_error":false,"session_id
 	}
 
 	taskLog := slog.New(slog.NewTextHandler(io.Discard, nil))
-	result, err := d.runTask(context.Background(), task, "claude", 0, taskLog)
+	result, err := d.runTask(context.Background(), testTaskStartClaim(task), "claude", 0, taskLog)
 	if err != nil {
 		t.Fatalf("runTask(): %v", err)
 	}
@@ -542,12 +542,12 @@ printf 'ran\n' > "$CAPTURE_FILE"
 	}
 
 	task := Task{
-		ID:          "task-temp-base-invalid",
-		WorkspaceID: "ws-temp-base-invalid",
-		RuntimeID:   "rt-1",
-		IssueID:     "issue-temp-base-invalid",
-		AgentID:     "agent-temp-base-invalid",
-		AuthToken:   "mat_temp_base_invalid",
+		ID:            "task-temp-base-invalid",
+		WorkspaceID:   "ws-temp-base-invalid",
+		RuntimeID:     "rt-1",
+		ChatSessionID: "issue-temp-base-invalid",
+		AgentID:       "agent-temp-base-invalid",
+		AuthToken:     "mat_temp_base_invalid",
 		Agent: &AgentData{
 			ID:        "agent-temp-base-invalid",
 			Name:      "test-agent",
@@ -556,7 +556,7 @@ printf 'ran\n' > "$CAPTURE_FILE"
 	}
 
 	taskLog := slog.New(slog.NewTextHandler(io.Discard, nil))
-	_, err := d.runTask(context.Background(), task, "claude", 0, taskLog)
+	_, err := d.runTask(context.Background(), testTaskStartClaim(task), "claude", 0, taskLog)
 	if err == nil {
 		t.Fatal("runTask() succeeded with an unusable AURO_AGENT_TEMP_BASE, want failure")
 	}
@@ -628,7 +628,7 @@ func TestRunTask_ExtendsPrepareLeaseDuringStartTask(t *testing.T) {
 		ID:                  taskID,
 		WorkspaceID:         workspaceID,
 		RuntimeID:           "rt-1",
-		IssueID:             "issue-runtask-start-lease",
+		ChatSessionID:       "issue-runtask-start-lease",
 		StartClaimSupported: true,
 		DispatchedAt:        "2026-09-17T09:00:00.123456Z",
 		AgentID:             "agent-runtask-start-lease",
@@ -636,7 +636,7 @@ func TestRunTask_ExtendsPrepareLeaseDuringStartTask(t *testing.T) {
 	}
 
 	taskLog := slog.New(slog.NewTextHandler(io.Discard, nil))
-	_, _ = d.runTask(context.Background(), task, "claude", 0, taskLog)
+	_, _ = d.runTask(context.Background(), testTaskStartClaim(task), "claude", 0, taskLog)
 
 	if !startEntered.Load() {
 		t.Fatal("runTask did not call /start")
@@ -750,13 +750,13 @@ func prepareTimeoutStopsLeaseDuringBlockedStart(t *testing.T, budget time.Durati
 		DispatchedAt:        "2026-09-17T09:00:00.123456Z",
 		WorkspaceID:         "ws-runtask-start-timeout",
 		RuntimeID:           "rt-1",
-		IssueID:             "issue-runtask-start-timeout",
+		ChatSessionID:       "issue-runtask-start-timeout",
 		AgentID:             "agent-runtask-start-timeout",
 		Agent:               &AgentData{ID: "agent-runtask-start-timeout", Name: "test-agent"},
 	}
 	taskLog := slog.New(slog.NewTextHandler(io.Discard, nil))
 	startedAt := time.Now()
-	_, err := d.runTask(context.Background(), task, "claude", 0, taskLog)
+	_, err := d.runTask(context.Background(), testTaskStartClaim(task), "claude", 0, taskLog)
 	if !errors.Is(err, errTaskPrepareTimeout) {
 		t.Fatalf("runTask error = %v, want task prepare timeout", err)
 	}
@@ -857,11 +857,11 @@ func TestHandleTask_KeepsEnvRootActiveAcrossCompletion(t *testing.T) {
 	})
 
 	task := Task{
-		ID:          taskID,
-		WorkspaceID: workspaceID,
-		RuntimeID:   "rt-1",
-		IssueID:     "issue-active-during-complete",
-		Agent:       &AgentData{Name: "test-agent"},
+		ID:            taskID,
+		WorkspaceID:   workspaceID,
+		RuntimeID:     "rt-1",
+		ChatSessionID: "issue-active-during-complete",
+		Agent:         &AgentData{Name: "test-agent"},
 	}
 
 	d.handleTask(context.Background(), task, 0)

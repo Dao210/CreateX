@@ -19,7 +19,7 @@ import enAgents from "../../../locales/en/agents.json";
 import enIssues from "../../../locales/en/execution.json";
 
 const TEST_RESOURCES = {
-  en: { common: enCommon, agents: enAgents, issues: enIssues },
+  en: { common: enCommon, agents: enAgents, execution: enIssues },
 };
 
 const mockInitiateListModels = vi.hoisted(() => vi.fn());

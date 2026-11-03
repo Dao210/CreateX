@@ -2,6 +2,8 @@ package service
 
 import (
 	"context"
+	"fmt"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -24,34 +26,20 @@ func (r *mockRow) Scan(dest ...any) error {
 	if r.err != nil {
 		return r.err
 	}
-	t := r.task
-	ptrs := []any{
-		&t.ID, &t.AgentID, &t.IssueID, &t.Status, &t.Priority,
-		&t.DispatchedAt, &t.StartedAt, &t.CompletedAt, &t.Result,
-		&t.Error, &t.CreatedAt, &t.Context, &t.RuntimeID,
-		&t.SessionID, &t.WorkDir, &t.TriggerCommentID,
-		&t.ChatSessionID, &t.AutopilotRunID,
-	}
-	for i, p := range ptrs {
-		if i >= len(dest) {
-			break
-		}
-		// Copy value from source to dest by assigning through the pointer.
-		switch d := dest[i].(type) {
-		case *pgtype.UUID:
-			*d = *(p.(*pgtype.UUID))
-		case *string:
-			*d = *(p.(*string))
-		case *int32:
-			*d = *(p.(*int32))
-		case *pgtype.Timestamptz:
-			*d = *(p.(*pgtype.Timestamptz))
-		case *[]byte:
-			*d = *(p.(*[]byte))
-		case *pgtype.Text:
-			*d = *(p.(*pgtype.Text))
+	if len(dest) == 1 {
+		if id, ok := dest[0].(*pgtype.UUID); ok {
+			*id = r.task.ChatSessionID
+			return nil
 		}
 	}
+	value := reflect.ValueOf(r.task).Elem()
+	if len(dest) != value.NumField() {
+		return fmt.Errorf("task scan: %d columns for %d fields", len(dest), value.NumField())
+	}
+	for i, target := range dest {
+		reflect.ValueOf(target).Elem().Set(value.Field(i))
+	}
+
 	return nil
 }
 
@@ -224,9 +212,9 @@ func TestProviderNetworkRetrySchedule(t *testing.T) {
 	// autopilot run so only the reason/attempt/ceiling gate is exercised.
 	mkTask := func(attempt, max int32) db.AgentTaskQueue {
 		return db.AgentTaskQueue{
-			Attempt:     attempt,
-			MaxAttempts: max,
-			IssueID:     pgtype.UUID{Bytes: [16]byte{1}, Valid: true},
+			Attempt:       attempt,
+			MaxAttempts:   max,
+			ChatSessionID: testUUID(99),
 		}
 	}
 	eligCases := []struct {
@@ -278,9 +266,6 @@ func TestTaskFailureClassifiers(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.reason, func(t *testing.T) {
-			if got := taskErrorType(tc.reason); got != tc.wantType {
-				t.Fatalf("taskErrorType(%q) = %q, want %q", tc.reason, got, tc.wantType)
-			}
 			if got := !resumeUnsafeFailureReason(tc.reason); got != tc.wantResumeOK {
 				t.Fatalf("resume-safe(%q) = %v, want %v", tc.reason, got, tc.wantResumeOK)
 			}
@@ -363,9 +348,9 @@ func TestOpencodeStreamEndedFailureRetries(t *testing.T) {
 
 	mkTask := func(attempt, max int32) db.AgentTaskQueue {
 		return db.AgentTaskQueue{
-			Attempt:     attempt,
-			MaxAttempts: max,
-			IssueID:     pgtype.UUID{Bytes: [16]byte{1}, Valid: true},
+			Attempt:       attempt,
+			MaxAttempts:   max,
+			ChatSessionID: testUUID(99),
 		}
 	}
 
@@ -448,9 +433,9 @@ func TestOpencodeStreamEndedFailureRetries(t *testing.T) {
 func TestSkillBundleFailureFromLegacyDaemonRetries(t *testing.T) {
 	const legacyErr = "resolve skill bundles: context deadline exceeded"
 	task := db.AgentTaskQueue{
-		Attempt:     1,
-		MaxAttempts: 2,
-		IssueID:     pgtype.UUID{Bytes: [16]byte{1}, Valid: true},
+		Attempt:       1,
+		MaxAttempts:   2,
+		ChatSessionID: testUUID(99),
 	}
 
 	// What an old daemon puts on the wire, and what FailTask does with it.

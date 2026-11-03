@@ -138,11 +138,11 @@ describe("ApiClient Plugin surface bridge routes", () => {
 
     await new ApiClient("https://api.example.test").callPluginAction(
       "installation-1",
-      { method: "GET", path: "/context", issueId: "MUL-42" },
+      { method: "GET", path: "/context" },
     );
 
     expect(fetchMock.mock.calls[0]?.[0]).toBe(
-      "https://api.example.test/api/plugin-bridge/v1/context?issue_id=MUL-42",
+      "https://api.example.test/api/plugin-bridge/v1/context",
     );
     expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({
       method: "GET",
@@ -167,7 +167,7 @@ describe("ApiClient Plugin surface bridge routes", () => {
     await new ApiClient("https://api.example.test").invokePluginHook(
       "installation-1",
       "summarize",
-      { trigger: "ui", issueId: "issue-1" },
+      { trigger: "ui" },
     );
 
     expect(fetchMock.mock.calls[0]?.[0]).toBe(
@@ -184,7 +184,6 @@ describe("ApiClient workspace working agents", () => {
         name: "Agent 1",
         avatar_url: null,
         running_task_count: 2,
-        issue_ids: ["issue-1"],
       },
     ];
     const fetchMock = vi.fn().mockImplementation(() =>
@@ -346,23 +345,6 @@ describe("ApiClient notification preferences", () => {
       preferences: {},
     });
   });
-});
-
-describe("ApiClient Inbox response schemas", () => {
-  const legacyRow = {
-    id: "inbox-1",
-    workspace_id: "ws-1",
-    recipient_type: "member",
-    recipient_id: "member-1",
-    type: "new_comment",
-    severity: "info",
-    issue_id: "issue-1",
-    title: "Legacy Inbox row",
-    body: null,
-    read: false,
-    archived: false,
-    created_at: "2026-08-24T00:00:00Z",
-  };
 });
 
 describe("ApiClient", () => {
@@ -676,7 +658,6 @@ describe("ApiClient", () => {
             JSON.stringify({
               id: "att-1",
               workspace_id: "ws-1",
-              issue_id: null,
               comment_id: null,
               uploader_type: "member",
               uploader_id: "u-1",
@@ -891,7 +872,6 @@ describe("ApiClient", () => {
       id: "task-1",
       agent_id: "agent-1",
       runtime_id: "runtime-1",
-      issue_id: "",
       status: "cancelled",
       priority: 0,
       dispatched_at: null,
@@ -1126,7 +1106,7 @@ describe("ApiClient", () => {
       const client = new ApiClient("https://api.example.test");
       const controller = new AbortController();
       const file = new File(["hi"], "hi.png", { type: "image/png" });
-      await client.uploadFile(file, { issueId: "issue-1" }, controller.signal);
+      await client.uploadFile(file, { chatSessionId: "session-1" }, controller.signal);
 
       const [, init] = fetchMock.mock.calls[0]!;
       expect(init?.signal).toBe(controller.signal);

@@ -1044,28 +1044,10 @@ func (h *Handler) UpdateAutopilot(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, resp)
 }
 
-// autopilotRuleSubstantiveChange reports whether a substantive (publish-worthy)
-// field of the autopilot ROW changed between prev and next — a change that alters
-// WHAT the automation instructs the agent to do, or WHO / WHETHER it runs, and so
-// transfers accountability to the editor (MUL-4302 §3.4; boundary pinned with Elon):
-//
-//   - assignee_type / assignee_id — who (agent / squad leader) executes;
-//   - status — enabled state (active / paused / archived);
-//   - execution_mode — run_only vs create_issue;
-//   - description — the product surfaces this as the run PROMPT, i.e. the task
-//     instruction itself, so editing it must transfer responsibility (the gap Elon
-//     flagged: a fresh publisher of the instructions is the accountable human);
-//   - issue_title_template — templates the created issue in create_issue mode; part
-//     of the instruction / output spec the run produces.
-//
-// Deliberately NOT substantive (cosmetic / routing — they change neither the
-// instruction nor the executor): title (display label) and project_id (which project
-// created issues are filed under). The comparison is faithful because UpdateAutopilot
-// seeds every param from prev, so an omitted field round-trips unchanged.
-//
-// Trigger-table edits (cron / timezone / enabled / event_filters) are substantive PER
-// TRIGGER and handled in UpdateAutopilotTrigger; archive and system-pause republish in
-// their own paths.
+// autopilotRuleSubstantiveChange transfers accountability when the editor
+// changes the executing agent, enabled state, execution mode or instructions.
+// A display-title edit does not change responsibility. Trigger edits handle
+// their own accountability in UpdateAutopilotTrigger.
 func autopilotRuleSubstantiveChange(prev, next db.Autopilot) bool {
 	return prev.AssigneeType != next.AssigneeType ||
 		prev.AssigneeID != next.AssigneeID ||

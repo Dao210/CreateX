@@ -16,7 +16,7 @@ func newLabelCreateTestCmd() *cobra.Command {
 	cmd := &cobra.Command{Use: "create"}
 	cmd.Flags().String("name", "", "")
 	cmd.Flags().String("color", "", "")
-	cmd.Flags().String("resource-type", "issue", "")
+	cmd.Flags().String("resource-type", "agent", "")
 	cmd.Flags().String("description", "", "")
 	cmd.Flags().String("output", "json", "")
 	return cmd
@@ -77,6 +77,7 @@ func TestRunLabelCreateSendsExpectedRequest(t *testing.T) {
 
 	cmd := newLabelCreateTestCmd()
 	_ = cmd.Flags().Set("name", "Bug")
+	_ = cmd.Flags().Set("resource-type", "agent")
 	_ = cmd.Flags().Set("color", "#ef4444")
 
 	out, err := captureStdout(t, func() error { return runLabelCreate(cmd, nil) })
@@ -159,6 +160,7 @@ func TestRunLabelCreateRequiresNameAndColor(t *testing.T) {
 	}
 
 	_ = cmd.Flags().Set("name", "Bug")
+	_ = cmd.Flags().Set("resource-type", "agent")
 	if err := runLabelCreate(cmd, nil); err == nil || !strings.Contains(err.Error(), "--color is required") {
 		t.Fatalf("runLabelCreate error = %v, want missing color", err)
 	}

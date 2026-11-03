@@ -205,7 +205,6 @@ func configureExamplePlugin(t *testing.T, installationID string) {
 	body, _ := json.Marshal(map[string]any{"values": map[string]any{
 		"service_prefix":          "prod-",
 		"rollback_window_minutes": 60,
-		"require_incident_label":  true,
 		"environment":             "production",
 		"sentinel_token":          "sentinel-secret",
 	}})
@@ -268,7 +267,7 @@ func TestExamplePluginContributesItsSkill(t *testing.T) {
 	}
 	// Asserting on a sentence the skill actually teaches, not on its length: a
 	// truncated or mis-resolved entry would still have bytes in it.
-	if !strings.Contains(body, "Blast radius") {
+	if !strings.Contains(body, "Establish the affected service") {
 		t.Fatalf("the skill did not come from the example's SKILL.md; got %d bytes", len(body))
 	}
 }

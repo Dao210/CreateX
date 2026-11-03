@@ -24,7 +24,7 @@ export const test = base.extend<{ api: TestApiClient; game: SiegeGame }>({
     } finally {
       if (errors.length) await testInfo.attach("browser-errors", { body: JSON.stringify(errors, null, 2), contentType: "application/json" });
       if (testInfo.status !== testInfo.expectedStatus) console.error("Siege browser diagnostic", JSON.stringify({ url: page.url(), errors }));
-      await api.deleteWorkspace(); await api.cleanup();
+      await api.deleteWorkspace();
     }
   }, { auto: true }],
   game: async ({ api }, use) => { await use(games.get(api)!); },

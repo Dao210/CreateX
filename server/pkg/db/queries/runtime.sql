@@ -399,7 +399,7 @@ FOR UPDATE;
 
 -- name: ReassignTasksToRuntime :one
 WITH fence AS MATERIALIZED (
-    SELECT lock_task_owner_rows(NULL, @new_runtime_id) AS ok
+    SELECT lock_task_owner_rows(NULL, @new_runtime_id, NULL) AS ok
 ),
 reassigned AS (
     UPDATE agent_task_queue
@@ -470,3 +470,24 @@ SELECT EXISTS (
 
 -- name: CountTasksByRuntime :one
 SELECT count(*) FROM agent_task_queue WHERE runtime_id = $1;
+
+-- name: UnbindChatSessionsFromRuntime :exec
+UPDATE chat_session SET runtime_id = NULL WHERE runtime_id = $1;
+
+-- name: DeleteRuntimeSystemAgentChatData :exec
+WITH sessions AS MATERIALIZED (
+    SELECT cs.id FROM chat_session cs JOIN agent a ON a.id = cs.agent_id WHERE a.runtime_id = $1 AND a.kind = 'system'
+), removed_attachments AS (
+    DELETE FROM attachment WHERE chat_session_id IN (SELECT id FROM sessions)
+), removed_messages AS (
+    DELETE FROM chat_message WHERE chat_session_id IN (SELECT id FROM sessions)
+), removed_bindings AS (
+    DELETE FROM channel_chat_session_binding WHERE chat_session_id IN (SELECT id FROM sessions)
+), removed_lark_bindings AS (
+    DELETE FROM lark_chat_session_binding WHERE chat_session_id IN (SELECT id FROM sessions)
+), removed_context AS (
+    DELETE FROM channel_chat_context_generation WHERE chat_session_id IN (SELECT id FROM sessions)
+), detached_tasks AS (
+    UPDATE agent_task_queue SET chat_session_id = NULL WHERE chat_session_id IN (SELECT id FROM sessions)
+)
+DELETE FROM chat_session WHERE id IN (SELECT id FROM sessions);

@@ -31,7 +31,6 @@ type autopilotQuotaFixture struct {
 	autopilotID   pgtype.UUID
 	agentID       pgtype.UUID
 	publisherID   pgtype.UUID
-	issueID       pgtype.UUID
 	periodStart   time.Time
 	periodEnd     time.Time
 	resetAt       time.Time
@@ -63,7 +62,7 @@ func newAutopilotQuotaFixture(t *testing.T, action entitlement.Action, limit int
 	t.Helper()
 	pool := newResolveOriginatorPool(t)
 	q := db.New(pool)
-	workspaceIDString, publisherID, agentID, issueIDString := seedAttributionFixture(t, pool)
+	workspaceIDString, publisherID, agentID, _ := seedAttributionFixture(t, pool)
 	autopilotIDString, _ := seedRunOnlyAutopilot(t, pool, workspaceIDString, agentID, publisherID)
 	workspaceID := util.MustParseUUID(workspaceIDString)
 	workspace := uuid.UUID(workspaceID.Bytes)
@@ -74,7 +73,6 @@ func newAutopilotQuotaFixture(t *testing.T, action entitlement.Action, limit int
 		pool: pool, queries: q, stub: stub, workspace: workspace,
 		workspaceID: workspaceID, autopilotID: util.MustParseUUID(autopilotIDString),
 		agentID: util.MustParseUUID(agentID), publisherID: util.MustParseUUID(publisherID),
-		issueID:     util.MustParseUUID(issueIDString),
 		periodStart: periodStart, periodEnd: periodEnd, resetAt: periodEnd,
 		policyLimit: limit,
 		createRunArgs: db.CreateAutopilotRunParams{
@@ -487,7 +485,14 @@ func TestAutopilotQuotaInboxFailurePreservesQuotaRejection(t *testing.T) {
 func TestAutopilotQuotaNoticeSurvivesDeletedAutopilot(t *testing.T) {
 	fixture := newAutopilotQuotaFixture(t, entitlement.ActionEnforce, 1)
 	ctx := context.Background()
-	if _, err := fixture.pool.Exec(ctx, `DELETE FROM autopilot WHERE id = $1`, fixture.autopilotID); err != nil {
+	if _, err := fixture.pool.Exec(ctx, `WITH runs AS MATERIALIZED (SELECT id FROM autopilot_run WHERE autopilot_id=$1),
+ removed_deliveries AS (DELETE FROM webhook_delivery WHERE autopilot_id=$1),
+ removed_triggers AS (DELETE FROM autopilot_trigger WHERE autopilot_id=$1),
+ removed_versions AS (DELETE FROM autopilot_rule_version WHERE autopilot_id=$1),
+ removed_collaborators AS (DELETE FROM autopilot_collaborator WHERE autopilot_id=$1),
+ detached_tasks AS (UPDATE agent_task_queue SET autopilot_run_id=NULL WHERE autopilot_run_id IN (SELECT id FROM runs)),
+ removed_runs AS (DELETE FROM autopilot_run WHERE autopilot_id=$1)
+ DELETE FROM autopilot WHERE id=$1`, fixture.autopilotID); err != nil {
 		t.Fatalf("delete autopilot before quota notice: %v", err)
 	}
 

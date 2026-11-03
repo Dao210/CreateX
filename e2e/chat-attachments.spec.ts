@@ -67,7 +67,6 @@ test.describe("Chat attachments", () => {
       createdSessionId = null;
       createdAgentId = null;
       createdRuntimeId = null;
-      await api.cleanup();
     }
   });
 

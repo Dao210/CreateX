@@ -15,7 +15,7 @@ vi.mock("../hooks", () => ({ useWorkspaceId: () => "ws" }));
 
 function item(id: string): InboxItem {
   return { id, workspace_id: "ws", recipient_type: "member", recipient_id: "user", actor_type: "system", actor_id: null,
-    type: "mentioned", severity: "info", issue_id: id, title: id, body: null, issue_status: "done", issue_priority: "high",
+    type: "mentioned", severity: "info", title: id, body: null,
     read: false, archived: true, created_at: "2026-09-01T00:00:00Z", details: null };
 }
 const page = (items: InboxItem[], nextCursor: string | null = null): ArchivedInboxPage => ({ items, nextCursor, hasMore: !!nextCursor });

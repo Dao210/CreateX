@@ -9,6 +9,7 @@ import (
 
 	"github.com/auro-ai/auro/server/internal/attribution"
 	"github.com/auro-ai/auro/server/internal/events"
+	"github.com/auro-ai/auro/server/internal/testutil"
 	"github.com/auro-ai/auro/server/internal/util"
 	db "github.com/auro-ai/auro/server/pkg/db/generated"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -26,13 +27,12 @@ import (
 func TestAttributionInvariantCheck_RejectsBypass(t *testing.T) {
 	pool := newResolveOriginatorPool(t)
 	ctx := context.Background()
-	_, userA, agentID, issueID := seedAttributionFixture(t, pool)
+	_, userA, agentID, _ := seedAttributionFixture(t, pool)
 
 	// originator set, accountable NULL, source set (enforced) → must violate the check.
 	if _, err := pool.Exec(ctx, `
-		INSERT INTO agent_task_queue (agent_id, runtime_id, issue_id, status, priority, originator_user_id, originator_source)
-		VALUES ($1, (SELECT runtime_id FROM agent WHERE id = $1), $2, 'queued', 0, $3, 'comment_source')`,
-		agentID, issueID, userA); err == nil {
+		INSERT INTO agent_task_queue (agent_id, runtime_id, status, priority, originator_user_id, originator_source)
+		VALUES ($1, (SELECT runtime_id FROM agent WHERE id = $1), 'queued', 0, $2, 'comment_source')`, agentID, userA); err == nil {
 		t.Fatal("expected the CHECK to reject originator set with NULL accountable, but insert succeeded")
 	}
 
@@ -44,18 +44,16 @@ func TestAttributionInvariantCheck_RejectsBypass(t *testing.T) {
 	}
 	t.Cleanup(func() { pool.Exec(context.Background(), `DELETE FROM "user" WHERE id = $1`, userB) })
 	if _, err := pool.Exec(ctx, `
-		INSERT INTO agent_task_queue (agent_id, runtime_id, issue_id, status, priority, originator_user_id, accountable_user_id, originator_source)
-		VALUES ($1, (SELECT runtime_id FROM agent WHERE id = $1), $2, 'queued', 0, $3, $4, 'comment_source')`,
-		agentID, issueID, userA, userB); err == nil {
+		INSERT INTO agent_task_queue (agent_id, runtime_id, status, priority, originator_user_id, accountable_user_id, originator_source)
+		VALUES ($1, (SELECT runtime_id FROM agent WHERE id = $1), 'queued', 0, $2, $3, 'comment_source')`, agentID, userA, userB); err == nil {
 		t.Fatal("expected the CHECK to reject originator != accountable, but insert succeeded")
 	}
 
 	// The legitimate shape (equal) is accepted.
 	var okTaskID string
 	if err := pool.QueryRow(ctx, `
-		INSERT INTO agent_task_queue (agent_id, runtime_id, issue_id, status, priority, originator_user_id, accountable_user_id, originator_source)
-		VALUES ($1, (SELECT runtime_id FROM agent WHERE id = $1), $2, 'queued', 0, $3, $3, 'direct_human') RETURNING id`,
-		agentID, issueID, userA).Scan(&okTaskID); err != nil {
+		INSERT INTO agent_task_queue (agent_id, runtime_id, status, priority, originator_user_id, accountable_user_id, originator_source)
+		VALUES ($1, (SELECT runtime_id FROM agent WHERE id = $1), 'queued', 0, $2, $2, 'direct_human') RETURNING id`, agentID, userA).Scan(&okTaskID); err != nil {
 		t.Fatalf("equal originator/accountable must be accepted, got %v", err)
 	}
 	t.Cleanup(func() { pool.Exec(context.Background(), `DELETE FROM agent_task_queue WHERE id = $1`, okTaskID) })
@@ -69,12 +67,11 @@ func TestAttributionInvariantCheck_RejectsBypass(t *testing.T) {
 func TestAttributionInvariantCheck_RejectsUnbackfilledLegacyRows(t *testing.T) {
 	pool := newResolveOriginatorPool(t)
 	ctx := context.Background()
-	_, userA, agentID, issueID := seedAttributionFixture(t, pool)
+	_, userA, agentID, _ := seedAttributionFixture(t, pool)
 
 	if _, err := pool.Exec(ctx, `
-		INSERT INTO agent_task_queue (agent_id, runtime_id, issue_id, status, priority, originator_user_id)
-		VALUES ($1, (SELECT runtime_id FROM agent WHERE id = $1), $2, 'queued', 0, $3)`,
-		agentID, issueID, userA); err == nil {
+		INSERT INTO agent_task_queue (agent_id, runtime_id, status, priority, originator_user_id)
+		VALUES ($1, (SELECT runtime_id FROM agent WHERE id = $1), 'queued', 0, $2)`, agentID, userA); err == nil {
 		t.Fatal("expected the strict CHECK to reject an unbackfilled legacy row, but insert succeeded")
 	}
 }
@@ -96,7 +93,16 @@ func TestTriggerOwnerAttribution_ScheduleTriggerCreator(t *testing.T) {
 		workspaceID, agentID, creatorID).Scan(&autopilotID); err != nil {
 		t.Fatalf("seed autopilot: %v", err)
 	}
-	t.Cleanup(func() { pool.Exec(context.Background(), `DELETE FROM autopilot WHERE id = $1`, autopilotID) })
+	t.Cleanup(func() {
+		pool.Exec(context.Background(), `WITH runs AS MATERIALIZED (SELECT id FROM autopilot_run WHERE autopilot_id=$1),
+ removed_deliveries AS (DELETE FROM webhook_delivery WHERE autopilot_id=$1),
+ removed_triggers AS (DELETE FROM autopilot_trigger WHERE autopilot_id=$1),
+ removed_versions AS (DELETE FROM autopilot_rule_version WHERE autopilot_id=$1),
+ removed_collaborators AS (DELETE FROM autopilot_collaborator WHERE autopilot_id=$1),
+ detached_tasks AS (UPDATE agent_task_queue SET autopilot_run_id=NULL WHERE autopilot_run_id IN (SELECT id FROM runs)),
+ removed_runs AS (DELETE FROM autopilot_run WHERE autopilot_id=$1)
+ DELETE FROM autopilot WHERE id=$1`, autopilotID)
+	})
 
 	// Schedule trigger whose responsible publisher is the creating member.
 	var triggerID string
@@ -141,7 +147,16 @@ func TestTriggerOwnerAttribution_LegacyTriggerFallsBackToRuleOwner(t *testing.T)
 		workspaceID, agentID, publisherID).Scan(&autopilotID); err != nil {
 		t.Fatalf("seed autopilot: %v", err)
 	}
-	t.Cleanup(func() { pool.Exec(context.Background(), `DELETE FROM autopilot WHERE id = $1`, autopilotID) })
+	t.Cleanup(func() {
+		pool.Exec(context.Background(), `WITH runs AS MATERIALIZED (SELECT id FROM autopilot_run WHERE autopilot_id=$1),
+ removed_deliveries AS (DELETE FROM webhook_delivery WHERE autopilot_id=$1),
+ removed_triggers AS (DELETE FROM autopilot_trigger WHERE autopilot_id=$1),
+ removed_versions AS (DELETE FROM autopilot_rule_version WHERE autopilot_id=$1),
+ removed_collaborators AS (DELETE FROM autopilot_collaborator WHERE autopilot_id=$1),
+ detached_tasks AS (UPDATE agent_task_queue SET autopilot_run_id=NULL WHERE autopilot_run_id IN (SELECT id FROM runs)),
+ removed_runs AS (DELETE FROM autopilot_run WHERE autopilot_id=$1)
+ DELETE FROM autopilot WHERE id=$1`, autopilotID)
+	})
 
 	// Trigger with NO creator recorded (pre-migration style).
 	var triggerID string
@@ -216,7 +231,16 @@ func TestTriggerOwnerAttribution_StaysWithTriggerCreator(t *testing.T) {
 		workspaceID, agentID, creatorA).Scan(&autopilotID); err != nil {
 		t.Fatalf("seed autopilot: %v", err)
 	}
-	t.Cleanup(func() { pool.Exec(context.Background(), `DELETE FROM autopilot WHERE id = $1`, autopilotID) })
+	t.Cleanup(func() {
+		pool.Exec(context.Background(), `WITH runs AS MATERIALIZED (SELECT id FROM autopilot_run WHERE autopilot_id=$1),
+ removed_deliveries AS (DELETE FROM webhook_delivery WHERE autopilot_id=$1),
+ removed_triggers AS (DELETE FROM autopilot_trigger WHERE autopilot_id=$1),
+ removed_versions AS (DELETE FROM autopilot_rule_version WHERE autopilot_id=$1),
+ removed_collaborators AS (DELETE FROM autopilot_collaborator WHERE autopilot_id=$1),
+ detached_tasks AS (UPDATE agent_task_queue SET autopilot_run_id=NULL WHERE autopilot_run_id IN (SELECT id FROM runs)),
+ removed_runs AS (DELETE FROM autopilot_run WHERE autopilot_id=$1)
+ DELETE FROM autopilot WHERE id=$1`, autopilotID)
+	})
 
 	// Two triggers, both initially published by creator A (the create-site default).
 	seedTrigger := func(cron string) string {
@@ -315,7 +339,16 @@ func seedRunOnlyAutopilot(t *testing.T, pool *pgxpool.Pool, workspaceID, agentID
 		workspaceID, agentID, creatorID).Scan(&autopilotID); err != nil {
 		t.Fatalf("seed autopilot: %v", err)
 	}
-	t.Cleanup(func() { pool.Exec(context.Background(), `DELETE FROM autopilot WHERE id = $1`, autopilotID) })
+	t.Cleanup(func() {
+		pool.Exec(context.Background(), `WITH runs AS MATERIALIZED (SELECT id FROM autopilot_run WHERE autopilot_id=$1),
+ removed_deliveries AS (DELETE FROM webhook_delivery WHERE autopilot_id=$1),
+ removed_triggers AS (DELETE FROM autopilot_trigger WHERE autopilot_id=$1),
+ removed_versions AS (DELETE FROM autopilot_rule_version WHERE autopilot_id=$1),
+ removed_collaborators AS (DELETE FROM autopilot_collaborator WHERE autopilot_id=$1),
+ detached_tasks AS (UPDATE agent_task_queue SET autopilot_run_id=NULL WHERE autopilot_run_id IN (SELECT id FROM runs)),
+ removed_runs AS (DELETE FROM autopilot_run WHERE autopilot_id=$1)
+ DELETE FROM autopilot WHERE id=$1`, autopilotID)
+	})
 	if err := pool.QueryRow(ctx, `
 		INSERT INTO autopilot_run (autopilot_id, source, status) VALUES ($1, 'manual', 'running') RETURNING id`,
 		autopilotID).Scan(&runID); err != nil {
@@ -461,7 +494,16 @@ func TestDispatchRunOnlyScheduleStaysWithTriggerCreator(t *testing.T) {
 		workspaceID, agentID, creatorA).Scan(&autopilotID); err != nil {
 		t.Fatalf("seed autopilot: %v", err)
 	}
-	t.Cleanup(func() { pool.Exec(context.Background(), `DELETE FROM autopilot WHERE id = $1`, autopilotID) })
+	t.Cleanup(func() {
+		pool.Exec(context.Background(), `WITH runs AS MATERIALIZED (SELECT id FROM autopilot_run WHERE autopilot_id=$1),
+ removed_deliveries AS (DELETE FROM webhook_delivery WHERE autopilot_id=$1),
+ removed_triggers AS (DELETE FROM autopilot_trigger WHERE autopilot_id=$1),
+ removed_versions AS (DELETE FROM autopilot_rule_version WHERE autopilot_id=$1),
+ removed_collaborators AS (DELETE FROM autopilot_collaborator WHERE autopilot_id=$1),
+ detached_tasks AS (UPDATE agent_task_queue SET autopilot_run_id=NULL WHERE autopilot_run_id IN (SELECT id FROM runs)),
+ removed_runs AS (DELETE FROM autopilot_run WHERE autopilot_id=$1)
+ DELETE FROM autopilot WHERE id=$1`, autopilotID)
+	})
 
 	// Schedule trigger initially published by creator A, then edited by B.
 	var triggerID string
@@ -599,7 +641,7 @@ func TestApplyAttributionFallbackRefusesOnMissingOwner(t *testing.T) {
 	workspaceID, _, _, _ := seedAttributionFixture(t, pool) // default policy = open
 
 	svc := &TaskService{Queries: q, TxStarter: pool, Bus: events.New()}
-	unattr := attribution.Unattributed(attribution.EvidenceIssueAssignment, util.MustParseUUID(workspaceID))
+	unattr := attribution.Unattributed(attribution.EvidenceChat, util.MustParseUUID(workspaceID))
 	_, err := svc.applyAttributionFallback(ctx, unattr, db.Agent{WorkspaceID: util.MustParseUUID(workspaceID)}) // OwnerID zero
 	if !errors.Is(err, ErrAttributionFailClosed) {
 		t.Fatalf("missing owner: err = %v, want ErrAttributionFailClosed", err)
@@ -616,7 +658,7 @@ func TestApplyAttributionFallbackRefusesOnPolicyReadFailure(t *testing.T) {
 	_, ownerID, _, _ := seedAttributionFixture(t, pool)
 
 	svc := &TaskService{Queries: q, TxStarter: pool, Bus: events.New()}
-	unattr := attribution.Unattributed(attribution.EvidenceIssueAssignment, pgtype.UUID{})
+	unattr := attribution.Unattributed(attribution.EvidenceChat, pgtype.UUID{})
 	missingWs := pgtype.UUID{Bytes: [16]byte{0xDE, 0xAD, 0xBE, 0xEF}, Valid: true} // no such workspace
 	_, err := svc.applyAttributionFallback(ctx, unattr, db.Agent{WorkspaceID: missingWs, OwnerID: util.MustParseUUID(ownerID)})
 	if !errors.Is(err, ErrAttributionFailClosed) {
@@ -628,7 +670,7 @@ func TestApplyAttributionFallbackRefusesOnPolicyReadFailure(t *testing.T) {
 // the policy and passes through unchanged (proven with a nil-Queries service).
 func TestApplyAttributionFallbackPreciseUntouched(t *testing.T) {
 	svc := &TaskService{} // no Queries: a policy read would panic/error if attempted
-	precise := attribution.DirectHumanRun(pgtype.UUID{Bytes: [16]byte{0x11}, Valid: true}, attribution.EvidenceComment, pgtype.UUID{})
+	precise := attribution.DirectHumanRun(pgtype.UUID{Bytes: [16]byte{0x11}, Valid: true}, attribution.EvidenceChat, pgtype.UUID{})
 	got, err := svc.applyAttributionFallback(context.Background(), precise, db.Agent{})
 	if err != nil {
 		t.Fatalf("precise attribution must not error: %v", err)
@@ -659,10 +701,10 @@ func TestEnqueueChatTaskStampsChatEvidence(t *testing.T) {
 	seedChannelTaskBinding(t, pool, chatSessionID)
 
 	svc := &TaskService{Queries: q, TxStarter: pool, Bus: events.New()}
-	task, err := svc.EnqueueChatTask(ctx, db.ChatSession{
+	task, err := svc.enqueueChatTask(ctx, db.ChatSession{
 		ID:      util.MustParseUUID(chatSessionID),
 		AgentID: util.MustParseUUID(agentID),
-	}, util.MustParseUUID(userID), false)
+	}, util.MustParseUUID(userID), false, 0, false, pgtype.UUID{}, 0)
 	if err != nil {
 		t.Fatalf("EnqueueChatTask: %v", err)
 	}
@@ -715,10 +757,10 @@ func TestEnqueueChatTaskDefersForChannelMediaAndPromotesWhenReady(t *testing.T) 
 	}
 
 	svc := &TaskService{Queries: q, TxStarter: pool, Bus: events.New()}
-	priorTask, err := svc.EnqueueChatTask(ctx, db.ChatSession{
+	priorTask, err := svc.enqueueChatTask(ctx, db.ChatSession{
 		ID:      util.MustParseUUID(chatSessionID),
 		AgentID: util.MustParseUUID(agentID),
-	}, util.MustParseUUID(userID), false)
+	}, util.MustParseUUID(userID), false, 0, false, pgtype.UUID{}, 0)
 	if err != nil {
 		t.Fatalf("enqueue prior chat task: %v", err)
 	}
@@ -729,10 +771,10 @@ func TestEnqueueChatTaskDefersForChannelMediaAndPromotesWhenReady(t *testing.T) 
 		t.Fatalf("seed pending media message: %v", err)
 	}
 
-	task, err := svc.EnqueueChatTask(ctx, db.ChatSession{
+	task, err := svc.enqueueChatTask(ctx, db.ChatSession{
 		ID:      util.MustParseUUID(chatSessionID),
 		AgentID: util.MustParseUUID(agentID),
-	}, util.MustParseUUID(userID), false)
+	}, util.MustParseUUID(userID), false, 0, false, pgtype.UUID{}, 0)
 	if err != nil {
 		t.Fatalf("EnqueueChatTask: %v", err)
 	}
@@ -781,7 +823,7 @@ func TestEnqueueChatTaskDefersForChannelMediaAndPromotesWhenReady(t *testing.T) 
 // seedAttributionFixture creates the minimal user/workspace/member/runtime/agent
 // graph plus a member-created issue assigned to the agent, and returns the ids
 // needed to enqueue a run. Everything is cleaned up via t.Cleanup.
-func seedAttributionFixture(t *testing.T, pool *pgxpool.Pool) (workspaceID, userID, agentID, unused string) {
+func seedAttributionFixture(t *testing.T, pool *pgxpool.Pool) (workspaceID, userID, agentID, chatID string) {
 	t.Helper()
 	ctx := context.Background()
 	suffix := time.Now().UnixNano()
@@ -817,5 +859,7 @@ func seedAttributionFixture(t *testing.T, pool *pgxpool.Pool) (workspaceID, user
 		RETURNING id`, workspaceID, runtimeID, userID).Scan(&agentID); err != nil {
 		t.Fatalf("seed agent: %v", err)
 	}
-	return workspaceID, userID, agentID, ""
+	fx := testutil.New(pool, workspaceID, userID)
+	chatID = fx.ChatSession(t, agentID)
+	return workspaceID, userID, agentID, chatID
 }

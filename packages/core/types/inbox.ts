@@ -1,3 +1,4 @@
+
 import type { InboxContent } from "../inbox/messages";
 
 export type InboxSeverity = "action_required" | "attention" | "info";
@@ -24,16 +25,8 @@ export interface InboxItem {
   actor_id: string | null;
   type: InboxItemType;
   severity: InboxSeverity;
-  issue_id: string | null;
   title: string;
   body: string | null;
-  issue_status: string | null;
-  /**
-   * Current priority of the linked issue. Optional so an installed Desktop
-   * client remains compatible with an older backend that predates this Inbox
-   * projection; null also covers notifications without a linked issue.
-   */
-  issue_priority?: string | null;
   read: boolean;
   archived: boolean;
   created_at: string;

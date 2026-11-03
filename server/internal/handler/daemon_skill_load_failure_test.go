@@ -68,7 +68,7 @@ func seedSkillLoadFixture(t *testing.T, ctx context.Context, name string) (runti
 	t.Helper()
 
 	runtimeID = createClaimReclaimRuntime(t, ctx, name+" runtime")
-	agentID, issueID := createClaimReclaimAgentAndIssue(t, ctx, runtimeID, name+" agent")
+	agentID, issueID := createClaimReclaimAgentAndChat(t, ctx, runtimeID, name+" agent")
 
 	skillID = dbfx.Insert(t, "skill", testutil.Cols{
 		"workspace_id": testWorkspaceID,
@@ -87,8 +87,8 @@ func seedSkillLoadFixture(t *testing.T, ctx context.Context, name string) (runti
 	dbfx.Exec(t, `INSERT INTO agent_skill (agent_id, skill_id) VALUES ($1, $2)`, agentID, skillID)
 
 	taskID = dbfx.Task(t, agentID, testutil.Cols{
-		"runtime_id": runtimeID,
-		"issue_id":   issueID,
+		"runtime_id":      runtimeID,
+		"chat_session_id": issueID,
 	})
 	return runtimeID, taskID, skillID
 }

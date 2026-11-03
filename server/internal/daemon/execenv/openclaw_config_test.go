@@ -1543,8 +1543,8 @@ func TestPrepareOpenclawSkillWriteMatchesScanPath(t *testing.T) {
 	}
 	cfgPath := result.ConfigPath
 	if err := writeContextFiles(workDir, "openclaw", TaskContextForEnv{
-		IssueID:     "issue-1",
-		AgentSkills: skills,
+		ChatSessionID: "issue-1",
+		AgentSkills:   skills,
 	}, nil); err != nil {
 		t.Fatalf("writeContextFiles: %v", err)
 	}
@@ -1579,7 +1579,7 @@ func TestPrepareEnvironmentOpenclawWiresConfigPath(t *testing.T) {
 		Provider:       "openclaw",
 		OpenclawBin:    stub.bin,
 		Task: TaskContextForEnv{
-			IssueID: "issue-1",
+			ChatSessionID: "issue-1",
 		},
 	}, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	if err != nil {
@@ -1626,7 +1626,7 @@ func TestPrepareEnvironmentOpenclawWiresIncludeRoot(t *testing.T) {
 		AgentName:      "scout",
 		Provider:       "openclaw",
 		OpenclawBin:    stub.bin,
-		Task:           TaskContextForEnv{IssueID: "issue-1"},
+		Task:           TaskContextForEnv{ChatSessionID: "issue-1"},
 	}, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	if err != nil {
 		t.Fatalf("Prepare: %v", err)
@@ -1653,7 +1653,7 @@ func TestPrepareEnvironmentOpenclawFailsClosed(t *testing.T) {
 		AgentName:      "scout",
 		Provider:       "openclaw",
 		OpenclawBin:    stub.bin,
-		Task:           TaskContextForEnv{IssueID: "issue-1"},
+		Task:           TaskContextForEnv{ChatSessionID: "issue-1"},
 	}, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	if err == nil {
 		t.Fatal("Prepare(openclaw) succeeded when CLI errored; expected fail closed")
@@ -1687,7 +1687,7 @@ func TestPrepareEnvironmentNonOpenclawSkipsConfig(t *testing.T) {
 				TaskID:         taskID,
 				AgentName:      "scout",
 				Provider:       provider,
-				Task:           TaskContextForEnv{IssueID: "issue-1"},
+				Task:           TaskContextForEnv{ChatSessionID: "issue-1"},
 			}, slog.New(slog.NewTextHandler(io.Discard, nil)))
 			if err != nil {
 				t.Fatalf("Prepare(%s): %v", provider, err)

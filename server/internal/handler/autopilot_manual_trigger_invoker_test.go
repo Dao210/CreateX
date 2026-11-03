@@ -84,10 +84,10 @@ func TestTriggerAutopilot_AgentActsForItsOriginator(t *testing.T) {
 
 	var run AutopilotRunResponse
 	triggerAsAgent(t, autopilotID, agentID, taskID).Want(http.StatusOK).JSON(&run)
-	if run.Status != "issue_created" {
+	if run.Status != "running" {
 		// .Want() reports the status code; only this assertion knows that a 200
 		// carrying a skipped run is the exact shape the bug produced.
-		t.Fatalf("run status = %q (reason_code %v, failure_reason %v), want issue_created",
+		t.Fatalf("run status = %q (reason_code %v, failure_reason %v), want running",
 			run.Status, derefStr(run.ReasonCode), derefStr(run.FailureReason))
 	}
 }
@@ -163,8 +163,8 @@ func TestTriggerAutopilot_MemberPathUnchanged(t *testing.T) {
 
 	var run AutopilotRunResponse
 	testutil.Call(t, testHandler.TriggerAutopilot, r).Want(http.StatusOK).JSON(&run)
-	if run.Status != "issue_created" {
-		t.Fatalf("run status = %q (reason_code %v), want issue_created", run.Status, derefStr(run.ReasonCode))
+	if run.Status != "running" {
+		t.Fatalf("run status = %q (reason_code %v), want running", run.Status, derefStr(run.ReasonCode))
 	}
 }
 
@@ -179,4 +179,32 @@ func derefStr(s *string) string {
 		return "<nil>"
 	}
 	return *s
+}
+
+func triggerInvokerFixture(t *testing.T, titleSuffix string) (autopilotID, agentID string) {
+	t.Helper()
+
+	dbfx.QueryRow(t, `SELECT id FROM agent WHERE workspace_id = $1 LIMIT 1`, testWorkspaceID).Scan(&agentID)
+
+	title := fmt.Sprintf("manual trigger invoker %s %d", titleSuffix, time.Now().UnixNano())
+	req := newRequest("POST", "/api/autopilots?workspace_id="+testWorkspaceID, map[string]any{
+		"title":          title,
+		"assignee_id":    agentID,
+		"execution_mode": "run_only",
+	})
+	var ap AutopilotResponse
+	testutil.Call(t, testHandler.CreateAutopilot, req).Want(http.StatusCreated).JSON(&ap)
+
+	// A dispatched run leaves an issue and a task behind it; both outlive the
+	// autopilot row, so they are cleaned before it.
+	dbfx.Cleanup(t, `DELETE FROM autopilot_run WHERE autopilot_id = $1`, ap.ID)
+	dbfx.Cleanup(t, `WITH runs AS MATERIALIZED (SELECT id FROM autopilot_run WHERE autopilot_id=$1),
+ removed_deliveries AS (DELETE FROM webhook_delivery WHERE autopilot_id=$1),
+ removed_triggers AS (DELETE FROM autopilot_trigger WHERE autopilot_id=$1),
+ removed_versions AS (DELETE FROM autopilot_rule_version WHERE autopilot_id=$1),
+ removed_collaborators AS (DELETE FROM autopilot_collaborator WHERE autopilot_id=$1),
+ detached_tasks AS (UPDATE agent_task_queue SET autopilot_run_id=NULL WHERE autopilot_run_id IN (SELECT id FROM runs)),
+ removed_runs AS (DELETE FROM autopilot_run WHERE autopilot_id=$1)
+ DELETE FROM autopilot WHERE id=$1`, ap.ID)
+	return ap.ID, agentID
 }

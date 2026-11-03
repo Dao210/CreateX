@@ -11,8 +11,6 @@ const (
 	EventRuntimeReady                  = "runtime_ready"
 	EventRuntimeFailed                 = "runtime_failed"
 	EventRuntimeOffline                = "runtime_offline"
-	EventIssueExecuted                 = "issue_executed"
-	EventIssueCreated                  = "issue_created"
 	EventChatMessageSent               = "chat_message_sent"
 	EventAutopilotRunStarted           = "autopilot_run_started"
 	EventAutopilotRunCompleted         = "autopilot_run_completed"
@@ -27,7 +25,6 @@ const (
 	EventCloudWaitlistJoined           = "cloud_waitlist_joined"
 	EventFeedbackSubmitted             = "feedback_submitted"
 	EventContactSalesSubmitted         = "contact_sales_submitted"
-	EventSquadCreated                  = "squad_created"
 	EventAutopilotCreated              = "autopilot_created"
 )
 
@@ -56,8 +53,6 @@ var metricsOnlyEvents = map[string]struct{}{
 	// (MUL-4127); the PostHog copy was redundant.
 	EventSignup:                        {},
 	EventWorkspaceCreated:              {},
-	EventIssueCreated:                  {},
-	EventIssueExecuted:                 {},
 	EventChatMessageSent:               {},
 	EventTeamInviteSent:                {},
 	EventTeamInviteAccepted:            {},
@@ -69,7 +64,6 @@ var metricsOnlyEvents = map[string]struct{}{
 	EventCloudWaitlistJoined:           {},
 	EventFeedbackSubmitted:             {},
 	EventContactSalesSubmitted:         {},
-	EventSquadCreated:                  {},
 	EventAutopilotCreated:              {},
 	// High-volume runtime / autopilot execution-lifecycle telemetry — always
 	// Prometheus-only (Grafana already carries the equivalent counters).
@@ -103,11 +97,11 @@ const (
 // always stamped so dashboards can filter demo data without sparse-property
 // edge cases.
 type CoreProperties struct {
-	UserID         string
-	WorkspaceID    string
-	AgentID        string
-	TaskID         string
-	IssueID        string
+	UserID      string
+	WorkspaceID string
+	AgentID     string
+	TaskID      string
+
 	ChatSessionID  string
 	AutopilotRunID string
 	Source         string
@@ -284,60 +278,6 @@ func RuntimeOffline(ownerID, workspaceID, runtimeID, daemonID, provider string) 
 	}
 }
 
-// IssueExecuted fires at most once per issue lifetime — on the first task
-// completion that flips `issues.first_executed_at` from NULL via an atomic
-// UPDATE. Retries, re-assignments, and comment-triggered follow-ups never
-// re-emit, which is what keeps the ≥1/≥2/≥5/≥10 funnel buckets honest.
-//
-// Deliberately not stamped here: the workspace's Nth-issue ordinal.
-// Computing it at emit time is not atomic (two concurrent first-completions
-// both read count=1, both emit n=1), and PostHog derives the same number
-// exactly at query time from the event stream.
-func IssueExecuted(actorID, workspaceID, issueID, taskID, agentID, source, runtimeMode, provider string, taskDurationMS int64) Event {
-	return Event{
-		Name:        EventIssueExecuted,
-		DistinctID:  actorID,
-		WorkspaceID: workspaceID,
-		Properties: withCoreProperties(map[string]any{
-
-			"task_id":          taskID,
-			"agent_id":         agentID,
-			"task_duration_ms": taskDurationMS,
-			"duration_ms":      taskDurationMS,
-		}, CoreProperties{
-			UserID:      nonAgentUserID(actorID),
-			WorkspaceID: workspaceID,
-			AgentID:     agentID,
-			TaskID:      taskID,
-			IssueID:     issueID,
-			Source:      source,
-			RuntimeMode: runtimeMode,
-			Provider:    provider,
-		}),
-	}
-}
-
-func IssueCreated(actorID, workspaceID, issueID, agentID, taskID, autopilotRunID, source, platform string) Event {
-	props := map[string]any{}
-	if platform != "" {
-		props["platform"] = platform
-	}
-	return Event{
-		Name:        EventIssueCreated,
-		DistinctID:  actorID,
-		WorkspaceID: workspaceID,
-		Properties: withCoreProperties(props, CoreProperties{
-			UserID:         nonAgentUserID(actorID),
-			WorkspaceID:    workspaceID,
-			AgentID:        agentID,
-			TaskID:         taskID,
-			IssueID:        issueID,
-			AutopilotRunID: autopilotRunID,
-			Source:         source,
-		}),
-	}
-}
-
 func ChatMessageSent(userID, workspaceID, chatSessionID, taskID, agentID, runtimeMode, provider, platform string) Event {
 	props := map[string]any{}
 	if platform != "" {
@@ -360,15 +300,10 @@ func ChatMessageSent(userID, workspaceID, chatSessionID, taskID, agentID, runtim
 	}
 }
 
-// AutopilotAssignee describes the autopilot's configured target. agent_id is
-// always the agent that will actually execute the work (the squad leader for
-// squad autopilots) so funnels grouping by agent stay consistent. assignee_*
-// fields record the original configuration so reports can tell a solo-agent
-// autopilot apart from a squad one without joining back to the autopilot row.
+// AutopilotAssignee identifies the agent that executes an automation.
 type AutopilotAssignee struct {
-	AgentID      string // executing agent — leader for squad autopilots
-	AssigneeType string // "agent" or "squad"
-	SquadID      string // empty when AssigneeType != "squad"
+	AgentID      string // executing agent
+	AssigneeType string // "agent"
 }
 
 func AutopilotRunStarted(actorID, workspaceID, autopilotID, runID, cadence string, assignee AutopilotAssignee, triggerSource string) Event {
@@ -679,25 +614,6 @@ func ContactSalesSubmitted(inquiryID, companySize, countryRegion, useCase, formS
 	}
 }
 
-// SquadCreated fires when a workspace member or admin creates a new squad.
-// `memberCount` is the number of members the squad was seeded with at
-// creation time (frontend can pre-populate via the picker).
-func SquadCreated(actorID, workspaceID, squadID string, memberCount int) Event {
-	return Event{
-		Name:        EventSquadCreated,
-		DistinctID:  actorID,
-		WorkspaceID: workspaceID,
-		Properties: withCoreProperties(map[string]any{
-
-			"member_count": int64(memberCount),
-		}, CoreProperties{
-			UserID:      nonAgentUserID(actorID),
-			WorkspaceID: workspaceID,
-			Source:      SourceManual,
-		}),
-	}
-}
-
 // AutopilotCreated fires when a workspace member creates a new autopilot.
 // `cadence` matches the autopilot.cadence enum (hourly/daily/weekly/...
 // /webhook). triggerKind is the initial trigger type (schedule / webhook /
@@ -740,9 +656,6 @@ func autopilotRunEvent(name, actorID, workspaceID, autopilotID, runID, cadence s
 	if assignee.AssigneeType != "" {
 		props["assignee_type"] = assignee.AssigneeType
 	}
-	if assignee.SquadID != "" {
-
-	}
 	return Event{
 		Name:        name,
 		DistinctID:  actorID,
@@ -764,9 +677,7 @@ func withCoreProperties(props map[string]any, core CoreProperties) map[string]an
 	if core.TaskID != "" {
 		props["task_id"] = core.TaskID
 	}
-	if core.IssueID != "" {
 
-	}
 	if core.ChatSessionID != "" {
 		props["chat_session_id"] = core.ChatSessionID
 	}

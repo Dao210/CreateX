@@ -13,18 +13,6 @@
     "net:pulse.example.com"
   ],
   "contributes": {
-    "surfaces": [
-      {
-        "key": "pulse",
-        "type": "issue_panel",
-        "name": "Schedule pulse",
-        "entry": "ui/main.js",
-        "platforms": [
-          "web",
-          "desktop"
-        ]
-      }
-    ],
     "hooks": [
       {
         "key": "pulse",

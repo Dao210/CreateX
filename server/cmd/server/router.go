@@ -1691,7 +1691,7 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 		r.Post("/api/me/onboarding/cloud-waitlist", h.JoinCloudWaitlist)
 		// DEPRECATED — shim routes for desktop < v3 during the rollout
 		// window. v3 frontend creates the Helper agent + starter issue
-		// via generic CreateAgent / CreateIssue and only calls /complete
+		// via generic CreateAgent and only calls /complete
 		// here. Remove once X-Client-Version telemetry confirms zero
 		// pre-v3 desktops are still calling these. Handlers live in
 		// server/internal/handler/onboarding_shim.go.
@@ -2041,20 +2041,8 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 			r.Handle("/api/game-progress/*", progress)
 			r.Method("GET", "/api/life", gameGuard("life", life.Handler(queries)))
 
-			// Assignee frequency
-
-			// Local search index sync for Web/Desktop (MUL-7754). Human clients
-			// only: agents search through /api/issues/search.
-
-			// Issues
-
 			// Task messages (user-facing, not daemon auth)
 			r.Get("/api/tasks/{taskId}/messages", h.ListTaskMessagesByUser)
-
-			// Issue quick actions (definitions; running one lives under
-			// /api/issues/{id}/quick-actions/{quickActionId}/run)
-
-			// Custom issue properties (definitions; values live under /api/issues/{id}/properties)
 
 			// Labels
 			r.Route("/api/labels", func(r chi.Router) {
@@ -2200,8 +2188,7 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 			})
 
 			// Dashboard — workspace-wide token + run-time rollups for the
-			// "/{slug}/dashboard" page. Optional ?project_id filter scopes
-			// the rollup to a single project.
+			// "/{slug}/dashboard" page.
 			r.Route("/api/dashboard", func(r chi.Router) {
 				r.Get("/usage/daily", h.GetDashboardUsageDaily)
 				r.Get("/usage/by-agent", h.GetDashboardUsageByAgent)

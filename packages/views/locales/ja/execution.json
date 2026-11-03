@@ -1,25 +1,4 @@
 {
-  "comment": {
-    "trigger_blocked_invocation_not_allowed": "この対象が見つからないか、使用する権限がありません",
-    "trigger_blocked_target_unavailable": "この対象は利用できません",
-    "trigger_blocked_runtime_offline": "この対象のランタイムがオフラインです",
-    "trigger_blocked_runtime_unusable": "この対象の CLI はそのマシンで実行できません — そのマシンで再インストールしてください",
-    "trigger_blocked_runtime_profile_missing": "この対象の CLI はそのマシンでランタイム プロファイルが不足しています — そのマシンでインストールしてください",
-    "trigger_blocked_agent_runtime_required": "この対象にはランタイムがありません — 実行するにはバインドしてください",
-    "trigger_blocked_runtime_access_denied": "この対象のエージェントはプライベートランタイムで実行できません — ランタイムを公開にするか、所有者が利用できるランタイムへエージェントを再設定/コピーしてください",
-    "trigger_blocked_generic": "この対象はトリガーされません",
-    "trigger_blocked_short_invocation_not_allowed": "未検出または権限なし",
-    "trigger_blocked_short_target_unavailable": "利用不可",
-    "trigger_blocked_short_runtime_offline": "ランタイム オフライン",
-    "trigger_blocked_short_runtime_unusable": "CLI を実行できません",
-    "trigger_blocked_short_runtime_profile_missing": "ランタイム プロファイル未導入",
-    "trigger_blocked_short_agent_runtime_required": "ランタイム未設定",
-    "trigger_blocked_short_runtime_access_denied": "ランタイムアクセス拒否",
-    "trigger_blocked_short_generic": "トリガーされません"
-  },
-  "wakeups": {
-    "triggered_by_wakeup": "自動起動による実行"
-  },
   "agent_activity": {
     "status_running": "作業中",
     "status_queued": "待機中",
@@ -70,5 +49,23 @@
     "surface_loading": "{{name}} を読み込んでいます…",
     "surface_navigated": "{{name}} がパネルを外部から読み込んだページに置き換えようとしました。停止して接続を切りました。ワールド管理者に知らせてください。",
     "surface_unavailable": "{{name}} のインターフェースを読み込めません。インストール済みのバージョンに含まれていない可能性があります。"
+  },
+  "invocation": {
+    "trigger_blocked_invocation_not_allowed": "この対象が見つからないか、使用する権限がありません",
+    "trigger_blocked_target_unavailable": "この対象は利用できません",
+    "trigger_blocked_runtime_offline": "この対象のランタイムがオフラインです",
+    "trigger_blocked_runtime_unusable": "この対象の CLI はそのマシンで実行できません — そのマシンで再インストールしてください",
+    "trigger_blocked_runtime_profile_missing": "この対象の CLI はそのマシンでランタイム プロファイルが不足しています — そのマシンでインストールしてください",
+    "trigger_blocked_agent_runtime_required": "この対象にはランタイムがありません — 実行するにはバインドしてください",
+    "trigger_blocked_runtime_access_denied": "この対象のエージェントはプライベートランタイムで実行できません — ランタイムを公開にするか、所有者が利用できるランタイムへエージェントを再設定/コピーしてください",
+    "trigger_blocked_generic": "この対象はトリガーされません",
+    "trigger_blocked_short_invocation_not_allowed": "未検出または権限なし",
+    "trigger_blocked_short_target_unavailable": "利用不可",
+    "trigger_blocked_short_runtime_offline": "ランタイム オフライン",
+    "trigger_blocked_short_runtime_unusable": "CLI を実行できません",
+    "trigger_blocked_short_runtime_profile_missing": "ランタイム プロファイル未導入",
+    "trigger_blocked_short_agent_runtime_required": "ランタイム未設定",
+    "trigger_blocked_short_runtime_access_denied": "ランタイムアクセス拒否",
+    "trigger_blocked_short_generic": "トリガーされません"
   }
 }

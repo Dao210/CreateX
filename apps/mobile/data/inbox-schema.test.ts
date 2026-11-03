@@ -12,7 +12,6 @@ describe("inbox list schema", () => {
       recipient_id: "user-1",
       type: "status_changed",
       severity: "info",
-      issue_id: "issue-1",
       title: "P0: delegated subscription rule",
       body: "",
       actor_type: "agent",

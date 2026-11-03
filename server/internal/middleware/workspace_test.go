@@ -42,9 +42,7 @@ func setupResolverFixture(t *testing.T, pool *pgxpool.Pool) (workspaceID string,
 	_, _ = pool.Exec(ctx, `DELETE FROM workspace WHERE slug = $1`, testResolverSlug)
 
 	if err := pool.QueryRow(ctx,
-		`INSERT INTO workspace (name, slug, description, issue_prefix) VALUES ($1, $2, '', 'MRT') RETURNING id`,
-		"Middleware Resolver Test", testResolverSlug,
-	).Scan(&workspaceID); err != nil {
+		`INSERT INTO workspace (name, slug, description) VALUES ($1, $2, '') RETURNING id`, "Middleware Resolver Test", testResolverSlug).Scan(&workspaceID); err != nil {
 		t.Fatalf("insert workspace: %v", err)
 	}
 	return workspaceID, func() {

@@ -42,7 +42,6 @@ const (
 
 // Surface types. A surface is an iframe the host mounts at a fixed location.
 const (
-	SurfaceIssuePanel   = "issue_panel"
 	SurfaceSidebarPanel = "sidebar_panel"
 	SurfaceModal        = "modal"
 )
@@ -90,10 +89,6 @@ const (
 // Scopes. This list is complete and closed; anything else is rejected at parse
 // time. `net:<domain>` is the only parameterized form.
 const (
-	ScopeIssuesRead       = "issues:read"
-	ScopeIssuesWrite      = "issues:write"
-	ScopeCommentsRead     = "comments:read"
-	ScopeCommentsWrite    = "comments:write"
 	ScopeTasksRead        = "tasks:read"
 	ScopeTasksWrite       = "tasks:write"
 	ScopeAgentsRead       = "agents:read"
@@ -108,20 +103,12 @@ const (
 
 // Product events an `event`-triggered hook may subscribe to.
 const (
-	EventIssueCreated       = eventcontract.EventIssueCreated
-	EventIssueUpdated       = eventcontract.EventIssueUpdated
-	EventIssueStatusChanged = eventcontract.EventIssueStatusChanged
-	EventCommentCreated     = eventcontract.EventCommentCreated
 	EventTaskStarted        = eventcontract.EventTaskStarted
 	EventTaskCompleted      = eventcontract.EventTaskCompleted
 	EventTaskFailed         = eventcontract.EventTaskFailed
 )
 
 var fixedScopes = map[string]bool{
-	ScopeIssuesRead:       true,
-	ScopeIssuesWrite:      true,
-	ScopeCommentsRead:     true,
-	ScopeCommentsWrite:    true,
 	ScopeTasksRead:        true,
 	ScopeTasksWrite:       true,
 	ScopeAgentsRead:       true,
@@ -142,20 +129,12 @@ func hasScope(scopes []string, want string) bool {
 // eventReadScope maps each event onto the scope a plugin would have needed to
 // read the same content through the Action API.
 var eventReadScope = map[string]string{
-	EventIssueCreated:       ScopeIssuesRead,
-	EventIssueUpdated:       ScopeIssuesRead,
-	EventIssueStatusChanged: ScopeIssuesRead,
-	EventCommentCreated:     ScopeCommentsRead,
 	EventTaskStarted:        ScopeTasksRead,
 	EventTaskCompleted:      ScopeTasksRead,
 	EventTaskFailed:         ScopeTasksRead,
 }
 
 var knownEvents = map[string]bool{
-	EventIssueCreated:       true,
-	EventIssueUpdated:       true,
-	EventIssueStatusChanged: true,
-	EventCommentCreated:     true,
 	EventTaskStarted:        true,
 	EventTaskCompleted:      true,
 	EventTaskFailed:         true,
@@ -565,7 +544,7 @@ func (m Manifest) validateContributions() error {
 		}
 		surfaceKeys[surface.Key] = true
 		switch surface.Type {
-		case SurfaceIssuePanel, SurfaceSidebarPanel, SurfaceModal:
+		case SurfaceSidebarPanel, SurfaceModal:
 		default:
 			return fmt.Errorf("%s.type is unsupported: %q", field, surface.Type)
 		}

@@ -9,7 +9,6 @@ export type ShortcutActionId =
   | "openSearch"
   | "toggleSidebar"
   | "toggleRightSidebar"
-  | "findInIssue"
   | "archiveInboxItem"
   | "send"
   | "goBack"
@@ -79,7 +78,6 @@ export const SHORTCUT_ACTIONS: readonly ShortcutActionDefinition[] = [
     defaultShortcut: primary("/"),
     allowInEditable: false,
   },
-  { id: "findInIssue", category: "general", defaultShortcut: primary("F"), allowInEditable: true },
   {
     id: "archiveInboxItem",
     category: "general",

@@ -1,37 +1,9 @@
-/**
- * Chat composer — thin wrapper around the shared `<MessageComposer>` with
- * chat-specific wiring:
- *
- *   - **Controlled text**: parent (chat.tsx) owns the draft via
- *     `useChatDraftsStore` so switching sessions rehydrates the right
- *     draft. Pass `value` + `onChangeText` through.
- *   - **Stop button**: while an agent task is running for the active
- *     session, `sending` flips true and we replace the Send button slot
- *     with a Stop affordance (filled foreground bg + stop glyph). Tap →
- *     `onStop()` cancels the in-flight task.
- *   - **Mention picker mode=chat**: chat is user ↔ single agent so
- *     @member / @agent / @squad / @all are noise + would notify the
- *     wrong people. Picker route honors `?mode=chat` and surfaces only
- *     Issues (useful for "reference this ticket for context").
- *   - **No reply target**: chat is a flat conversation; passes no
- *     reply chip.
- *   - **No upload context**: chat attachments are session-scoped; the
- *     server back-fills `chat_message_id` on each row when the message
- *     persists (server-side). `MessageComposer` calls `api.uploadFile`
- *     without `{ issueId, commentId }`.
- *   - **Parent owns keyboard**: chat.tsx wraps in KeyboardAvoidingView +
- *     SafeAreaView, so `manageKeyboard={false}` prevents the composer
- *     from double-stacking its own keyboard handling.
- *
- * Previously a hand-written 400-LOC twin of inline-comment-composer.tsx;
- * now ~50 LOC plus the StopButton subcomponent.
- */
+/** Chat draft, attachment, send and stop controls. The parent owns keyboard layout. */
 import { useCallback } from "react";
 import { Pressable, View } from "react-native";
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 import { MessageComposer } from "@/components/composer/message-composer";
-import { useWorkspaceStore } from "@/data/workspace-store";
 import { useColorScheme } from "@/lib/use-color-scheme";
 import { THEME } from "@/lib/theme";
 import { useT } from "@/lib/i18n";
@@ -71,7 +43,6 @@ export function ChatComposer({
   disabled = false,
   disabledReason,
 }: Props) {
-  const wsSlug = useWorkspaceStore((s) => s.currentWorkspaceSlug);
   const { t } = useT("chat");
 
   const onSubmit = useCallback(

@@ -18,28 +18,6 @@ export interface BillingBalance {
   updated_at: string;
 }
 
-// `tx_type` values per the cloud doc's enum. Exported as a union for
-// reference / display switches; the actual interface field below is
-// typed as plain `string` so a future cloud-side enum widening doesn't
-// crash the parser. Frontend should switch on these values when known
-// and fall back to a generic display otherwise.
-export type BillingTxType =
-  | "topup"
-  | "deduction"
-  | "refund"
-  | "expire"
-  | "adjustment";
-
-// `source` values per the cloud doc's enum. Same loosening rationale
-// as BillingTxType above.
-export type BillingTxSource =
-  | "gateway"
-  | "fleet"
-  | "topup"
-  | "refund"
-  | "admin"
-  | "system";
-
 export interface BillingTransaction {
   id: string;
   owner_id: string;
@@ -65,12 +43,6 @@ export interface BillingTransactionsPage {
   page_size: number;
 }
 
-// `source_type` of a credit batch. `purchase` = paid topup,
-// `bonus`   = subscription / promo gift, `adjustment` = ops fix.
-// Exported as a union for documentation; the field is widened to
-// string in BillingBatch (same rationale as BillingTxType).
-export type BillingBatchSourceType = "purchase" | "bonus" | "adjustment";
-
 export interface BillingBatch {
   id: string;
   owner_id: string;
@@ -92,18 +64,6 @@ export interface BillingBatchesPage {
   page: number;
   page_size: number;
 }
-
-// Topup order lifecycle. `pending` = checkout open, `paid` = Stripe
-// confirmed payment but credit not yet booked, `credited` = wallet
-// updated, `failed`/`canceled` = terminal failures. Exported as a
-// union for documentation; the field is widened to string in
-// BillingTopup / BillingCheckoutSessionStatus.
-export type BillingTopupStatus =
-  | "pending"
-  | "paid"
-  | "credited"
-  | "failed"
-  | "canceled";
 
 export interface BillingTopup {
   id: string;
@@ -199,9 +159,6 @@ export type WorkspaceEntitlementLimit =
   | { mode: "limited"; limit: number }
   | { mode: "unlimited"; limit: null };
 
-export type WorkspaceEntitlementLimitMode =
-  WorkspaceEntitlementLimit["mode"];
-
 export interface WorkspaceSubscriptionEntitlements {
   workspaceId: string;
   // Deliberately open strings: cloud may add plans and Stripe statuses without
@@ -240,11 +197,6 @@ export interface WorkspaceSubscriptionSummary {
     portal: boolean;
     purchaseSeats: boolean;
   };
-}
-
-export interface IssueLimitUsage {
-  used: number;
-  limit: number;
 }
 
 export interface WorkspaceSeatCapacity {

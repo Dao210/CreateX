@@ -50,7 +50,7 @@ func TestOpenclawDaemonEquivalentRealTask(t *testing.T) {
 		Provider:       "openclaw",
 		OpenclawBin:    bin,
 		Task: TaskContextForEnv{
-			IssueID: "openclaw-real-smoke",
+			ChatSessionID: "openclaw-real-smoke",
 		},
 	}, logger)
 	if err != nil {

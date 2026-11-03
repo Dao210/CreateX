@@ -15,9 +15,9 @@ const bundleManifest = `{
   "name": "Hello Panel",
   "version": "1.0.0",
   "author": { "name": "example" },
-  "scopes": ["issues:read"],
+  "scopes": ["tasks:read"],
   "contributes": {
-    "surfaces": [{ "key": "hello", "type": "issue_panel", "name": "Hello", "entry": "ui/main.js" }],
+    "surfaces": [{ "key": "hello", "type": "modal", "name": "Hello", "entry": "ui/main.js" }],
     "resources": [{ "type": "skill", "key": "pr-review", "entry": "skills/pr-review/SKILL.md" }]
   }
 }`

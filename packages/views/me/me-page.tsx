@@ -154,7 +154,7 @@ function MeContent({ storage, workspace, userId }: {
                   <CardDescription>{t(($) => $.progress.stars, { earned: totalStars, total: CAMPAIGN_LEVELS.length * 3 })}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="grid grid-cols-4 gap-2">{stars.map((value, index) => <div key={index} role="img" className="rounded-lg border border-border p-2" aria-label={t(($) => $.progress.level_stars, { level: index + 1, stars: value })}><span className="text-caption tabular-nums text-muted-foreground">{String(index + 1).padStart(2, "0")}</span><div className="mt-1 flex gap-0.5">{[0, 1, 2].map((star) => <Star key={star} className={`size-3 ${star < value ? "fill-current text-brand" : "text-muted-foreground/30"}`} aria-hidden />)}</div></div>)}</div>
+                  <div className="grid grid-cols-4 gap-2">{stars.map((value, index) => <div key={index} role="img" className="rounded-lg border border-border p-2" aria-label={t(($) => $.progress.level_stars, { level: index + 1, stars: value })}><span className="text-caption tabular-nums text-muted-foreground">{String(index + 1).padStart(2, "0")}</span><div className="mt-1 flex gap-0.5">{[0, 1, 2].map((star) => <Star key={star} className={`size-3 ${star < value ? "fill-current text-brand" : "text-faint-foreground"}`} aria-hidden />)}</div></div>)}</div>
                   <p className="text-caption text-muted-foreground">{completed ? t(($) => $.progress.campaign_complete) : t(($) => $.progress.next_level, { level: nextLevel })}</p>
                   <AppLink href={`${paths.siege()}/campaign?level=${nextLevel}`} className={buttonVariants({ size: "sm", variant: "outline" })}>{t(($) => $.progress.continue_siege)}<ArrowRight /></AppLink>
                 </CardContent>
@@ -193,7 +193,7 @@ function SiegeCard({ blueprint, locale, workshopHref }: { blueprint: LibraryBlue
   const kind = weaponKind(blueprint.spec);
   const kindLabel = kind === "cannon" ? t(($) => $.weapons.kind_cannon) : kind === "blade" ? t(($) => $.weapons.kind_blade) : kind === "hammer" ? t(($) => $.weapons.kind_hammer) : t(($) => $.weapons.kind_mixed);
   return <Card size="sm" className="h-full overflow-hidden">
-    <div className="flex aspect-[4/3] items-center justify-center bg-muted/25 p-4 text-foreground/80"><BlueprintPreview drawing={blueprint.drawing as Drawing} className="h-full w-full" /></div>
+    <div className="flex aspect-[4/3] items-center justify-center bg-muted/25 p-4 text-foreground"><BlueprintPreview drawing={blueprint.drawing as Drawing} className="h-full w-full" /></div>
     <CardHeader className="gap-1">
       <div className="flex min-w-0 items-center gap-2"><CardTitle className="truncate">{blueprint.name}</CardTitle><Badge variant="secondary">{kindLabel}</Badge></div>
       <CardDescription>{t(($) => $.weapons.created, { date: formatDate(blueprint.createdAt, locale) })}</CardDescription>

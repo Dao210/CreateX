@@ -1051,7 +1051,7 @@ print_status_json() {
 print_handoff() {
   local entrypoint
   if component_selected web; then
-    entrypoint="Open        http://localhost:${FRONTEND_PORT}/${WORKSPACE_SLUG}/issues"
+    entrypoint="Open        http://localhost:${FRONTEND_PORT}/${WORKSPACE_SLUG}/me"
   elif component_selected desktop; then
     entrypoint="Desktop     renderer http://localhost:${DESKTOP_RENDERER_PORT} → backend :${BACKEND_PORT}"
   else

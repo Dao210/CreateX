@@ -119,7 +119,7 @@ FLAGS
 {{.LocalFlags.FlagUsages}}
 EXAMPLES
   $ auro login
-  $ auro issue list --output json
+  $ auro chat list --output json
   $ auro daemon start
   $ auro agent list --output json
 

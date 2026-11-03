@@ -21,8 +21,8 @@ func TestHermesSessionStorePathLayout(t *testing.T) {
 	agent := "11111111-2222-3333-4444-555555555555"
 	issue := "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
 	got := HermesSessionStorePath("", agent, filepath.Join(platformDefaultHermesHome(), "profiles", "research"),
-		TaskContextForEnv{AgentID: agent, IssueID: issue})
-	want := filepath.Join(home, ".auro", hermesSessionStoreRoot, agent, "research", issue)
+		TaskContextForEnv{AgentID: agent, ChatSessionID: issue})
+	want := filepath.Join(home, ".auro", hermesSessionStoreRoot, agent, "research", "chat_"+issue)
 	if got != want {
 		t.Fatalf("store path = %q, want %q", got, want)
 	}
@@ -36,8 +36,8 @@ func TestHermesSessionStorePathScoping(t *testing.T) {
 	t.Setenv("USERPROFILE", home)
 
 	const agent = "agent-1"
-	issueA := HermesSessionStorePath("", agent, "", TaskContextForEnv{IssueID: "issue-a"})
-	issueB := HermesSessionStorePath("", agent, "", TaskContextForEnv{IssueID: "issue-b"})
+	issueA := HermesSessionStorePath("", agent, "", TaskContextForEnv{ChatSessionID: "issue-a"})
+	issueB := HermesSessionStorePath("", agent, "", TaskContextForEnv{ChatSessionID: "issue-b"})
 	if issueA == "" || issueA == issueB {
 		t.Fatalf("two issues must get distinct stores, got %q and %q", issueA, issueB)
 	}
@@ -46,14 +46,10 @@ func TestHermesSessionStorePathScoping(t *testing.T) {
 	if filepath.Base(chat) != "chat_sess-1" {
 		t.Fatalf("chat conversation segment = %q, want chat_sess-1", filepath.Base(chat))
 	}
-	// An issue task and a chat task can never collide even on equal ids.
-	if same := HermesSessionStorePath("", agent, "", TaskContextForEnv{IssueID: "sess-1"}); same == chat {
-		t.Fatalf("issue and chat conversations collided on %q", chat)
-	}
 
 	// No agent, or no conversation, means no store: the session database stays
 	// task-local rather than landing in a shard nothing will resume.
-	if got := HermesSessionStorePath("", "", "", TaskContextForEnv{IssueID: "issue-a"}); got != "" {
+	if got := HermesSessionStorePath("", "", "", TaskContextForEnv{ChatSessionID: "issue-a"}); got != "" {
 		t.Fatalf("store path without an agent = %q, want empty", got)
 	}
 	if got := HermesSessionStorePath("", agent, "", TaskContextForEnv{}); got != "" {

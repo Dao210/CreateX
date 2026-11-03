@@ -16,8 +16,6 @@ export function useCreateWorkspace() {
       name: string;
       slug: string;
       description?: string;
-      /** Omit to let the server derive it from the slug. */
-      issue_prefix?: string;
     }) => api.createWorkspace(data),
     // Seed the workspace list cache BEFORE callers navigate to /{newWs.slug}/issues.
     // The destination [workspaceSlug]/layout queries by slug from this cache;

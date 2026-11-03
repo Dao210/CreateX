@@ -37,16 +37,16 @@ func setupAutopilotScheduleJob(t *testing.T, cron string) (db.AutopilotTrigger, 
 	}
 
 	ap, err := queries.CreateAutopilot(ctx, db.CreateAutopilotParams{
-		WorkspaceID:        parseUUID(testWorkspaceID),
-		Title:              "Schedule dispatch fixture",
-		Description:        pgtype.Text{String: "schedule dispatch test", Valid: true},
-		AssigneeType:       "agent",
-		AssigneeID:         parseUUID(agentID),
-		Status:             "active",
-		ExecutionMode:      "run_only",
-		IssueTitleTemplate: pgtype.Text{},
-		CreatedByType:      "member",
-		CreatedByID:        parseUUID(testUserID),
+		WorkspaceID:   parseUUID(testWorkspaceID),
+		Title:         "Schedule dispatch fixture",
+		Description:   pgtype.Text{String: "schedule dispatch test", Valid: true},
+		AssigneeType:  "agent",
+		AssigneeID:    parseUUID(agentID),
+		Status:        "active",
+		ExecutionMode: "run_only",
+
+		CreatedByType: "member",
+		CreatedByID:   parseUUID(testUserID),
 	})
 	if err != nil {
 		t.Fatalf("CreateAutopilot: %v", err)
@@ -85,7 +85,14 @@ func setupAutopilotScheduleJob(t *testing.T, cron string) (db.AutopilotTrigger, 
 			`DELETE FROM sys_cron_executions WHERE scope_kind = $1 AND scope_id = $2`,
 			scheduler.ScopeKindAutopilotTrigger, util.UUIDToString(trigger.ID),
 		)
-		_, _ = testPool.Exec(bg, `DELETE FROM autopilot WHERE id = $1`, ap.ID)
+		_, _ = testPool.Exec(bg, `WITH runs AS MATERIALIZED (SELECT id FROM autopilot_run WHERE autopilot_id=$1),
+ removed_deliveries AS (DELETE FROM webhook_delivery WHERE autopilot_id=$1),
+ removed_triggers AS (DELETE FROM autopilot_trigger WHERE autopilot_id=$1),
+ removed_versions AS (DELETE FROM autopilot_rule_version WHERE autopilot_id=$1),
+ removed_collaborators AS (DELETE FROM autopilot_collaborator WHERE autopilot_id=$1),
+ detached_tasks AS (UPDATE agent_task_queue SET autopilot_run_id=NULL WHERE autopilot_run_id IN (SELECT id FROM runs)),
+ removed_runs AS (DELETE FROM autopilot_run WHERE autopilot_id=$1)
+ DELETE FROM autopilot WHERE id=$1`, ap.ID)
 	})
 
 	mgr := scheduler.NewManager(testPool, scheduler.Options{
@@ -617,23 +624,30 @@ func seedColdStartTrigger(t *testing.T, cron string) (db.AutopilotTrigger, *db.Q
 	}
 
 	ap, err := queries.CreateAutopilot(ctx, db.CreateAutopilotParams{
-		WorkspaceID:        parseUUID(testWorkspaceID),
-		Title:              "Cold-start regression",
-		Description:        pgtype.Text{String: "deterministic cold-start", Valid: true},
-		AssigneeType:       "agent",
-		AssigneeID:         parseUUID(agentID),
-		Status:             "active",
-		ExecutionMode:      "run_only",
-		IssueTitleTemplate: pgtype.Text{},
-		CreatedByType:      "member",
-		CreatedByID:        parseUUID(testUserID),
+		WorkspaceID:   parseUUID(testWorkspaceID),
+		Title:         "Cold-start regression",
+		Description:   pgtype.Text{String: "deterministic cold-start", Valid: true},
+		AssigneeType:  "agent",
+		AssigneeID:    parseUUID(agentID),
+		Status:        "active",
+		ExecutionMode: "run_only",
+
+		CreatedByType: "member",
+		CreatedByID:   parseUUID(testUserID),
 	})
 	if err != nil {
 		t.Fatalf("CreateAutopilot: %v", err)
 	}
 	t.Cleanup(func() {
 		if _, err := testPool.Exec(context.Background(),
-			`DELETE FROM autopilot WHERE id = $1`, ap.ID); err != nil {
+			`WITH runs AS MATERIALIZED (SELECT id FROM autopilot_run WHERE autopilot_id=$1),
+ removed_deliveries AS (DELETE FROM webhook_delivery WHERE autopilot_id=$1),
+ removed_triggers AS (DELETE FROM autopilot_trigger WHERE autopilot_id=$1),
+ removed_versions AS (DELETE FROM autopilot_rule_version WHERE autopilot_id=$1),
+ removed_collaborators AS (DELETE FROM autopilot_collaborator WHERE autopilot_id=$1),
+ detached_tasks AS (UPDATE agent_task_queue SET autopilot_run_id=NULL WHERE autopilot_run_id IN (SELECT id FROM runs)),
+ removed_runs AS (DELETE FROM autopilot_run WHERE autopilot_id=$1)
+ DELETE FROM autopilot WHERE id=$1`, ap.ID); err != nil {
 			t.Logf("cleanup autopilot: %v", err)
 		}
 	})

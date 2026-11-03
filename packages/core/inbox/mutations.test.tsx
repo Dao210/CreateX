@@ -30,10 +30,8 @@ function item(overrides: Partial<InboxItem> = {}): InboxItem {
     actor_id: "agent-1",
     type: "new_comment",
     severity: "info",
-    issue_id: "issue-1",
     title: "Issue title",
     body: null,
-    issue_status: null,
     read: false,
     archived: true,
     created_at: "2026-06-15T08:00:00Z",
@@ -83,7 +81,7 @@ describe("useMarkInboxUnread", () => {
     // notifications the user already dealt with without changing the row.
     queryClient.setQueryData<InboxItem[]>(inboxKeys.list(WORKSPACE_ID), [
       item({ id: "inbox-1", read: true, archived: false }),
-      item({ id: "sibling", issue_id: "issue-1", read: true, archived: false }),
+      item({ id: "sibling", read: true, archived: false }),
     ]);
     queryClient.setQueryData<InboxItem[]>(inboxKeys.archived(WORKSPACE_ID), [
       item({ id: "inbox-1", read: true }),
@@ -154,8 +152,8 @@ describe("useUnarchiveInbox", () => {
 
   it("restores only the selected message and preserves another window for the same creation", async () => {
     queryClient.setQueryData<InboxItem[]>(inboxKeys.archived(WORKSPACE_ID), [
-      item({ id: "selected", type: "world_digest", issue_id: null, details: { character_id: "scout" } }),
-      item({ id: "another-window", type: "world_digest", issue_id: null, read: true, details: { character_id: "scout" } }),
+      item({ id: "selected", type: "world_digest", details: { character_id: "scout" } }),
+      item({ id: "another-window", type: "world_digest", read: true, details: { character_id: "scout" } }),
     ]);
     const { result } = renderHook(() => useUnarchiveInbox(), { wrapper: createWrapper(queryClient) });
     result.current.mutate("selected");

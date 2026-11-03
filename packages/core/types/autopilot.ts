@@ -63,12 +63,6 @@ export interface WebhookEventFilter {
   actions?: string[];
 }
 
-export interface AutopilotSubscriber {
-  user_type: "member";
-  user_id: string;
-  created_at: string;
-}
-
 // A workspace member explicitly granted write access to an autopilot, on top
 // of the implicit "creator ∪ owner/admin" set. Members-only for now.
 export interface AutopilotCollaborator {
@@ -114,7 +108,6 @@ export interface AutopilotRun {
   trigger_id: string | null;
   source: AutopilotRunSource;
   status: AutopilotRunStatus;
-  issue_id: string | null;
   task_id: string | null;
   triggered_at: string;
   completed_at: string | null;
@@ -140,11 +133,6 @@ export interface AutopilotQuotaUsage {
   period_end: string | null;
   reset_at: string | null;
   blocked_counts: Record<string, number> | null;
-}
-
-export interface AutopilotSubscriberInput {
-  user_type: "member";
-  user_id: string;
 }
 
 export interface CreateAutopilotRequest {

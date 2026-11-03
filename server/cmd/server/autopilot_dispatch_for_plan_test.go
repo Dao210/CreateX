@@ -42,23 +42,30 @@ func TestDispatchAutopilotForPlanIsIdempotent(t *testing.T) {
 	}
 
 	ap, err := queries.CreateAutopilot(ctx, db.CreateAutopilotParams{
-		WorkspaceID:        parseUUID(testWorkspaceID),
-		Title:              "Dispatch for plan idempotency",
-		Description:        pgtype.Text{String: "Dispatch for plan test", Valid: true},
-		AssigneeType:       "agent",
-		AssigneeID:         parseUUID(agentID),
-		Status:             "active",
-		ExecutionMode:      "run_only",
-		IssueTitleTemplate: pgtype.Text{},
-		CreatedByType:      "member",
-		CreatedByID:        parseUUID(testUserID),
+		WorkspaceID:   parseUUID(testWorkspaceID),
+		Title:         "Dispatch for plan idempotency",
+		Description:   pgtype.Text{String: "Dispatch for plan test", Valid: true},
+		AssigneeType:  "agent",
+		AssigneeID:    parseUUID(agentID),
+		Status:        "active",
+		ExecutionMode: "run_only",
+
+		CreatedByType: "member",
+		CreatedByID:   parseUUID(testUserID),
 	})
 	if err != nil {
 		t.Fatalf("CreateAutopilot: %v", err)
 	}
 	t.Cleanup(func() {
 		if _, err := testPool.Exec(context.Background(),
-			`DELETE FROM autopilot WHERE id = $1`, ap.ID); err != nil {
+			`WITH runs AS MATERIALIZED (SELECT id FROM autopilot_run WHERE autopilot_id=$1),
+ removed_deliveries AS (DELETE FROM webhook_delivery WHERE autopilot_id=$1),
+ removed_triggers AS (DELETE FROM autopilot_trigger WHERE autopilot_id=$1),
+ removed_versions AS (DELETE FROM autopilot_rule_version WHERE autopilot_id=$1),
+ removed_collaborators AS (DELETE FROM autopilot_collaborator WHERE autopilot_id=$1),
+ detached_tasks AS (UPDATE agent_task_queue SET autopilot_run_id=NULL WHERE autopilot_run_id IN (SELECT id FROM runs)),
+ removed_runs AS (DELETE FROM autopilot_run WHERE autopilot_id=$1)
+ DELETE FROM autopilot WHERE id=$1`, ap.ID); err != nil {
 			t.Logf("cleanup autopilot: %v", err)
 		}
 	})
@@ -208,7 +215,7 @@ func TestDispatchAutopilotForPlanRejectsZeroArgs(t *testing.T) {
 // to release the partial-unique slot, then create a fresh dispatched
 // run with the downstream linkage actually populated.
 func TestDispatchAutopilotForPlanRecoversPartialRun(t *testing.T) {
-	for _, mode := range []string{"run_only", "create_issue"} {
+	for _, mode := range []string{"run_only"} {
 		t.Run(mode, func(t *testing.T) {
 			ctx := context.Background()
 			queries := db.New(testPool)
@@ -225,23 +232,30 @@ func TestDispatchAutopilotForPlanRecoversPartialRun(t *testing.T) {
 			}
 
 			ap, err := queries.CreateAutopilot(ctx, db.CreateAutopilotParams{
-				WorkspaceID:        parseUUID(testWorkspaceID),
-				Title:              "Partial recovery " + mode,
-				Description:        pgtype.Text{String: "partial run recovery test", Valid: true},
-				AssigneeType:       "agent",
-				AssigneeID:         parseUUID(agentID),
-				Status:             "active",
-				ExecutionMode:      mode,
-				IssueTitleTemplate: pgtype.Text{String: "Partial recovery", Valid: true},
-				CreatedByType:      "member",
-				CreatedByID:        parseUUID(testUserID),
+				WorkspaceID:   parseUUID(testWorkspaceID),
+				Title:         "Partial recovery " + mode,
+				Description:   pgtype.Text{String: "partial run recovery test", Valid: true},
+				AssigneeType:  "agent",
+				AssigneeID:    parseUUID(agentID),
+				Status:        "active",
+				ExecutionMode: mode,
+
+				CreatedByType: "member",
+				CreatedByID:   parseUUID(testUserID),
 			})
 			if err != nil {
 				t.Fatalf("CreateAutopilot: %v", err)
 			}
 			t.Cleanup(func() {
 				if _, err := testPool.Exec(context.Background(),
-					`DELETE FROM autopilot WHERE id = $1`, ap.ID); err != nil {
+					`WITH runs AS MATERIALIZED (SELECT id FROM autopilot_run WHERE autopilot_id=$1),
+ removed_deliveries AS (DELETE FROM webhook_delivery WHERE autopilot_id=$1),
+ removed_triggers AS (DELETE FROM autopilot_trigger WHERE autopilot_id=$1),
+ removed_versions AS (DELETE FROM autopilot_rule_version WHERE autopilot_id=$1),
+ removed_collaborators AS (DELETE FROM autopilot_collaborator WHERE autopilot_id=$1),
+ detached_tasks AS (UPDATE agent_task_queue SET autopilot_run_id=NULL WHERE autopilot_run_id IN (SELECT id FROM runs)),
+ removed_runs AS (DELETE FROM autopilot_run WHERE autopilot_id=$1)
+ DELETE FROM autopilot WHERE id=$1`, ap.ID); err != nil {
 					t.Logf("cleanup autopilot: %v", err)
 				}
 			})
@@ -269,9 +283,7 @@ func TestDispatchAutopilotForPlanRecoversPartialRun(t *testing.T) {
 			// task_id is NULL for run_only, issue_id is NULL for
 			// create_issue.
 			initialStatus := "running"
-			if mode == "create_issue" {
-				initialStatus = "issue_created"
-			}
+
 			partial, err := queries.CreateAutopilotRun(ctx, db.CreateAutopilotRunParams{
 				AutopilotID:    ap.ID,
 				TriggerID:      trigger.ID,
@@ -287,8 +299,8 @@ func TestDispatchAutopilotForPlanRecoversPartialRun(t *testing.T) {
 			if partial.TaskID.Valid {
 				t.Fatalf("seed partial run should have task_id=NULL, got %s", util.UUIDToString(partial.TaskID))
 			}
-			if partial.IssueID.Valid {
-				t.Fatalf("seed partial run should have issue_id=NULL, got %s", util.UUIDToString(partial.IssueID))
+			if partial.TaskID.Valid {
+				t.Fatalf("seed partial run should have issue_id=NULL, got %s", util.UUIDToString(partial.TaskID))
 			}
 
 			// Retry the dispatch — this is the stale-steal codepath.
@@ -342,10 +354,7 @@ func TestDispatchAutopilotForPlanRecoversPartialRun(t *testing.T) {
 				if !fresh.TaskID.Valid {
 					t.Fatalf("run_only retry must produce a run with task_id set")
 				}
-			case "create_issue":
-				if !fresh.IssueID.Valid {
-					t.Fatalf("create_issue retry must produce a run with issue_id set")
-				}
+
 			}
 
 			// Verify the partial-unique constraint is happy: exactly

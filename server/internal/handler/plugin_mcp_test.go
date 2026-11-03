@@ -22,7 +22,7 @@ const mcpToolboxManifest = `{
   "name": "Toolbox",
   "version": "1.0.0",
   "author": { "name": "example" },
-  "scopes": ["issues:read", "net:tools.example.com"],
+  "scopes": ["tasks:read", "net:tools.example.com"],
   "contributes": {
     "hooks": [{
       "key": "toolbox",
@@ -44,7 +44,7 @@ const httpHookManifest = `{
   "name": "Plain Hook",
   "version": "1.0.0",
   "author": { "name": "example" },
-  "scopes": ["issues:read", "net:hooks.example.com"],
+  "scopes": ["tasks:read", "net:hooks.example.com"],
   "contributes": {
     "hooks": [{
       "key": "notify",
@@ -90,7 +90,7 @@ func listMCPTools(t *testing.T, installationID, hookKey string) *httptest.Respon
 }
 
 func TestMCPToolListRejectsAnHTTPTransportHook(t *testing.T) {
-	installationID := installMCPPlugin(t, httpHookManifest, []string{"issues:read", "net:hooks.example.com"})
+	installationID := installMCPPlugin(t, httpHookManifest, []string{"tasks:read", "net:hooks.example.com"})
 
 	recorder := listMCPTools(t, installationID, "notify")
 	if recorder.Code != http.StatusBadRequest {
@@ -99,7 +99,7 @@ func TestMCPToolListRejectsAnHTTPTransportHook(t *testing.T) {
 }
 
 func TestMCPToolListRejectsAnUnknownHook(t *testing.T) {
-	installationID := installMCPPlugin(t, mcpToolboxManifest, []string{"issues:read", "net:tools.example.com"})
+	installationID := installMCPPlugin(t, mcpToolboxManifest, []string{"tasks:read", "net:tools.example.com"})
 
 	recorder := listMCPTools(t, installationID, "does-not-exist")
 	if recorder.Code != http.StatusNotFound {
@@ -118,7 +118,7 @@ const scopelessMCPManifest = `{
   "name": "Scopeless",
   "version": "1.0.0",
   "author": { "name": "example" },
-  "scopes": ["issues:read"],
+  "scopes": ["tasks:read"],
   "contributes": {
     "hooks": [{
       "key": "toolbox",

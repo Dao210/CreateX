@@ -32,7 +32,7 @@ func installPluginForAction(t *testing.T, scopes []string) string {
 			t.Fatalf("encode scopes: %v", err)
 		}
 		manifest = strings.Replace(manifest,
-			`"scopes": ["issues:read", "comments:write", "storage:user"]`,
+			`"scopes": ["tasks:read", "storage:workspace", "storage:user"]`,
 			`"scopes": `+string(encoded), 1)
 	}
 	versionID := withLocalPluginSource(t, manifest)
@@ -99,17 +99,16 @@ func TestPluginActionRequiresTheFeatureFlag(t *testing.T) {
 }
 
 func TestPluginInstallTokenEnforcesGrantedScope(t *testing.T) {
-	installationID := installPluginForAction(t, []string{"issues:read"})
+	installationID := installPluginForAction(t, []string{"tasks:read"})
 	token, err := testHandler.PluginService.IssueInstallToken(context.Background(), parseUUID(installationID))
 	if err != nil {
 		t.Fatalf("issue install token: %v", err)
 	}
-	issueID := createTestIssue(t, "Install token scope", "todo", "none")
 
-	request := pluginInstallTokenRequest(http.MethodPatch, "/v1/issues/"+issueID, token,
-		map[string]any{"title": "must not update"}, map[string]string{"issue_ref": issueID})
+	request := pluginInstallTokenRequest(http.MethodPatch, "/v1/storage/workspace/pref", token,
+		map[string]any{"value": "x"}, map[string]string{"scope": "workspace", "key": "pref"})
 	response := httptest.NewRecorder()
-	testHandler.PatchPluginIssue(response, request)
+	testHandler.PutPluginStorage(response, request)
 	if response.Code != http.StatusForbidden {
 		t.Fatalf("ungranted install-token patch status=%d body=%s", response.Code, response.Body.String())
 	}
@@ -117,67 +116,64 @@ func TestPluginInstallTokenEnforcesGrantedScope(t *testing.T) {
 	if err := json.Unmarshal(response.Body.Bytes(), &problem); err != nil {
 		t.Fatalf("decode scope problem: %v", err)
 	}
-	if problem.Code != "forbidden" || !strings.Contains(problem.Detail, "issues:write") {
+	if problem.Code != "missing_scope" || !strings.Contains(problem.Detail, "storage:workspace") {
 		t.Fatalf("unexpected scope problem: %+v", problem)
 	}
 }
 
 func TestPluginActionRequiresAGrantedScope(t *testing.T) {
-	// Installed with issues:read only. Everything else must be refused, and the
+	// Installed with tasks:read only. Everything else must be refused, and the
 	// refusal must name the missing scope so an admin can act on it.
-	installationID := installPluginForAction(t, []string{"issues:read"})
-	issueID := createTestIssue(t, "Plugin action scope test", "todo", "none")
+	installationID := installPluginForAction(t, []string{"storage:user"})
 
 	recorder := httptest.NewRecorder()
-	testHandler.GetPluginIssue(recorder, pluginActionRequest(http.MethodGet, "/issues", installationID, nil,
-		map[string]string{"issue_ref": issueID}))
-	if recorder.Code != http.StatusOK {
+	testHandler.GetPluginStorage(recorder, pluginActionRequest(http.MethodGet, "/v1/storage/workspace/pref", installationID, nil,
+		map[string]string{"scope": "user", "key": "pref"}))
+	if recorder.Code != http.StatusNotFound {
 		t.Fatalf("granted scope was refused: status=%d body=%s", recorder.Code, recorder.Body.String())
 	}
 
 	recorder = httptest.NewRecorder()
-	testHandler.CreatePluginComment(recorder, pluginActionRequest(http.MethodPost, "/comments", installationID,
-		map[string]any{"content": "hello"}, map[string]string{"issue_ref": issueID}))
+	testHandler.PutPluginStorage(recorder, pluginActionRequest(http.MethodPost, "/v1/storage/workspace/pref", installationID,
+		map[string]any{"value": "x"}, map[string]string{"scope": "workspace", "key": "pref"}))
 	if recorder.Code != http.StatusForbidden {
 		t.Fatalf("ungranted scope status=%d body=%s", recorder.Code, recorder.Body.String())
 	}
-	if !strings.Contains(recorder.Body.String(), "comments:write") {
+	if !strings.Contains(recorder.Body.String(), "storage:workspace") {
 		t.Fatalf("refusal does not name the missing scope: %s", recorder.Body.String())
 	}
 	var problem publicapiv1.Problem
 	if err := json.Unmarshal(recorder.Body.Bytes(), &problem); err != nil {
 		t.Fatalf("decode stable problem: %v", err)
 	}
-	if problem.Code != "forbidden" || problem.Error == "" || problem.RequestID == "" {
+	if problem.Code != "missing_scope" || problem.Error == "" || problem.RequestID == "" {
 		t.Fatalf("unexpected stable problem: %+v", problem)
 	}
 }
 
 func TestPluginActionRefusedWithoutAnInstallation(t *testing.T) {
-	installPluginForAction(t, []string{"issues:read"})
-	issueID := createTestIssue(t, "Plugin action installation test", "todo", "none")
+	installPluginForAction(t, []string{"tasks:read"})
 
 	// No header at all: the endpoint must not fall back to "any installed
 	// plugin" or to an unscoped call.
 	recorder := httptest.NewRecorder()
-	testHandler.GetPluginIssue(recorder, pluginActionRequest(http.MethodGet, "/issues", "", nil,
-		map[string]string{"issue_ref": issueID}))
+	testHandler.GetPluginStorage(recorder, pluginActionRequest(http.MethodGet, "/v1/storage/workspace/pref", "", nil,
+		map[string]string{"scope": "workspace", "key": "pref"}))
 	if recorder.Code != http.StatusBadRequest {
 		t.Fatalf("missing installation header status=%d body=%s", recorder.Code, recorder.Body.String())
 	}
 
 	// An installation id that does not exist is a 404, never a pass-through.
 	recorder = httptest.NewRecorder()
-	testHandler.GetPluginIssue(recorder, pluginActionRequest(http.MethodGet, "/issues",
-		"11111111-1111-1111-1111-111111111111", nil, map[string]string{"issue_ref": issueID}))
+	testHandler.GetPluginStorage(recorder, pluginActionRequest(http.MethodGet, "/v1/storage/workspace/pref",
+		"11111111-1111-1111-1111-111111111111", nil, map[string]string{"scope": "workspace", "key": "pref"}))
 	if recorder.Code != http.StatusNotFound {
 		t.Fatalf("unknown installation status=%d body=%s", recorder.Code, recorder.Body.String())
 	}
 }
 
 func TestPluginActionStopsWhenTheInstallationIsDisabled(t *testing.T) {
-	installationID := installPluginForAction(t, []string{"issues:read"})
-	issueID := createTestIssue(t, "Plugin action disable test", "todo", "none")
+	installationID := installPluginForAction(t, []string{"tasks:read"})
 
 	recorder := httptest.NewRecorder()
 	testHandler.DisablePlugin(recorder, pluginHandlerRequest(http.MethodPost, "/plugins/disable", nil,
@@ -189,8 +185,8 @@ func TestPluginActionStopsWhenTheInstallationIsDisabled(t *testing.T) {
 	// A surface left open in a stale tab keeps its bridge; disabling has to cut
 	// it off server-side or "disabled" only means "hidden".
 	recorder = httptest.NewRecorder()
-	testHandler.GetPluginIssue(recorder, pluginActionRequest(http.MethodGet, "/issues", installationID, nil,
-		map[string]string{"issue_ref": issueID}))
+	testHandler.GetPluginStorage(recorder, pluginActionRequest(http.MethodGet, "/v1/storage/workspace/pref", installationID, nil,
+		map[string]string{"scope": "workspace", "key": "pref"}))
 	if recorder.Code != http.StatusForbidden {
 		t.Fatalf("disabled installation status=%d body=%s", recorder.Code, recorder.Body.String())
 	}

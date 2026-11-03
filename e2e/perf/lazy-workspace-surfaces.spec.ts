@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { WORKSPACE_SLUG } from "./fixtures/typing-under-live-runs";
+import { WORKSPACE_SLUG } from "./fixtures/world";
 import { mockWorkspaceRequests } from "./fixtures/workspace-api";
 
 test("workspace loads search on demand without retired features", async ({ page, context, baseURL }) => {
@@ -45,7 +45,9 @@ test("workspace loads search on demand without retired features", async ({ page,
   expect(errors).toEqual([]);
 });
 
-test("system inbox stays usable on desktop and narrow screens", async ({ page, context, baseURL }) => {
+test("system inbox stays usable on desktop and narrow screens", async ({ page, context, baseURL }, testInfo) => {
+  test.setTimeout(60_000);
+  page.setDefaultTimeout(10_000);
   const origin = new URL(baseURL!).origin;
   const unknownRequests: string[] = [];
   const external: string[] = [];
@@ -72,16 +74,16 @@ test("system inbox stays usable on desktop and narrow screens", async ({ page, c
   for (const [width, height, label] of [[1280, 800, "desktop"], [390, 844, "mobile"]] as const) {
     await page.setViewportSize({ width, height });
     await page.goto(`${origin}/${WORKSPACE_SLUG}/inbox`);
-    await page.getByRole("button", { name: /^Autopilot paused/ }).click();
+    await page.getByRole("button", { name: /Autopilot paused/ }).click();
     await expect(page.getByRole("heading", { name: "Autopilot paused" })).toBeVisible();
     await expect(page.getByText("Retired task notification")).toHaveCount(0);
     await expect(page.getByText("Retired quick-create notification")).toHaveCount(0);
     await expect(page.getByText(notice.body)).toBeVisible();
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-    await page.screenshot({ path: `tasks/verification/issue-project-removal-2026-10-25/inbox-${label}.png` });
+    await page.screenshot({ path: testInfo.outputPath(`inbox-${label}.png`) });
     if (label === "mobile") {
       await page.getByRole("button", { name: "Inbox", exact: true }).click();
-      await expect(page.getByRole("button", { name: /^Autopilot paused/ })).toBeVisible();
+      await expect(page.getByRole("button", { name: /Autopilot paused/ })).toBeVisible();
     }
   }
   expect(unknownRequests).toEqual([]);

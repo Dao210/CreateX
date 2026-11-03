@@ -9,7 +9,7 @@ import (
 )
 
 // ---------------------------------------------------------------------------
-// Workspace / Project dashboard
+// Workspace dashboard
 //
 // Six read endpoints power the workspace dashboard:
 //
@@ -20,9 +20,7 @@ import (
 //   GET /api/dashboard/failures/daily     per-(date, failure_reason) counts
 //   GET /api/dashboard/failures/by-agent  per-(agent, failure_reason) counts
 //
-// All of them accept ?days=N (defaults to 30, capped at 365) and an optional
-// ?project_id=<uuid> to scope the rollup to a single project. With no
-// project_id the data spans the whole workspace.
+// All accept ?days=N (defaults to 30, capped at 365) and span the whole workspace.
 //
 // Cutoff convention: the three date-bucketed series use parseSinceParamInTZ
 // (N+1 calendar days, the surplus day trimmed client-side with `-(days-1)`),

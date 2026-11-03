@@ -253,3 +253,35 @@ func TestPostgresRejectsUnsanitizedTaskPayloads(t *testing.T) {
 		}
 	})
 }
+
+// seedNULTask creates an agent with one running task, ready to be driven
+// through a terminal daemon callback.
+func seedNULTask(t *testing.T, label string) (agentID, taskID string) {
+	t.Helper()
+	ctx := context.Background()
+
+	if err := testPool.QueryRow(ctx, `
+		INSERT INTO agent (workspace_id, name, description, runtime_mode, runtime_config,
+			runtime_id, visibility, max_concurrent_tasks, owner_id,
+			instructions, custom_env, custom_args)
+		VALUES ($1, $2, '', 'cloud', '{}'::jsonb, $3, 'private', 1, $4, '', '{}'::jsonb, '[]'::jsonb)
+		RETURNING id`, testWorkspaceID, label, handlerTestRuntimeID(t), testUserID).Scan(&agentID); err != nil {
+		t.Fatalf("seed agent: %v", err)
+	}
+	t.Cleanup(func() {
+		testPool.Exec(context.Background(), `DELETE FROM agent WHERE id = $1`, agentID)
+	})
+
+	chatID := dbfx.ChatSession(t, agentID)
+
+	if err := testPool.QueryRow(ctx, `
+		INSERT INTO agent_task_queue (agent_id, runtime_id, chat_session_id, status, priority, started_at)
+		VALUES ($1, $2, $3, 'running', 0, now())
+		RETURNING id`, agentID, handlerTestRuntimeID(t), chatID).Scan(&taskID); err != nil {
+		t.Fatalf("seed running task: %v", err)
+	}
+	t.Cleanup(func() {
+		testPool.Exec(context.Background(), `DELETE FROM agent_task_queue WHERE id = $1`, taskID)
+	})
+	return agentID, taskID
+}

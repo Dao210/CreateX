@@ -42,28 +42,9 @@ type RepoData struct {
 	Ref         string `json:"ref,omitempty"`
 }
 
-// ProjectResourceData mirrors handler.ProjectResourceData — a single project
-// resource as delivered to the daemon. resource_ref is type-specific JSON.
-type ProjectResourceData struct {
-	ID           string          `json:"id"`
-	ResourceType string          `json:"resource_type"`
-	ResourceRef  json.RawMessage `json:"resource_ref"`
-	Label        string          `json:"label,omitempty"`
-}
-
 // ConnectedAppData keeps the claim-response field local to daemon types while
 // sharing the canonical JSON shape with the runtime app metadata package.
 type ConnectedAppData = runtimeapps.ConnectedApp
-
-// IssueStatusData mirrors one active custom workspace status from the claim
-// payload (MUL-6460). Mirror field: internal/handler/agent.go
-// TaskIssueStatusData, same JSON names.
-type IssueStatusData struct {
-	Key         string `json:"key"`
-	Name        string `json:"name"`
-	Category    string `json:"category"`
-	Description string `json:"description,omitempty"`
-}
 
 // Task represents a claimed task from the server.
 // Agent data (name, skills) is populated by the claim endpoint.
@@ -91,55 +72,29 @@ type Task struct {
 	// regardless of task kind so the daemon can inject `## Workspace Context`
 	// into the brief. Empty when the owner hasn't set one.
 	WorkspaceContext string `json:"workspace_context,omitempty"`
-	// IssueStatuses mirrors the claim payload's active CUSTOM status catalog
-	// (MUL-6460): key/name/category/description per status, already in catalog
-	// order. Rendered into the brief's status-command line; empty (including on
-	// old servers that never send the field) keeps the brief byte-identical to
-	// the built-in-only form. IssueStatusesOmitted is the cap overflow count.
 
 	ThreadName    string             `json:"thread_name,omitempty"` // semantic title for provider-native session/thread history
 	Agent         *AgentData         `json:"agent,omitempty"`
 	ConnectedApps []ConnectedAppData `json:"connected_apps,omitempty"` // per-run app capabilities mounted through runtime MCP overlays
 	Repos         []RepoData         `json:"repos,omitempty"`
-	// active project for this task, when present
-	// human-readable project title for context injection
-	// durable project-level context injected into the brief
-	// project-scoped resources to expose to the agent
-	// true when executing in the squad-leader coordinator role
-	// server capability: IsLeaderTask/SquadID authoritatively answer "is this a leader run". Absent on servers predating it — those before #4951 never sent is_leader_task at all, later ones send it without this guarantee — so taskIsSquadLeader falls back to the briefing marker for both (MUL-5811)
+
 	PriorSessionID                string `json:"prior_session_id,omitempty"`                 // Claude session ID from a previous task on this issue
 	PriorWorkDir                  string `json:"prior_work_dir,omitempty"`                   // work_dir from a previous task on this issue
 	PriorSessionResumeUnavailable bool   `json:"prior_session_resume_unavailable,omitempty"` // MUL-5305: server signals a more recent Codex session was withheld (rollout missing) and PriorSessionID (if any) is an older fallback; the run must disclose the continuity gap even if that older session resumes cleanly. Absent/false on old servers.
-	// comment that triggered this task
-	// MUL-4195: earlier comments folded into this run while it was still queued; the agent must address these in addition to the (newest) triggering comment. Empty for old servers / non-merged runs
-	// MUL-4195: full detail of the folded comments (thread_id/author/created_at/content) so the prompt can address each without assuming a shared thread. Empty for old servers / non-merged runs
-	// root comment ID for the triggering thread; falls back to trigger_comment_id on old servers
-	// content of the triggering comment
-	// "agent" or "member" — author kind for the triggering comment
-	// display name of the triggering comment author
-	// issue-wide comments since this agent's last run (excludes its own and the injected trigger); 0/omitted for old daemons or cold start
-	// RFC3339 anchor (last run's started_at) the count is measured from; empty on cold start
-	// the server actually computed the issue-wide delta this claim (both reads succeeded). A zero NewCommentCount means "nothing was said" only when this is true; otherwise the zero is a failed read, a cold start, or an old server, and the prompt must not present it as the comment scan's answer (MUL-6984)
-	// MUL-7344: the server compared the issue's title/description against the snapshot taken at this agent's previous run on this issue. Same contract as NewCommentsDeltaKnown — absent means NOT compared (cold start, no prior snapshot, read error, old server), and the prompt must then keep telling the agent to read the issue
-	// subset of title,description in that order; empty alongside IssueStateDeltaKnown means unchanged. Fields outside that set (status, assignee, priority, labels, parent, due, stage, project, metadata) are not compared and must never be reported as checked; status and assignee ship their current values instead
-	// the issue's status key at claim time; sent whether or not the delta is known
-	// "agent", "member" or "squad" at claim time; empty when unassigned
-	// assignee UUID at claim time; empty when unassigned
-	ChatSessionID             string               `json:"chat_session_id,omitempty"`              // non-empty for chat tasks
-	ChatChannelType           string               `json:"chat_channel_type,omitempty"`            // "slack" when the chat session is backed by an IM channel; empty for a web-only chat. Drives the channel-awareness block in the prompt
-	ChatChannelDeliversFiles  bool                 `json:"chat_channel_delivers_files,omitempty"`  // server capability: this deployment carries a file the agent produces the last hop into this conversation. Absent on a server predating it, which reads as false — the run is told to describe its file in words, and the worst case is a delivery that could have happened did not. Must never be re-derived from chat_channel_type: whether the hop exists depends on the SERVER's storage and adapter wiring, which no daemon can see (MUL-4899)
-	ChatType                  string               `json:"chat_type,omitempty"`                    // "group" when the channel conversation is a shared room, "p2p" for a 1:1 with the bot. Empty for a web chat or an old server; the per-turn prompt then reports unknown rather than guessing 1:1
-	ChatInThread              bool                 `json:"chat_in_thread,omitempty"`               // true when the latest @mention was a thread reply; selects which read command the prompt tells the agent to start with
-	ChatMessage               string               `json:"chat_message,omitempty"`                 // user message content for chat tasks
-	ChatMessageAttachments    []ChatAttachmentMeta `json:"chat_message_attachments,omitempty"`     // attachments linked to the chat message; agent uses these to `auro attachment download <id>`
-	ChatIntro                 bool                 `json:"chat_intro,omitempty"`                   // legacy compatibility for historical is_agent_intro sessions; new agent creation no longer creates these chats
-	RegenerateQuickActionsFor string               `json:"regenerate_quick_actions_for,omitempty"` // set only by servers predating server-side quick-actions generation (MUL-5573). Read as a REFUSAL marker, never executed: see the guard in runTask
-	AutopilotRunID            string               `json:"autopilot_run_id,omitempty"`             // non-empty for autopilot run_only tasks
-	AutopilotID               string               `json:"autopilot_id,omitempty"`                 // autopilot that spawned this run
-	AutopilotTitle            string               `json:"autopilot_title,omitempty"`              // autopilot title used as task context
-	AutopilotDescription      string               `json:"autopilot_description,omitempty"`        // autopilot description used as task prompt
-	AutopilotSource           string               `json:"autopilot_source,omitempty"`             // manual, schedule, webhook, or api
-	AutopilotTriggerPayload   json.RawMessage      `json:"autopilot_trigger_payload,omitempty"`    // optional trigger payload for webhook/api runs
+
+	ChatSessionID            string               `json:"chat_session_id,omitempty"`             // non-empty for chat tasks
+	ChatChannelType          string               `json:"chat_channel_type,omitempty"`           // "slack" when the chat session is backed by an IM channel; empty for a web-only chat. Drives the channel-awareness block in the prompt
+	ChatChannelDeliversFiles bool                 `json:"chat_channel_delivers_files,omitempty"` // server capability: this deployment carries a file the agent produces the last hop into this conversation. Absent on a server predating it, which reads as false — the run is told to describe its file in words, and the worst case is a delivery that could have happened did not. Must never be re-derived from chat_channel_type: whether the hop exists depends on the SERVER's storage and adapter wiring, which no daemon can see (MUL-4899)
+	ChatType                 string               `json:"chat_type,omitempty"`                   // "group" when the channel conversation is a shared room, "p2p" for a 1:1 with the bot. Empty for a web chat or an old server; the per-turn prompt then reports unknown rather than guessing 1:1
+	ChatInThread             bool                 `json:"chat_in_thread,omitempty"`              // true when the latest @mention was a thread reply; selects which read command the prompt tells the agent to start with
+	ChatMessage              string               `json:"chat_message,omitempty"`                // user message content for chat tasks
+	ChatMessageAttachments   []ChatAttachmentMeta `json:"chat_message_attachments,omitempty"`    // attachments linked to the chat message; agent uses these to `auro attachment download <id>`
+	AutopilotRunID           string               `json:"autopilot_run_id,omitempty"`            // non-empty for autopilot run_only tasks
+	AutopilotID              string               `json:"autopilot_id,omitempty"`                // autopilot that spawned this run
+	AutopilotTitle           string               `json:"autopilot_title,omitempty"`             // autopilot title used as task context
+	AutopilotDescription     string               `json:"autopilot_description,omitempty"`       // autopilot description used as task prompt
+	AutopilotSource          string               `json:"autopilot_source,omitempty"`            // manual, schedule, webhook, or api
+	AutopilotTriggerPayload  json.RawMessage      `json:"autopilot_trigger_payload,omitempty"`   // optional trigger payload for webhook/api runs
 	// user's natural-language input for quick-create tasks
 	// explicit priority selected in quick-create
 	// explicit calendar due date selected in quick-create

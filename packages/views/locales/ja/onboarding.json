@@ -144,41 +144,18 @@
     "success_toast": "ウェイトリストに登録しました。クラウドランタイムが利用可能になったらメールでお知らせします。",
     "failed_toast": "ウェイトリストに登録できませんでした"
   },
-  "welcome_after_onboarding": {
-    "skip": {
-      "loading": "ワールドを準備中…",
-      "title": "Weave a World へようこそ!",
-      "subtitle": "ランタイム接続を案内するタスクを 1 つ追加しました。準備できたら Runtimes から Mika と始められます。",
-      "got_it": "了解",
-      "status_in_progress": "進行中",
-      "error_title": "準備できませんでした",
-      "error_body": "ランタイム案内のタスクを作成できませんでした。再試行するか、準備ができたら Runtimes からランタイムを接続してください。",
-      "retry": "再試行",
-      "dismiss": "後で",
-      "cards": {
-        "install_runtime": {
-          "title": "ランタイムを接続",
-          "subtitle": "Codex または Kimi をインストールし、Runtimes から Mika の案内チャットを始めてください。"
-        }
-      }
-    }
-  },
   "step_workspace": {
     "eyebrow_first": "最初のワールド",
     "eyebrow_resume": "続きから、または新規作成",
     "headline_first": "ワールドに名前を付けましょう。",
     "headline_resume": "{{name}} で続けるか、別のワールドを始めましょう。",
-    "lede_first": "ワールドは、タスク、エージェント、プロジェクトが集まる場所です。あとでチームメイトを招待したり、ワールドを増やしたりできます。",
+    "lede_first": "ワールドにはエージェント、チャット、作品があります。メンバーは後から招待できます。",
     "lede_resume": "すでにあるワールドでセットアップを続けるか、別に新しいワールドを作成してください。いくつでもワールドに所属できます。",
     "name_label": "ワールド名",
     "name_placeholder": "Acme Inc、My Lab、Side Projects…",
     "random_name": "ランダム",
     "url_label": "URL",
     "slug_placeholder": "acme",
-    "issue_prefix_label": "タスクプレフィックス",
-    "issue_prefix_prefix": "タスクは ",
-    "issue_prefix_suffix": " のように表示されます。あとで設定から変更できます。",
-    "issue_prefix_pending": "上の URL を入力すると、タスク番号はそれに合わせて決まります。ここに直接入力することもできます。",
     "create_new_title": "新しいワールドを作成",
     "hint_opening": "{{name}} を開いています。",
     "hint_creating": "{{name}} を作成しています。",
@@ -265,6 +242,6 @@
     "headline": "最初のエージェント仲間、Mika を紹介します。",
     "name": "Mika",
     "role": "参謀長",
-    "blurb": "やりたいことを Mika に伝えると、タスクになり、適したエージェントが担当します。"
+    "blurb": "Mika に目標を伝え、チャットで一緒に進めましょう。"
   }
 }

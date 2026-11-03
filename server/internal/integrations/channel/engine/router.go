@@ -424,7 +424,7 @@ func (r *Router) processClaimed(ctx context.Context, set ResolverSet, msg channe
 		if startChat {
 			startedTask = db.AgentTaskQueue{}
 			var beforeCommit func(context.Context, pgx.Tx, db.ChatSession) error
-			if persistStartedMessage && !msg.SkipAgentRun {
+			if persistStartedMessage {
 				prepared, prepareErr := r.tasks.PrepareChatTaskEnqueue(ctx, inst.AgentID, identity.UserID)
 				if prepareErr != nil {
 					return Result{}, finalizeRelease, fmt.Errorf("prepare started chat task: %w", prepareErr)
@@ -567,23 +567,8 @@ func (r *Router) processClaimed(ctx context.Context, set ResolverSet, msg channe
 		res.ChannelRouteRevision = started.RouteRevision
 	}
 
-	// 7. /issue command, if present. chat_message is already durable; all
-	//    error returns from here signal finalizeNone (or the defensive Mark).
-
-	// 8. Debounce the run trigger. The synchronous outcome is OutcomeIngested
-	//    with no TaskID — the task row is created at flush. identity.UserID is
-	//    THIS message's sender (the task initiator), deliberately not the
-	//    session creator (group sessions are creator=installer). Latest sender
-	//    in a window wins (MUL-2645).
-	//
-	//    SkipAgentRun lets an adapter opt this message out of the agent turn —
-	//    used by wecom for standalone /issue commands where the engine has
-	//    already done the meaningful work (created the issue, sent the
-	//    "✅ Created #N" reply via OutboundReplier) and an agent reply would
-	//    just quote the slash command back. The chat_message is still durable
-	//    and the OutboundReplier still fires — only the debounced run trigger
-	//    (and therefore the typing indicator) is suppressed.
-	if !msg.SkipAgentRun && !startTaskCommitted {
+	// Schedule the persisted input against its captured context generation.
+	if !startTaskCommitted {
 		pendingContexts := appendRes.PendingContexts
 		if len(pendingContexts) == 0 {
 			pendingContexts = []PendingContext{{
@@ -611,7 +596,7 @@ func (r *Router) processClaimed(ctx context.Context, set ResolverSet, msg channe
 			}
 		}
 	}
-	res.runScheduled = !msg.SkipAgentRun && (startTaskCommitted || !startChat)
+	res.runScheduled = startTaskCommitted || !startChat
 	if resolveMedia {
 		r.enqueueMedia(set, inst, identity, appendRes.MessageID, msg, sessionID, localMediaDeadline)
 	}
@@ -971,9 +956,3 @@ func (r *Router) drop(ctx context.Context, set ResolverSet, msg channel.InboundM
 	_ = set.Audit.RecordDrop(ctx, instID, msg, reason)
 	return Result{Outcome: OutcomeDropped, DropReason: reason, InstallationID: instID}
 }
-
-// ErrEmptyIssueTitle is a defensive invariant error. Router handles a
-// user-authored empty title as OutcomeIssueUsage before calling createIssue.
-var ErrEmptyIssueTitle = errors.New("issue title is empty")
-
-var _ channel.InboundHandler = (*Router)(nil).Handle

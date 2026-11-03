@@ -22,13 +22,13 @@ test("onboarding automatically creates a workspace and replaces the loading rout
   });
   try {
     await page.goto("/onboarding");
-    await expect(page).toHaveURL(/\/[^/]+\/issues$/, { timeout: 30000 });
+    await expect(page).toHaveURL(/\/[^/]+\/me$/, { timeout: 30000 });
     const workspaces = await api.getWorkspaces();
     expect(workspaces).toHaveLength(1);
     expect(creates).toHaveLength(1);
-    expect(new URL(page.url()).pathname).toBe(`/${workspaces[0]!.slug}/issues`);
+    expect(new URL(page.url()).pathname).toBe(`/${workspaces[0]!.slug}/me`);
     await page.reload();
-    await expect(page).toHaveURL(new RegExp(`/${workspaces[0]!.slug}/issues$`));
+    await expect(page).toHaveURL(new RegExp(`/${workspaces[0]!.slug}/me$`));
     await expect(page.getByRole("heading", { name: "A new civilization" })).toHaveCount(0);
   } finally {
     await removeWorkspaces(api);
@@ -42,7 +42,7 @@ test("onboarding resumes an existing workspace without creating another", async 
   await signIn(page, api);
   try {
     await page.goto("/onboarding");
-    await expect(page).toHaveURL(new RegExp(`/${workspace.slug}/issues$`), { timeout: 30000 });
+    await expect(page).toHaveURL(new RegExp(`/${workspace.slug}/me$`), { timeout: 30000 });
     expect(await api.getWorkspaces()).toHaveLength(1);
   } finally {
     await removeWorkspaces(api);
@@ -58,10 +58,10 @@ test("onboarding shows a retry action after a failed completion", async ({ page 
   }, { times: 1 });
   try {
     await page.goto("/onboarding");
-    await expect(page.getByRole("alert")).toHaveText("Your workspace could not be prepared.", { timeout: 30000 });
+    await expect(page.getByRole("alert").filter({ hasText: "Your world could not be prepared." })).toHaveText("Your world could not be prepared.", { timeout: 30000 });
     await expect(page).toHaveURL(/\/onboarding$/);
     await page.getByRole("button", { name: "Try again" }).click();
-    await expect(page).toHaveURL(/\/[^/]+\/issues$/, { timeout: 30000 });
+    await expect(page).toHaveURL(/\/[^/]+\/me$/, { timeout: 30000 });
     expect(await api.getWorkspaces()).toHaveLength(1);
   } finally {
     await removeWorkspaces(api);

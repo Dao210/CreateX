@@ -541,10 +541,6 @@ func (h *Handler) UploadFile(w http.ResponseWriter, r *http.Request) {
 }
 
 // ---------------------------------------------------------------------------
-// ListAttachments — GET /api/issues/{id}/attachments
-// ---------------------------------------------------------------------------
-
-// ---------------------------------------------------------------------------
 // GetAttachmentByID — GET /api/attachments/{id}
 // ---------------------------------------------------------------------------
 
@@ -1358,24 +1354,12 @@ func (h *Handler) DeleteAttachment(w http.ResponseWriter, r *http.Request) {
 // Attachment linking
 // ---------------------------------------------------------------------------
 
-// attachmentOwnerLockAttempts bounds the re-read below. An attachment gains an
-// owner once, when the issue or comment it was uploaded for links it, so one
-// retry is enough in practice; the bound is what keeps a pathological
-// interleaving from looping.
+// attachmentOwnerLockAttempts bounds retries when a concurrent send binds an upload.
 const attachmentOwnerLockAttempts = 3
 
-// withAttachmentOwnerLock runs write in a transaction that locks the
-// attachment's owners first — the issue, then the comment when it has one —
-// which is the issue -> comment -> child order LockIssueForDelete,
-// UpdateComment, LockLiveComment and CreateComment all take. Locking the
-// attachment row and then touching its issue is the opposite order, and closes
-// a deadlock cycle with issue teardown: teardown holds the issue and reaches
-// the same attachment through the issue_id cascade.
-//
-// The row is re-read under those locks, so a link that committed while this
-// waited is seen before the write; an attachment that gained an owner is
-// retried with that owner locked. Returns pgx.ErrNoRows when the attachment,
-// or the comment owning it, is gone.
+// withAttachmentOwnerLock locks the chat owner before writing its attachment.
+// If a concurrent send changes ownership, the bounded retry locks the new owner.
+// A missing attachment or chat owner returns pgx.ErrNoRows.
 func (h *Handler) withAttachmentOwnerLock(ctx context.Context, att db.Attachment, write func(*db.Queries) error) error {
 	for attempt := 0; ; attempt++ {
 		fresh, err := h.attachmentOwnerLockAttempt(ctx, att, write)

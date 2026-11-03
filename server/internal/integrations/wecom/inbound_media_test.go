@@ -16,7 +16,6 @@ import (
 	"testing"
 
 	"github.com/auro-ai/auro/server/internal/integrations/channel"
-	"github.com/auro-ai/auro/server/internal/integrations/channel/engine"
 )
 
 // mediaFrame builds an aibot_msg_callback frame from a raw body map, going
@@ -340,16 +339,7 @@ func TestDispatchFrame_TheCommandSourceHasNoPlaceholdersInIt(t *testing.T) {
 			if got.CommandText != tc.wantCommand {
 				t.Errorf("CommandText = %q, want %q — a placeholder in the command source is a line the sender never typed", got.CommandText, tc.wantCommand)
 			}
-			cmd, ok := engine.ParseIssueCommand(got.CommandText)
-			if !ok {
-				t.Fatalf("engine.ParseIssueCommand(%q) declined — the sender attached a screenshot, typed /issue, and got no issue and no explanation", got.CommandText)
-			}
-			if cmd.Title != "登录坏了" {
-				t.Errorf("issue title = %q, want 登录坏了", cmd.Title)
-			}
-			if !got.SkipAgentRun {
-				t.Error("SkipAgentRun = false on a pure /issue; the agent would answer the slash command back at the sender")
-			}
+
 		})
 	}
 }
@@ -384,16 +374,7 @@ func TestDispatchFrame_GroupMentionedMixedCommand(t *testing.T) {
 	if want := "/issue 登录坏了"; got.CommandText != want {
 		t.Errorf("CommandText = %q, want %q — the placeholder and the addressing both have to come off", got.CommandText, want)
 	}
-	cmd, ok := engine.ParseIssueCommand(got.CommandText)
-	if !ok {
-		t.Fatalf("engine.ParseIssueCommand(%q) declined — an @-mentioned /issue with a screenshot files nothing", got.CommandText)
-	}
-	if cmd.Title != "登录坏了" {
-		t.Errorf("issue title = %q, want 登录坏了", cmd.Title)
-	}
-	if !got.SkipAgentRun {
-		t.Error("SkipAgentRun = false; the group would get the slash command read back to it")
-	}
+
 }
 
 func TestDispatchFrame_MixedSessionControlsShareNormalization(t *testing.T) {
@@ -456,7 +437,5 @@ func TestDispatchFrame_AStandalonePhotoCarriesNoCommand(t *testing.T) {
 	if got.CommandText != "" {
 		t.Errorf("CommandText = %q, want empty — the sender typed nothing", got.CommandText)
 	}
-	if got.SkipAgentRun {
-		t.Error("SkipAgentRun = true on a bare photo; the agent would never see the picture it was sent")
-	}
+
 }

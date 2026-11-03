@@ -1,24 +1,10 @@
-import type { Issue, IssueMetadata, IssueReaction } from "./issue";
-import type { IssueProperty, IssuePropertyValues } from "./property";
+
 import type { Agent } from "./agent";
 import type { InboxItem } from "./inbox";
-import type { Comment, Reaction } from "./comment";
-import type { TimelineEntry } from "./activity";
 import type { Workspace, MemberWithUser, Invitation } from "./workspace";
-import type { Project } from "./project";
-import type { Label } from "./label";
 
 // WebSocket event types (matching Go server protocol/events.go)
 export type WSEventType =
-  | "issue:created"
-  | "issue:updated"
-  | "issue_attachments:changed"
-  | "issue:deleted"
-  | "comment:created"
-  | "comment:updated"
-  | "comment:deleted"
-  | "comment:resolved"
-  | "comment:unresolved"
   | "agent:status"
   | "agent:created"
   | "agent:archived"
@@ -49,13 +35,6 @@ export type WSEventType =
   | "skill:created"
   | "skill:updated"
   | "skill:deleted"
-  | "subscriber:added"
-  | "subscriber:removed"
-  | "activity:created"
-  | "reaction:added"
-  | "reaction:removed"
-  | "issue_reaction:added"
-  | "issue_reaction:removed"
   | "chat:message"
   | "chat:done"
   | "chat:quick_actions"
@@ -64,110 +43,21 @@ export type WSEventType =
   | "chat:session_read"
   | "chat:session_deleted"
   | "chat:session_updated"
-  | "project:created"
-  | "project:updated"
-  | "project:deleted"
-  | "squad:created"
-  | "squad:updated"
-  | "squad:deleted"
   | "label:created"
   | "label:updated"
   | "label:deleted"
-  | "issue_labels:changed"
-  | "issue_metadata:changed"
-  | "issue_properties:changed"
-  | "property:created"
-  | "property:updated"
-  | "issue_status:changed"
-  | "pin:created"
-  | "pin:deleted"
-  | "pin:reordered"
   | "invitation:created"
   | "invitation:accepted"
   | "invitation:declined"
   | "invitation:revoked"
   | "github_installation:created"
-  | "github_installation:deleted"
-  | "pull_request:linked"
-  | "pull_request:updated"
-  | "pull_request:unlinked";
+  | "github_installation:deleted";
 
 export interface WSMessage<T = unknown> {
   type: WSEventType;
   payload: T;
   actor_id?: string;
   actor_type?: string;
-}
-
-export interface IssueCreatedPayload {
-  issue: Issue;
-}
-
-export interface IssueUpdatedPayload {
-  issue: Issue;
-  // The server stamps issue:updated with which fields actually changed
-  // (server/internal/handler/issue.go publish). assignee_changed lets the
-  // realtime layer keep filtered myList caches in place on a non-membership
-  // change instead of refetching; status_changed lets it reconcile board column
-  // counts when a status change lands on an off-screen (unloaded) issue;
-  // project_changed lets it drop a moved issue from the old project's filtered
-  // list (the client-side cache diff is unreliable after an optimistic local
-  // move — MUL-3669 / #4548). Other change flags are present on the wire too and
-  // can be surfaced here when needed.
-  assignee_changed?: boolean;
-  status_changed?: boolean;
-  project_changed?: boolean;
-  // Both ends of a duplicate-mark change (MUL-7349). The mark is not on Issue,
-  // so these tell the realtime layer whose duplicate relations to refresh.
-  duplicate_of_issue_id?: string | null;
-  prev_duplicate_of_issue_id?: string | null;
-}
-
-export interface IssueDeletedPayload {
-  issue_id: string;
-}
-
-export interface IssueLabelsChangedPayload {
-  issue_id: string;
-  labels: Label[];
-  issue_revision?: number;
-}
-
-export interface IssueAttachmentsChangedPayload {
-  issue_id: string;
-  issue_revision?: number;
-}
-
-export interface IssueMetadataChangedPayload {
-  issue_id: string;
-  metadata: IssueMetadata;
-  issue_revision?: number;
-}
-
-export interface IssuePropertiesChangedPayload {
-  issue_id: string;
-  properties: IssuePropertyValues;
-  issue_revision?: number;
-}
-
-export interface PropertyChangedPayload {
-  property: IssueProperty;
-}
-
-/**
- * The workspace issue status catalog changed (MUL-6243).
- *
- * One event covers all four writes because clients answer them the same way:
- * re-read the catalog. It deliberately carries no entry — merging a row out of
- * an event would have to be reconciled against writes this client never saw,
- * and the catalog is small enough that a refetch is both simpler and safer.
- *
- * `action` is advisory: it makes the frame self-describing in devtools. Nothing
- * routes on it, so a future write verb this client has never heard of still
- * refreshes the catalog correctly.
- */
-export interface IssueStatusChangedPayload {
-  action?: "created" | "updated" | "archived" | "reordered";
 }
 
 export interface AgentStatusPayload {
@@ -208,7 +98,6 @@ export interface InboxArchivedPayload {
 
 export interface InboxUnarchivedPayload {
   item_id: string;
-  issue_id: string | null;
   recipient_id: string;
 }
 
@@ -220,30 +109,6 @@ export interface InboxBatchReadPayload {
 export interface InboxBatchArchivedPayload {
   recipient_id: string;
   count: number;
-}
-
-export interface CommentCreatedPayload {
-  comment: Comment;
-  issue_revision?: number;
-}
-
-export interface CommentUpdatedPayload {
-  comment: Comment;
-  issue_revision?: number;
-}
-
-export interface CommentDeletedPayload {
-  comment_id: string;
-  issue_id: string;
-  issue_revision?: number;
-}
-
-export interface CommentResolvedPayload {
-  comment: Comment;
-}
-
-export interface CommentUnresolvedPayload {
-  comment: Comment;
 }
 
 export interface WorkspaceUpdatedPayload {
@@ -270,29 +135,10 @@ export interface MemberRemovedPayload {
   workspace_id: string;
 }
 
-export interface SubscriberAddedPayload {
-  issue_id: string;
-  user_type: string;
-  user_id: string;
-  reason: string;
-}
-
-export interface SubscriberRemovedPayload {
-  issue_id: string;
-  user_type: string;
-  user_id: string;
-}
-
-export interface ActivityCreatedPayload {
-  issue_id: string;
-  entry: TimelineEntry;
-}
-
 export interface TaskMessagePayload {
   /** Opaque tool-call identity, scoped to one backend execution. */
   call_id?: string;
   task_id: string;
-  issue_id: string;
   chat_session_id?: string;
   seq: number;
   type: "text" | "thinking" | "tool_use" | "tool_result" | "error";
@@ -318,7 +164,6 @@ export interface TaskMessagePayload {
 export interface TaskQueuedPayload {
   task_id: string;
   agent_id: string;
-  issue_id: string;
   chat_session_id?: string;
   status: string;
 }
@@ -326,7 +171,6 @@ export interface TaskQueuedPayload {
 export interface TaskDispatchPayload {
   task_id: string;
   agent_id: string;
-  issue_id: string;
   runtime_id: string;
   chat_session_id?: string;
 }
@@ -334,7 +178,6 @@ export interface TaskDispatchPayload {
 export interface TaskRunningPayload {
   task_id: string;
   agent_id: string;
-  issue_id: string;
   chat_session_id?: string;
   status: string;
 }
@@ -350,7 +193,6 @@ export interface TaskRunningPayload {
 export interface TaskWaitingLocalDirectoryPayload {
   task_id: string;
   agent_id: string;
-  issue_id: string;
   chat_session_id?: string;
   status: string;
   wait_reason?: string;
@@ -359,7 +201,6 @@ export interface TaskWaitingLocalDirectoryPayload {
 export interface TaskCompletedPayload {
   task_id: string;
   agent_id: string;
-  issue_id: string;
   chat_session_id?: string;
   status: string;
 }
@@ -367,7 +208,6 @@ export interface TaskCompletedPayload {
 export interface TaskFailedPayload {
   task_id: string;
   agent_id: string;
-  issue_id: string;
   chat_session_id?: string;
   status: string;
   failure_reason?: string;
@@ -377,38 +217,8 @@ export interface TaskFailedPayload {
 export interface TaskCancelledPayload {
   task_id: string;
   agent_id: string;
-  issue_id: string;
   chat_session_id?: string;
   status: string;
-}
-
-export interface ReactionAddedPayload {
-  reaction: Reaction;
-  issue_id: string;
-  comment_revision?: number;
-}
-
-export interface ReactionRemovedPayload {
-  comment_id: string;
-  issue_id: string;
-  emoji: string;
-  actor_type: string;
-  actor_id: string;
-  comment_revision?: number;
-}
-
-export interface IssueReactionAddedPayload {
-  reaction: IssueReaction;
-  issue_id: string;
-  issue_revision?: number;
-}
-
-export interface IssueReactionRemovedPayload {
-  issue_id: string;
-  emoji: string;
-  actor_type: string;
-  actor_id: string;
-  issue_revision?: number;
 }
 
 export interface ChatMessageEventPayload {
@@ -509,18 +319,6 @@ export interface ChatSessionDeletedPayload {
   chat_session_id: string;
 }
 
-export interface ProjectCreatedPayload {
-  project: Project;
-}
-
-export interface ProjectUpdatedPayload {
-  project: Project;
-}
-
-export interface ProjectDeletedPayload {
-  project_id: string;
-}
-
 export interface InvitationCreatedPayload {
   invitation: Invitation;
   workspace_name?: string;
@@ -569,24 +367,6 @@ export interface ChatSessionCreatedPayload {
  * forgets the payload shape — that's the whole point.
  */
 export interface WSEventPayloadMap {
-  "issue:created": IssueCreatedPayload;
-  "issue:updated": IssueUpdatedPayload;
-  "issue:deleted": IssueDeletedPayload;
-  "issue_attachments:changed": IssueAttachmentsChangedPayload;
-  "issue_labels:changed": IssueLabelsChangedPayload;
-  "issue_properties:changed": IssuePropertiesChangedPayload;
-  "property:created": PropertyChangedPayload;
-  "property:updated": PropertyChangedPayload;
-  "issue_status:changed": IssueStatusChangedPayload;
-  "issue_reaction:added": IssueReactionAddedPayload;
-  "issue_reaction:removed": IssueReactionRemovedPayload;
-  "comment:created": CommentCreatedPayload;
-  "comment:updated": CommentUpdatedPayload;
-  "comment:deleted": CommentDeletedPayload;
-  "comment:resolved": CommentResolvedPayload;
-  "comment:unresolved": CommentUnresolvedPayload;
-  "reaction:added": ReactionAddedPayload;
-  "reaction:removed": ReactionRemovedPayload;
   "agent:status": AgentStatusPayload;
   "agent:created": AgentCreatedPayload;
   "agent:archived": AgentArchivedPayload;
@@ -612,9 +392,6 @@ export interface WSEventPayloadMap {
   "member:added": MemberAddedPayload;
   "member:updated": MemberUpdatedPayload;
   "member:removed": MemberRemovedPayload;
-  "subscriber:added": SubscriberAddedPayload;
-  "subscriber:removed": SubscriberRemovedPayload;
-  "activity:created": ActivityCreatedPayload;
   "chat:message": ChatMessageEventPayload;
   "chat:done": ChatDonePayload;
   "chat:quick_actions": ChatQuickActionsPayload;
@@ -623,9 +400,6 @@ export interface WSEventPayloadMap {
   "chat:session_read": ChatSessionReadPayload;
   "chat:session_deleted": ChatSessionDeletedPayload;
   "chat:session_updated": unknown;
-  "project:created": ProjectCreatedPayload;
-  "project:updated": ProjectUpdatedPayload;
-  "project:deleted": ProjectDeletedPayload;
   "invitation:created": InvitationCreatedPayload;
   "invitation:accepted": InvitationAcceptedPayload;
   "invitation:declined": InvitationDeclinedPayload;
@@ -637,20 +411,11 @@ export interface WSEventPayloadMap {
   "skill:created": unknown;
   "skill:updated": unknown;
   "skill:deleted": unknown;
-  "squad:created": unknown;
-  "squad:updated": unknown;
-  "squad:deleted": unknown;
   "label:created": unknown;
   "label:updated": unknown;
   "label:deleted": unknown;
-  "pin:created": unknown;
-  "pin:deleted": unknown;
-  "pin:reordered": unknown;
   "github_installation:created": unknown;
   "github_installation:deleted": unknown;
-  "pull_request:linked": unknown;
-  "pull_request:updated": unknown;
-  "pull_request:unlinked": unknown;
 }
 
 /**

@@ -133,7 +133,6 @@ function makeTask(overrides: Record<string, unknown>) {
     id: "task-x",
     agent_id: "agent-1",
     runtime_id: "rt-1",
-    issue_id: "",
     status: "completed" as const,
     priority: 0,
     dispatched_at: null,

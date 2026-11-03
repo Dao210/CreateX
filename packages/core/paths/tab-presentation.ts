@@ -16,7 +16,6 @@
  * loaded yet renders a stable type icon and a type label, never a wrong or
  * empty identity, and never borrows the Issues icon.
  */
-import type { IssueStatus } from "../types";
 import {
   WORKSPACE_PAGES,
   type NavLabelKey,
@@ -73,8 +72,6 @@ export type InboxSelectionData =
  * pending (type-label + type-icon) presentation.
  */
 export interface TabEntityData {
-  issue?: { identifier: string; title: string; status: IssueStatus };
-  project?: { icon: string | null; title: string };
   autopilot?: { title: string };
   /** Resolved display name for an actor subject. */
   actorName?: string;

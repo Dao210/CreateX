@@ -1,18 +1,7 @@
+
 import { describe, expect, it } from "vitest";
-import type { Agent, Comment, Member, RuntimeDevice, Skill } from "../types";
-import {
-  canInvokeAgent,
-  canChangeMemberRole,
-  canDeleteComment,
-  canDeleteRuntime,
-  canDeleteSkill,
-  canDeleteWorkspace,
-  canEditAgent,
-  canEditComment,
-  canEditSkill,
-  canManageMembers,
-  canUpdateWorkspaceSettings,
-} from "./rules";
+import type { Agent, Member, RuntimeDevice, Skill } from "../types";
+import { canInvokeAgent, canChangeMemberRole, canDeleteRuntime, canDeleteSkill, canDeleteWorkspace, canEditAgent, canEditSkill, canManageMembers, canUpdateWorkspaceSettings } from "./rules";
 
 const ALICE = "user-alice";
 const BOB = "user-bob";
@@ -57,26 +46,6 @@ function makeSkill(createdBy: string | null): Skill {
     created_by: createdBy,
     created_at: "2026-04-01T00:00:00Z",
     updated_at: "2026-04-01T00:00:00Z",
-  };
-}
-
-function makeComment(overrides: Partial<Comment> = {}): Comment {
-  return {
-    id: "cmt_1",
-    issue_id: "iss_1",
-    author_type: "member",
-    author_id: ALICE,
-    content: "hi",
-    type: "comment",
-    parent_id: null,
-    reactions: [],
-    attachments: [],
-    created_at: "2026-04-01T00:00:00Z",
-    updated_at: "2026-04-01T00:00:00Z",
-    resolved_at: null,
-    resolved_by_type: null,
-    resolved_by_id: null,
-    ...overrides,
   };
 }
 
@@ -310,47 +279,6 @@ describe("canEditSkill / canDeleteSkill", () => {
       .toBe(true);
     expect(canDeleteSkill(skill, { userId: BOB, role: "member" }).allowed)
       .toBe(false);
-  });
-});
-
-describe("canEditComment / canDeleteComment", () => {
-  it("allows the author to edit their own comment", () => {
-    const c = makeComment({ author_id: ALICE });
-    expect(canEditComment(c, { userId: ALICE, role: "member" }).allowed).toBe(
-      true,
-    );
-  });
-  it("allows workspace admin to edit someone else's comment", () => {
-    const c = makeComment({ author_id: ALICE });
-    expect(canEditComment(c, { userId: BOB, role: "admin" }).allowed).toBe(
-      true,
-    );
-  });
-  it("denies non-author non-admin", () => {
-    const c = makeComment({ author_id: ALICE });
-    expect(canEditComment(c, { userId: BOB, role: "member" }).allowed).toBe(
-      false,
-    );
-  });
-  it("denies edit on agent-authored comments", () => {
-    const c = makeComment({ author_type: "agent", author_id: "agt_1" });
-    const d = canEditComment(c, { userId: BOB, role: "owner" });
-    expect(d.allowed).toBe(false);
-    expect(d.reason).toBe("not_resource_owner");
-  });
-  it("admin CAN delete an agent-authored comment", () => {
-    // delete is broader than edit — admins moderate any comment regardless of
-    // author type. Mirrors backend `comment.go:507-512`.
-    const c = makeComment({ author_type: "agent", author_id: "agt_1" });
-    expect(canDeleteComment(c, { userId: BOB, role: "admin" }).allowed).toBe(
-      true,
-    );
-  });
-  it("denies plain member from deleting agent-authored comment", () => {
-    const c = makeComment({ author_type: "agent", author_id: "agt_1" });
-    expect(
-      canDeleteComment(c, { userId: BOB, role: "member" }).allowed,
-    ).toBe(false);
   });
 });
 

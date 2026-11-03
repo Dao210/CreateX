@@ -134,11 +134,9 @@ func TestSessionBinder_BindMediaReachesTheSessionStore(t *testing.T) {
 	fb := &fakeSessionBinder{}
 	b := &sessionBinder{session: fb}
 	refs := []channel.MediaRef{{StorageKey: "k", Filename: "photo.jpg"}}
-	issue := pgtype.UUID{Bytes: [16]byte{7}, Valid: true}
 
 	if _, err := b.BindMedia(context.Background(), engine.BindMediaParams{
 		MediaRefs: refs,
-		IssueID:   issue,
 	}); err != nil {
 		t.Fatalf("BindMedia: %v", err)
 	}
@@ -148,11 +146,7 @@ func TestSessionBinder_BindMediaReachesTheSessionStore(t *testing.T) {
 	if len(fb.bindIn.MediaRefs) != 1 {
 		t.Errorf("MediaRefs = %d, want 1", len(fb.bindIn.MediaRefs))
 	}
-	// IssueID is what makes an /issue turn's attachment belong to the issue
-	// rather than to a chat message nobody opens again.
-	if fb.bindIn.IssueID != issue {
-		t.Error("IssueID was dropped; an /issue attachment would land on the chat message instead")
-	}
+
 }
 
 // The media budget is how long the chat task waits before running. Dropped, the

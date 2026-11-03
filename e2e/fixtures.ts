@@ -6,6 +6,7 @@
 
 import "./env";
 import pg from "pg";
+import { randomInt } from "node:crypto";
 
 // `||` (not `??`) so an empty `NEXT_PUBLIC_API_URL=` in .env still falls
 // back to localhost. dotenv sets unset-vs-empty both as "" — treating them
@@ -19,72 +20,25 @@ interface TestWorkspace {
   slug: string;
 }
 
-export type TestIssueStatus =
-  | "backlog"
-  | "todo"
-  | "in_progress"
-  | "in_review"
-  | "done"
-  | "blocked"
-  | "cancelled";
-
-export type TestIssuePriority = "urgent" | "high" | "medium" | "low" | "none";
-
-export interface TestTableIssueSeed {
-  title: string;
-  status?: TestIssueStatus;
-  priority?: TestIssuePriority;
-  parentIssueId?: string | null;
-  position?: number;
-}
-
-export interface TestTableIssue {
-  id: string;
-  title: string;
-  status: TestIssueStatus;
-  number: number;
-}
-
 export class TestApiClient {
   private token: string | null = null;
   private workspaceSlug: string | null = null;
   private workspaceId: string | null = null;
   private email: string | null = null;
-  private createdIssueIds: string[] = [];
-  private createdProjectIds: string[] = [];
-  private seededIssueIds: string[] = [];
 
   async login(email: string, name: string, password?: string) {
     const client = new pg.Client(DATABASE_URL);
     await client.connect();
     try {
-      // Keep each E2E login isolated so previous test runs do not trip the
-      // per-email send-code rate limit.
+      // Seed a verification fixture so E2E setup never sends external mail.
+      const code = String(randomInt(100000, 1000000));
       await client.query("DELETE FROM verification_code WHERE email = $1", [email]);
-
-      // Step 1: Send verification code
-      const sendRes = await fetch(`${API_BASE}/auth/send-code`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
-      if (!sendRes.ok) {
-        throw new Error(`send-code failed: ${sendRes.status}`);
-      }
-
-      // Step 2: Read code from database
-      const result = await client.query(
-        "SELECT code FROM verification_code WHERE email = $1 AND used = FALSE AND expires_at > now() ORDER BY created_at DESC LIMIT 1",
-        [email],
+      await client.query(
+        "INSERT INTO verification_code (email, code, expires_at) VALUES ($1, $2, now() + interval '10 minutes')",
+        [email, code],
       );
-      if (result.rows.length === 0) {
-        throw new Error(`No verification code found for ${email}`);
-      }
 
-      const configuredDevCode = process.env.AURO_DEV_VERIFICATION_CODE?.trim();
-      const code = configuredDevCode || result.rows[0].code;
-
-      // Step 3: Verify code to get JWT
+      // Exercise the real verification handler to obtain the session token.
       const verifyRes = await fetch(`${API_BASE}/auth/verify-code`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -198,167 +152,6 @@ export class TestApiClient {
     }
   }
 
-  /** Create a project and register it for cleanup. */
-  async createProject(title: string, opts?: Record<string, unknown>) {
-    const res = await this.authedFetch("/api/projects", {
-      method: "POST",
-      body: JSON.stringify({ title, ...opts }),
-    });
-    if (!res.ok) {
-      throw new Error(`create project failed: ${res.status} ${await res.text()}`);
-    }
-    const project = await res.json();
-    this.createdProjectIds.push(project.id);
-    return project as { id: string; title: string; status: string };
-  }
-
-  async updateProject(id: string, updates: Record<string, unknown>) {
-    const res = await this.authedFetch(`/api/projects/${id}`, {
-      method: "PUT",
-      body: JSON.stringify(updates),
-    });
-    if (!res.ok) {
-      throw new Error(`update project failed: ${res.status} ${await res.text()}`);
-    }
-    return res.json();
-  }
-
-  async deleteProject(id: string) {
-    await this.authedFetch(`/api/projects/${id}`, { method: "DELETE" });
-  }
-
-  async createIssue(title: string, opts?: Record<string, unknown>) {
-    const res = await this.authedFetch("/api/issues", {
-      method: "POST",
-      body: JSON.stringify({ title, ...opts }),
-    });
-    const issue = await res.json();
-    this.createdIssueIds.push(issue.id);
-    return issue;
-  }
-
-  /**
-   * Insert a large, deterministic issue fixture in one transaction.
-   *
-   * Browser E2E coverage for cursor-backed Table views needs 1,000+ rows,
-   * which would make setup itself dominate the test if every row went through
-   * the HTTP create endpoint. These rows intentionally contain no dependent
-   * records; cleanup deletes exactly the returned IDs from the isolated E2E
-   * workspace.
-   */
-  async seedTableIssues(rows: TestTableIssueSeed[]): Promise<TestTableIssue[]> {
-    if (rows.length === 0) return [];
-    if (!this.workspaceId || !this.email) {
-      throw new Error("Cannot seed table issues before login and workspace setup");
-    }
-
-    const client = new pg.Client(DATABASE_URL);
-    await client.connect();
-    try {
-      await client.query("BEGIN");
-      const userResult = await client.query<{ id: string }>(
-        `SELECT id FROM "user" WHERE email = $1`,
-        [this.email],
-      );
-      const creatorId = userResult.rows[0]?.id;
-      if (!creatorId) {
-        throw new Error(`Cannot resolve E2E creator for ${this.email}`);
-      }
-
-      const counterResult = await client.query<{ issue_counter: number }>(
-        `
-          UPDATE workspace
-          SET issue_counter = issue_counter + $2
-          WHERE id = $1
-          RETURNING issue_counter
-        `,
-        [this.workspaceId, rows.length],
-      );
-      const finalCounter = Number(counterResult.rows[0]?.issue_counter);
-      if (!Number.isFinite(finalCounter)) {
-        throw new Error(`Cannot reserve issue numbers for workspace ${this.workspaceId}`);
-      }
-      const firstNumber = finalCounter - rows.length + 1;
-
-      const inserted = await client.query<TestTableIssue>(
-        `
-          INSERT INTO issue (
-            workspace_id,
-            title,
-            status,
-            priority,
-            creator_type,
-            creator_id,
-            parent_issue_id,
-            position,
-            number
-          )
-          SELECT
-            $1::uuid,
-            fixture.title,
-            fixture.status,
-            fixture.priority,
-            'member',
-            $2::uuid,
-            fixture.parent_issue_id,
-            fixture.position,
-            fixture.number
-          FROM unnest(
-            $3::text[],
-            $4::text[],
-            $5::text[],
-            $6::uuid[],
-            $7::double precision[],
-            $8::integer[]
-          ) WITH ORDINALITY AS fixture(
-            title,
-            status,
-            priority,
-            parent_issue_id,
-            position,
-            number,
-            ordinal
-          )
-          ORDER BY fixture.ordinal
-          RETURNING id, title, status, number
-        `,
-        [
-          this.workspaceId,
-          creatorId,
-          rows.map((row) => row.title),
-          rows.map((row) => row.status ?? "backlog"),
-          rows.map((row) => row.priority ?? "none"),
-          rows.map((row) => row.parentIssueId ?? null),
-          rows.map((row, index) => row.position ?? index + 1),
-          rows.map((_row, index) => firstNumber + index),
-        ],
-      );
-      await client.query("COMMIT");
-      this.seededIssueIds.push(...inserted.rows.map((row) => row.id));
-      return inserted.rows;
-    } catch (error) {
-      await client.query("ROLLBACK");
-      throw error;
-    } finally {
-      await client.end();
-    }
-  }
-
-  async deleteIssue(id: string) {
-    await this.authedFetch(`/api/issues/${id}`, { method: "DELETE" });
-  }
-
-  async createComment(issueId: string, content: string) {
-    const res = await this.authedFetch(`/api/issues/${issueId}/comments`, {
-      method: "POST",
-      body: JSON.stringify({ content }),
-    });
-    if (!res.ok) {
-      throw new Error(`create comment failed: ${res.status} ${await res.text()}`);
-    }
-    return (await res.json()) as { id: string };
-  }
-
   /** Adds an existing user to this client's workspace and returns the member id. */
   async addMemberByEmail(email: string, role: "admin" | "member" = "member"): Promise<string> {
     if (!this.workspaceId) throw new Error("Cannot add a member before a workspace is selected");
@@ -403,63 +196,6 @@ export class TestApiClient {
   async deleteWorkspace() {
     if (!this.workspaceId) return;
     await this.authedFetch(`/api/workspaces/${this.workspaceId}`, { method: "DELETE" });
-  }
-
-  /** Server-side issue search, for comparing against what the UI shows. */
-  async searchIssues(q: string, opts: { includeClosed?: boolean; limit?: number } = {}) {
-    const params = new URLSearchParams({ q, limit: String(opts.limit ?? 20) });
-    if (opts.includeClosed) params.set("include_closed", "true");
-    const res = await this.authedFetch(`/api/issues/search?${params}`);
-    if (!res.ok) {
-      throw new Error(`search issues failed: ${res.status} ${await res.text()}`);
-    }
-    return (await res.json()) as { issues: { id: string; identifier: string; title: string }[] };
-  }
-
-  async updateIssue(id: string, updates: Record<string, unknown>) {
-    const res = await this.authedFetch(`/api/issues/${id}`, {
-      method: "PUT",
-      body: JSON.stringify(updates),
-    });
-    if (!res.ok) {
-      throw new Error(`update issue failed: ${res.status} ${await res.text()}`);
-    }
-    return res.json();
-  }
-
-  /** Clean up all issues created during this test. */
-  async cleanup() {
-    if (this.seededIssueIds.length > 0 && this.workspaceId) {
-      const client = new pg.Client(DATABASE_URL);
-      await client.connect();
-      try {
-        await client.query(
-          `DELETE FROM issue WHERE workspace_id = $1 AND id = ANY($2::uuid[])`,
-          [this.workspaceId, this.seededIssueIds],
-        );
-      } finally {
-        await client.end();
-      }
-      this.seededIssueIds = [];
-    }
-    for (const id of this.createdIssueIds) {
-      try {
-        await this.deleteIssue(id);
-      } catch {
-        /* ignore — may already be deleted */
-      }
-    }
-    this.createdIssueIds = [];
-    // Projects last: an issue delete leaves no project reference behind, and
-    // dropping the project first would strand the issues in the list.
-    for (const id of this.createdProjectIds) {
-      try {
-        await this.deleteProject(id);
-      } catch {
-        /* ignore — may already be deleted */
-      }
-    }
-    this.createdProjectIds = [];
   }
 
   getToken() {

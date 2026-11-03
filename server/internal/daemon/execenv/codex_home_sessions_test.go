@@ -328,73 +328,6 @@ func TestCodexResumeRolloutPresent(t *testing.T) {
 	}
 }
 
-// With no stable per-issue key (e.g. a non-issue task), a local_directory task
-// must NOT collapse back to exposing the whole shared history — it falls back to
-// an empty local dir.
-func TestPrepareCodexSessionsDir_LocalDirectoryNoKeyFallsBackToEmptyDir(t *testing.T) {
-	t.Parallel()
-	root := t.TempDir()
-	codexHome := filepath.Join(root, "codex-home")
-	if err := os.MkdirAll(codexHome, 0o755); err != nil {
-		t.Fatalf("mkdir codex-home: %v", err)
-	}
-	sharedHome := filepath.Join(root, "shared")
-	seedFakeRollout(t, filepath.Join(sharedHome, "sessions"), "2026", "07", "13", "other", 16)
-
-	if err := prepareCodexSessionsDir(codexHome, sharedHome, CodexHomeOptions{IsLocalDirectory: true}, testLogger()); err != nil {
-		t.Fatalf("prepareCodexSessionsDir: %v", err)
-	}
-	sessions := filepath.Join(codexHome, "sessions")
-	fi, err := os.Lstat(sessions)
-	if err != nil {
-		t.Fatalf("sessions not created: %v", err)
-	}
-	if fi.Mode()&os.ModeSymlink != 0 {
-		t.Error("no-key local_directory must not link the shared history")
-	}
-	if CodexResumeRolloutPresent(codexHome, "other") {
-		t.Error("machine-global history must not be visible")
-	}
-}
-
-// Two consecutive local_directory tasks share one project dir but get a fresh
-// codex-home each (the daemon never reuses their workdir). The second run must
-// still see the first run's rollout via the per-issue store — this is the
-// regression Elon's review flagged.
-func TestPrepareCodexSessionsDir_LocalDirectoryResumeAcrossTaskIDs(t *testing.T) {
-	t.Parallel()
-	root := t.TempDir()
-	sharedHome := filepath.Join(root, "shared")
-	sessionID := "019f59d9-a6aa-7a53-b173-1eccc4b4c873"
-	key := filepath.Join("agent-1", "issue-1")
-
-	// Round 1: a fresh per-task codex-home links the per-issue store.
-	home1 := filepath.Join(root, "task-1", "codex-home")
-	if err := os.MkdirAll(home1, 0o755); err != nil {
-		t.Fatalf("mkdir home1: %v", err)
-	}
-	if err := prepareCodexSessionsDir(home1, sharedHome, CodexHomeOptions{IsLocalDirectory: true, SessionStoreKey: key}, testLogger()); err != nil {
-		t.Fatalf("round 1 prepare: %v", err)
-	}
-	// Codex writes the round-1 rollout through the link into the store.
-	seedRolloutAt(t, filepath.Join(home1, "sessions", "2026", "07", "13", "rollout-2026-07-13T00-00-00-"+sessionID+".jsonl"), 32)
-
-	// Round 2: a brand-new task ID → brand-new codex-home, same issue key.
-	home2 := filepath.Join(root, "task-2", "codex-home")
-	if err := os.MkdirAll(home2, 0o755); err != nil {
-		t.Fatalf("mkdir home2: %v", err)
-	}
-	if err := prepareCodexSessionsDir(home2, sharedHome, CodexHomeOptions{IsLocalDirectory: true, SessionStoreKey: key, ResumeSessionID: sessionID}, testLogger()); err != nil {
-		t.Fatalf("round 2 prepare: %v", err)
-	}
-
-	// The round-2 home must resolve the round-1 rollout through the shared store —
-	// otherwise the daemon would silently drop the conversation.
-	if !CodexResumeRolloutPresent(home2, sessionID) {
-		t.Fatal("round-2 local_directory task cannot see round-1 rollout — context would be silently lost")
-	}
-}
-
 // A managed home migrated on a prior reuse already links the per-issue store; a
 // subsequent reuse must treat that link as authoritative and not re-migrate it.
 func TestPrepareCodexSessionsDir_ReusedStoreLinkIsAuthoritative(t *testing.T) {
@@ -480,7 +413,7 @@ func TestPruneCodexSessionStores(t *testing.T) {
 func TestPruneCodexSessionStores_ReopenedStoreNotReclaimed(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("CODEX_HOME", home)
-	storeDir := codexSessionStoreDir(home, codexSessionStoreKey("", TaskContextForEnv{AgentID: "agent-1", IssueID: "issue-old"}))
+	storeDir := codexSessionStoreDir(home, codexSessionStoreKey("", TaskContextForEnv{AgentID: "agent-1", ChatSessionID: "issue-old"}))
 	sessionID := "019f59d9-a6aa-7a53-b173-1eccc4b4c873"
 	// A long-idle (30-day) store that still holds a resumable rollout.
 	seedRolloutAt(t, filepath.Join(storeDir, "2026", "06", "01", "rollout-2026-06-01T00-00-00-"+sessionID+".jsonl"), 16)
@@ -515,7 +448,7 @@ func TestPruneCodexSessionStores_ReopenedStoreNotReclaimed(t *testing.T) {
 func TestPruneCodexSessionStores_ActiveStoreNotReclaimed(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("CODEX_HOME", home)
-	storeDir := codexSessionStoreDir(home, codexSessionStoreKey("", TaskContextForEnv{AgentID: "agent-1", IssueID: "issue-active"}))
+	storeDir := codexSessionStoreDir(home, codexSessionStoreKey("", TaskContextForEnv{AgentID: "agent-1", ChatSessionID: "issue-active"}))
 	seedRolloutAt(t, filepath.Join(storeDir, "2026", "06", "01", "rollout-2026-06-01T00-00-00-x.jsonl"), 16)
 	// Idle past retention on disk (no remount refresh), but currently in use.
 	chtimesTree(t, storeDir, time.Now().Add(-30*24*time.Hour))
@@ -548,7 +481,7 @@ func TestPruneCodexSessionStores_IsolatesProfiles(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("CODEX_HOME", home)
 	// A store owned by the "staging" profile daemon, idle past retention.
-	stagingStore := codexSessionStoreDir(home, codexSessionStoreKey("staging", TaskContextForEnv{AgentID: "agent-1", IssueID: "issue-1"}))
+	stagingStore := codexSessionStoreDir(home, codexSessionStoreKey("staging", TaskContextForEnv{AgentID: "agent-1", ChatSessionID: "issue-1"}))
 	seedRolloutAt(t, filepath.Join(stagingStore, "2026", "06", "01", "rollout-2026-06-01T00-00-00-s.jsonl"), 16)
 	chtimesTree(t, stagingStore, time.Now().Add(-30*24*time.Hour))
 
@@ -618,8 +551,8 @@ func TestPruneCodexSessionStores_NoCrossProfileCollision(t *testing.T) {
 		home := t.TempDir()
 		t.Setenv("CODEX_HOME", home)
 		a, b := pair[0], pair[1]
-		storeA := codexSessionStoreDir(home, codexSessionStoreKey(a, TaskContextForEnv{AgentID: "agent", IssueID: "issue"}))
-		storeB := codexSessionStoreDir(home, codexSessionStoreKey(b, TaskContextForEnv{AgentID: "agent", IssueID: "issue"}))
+		storeA := codexSessionStoreDir(home, codexSessionStoreKey(a, TaskContextForEnv{AgentID: "agent", ChatSessionID: "issue"}))
+		storeB := codexSessionStoreDir(home, codexSessionStoreKey(b, TaskContextForEnv{AgentID: "agent", ChatSessionID: "issue"}))
 		seedRolloutAt(t, filepath.Join(storeA, "2026", "06", "01", "rollout-2026-06-01T00-00-00-a.jsonl"), 16)
 		seedRolloutAt(t, filepath.Join(storeB, "2026", "06", "01", "rollout-2026-06-01T00-00-00-b.jsonl"), 16)
 		chtimesTree(t, storeA, time.Now().Add(-30*24*time.Hour))

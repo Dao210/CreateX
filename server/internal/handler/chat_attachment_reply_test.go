@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/auro-ai/auro/server/internal/testutil"
 )
 
 // seedRunningChatTask inserts a running chat task (chat_session_id set) for the
@@ -218,7 +220,8 @@ func TestUploadFile_TaskScopedChatAttachment(t *testing.T) {
 	})
 
 	t.Run("non-chat task rejected", func(t *testing.T) {
-		issueTask := createHandlerTestTaskForAgent(t, agentID) // no chat_session_id
+		issueTask := createHandlerTestTaskForAgent(t, agentID)
+		dbfx.Exec(t, `UPDATE agent_task_queue SET chat_session_id=NULL WHERE id=$1`, issueTask)
 		w := uploadWithTaskID(t, agentID, issueTask, issueTask)
 		if w.Code != http.StatusBadRequest {
 			t.Fatalf("non-chat task upload: expected 400, got %d: %s", w.Code, w.Body.String())
@@ -237,8 +240,7 @@ func TestUploadFile_TaskScopedChatAttachment(t *testing.T) {
 // guarantee that lets us keep task_id as a plain (FK-less) transient column: an
 // unbound task-tagged upload (task_id set, chat_message_id NULL — e.g. the turn
 // failed before binding) is reaped when its chat_session is deleted, via
-// attachment.chat_session_id's ON DELETE CASCADE. Cleanup does not depend on the
-// task relationship, so no attachment.task_id foreign key / cascade is needed.
+// the session delete transaction. Cleanup does not depend on the task relation.
 func TestChatAttachment_UnboundOrphanReapedOnSessionDelete(t *testing.T) {
 	if testPool == nil {
 		t.Skip("test database not available")
@@ -248,10 +250,9 @@ func TestChatAttachment_UnboundOrphanReapedOnSessionDelete(t *testing.T) {
 	taskID := seedRunningChatTask(t, agentID, sessionID)
 	attID := seedAgentChatAttachment(t, agentID, sessionID, taskID)
 
-	if _, err := testPool.Exec(context.Background(),
-		`DELETE FROM chat_session WHERE id = $1`, sessionID); err != nil {
-		t.Fatalf("delete chat session: %v", err)
-	}
+	req := withURLParam(newRequest("DELETE", "/api/chat/sessions/"+sessionID, nil), "sessionId", sessionID)
+	req = withChatTestWorkspaceCtx(t, req)
+	testutil.Call(t, testHandler.DeleteChatSession, req).Want(http.StatusNoContent)
 
 	var exists bool
 	if err := testPool.QueryRow(context.Background(),
@@ -276,7 +277,7 @@ func TestCompleteTask_BindsChatAttachments(t *testing.T) {
 		taskID := seedRunningChatTask(t, agentID, sessionID)
 		attID := seedAgentChatAttachment(t, agentID, sessionID, taskID)
 
-		if _, err := testHandler.TaskService.CompleteTask(context.Background(),
+		if _, _, err := testHandler.TaskService.CompleteTaskWithTransition(context.Background(),
 			parseUUID(taskID), []byte(`{"output":"here is the chart"}`), "", "", "", false, "", ""); err != nil {
 			t.Fatalf("CompleteTask: %v", err)
 		}
@@ -297,7 +298,7 @@ func TestCompleteTask_BindsChatAttachments(t *testing.T) {
 		taskID := seedRunningChatTask(t, agentID, sessionID)
 		attID := seedAgentChatAttachment(t, agentID, sessionID, taskID)
 
-		if _, err := testHandler.TaskService.CompleteTask(context.Background(),
+		if _, _, err := testHandler.TaskService.CompleteTaskWithTransition(context.Background(),
 			parseUUID(taskID), []byte(`{"output":""}`), "", "", "", false, "", ""); err != nil {
 			t.Fatalf("CompleteTask: %v", err)
 		}
@@ -316,7 +317,7 @@ func TestCompleteTask_BindsChatAttachments(t *testing.T) {
 
 	t.Run("empty output + no attachment creates no message", func(t *testing.T) {
 		taskID := seedRunningChatTask(t, agentID, sessionID)
-		if _, err := testHandler.TaskService.CompleteTask(context.Background(),
+		if _, _, err := testHandler.TaskService.CompleteTaskWithTransition(context.Background(),
 			parseUUID(taskID), []byte(`{"output":""}`), "", "", "", false, "", ""); err != nil {
 			t.Fatalf("CompleteTask: %v", err)
 		}
@@ -339,7 +340,7 @@ func TestCompleteTask_BindsChatAttachments(t *testing.T) {
 		}
 		t.Cleanup(func() { testPool.Exec(context.Background(), `DELETE FROM attachment WHERE id = $1`, looseID) })
 
-		if _, err := testHandler.TaskService.CompleteTask(context.Background(),
+		if _, _, err := testHandler.TaskService.CompleteTaskWithTransition(context.Background(),
 			parseUUID(taskID), []byte(`{"output":"done"}`), "", "", "", false, "", ""); err != nil {
 			t.Fatalf("CompleteTask: %v", err)
 		}
@@ -377,7 +378,7 @@ func TestCompleteTask_BindsChatAttachments(t *testing.T) {
 			t.Fatalf("pre-bind attachment: %v", err)
 		}
 
-		if _, err := testHandler.TaskService.CompleteTask(context.Background(),
+		if _, _, err := testHandler.TaskService.CompleteTaskWithTransition(context.Background(),
 			parseUUID(taskID), []byte(`{"output":"done"}`), "", "", "", false, "", ""); err != nil {
 			t.Fatalf("CompleteTask: %v", err)
 		}
@@ -398,4 +399,68 @@ func TestCompleteTask_BindsChatAttachments(t *testing.T) {
 			t.Fatalf("FailTask must not bind attachments, got %v", got)
 		}
 	})
+}
+
+func TestDeleteBuilderChatRemovesExecutionAndAgentBindings(t *testing.T) {
+	ctx := context.Background()
+	agentID := createHandlerTestAgent(t, "Builder deletion", []byte("[]"))
+	sessionID := createHandlerTestChatSession(t, agentID)
+	taskID := seedRunningChatTask(t, agentID, sessionID)
+	attachmentID := seedAgentChatAttachment(t, agentID, sessionID, taskID)
+	if _, err := testPool.Exec(ctx, `UPDATE agent SET kind='system',system_key='agent_builder:cleanup' WHERE id=$1`, agentID); err != nil {
+		t.Fatal(err)
+	}
+	seedAgentLabel(t, ctx, testWorkspaceID, agentID)
+	var skillID, serverID string
+	if err := testPool.QueryRow(ctx, `INSERT INTO skill(workspace_id,name) VALUES($1,'builder-cleanup-skill') RETURNING id`, testWorkspaceID).Scan(&skillID); err != nil {
+		t.Fatal(err)
+	}
+	if err := testPool.QueryRow(ctx, `INSERT INTO workspace_mcp_server(workspace_id,name,config) VALUES($1,'builder-cleanup-mcp','{}') RETURNING id`, testWorkspaceID).Scan(&serverID); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		testPool.Exec(ctx, `DELETE FROM skill WHERE id=$1`, skillID)
+		testPool.Exec(ctx, `DELETE FROM workspace_mcp_server WHERE id=$1`, serverID)
+	})
+	for _, seed := range []struct {
+		sql  string
+		args []any
+	}{
+		{`INSERT INTO agent_skill(agent_id,skill_id) VALUES($1,$2)`, []any{agentID, skillID}},
+		{`INSERT INTO agent_mcp_server(agent_id,server_id) VALUES($1,$2)`, []any{agentID, serverID}},
+		{`INSERT INTO task_message(task_id,seq,type,content) VALUES($1,1,'text','builder output')`, []any{taskID}},
+		{`INSERT INTO task_usage(task_id,provider,model) VALUES($1,'claude','test')`, []any{taskID}},
+	} {
+		if _, err := testPool.Exec(ctx, seed.sql, seed.args...); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	req := withChatTestWorkspaceCtx(t, withURLParam(newRequest("DELETE", "/api/chat/sessions/"+sessionID, nil), "sessionId", sessionID))
+	testutil.Call(t, testHandler.DeleteChatSession, req).Want(http.StatusNoContent)
+	for _, check := range []struct{ table, column, id string }{
+		{"agent", "id", agentID}, {"chat_session", "id", sessionID}, {"agent_task_queue", "id", taskID},
+		{"task_message", "task_id", taskID}, {"task_usage", "task_id", taskID}, {"attachment", "id", attachmentID},
+		{"agent_skill", "agent_id", agentID}, {"agent_mcp_server", "agent_id", agentID}, {"agent_to_label", "agent_id", agentID},
+	} {
+		var count int
+		if err := testPool.QueryRow(ctx, "SELECT count(*) FROM "+check.table+" WHERE "+check.column+"=$1", check.id).Scan(&count); err != nil {
+			t.Fatal(err)
+		}
+		if count != 0 {
+			t.Errorf("%s retained %d rows after builder deletion", check.table, count)
+		}
+	}
+}
+
+func TestDeleteOrdinaryChatPreservesAgentLabels(t *testing.T) {
+	ctx := context.Background()
+	agentID := createHandlerTestAgent(t, "Persistent agent", []byte("[]"))
+	sessionID := createHandlerTestChatSession(t, agentID)
+	seedAgentLabel(t, ctx, testWorkspaceID, agentID)
+	req := withChatTestWorkspaceCtx(t, withURLParam(newRequest("DELETE", "/api/chat/sessions/"+sessionID, nil), "sessionId", sessionID))
+	testutil.Call(t, testHandler.DeleteChatSession, req).Want(http.StatusNoContent)
+	if got := countAgentLabelAssignments(t, ctx, agentID); got != 1 {
+		t.Fatalf("ordinary chat deletion removed agent labels: %d", got)
+	}
 }

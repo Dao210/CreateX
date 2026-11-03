@@ -8,8 +8,6 @@
     "no_agents": "该世界没有智能体",
     "archived": "该聊天已归档",
     "runtime_required": "智能体需要运行时",
-    "replying_to": "回复 {{name}}",
-    "cancel_reply": "取消回复",
     "mention": "提及成员或任务",
     "upload_image": "上传图片",
     "upload_file": "上传文件",

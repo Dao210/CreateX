@@ -34,7 +34,7 @@ var workspaceCreateCmd = &cobra.Command{
 		"Creating a workspace does NOT change the current default workspace for " +
 		"this profile — run 'auro workspace switch <slug>' afterward if you " +
 		"want subsequent commands to target the new workspace.",
-	Example: "  auro workspace create --name \"Support Team\" --slug support-team --issue-prefix SUP",
+	Example: "  auro workspace create --name \"Support Team\" --slug support-team",
 	Args:    cobra.NoArgs,
 	RunE:    runWorkspaceCreate,
 }
@@ -179,7 +179,6 @@ func init() {
 	workspaceCreateCmd.Flags().Bool("description-stdin", false, "Read description from stdin (preserves multi-line content verbatim)")
 	workspaceCreateCmd.Flags().String("context", "", "Workspace context (decodes \\n, \\r, \\t, \\\\; pipe via --context-stdin to preserve literal backslashes)")
 	workspaceCreateCmd.Flags().Bool("context-stdin", false, "Read context from stdin (preserves multi-line content verbatim)")
-	workspaceCreateCmd.Flags().String("issue-prefix", "", "Issue prefix (uppercased server-side)")
 	workspaceCreateCmd.Flags().String("output", "json", "Output format: table or json")
 	workspaceGetCmd.Flags().String("output", "json", "Output format: table or json")
 	workspaceMemberListCmd.Flags().String("output", "table", "Output format: table or json")
@@ -191,7 +190,6 @@ func init() {
 	workspaceUpdateCmd.Flags().Bool("description-stdin", false, "Read description from stdin (preserves multi-line content verbatim)")
 	workspaceUpdateCmd.Flags().String("context", "", "New workspace context (decodes \\n, \\r, \\t, \\\\; pipe via --context-stdin to preserve literal backslashes)")
 	workspaceUpdateCmd.Flags().Bool("context-stdin", false, "Read context from stdin (preserves multi-line content verbatim)")
-	workspaceUpdateCmd.Flags().String("issue-prefix", "", "New issue prefix (uppercased server-side)")
 	workspaceUpdateCmd.Flags().String("output", "json", "Output format: table or json")
 
 	workspaceMcpListCmd.Flags().String("output", "json", "Output format: table or json")
@@ -316,13 +314,6 @@ func buildWorkspaceCreateBody(cmd *cobra.Command) (map[string]any, error) {
 			return nil, err
 		}
 		body["context"] = ctxText
-	}
-	if cmd.Flags().Changed("issue-prefix") {
-		v, _ := cmd.Flags().GetString("issue-prefix")
-		if strings.TrimSpace(v) == "" {
-			return nil, fmt.Errorf("--issue-prefix cannot be empty; omit it to use the server-generated prefix")
-		}
-		body["issue_prefix"] = v
 	}
 	return body, nil
 }
@@ -556,16 +547,6 @@ func buildWorkspaceUpdateBody(cmd *cobra.Command) (map[string]any, error) {
 		}
 		body["context"] = ctxText
 	}
-	if cmd.Flags().Changed("issue-prefix") {
-		v, _ := cmd.Flags().GetString("issue-prefix")
-		// The handler silently skips an empty prefix (workspace.go:274), so
-		// `--issue-prefix ""` would otherwise return 200 without changing
-		// anything. Reject it here so the failure is visible.
-		if strings.TrimSpace(v) == "" {
-			return nil, fmt.Errorf("--issue-prefix cannot be empty; clearing the prefix is not supported")
-		}
-		body["issue_prefix"] = v
-	}
 	return body, nil
 }
 
@@ -583,7 +564,7 @@ func runWorkspaceUpdate(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	if len(body) == 0 {
-		return fmt.Errorf("no fields to update; use --name, --description, --context, or --issue-prefix")
+		return fmt.Errorf("no fields to update; use --name, --description, --context")
 	}
 
 	client, err := newAPIClient(cmd)

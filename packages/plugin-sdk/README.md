@@ -6,8 +6,6 @@ What a Auro plugin surface imports.
 import { auro } from "@auro/plugin-sdk";
 
 const ctx   = await auro.context.get();
-const issue = await auro.issue.get();
-await auro.issue.comment({ body: "hello" });
 const note  = await auro.storage.user.get("note");
 auro.ui.resize(320);
 ```
@@ -57,13 +55,9 @@ user's own session. Two limits apply at once:
 1. the scopes the workspace admin granted your plugin, and
 2. what that particular user could already do themselves.
 
-So a member without access to an issue gets a 404 through your surface too, and
-a scope the admin declined is a 403 that names it. Errors are
-`AuroPluginError` with a `status` mirroring HTTP.
-
-A comment you post is authored by **the user**, recorded as having been made
-through your plugin. It does not run `@mention` trigger dispatch — a surface
-cannot start agent runs as a side effect of posting text.
+A scope the administrator declined returns a 403 that names it. Errors are
+`AuroPluginError` with a `status` mirroring HTTP. Context and storage remain
+bound to the current world and the authenticated caller.
 
 ## Theme
 

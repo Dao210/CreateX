@@ -18,8 +18,8 @@ func TestDaemonRPCHandler_TasksClaim(t *testing.T) {
 	}
 	ctx := context.Background()
 	rt := createClaimReclaimRuntime(t, ctx, "WS claim rt")
-	a, i := createClaimReclaimAgentAndIssue(t, ctx, rt, "WS claim agent")
-	taskID := seedQueuedIssueTask(t, ctx, a, rt, i)
+	a, i := createClaimReclaimAgentAndChat(t, ctx, rt, "WS claim agent")
+	taskID := seedQueuedChatTask(t, ctx, a, rt, i)
 
 	identity := daemonws.ClientIdentity{
 		DaemonID:     "ws-daemon",

@@ -44,13 +44,9 @@ func (f *delegatedFailureFixture) insertWorkerTask(t *testing.T, status, evidenc
 	t.Helper()
 	var taskID pgtype.UUID
 	if err := f.pool.QueryRow(context.Background(), `
-		INSERT INTO agent_task_queue (
-			agent_id, runtime_id, issue_id, status, priority, attempt, max_attempts,
-			originator_user_id, accountable_user_id, originator_source,
-			delegated_from_task_id, trigger_evidence_kind
-		)
-		VALUES ($1, $2, $3, $4, 0, $5, $6, $7, $7, 'delegation', $8, NULLIF($9, ''))
-		RETURNING id`, f.worker, f.runtimeID, f.workerIssue, status, attempt, maxAttempts, f.userID, f.sourceTask, evidenceKind).Scan(&taskID); err != nil {
+		INSERT INTO agent_task_queue (agent_id, runtime_id, status, priority, attempt, max_attempts, originator_user_id, accountable_user_id, originator_source, delegated_from_task_id, trigger_evidence_kind)
+		VALUES ($1, $2, $3, 0, $4, $5, $6, $6, 'delegation', $7, NULLIF($8, ''))
+		RETURNING id`, f.worker, f.runtimeID, status, attempt, maxAttempts, f.userID, f.sourceTask, evidenceKind).Scan(&taskID); err != nil {
 		t.Fatalf("seed worker task: %v", err)
 	}
 	return taskID

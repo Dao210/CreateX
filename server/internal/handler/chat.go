@@ -323,9 +323,8 @@ type UpdateChatSessionRequest struct {
 	Title *string `json:"title"`
 }
 
-// UpdateChatSession updates one user-editable field on a chat session. Title
-// is surfaced by inline rename; project_id controls the project context used
-// by subsequent turns. Status and pinned keep their dedicated endpoints,
+// UpdateChatSession updates the title shown by inline rename.
+// Status and pinned keep their dedicated endpoints,
 // agent/creator/workspace are immutable, and the resume pointers
 // (session_id / work_dir / runtime_id) remain daemon-owned.
 func (h *Handler) UpdateChatSession(w http.ResponseWriter, r *http.Request) {
@@ -617,7 +616,7 @@ func (h *Handler) DeleteChatSession(w http.ResponseWriter, r *http.Request) {
 	// FOR UPDATE on the chat_session row blocks any concurrent INSERT into
 	// agent_task_queue that references it (the FK validation needs a
 	// KEY SHARE lock). After we commit the delete, the blocked INSERT
-	// fails its FK check, so it can't land an orphaned task.
+	// is serialized by the owner-row write fence.
 	if _, err := qtx.LockChatSessionForDelete(r.Context(), session.ID); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			// Already gone — treat as idempotent success.
@@ -631,7 +630,8 @@ func (h *Handler) DeleteChatSession(w http.ResponseWriter, r *http.Request) {
 	// Claim, clear, prioritize, and direct send all lock the agent before task
 	// rows. Keep delete on the same agent -> task suffix after its session lock,
 	// otherwise a builder-agent delete can deadlock with a concurrent claim.
-	if _, err := qtx.GetAgentForClaimUpdate(r.Context(), session.AgentID); err != nil {
+	agent, err := qtx.GetAgentForClaimUpdate(r.Context(), session.AgentID)
+	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to lock chat agent")
 		return
 	}
@@ -674,6 +674,17 @@ func (h *Handler) DeleteChatSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	deleteBuilder := agent.Kind == "system" && strings.HasPrefix(agent.SystemKey.String, "agent_builder:")
+	if deleteBuilder {
+		if err := service.DeleteAgentExecutionHistory(r.Context(), qtx, agent.ID); err != nil {
+			writeError(w, http.StatusInternalServerError, "failed to clean up builder execution history")
+			return
+		}
+		if err := qtx.DeleteAgentExecutionBindings(r.Context(), agent.ID); err != nil {
+			writeError(w, http.StatusInternalServerError, "failed to clean up builder bindings")
+			return
+		}
+	}
 	if err := qtx.DeleteChatSession(r.Context(), db.DeleteChatSessionParams{
 		ID:          session.ID,
 		WorkspaceID: session.WorkspaceID,
@@ -681,13 +692,15 @@ func (h *Handler) DeleteChatSession(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "failed to delete chat session")
 		return
 	}
-	if err := qtx.DeleteAgentLabelAssignmentsByAgent(r.Context(), session.AgentID); err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to remove chat session agent label assignments")
-		return
-	}
-	if err := qtx.DeleteSystemAgentByID(r.Context(), session.AgentID); err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to clean up chat session agent")
-		return
+	if deleteBuilder {
+		if err := qtx.DeleteAgentLabelAssignmentsByAgent(r.Context(), session.AgentID); err != nil {
+			writeError(w, http.StatusInternalServerError, "failed to remove chat session agent label assignments")
+			return
+		}
+		if err := qtx.DeleteSystemAgentByID(r.Context(), session.AgentID); err != nil {
+			writeError(w, http.StatusInternalServerError, "failed to clean up chat session agent")
+			return
+		}
 	}
 
 	if err := tx.Commit(r.Context()); err != nil {
@@ -1675,14 +1688,8 @@ func (h *Handler) ClearQueuedChatTasks(w http.ResponseWriter, r *http.Request) {
 // CancelTaskByUser cancels a task the caller is allowed to act on within the
 // current workspace.
 //
-// Tenancy is enforced uniformly through the task's owning agent: every
-// agent_task_queue row carries a NOT NULL agent_id (ON DELETE CASCADE, so the
-// agent always exists), and agents are workspace-scoped. GetAgentTaskInWorkspace
-// is therefore the single tenant guard that works regardless of which optional
-// source FK (issue / chat_session / autopilot_run) is set — which is what makes
-// run_only autopilot tasks and quick_create tasks (whose issue does not exist
-// yet) cancellable at all. Keying cancellation off issue_id / chat_session_id
-// alone is exactly what 404'd these tasks before (MUL-2827).
+// The owning agent enforces workspace tenancy for both chat and automation
+// executions. Optional source linkage is not an authorization boundary.
 //
 // On top of tenancy, two privacy models layer on:
 //   - a chat task is private to the member who started the conversation, so

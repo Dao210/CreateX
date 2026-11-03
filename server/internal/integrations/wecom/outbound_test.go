@@ -492,11 +492,12 @@ func TestTryDeliverInbox_PushesToBoundMemberPrivately(t *testing.T) {
 	q.memberBinding.InstallationID = instID
 
 	item := map[string]any{
+		"id":             "66666666-6666-6666-6666-666666666666",
 		"recipient_type": "member",
 		"recipient_id":   "33333333-3333-3333-3333-333333333333",
 		"workspace_id":   "44444444-4444-4444-4444-444444444444",
-		"type":           "issue_assigned",
-		"title":          "New issue",
+		"type":           "creation_ready",
+		"title":          "Creation ready",
 	}
 	if !o.tryDeliverInbox(context.Background(), item, "33333333-3333-3333-3333-333333333333", "44444444-4444-4444-4444-444444444444") {
 		t.Fatal("tryDeliverInbox returned false; expected delivery to a bound member")
@@ -514,7 +515,7 @@ func TestTryDeliverInbox_NoBindingIsNoop(t *testing.T) {
 	t.Parallel()
 	q := &fakeOutboundQueries{memberErr: pgx.ErrNoRows}
 	o, _, conn := newOutboundWithConn(t, q)
-	if o.tryDeliverInbox(context.Background(), map[string]any{}, "33333333-3333-3333-3333-333333333333", "44444444-4444-4444-4444-444444444444") {
+	if o.tryDeliverInbox(context.Background(), map[string]any{"id": "message-1"}, "33333333-3333-3333-3333-333333333333", "44444444-4444-4444-4444-444444444444") {
 		t.Error("expected false when the member has no wecom binding")
 	}
 	if len(conn.frames) != 0 {
@@ -618,5 +619,19 @@ func TestProcessEvent_FailsClosedWhenTheTaskIdIsMissing(t *testing.T) {
 	conn.mu.Unlock()
 	if n != 0 {
 		t.Fatalf("delivered a completion whose origin could not be established (%d frame(s))", n)
+	}
+}
+
+func TestTryDeliverInbox_MissingMessageIDIsNoop(t *testing.T) {
+	t.Parallel()
+	q := &fakeOutboundQueries{memberBinding: db.ChannelUserBinding{ChannelUserID: "T_USER_1"}}
+	o, instID, conn := newOutboundWithConn(t, q)
+	q.memberBinding.InstallationID = instID
+	item := map[string]any{"type": "creation_ready", "title": "Creation ready"}
+	if o.tryDeliverInbox(context.Background(), item, "33333333-3333-3333-3333-333333333333", "44444444-4444-4444-4444-444444444444") {
+		t.Fatal("notification without a stable message ID was delivered")
+	}
+	if len(conn.frames) != 0 {
+		t.Fatalf("malformed notification emitted %d frames", len(conn.frames))
 	}
 }

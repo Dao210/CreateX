@@ -231,7 +231,8 @@ func (q *Queries) CreateChatMessage(ctx context.Context, arg CreateChatMessagePa
 
 const createChatSession = `-- name: CreateChatSession :one
 INSERT INTO chat_session (workspace_id, agent_id, creator_id, title, runtime_id, id)
-VALUES ($1, $2, $3, $4, (SELECT runtime_id FROM agent WHERE id = $2), COALESCE($5::uuid, gen_random_uuid()))
+SELECT $1, $2, $3, $4, (SELECT runtime_id FROM agent WHERE id = $2), COALESCE($5::uuid, gen_random_uuid())
+WHERE lock_task_owner_rows($2, NULL, NULL)
 RETURNING id, workspace_id, agent_id, creator_id, title, session_id, work_dir, status, created_at, updated_at, unread_since, runtime_id, last_read_at, pinned_at, explicitly_created_at
 `
 
@@ -294,8 +295,8 @@ SELECT
     $6::timestamptz,
     $15::bigint,
     COALESCE($16::uuid, gen_random_uuid())
-WHERE lock_task_owner_rows($1, $2)
-RETURNING id, agent_id, status, priority, dispatched_at, started_at, completed_at, result, error, created_at, context, runtime_id, session_id, work_dir, chat_session_id, autopilot_run_id, attempt, max_attempts, parent_task_id, failure_reason, trigger_summary, force_fresh_session, wait_reason, initiator_user_id, handoff_note, prepare_lease_expires_at, runtime_mcp_overlay, fire_at, originator_user_id, runtime_connected_apps, chat_input_task_id, chat_finalize_deferred_at, originator_source, delegated_from_task_id, retry_of_task_id, rerun_of_task_id, rule_version_id, trigger_evidence_kind, trigger_evidence_ref_id, accountable_user_id, session_rollout_missing, retired_session_id, quick_actions_disabled, regenerate_quick_actions_for, branch_name, durable_work_dir, channel_context_revision, cancelled_by_type, cancelled_by_id, cancelled_by_name
+WHERE lock_task_owner_rows($1, $2, $4)
+RETURNING id, agent_id, status, priority, dispatched_at, started_at, completed_at, result, error, created_at, context, runtime_id, session_id, work_dir, chat_session_id, autopilot_run_id, attempt, max_attempts, parent_task_id, failure_reason, trigger_summary, force_fresh_session, wait_reason, initiator_user_id, handoff_note, prepare_lease_expires_at, runtime_mcp_overlay, fire_at, originator_user_id, runtime_connected_apps, chat_input_task_id, chat_finalize_deferred_at, originator_source, retry_of_task_id, rule_version_id, trigger_evidence_kind, trigger_evidence_ref_id, accountable_user_id, session_rollout_missing, retired_session_id, quick_actions_disabled, branch_name, durable_work_dir, channel_context_revision, cancelled_by_type, cancelled_by_id, cancelled_by_name
 `
 
 type CreateChatTaskParams struct {
@@ -371,9 +372,7 @@ func (q *Queries) CreateChatTask(ctx context.Context, arg CreateChatTaskParams) 
 		&i.ChatInputTaskID,
 		&i.ChatFinalizeDeferredAt,
 		&i.OriginatorSource,
-		&i.DelegatedFromTaskID,
 		&i.RetryOfTaskID,
-		&i.RerunOfTaskID,
 		&i.RuleVersionID,
 		&i.TriggerEvidenceKind,
 		&i.TriggerEvidenceRefID,
@@ -381,7 +380,6 @@ func (q *Queries) CreateChatTask(ctx context.Context, arg CreateChatTaskParams) 
 		&i.SessionRolloutMissing,
 		&i.RetiredSessionID,
 		&i.QuickActionsDisabled,
-		&i.RegenerateQuickActionsFor,
 		&i.BranchName,
 		&i.DurableWorkDir,
 		&i.ChannelContextRevision,
@@ -455,7 +453,7 @@ FROM (
 WHERE task.id = $1
   AND pending.max_until IS NOT NULL
   AND (task.fire_at IS NULL OR task.fire_at < pending.max_until)
-RETURNING task.id, task.agent_id, task.status, task.priority, task.dispatched_at, task.started_at, task.completed_at, task.result, task.error, task.created_at, task.context, task.runtime_id, task.session_id, task.work_dir, task.chat_session_id, task.autopilot_run_id, task.attempt, task.max_attempts, task.parent_task_id, task.failure_reason, task.trigger_summary, task.force_fresh_session, task.wait_reason, task.initiator_user_id, task.handoff_note, task.prepare_lease_expires_at, task.runtime_mcp_overlay, task.fire_at, task.originator_user_id, task.runtime_connected_apps, task.chat_input_task_id, task.chat_finalize_deferred_at, task.originator_source, task.delegated_from_task_id, task.retry_of_task_id, task.rerun_of_task_id, task.rule_version_id, task.trigger_evidence_kind, task.trigger_evidence_ref_id, task.accountable_user_id, task.session_rollout_missing, task.retired_session_id, task.quick_actions_disabled, task.regenerate_quick_actions_for, task.branch_name, task.durable_work_dir, task.channel_context_revision, task.cancelled_by_type, task.cancelled_by_id, task.cancelled_by_name
+RETURNING task.id, task.agent_id, task.status, task.priority, task.dispatched_at, task.started_at, task.completed_at, task.result, task.error, task.created_at, task.context, task.runtime_id, task.session_id, task.work_dir, task.chat_session_id, task.autopilot_run_id, task.attempt, task.max_attempts, task.parent_task_id, task.failure_reason, task.trigger_summary, task.force_fresh_session, task.wait_reason, task.initiator_user_id, task.handoff_note, task.prepare_lease_expires_at, task.runtime_mcp_overlay, task.fire_at, task.originator_user_id, task.runtime_connected_apps, task.chat_input_task_id, task.chat_finalize_deferred_at, task.originator_source, task.retry_of_task_id, task.rule_version_id, task.trigger_evidence_kind, task.trigger_evidence_ref_id, task.accountable_user_id, task.session_rollout_missing, task.retired_session_id, task.quick_actions_disabled, task.branch_name, task.durable_work_dir, task.channel_context_revision, task.cancelled_by_type, task.cancelled_by_id, task.cancelled_by_name
 `
 
 func (q *Queries) DeferChatTaskForSealedPendingMedia(ctx context.Context, taskID pgtype.UUID) (AgentTaskQueue, error) {
@@ -495,9 +493,7 @@ func (q *Queries) DeferChatTaskForSealedPendingMedia(ctx context.Context, taskID
 		&i.ChatInputTaskID,
 		&i.ChatFinalizeDeferredAt,
 		&i.OriginatorSource,
-		&i.DelegatedFromTaskID,
 		&i.RetryOfTaskID,
-		&i.RerunOfTaskID,
 		&i.RuleVersionID,
 		&i.TriggerEvidenceKind,
 		&i.TriggerEvidenceRefID,
@@ -505,7 +501,6 @@ func (q *Queries) DeferChatTaskForSealedPendingMedia(ctx context.Context, taskID
 		&i.SessionRolloutMissing,
 		&i.RetiredSessionID,
 		&i.QuickActionsDisabled,
-		&i.RegenerateQuickActionsFor,
 		&i.BranchName,
 		&i.DurableWorkDir,
 		&i.ChannelContextRevision,
@@ -559,7 +554,17 @@ func (q *Queries) DeleteChatDraftRestoresBySystemRuntimeAgents(ctx context.Conte
 }
 
 const deleteChatSession = `-- name: DeleteChatSession :exec
-DELETE FROM chat_session WHERE id = $1 AND workspace_id = $2
+WITH target AS MATERIALIZED (
+    SELECT cs.id FROM chat_session cs WHERE cs.id = $1 AND cs.workspace_id = $2
+), removed_attachments AS (
+    DELETE FROM attachment WHERE chat_session_id IN (SELECT id FROM target)
+        OR chat_message_id IN (SELECT id FROM chat_message WHERE chat_session_id IN (SELECT id FROM target))
+), removed_messages AS (
+    DELETE FROM chat_message WHERE chat_session_id IN (SELECT id FROM target)
+), detached_tasks AS (
+    UPDATE agent_task_queue SET chat_session_id = NULL WHERE chat_session_id IN (SELECT id FROM target)
+)
+DELETE FROM chat_session WHERE id IN (SELECT id FROM target)
 `
 
 type DeleteChatSessionParams struct {
@@ -573,11 +578,12 @@ func (q *Queries) DeleteChatSession(ctx context.Context, arg DeleteChatSessionPa
 }
 
 const deleteUserChatMessageByTask = `-- name: DeleteUserChatMessageByTask :one
-DELETE FROM chat_message
-WHERE task_id = $1
-  AND role = 'user'
-  AND message_kind <> 'onboarding_kickoff'
-RETURNING id, chat_session_id, role, content, task_id, created_at, failure_reason, elapsed_ms, message_kind, channel_media_pending_until, channel_ingested, quick_actions, channel_context_revision, channel_outbound_type, channel_outbound_installation_id, channel_outbound_chat_id, channel_outbound_message_ids
+WITH target AS MATERIALIZED (
+    SELECT cm.id FROM chat_message cm WHERE cm.task_id = $1 AND cm.role = 'user' AND cm.message_kind <> 'onboarding_kickoff'
+), removed_attachments AS (
+    DELETE FROM attachment WHERE chat_message_id IN (SELECT id FROM target)
+)
+DELETE FROM chat_message WHERE id IN (SELECT id FROM target) RETURNING id, chat_session_id, role, content, task_id, created_at, failure_reason, elapsed_ms, message_kind, channel_media_pending_until, channel_ingested, quick_actions, channel_context_revision, channel_outbound_type, channel_outbound_installation_id, channel_outbound_chat_id, channel_outbound_message_ids
 `
 
 func (q *Queries) DeleteUserChatMessageByTask(ctx context.Context, taskID pgtype.UUID) (ChatMessage, error) {
@@ -804,6 +810,7 @@ WHERE session_id NOT IN (SELECT session_id FROM retired_sessions)
       AND COALESCE(failure_reason, '') NOT IN ('iteration_limit', 'agent_fallback_message', 'api_invalid_request', 'codex_semantic_inactivity', 'agent_error.context_overflow', 'codex_resume_oversized')
       AND NOT (COALESCE(error, '') ILIKE '%400%' AND COALESCE(error, '') ILIKE '%invalid_request_error%')
       AND NOT (COALESCE(error, '') ILIKE '%could not resolve authentication method%')
+      AND NOT (COALESCE(error, '') ILIKE '%image dimensions exceed max allowed size%' AND COALESCE(error, '') ILIKE '%image.source.base64.data%')
       AND NOT (COALESCE(error, '') ~* 'must not be empty|must be non-?empty|must have non-?empty|non-?empty content|cannot be empty|should not be empty'
                AND COALESCE(error, '') ~* 'role[^a-z0-9]{0,2}assistant|assistant message|message at position|messages\.[0-9]|messages\[[0-9]')
     )
@@ -908,7 +915,6 @@ func (q *Queries) GetOldestActiveChatSessionForCreatorAgent(ctx context.Context,
 const getPendingChatTask = `-- name: GetPendingChatTask :one
 SELECT id, status, created_at FROM agent_task_queue
 WHERE chat_session_id = $1 AND status IN ('queued', 'dispatched', 'running', 'waiting_local_directory')
-  AND regenerate_quick_actions_for IS NULL
 ORDER BY created_at DESC
 LIMIT 1
 `
@@ -1019,7 +1025,6 @@ SELECT EXISTS (
   JOIN chat_session cs ON cs.id = atq.chat_session_id
   WHERE atq.chat_session_id IS NOT NULL
     AND atq.status IN ('queued', 'dispatched', 'running', 'waiting_local_directory', 'deferred')
-    AND atq.regenerate_quick_actions_for IS NULL
     AND cs.workspace_id = $1
     AND cs.creator_id = $2
     AND cs.agent_id = ANY($3::uuid[])
@@ -1044,7 +1049,6 @@ SELECT EXISTS (
   SELECT 1 FROM agent_task_queue
   WHERE chat_session_id = $1
     AND status IN ('queued', 'dispatched', 'running', 'waiting_local_directory', 'deferred')
-    AND regenerate_quick_actions_for IS NULL
 ) AS has_pending
 `
 
@@ -1531,7 +1535,6 @@ WHERE message.chat_session_id = $1
           FROM agent_task_queue AS head
           WHERE head.chat_session_id = $1
             AND head.status IN ('queued', 'dispatched', 'running', 'waiting_local_directory', 'deferred')
-            AND head.regenerate_quick_actions_for IS NULL
           ORDER BY
             CASE
               WHEN head.status IN ('dispatched', 'running', 'waiting_local_directory') THEN 0
@@ -1602,7 +1605,6 @@ WHERE message.chat_session_id = $1
           FROM agent_task_queue AS head
           WHERE head.chat_session_id = $1
             AND head.status IN ('queued', 'dispatched', 'running', 'waiting_local_directory', 'deferred')
-            AND head.regenerate_quick_actions_for IS NULL
           ORDER BY
             CASE
               WHEN head.status IN ('dispatched', 'running', 'waiting_local_directory') THEN 0
@@ -1674,7 +1676,6 @@ WHERE message.chat_session_id = $1
           FROM agent_task_queue AS head
           WHERE head.chat_session_id = $1
             AND head.status IN ('queued', 'dispatched', 'running', 'waiting_local_directory', 'deferred')
-            AND head.regenerate_quick_actions_for IS NULL
           ORDER BY
             CASE
               WHEN head.status IN ('dispatched', 'running', 'waiting_local_directory') THEN 0
@@ -1935,7 +1936,6 @@ FROM agent_task_queue atq
 JOIN chat_session cs ON cs.id = atq.chat_session_id
 WHERE atq.chat_session_id IS NOT NULL
   AND atq.status IN ('queued', 'dispatched', 'running', 'waiting_local_directory', 'deferred')
-  AND atq.regenerate_quick_actions_for IS NULL
   AND cs.workspace_id = $1
   AND cs.creator_id = $2
 ORDER BY atq.created_at DESC
@@ -1997,7 +1997,6 @@ LEFT JOIN LATERAL (
 ) AS message ON TRUE
 WHERE task.chat_session_id = $1
   AND task.status IN ('queued', 'dispatched', 'running', 'waiting_local_directory', 'deferred')
-  AND task.regenerate_quick_actions_for IS NULL
 ORDER BY
     CASE
       WHEN task.status IN ('dispatched', 'running', 'waiting_local_directory') THEN 0
@@ -2306,7 +2305,6 @@ WITH target AS MATERIALIZED (
       FROM agent_task_queue AS active
       WHERE active.chat_session_id = $1
         AND active.status IN ('dispatched', 'running', 'waiting_local_directory')
-        AND active.regenerate_quick_actions_for IS NULL
     )
   FOR UPDATE
 ), demoted AS (
@@ -2331,7 +2329,6 @@ SELECT
     FROM agent_task_queue AS active
     WHERE active.chat_session_id = $1
       AND active.status IN ('dispatched', 'running', 'waiting_local_directory')
-      AND active.regenerate_quick_actions_for IS NULL
     ORDER BY active.created_at ASC, active.id ASC
     LIMIT 1
   )::uuid AS active_task_id
@@ -2368,7 +2365,7 @@ WHERE task.chat_session_id = $1
         AND message.role = 'user'
         AND message.channel_media_pending_until > now()
   )
-RETURNING task.id, task.agent_id, task.status, task.priority, task.dispatched_at, task.started_at, task.completed_at, task.result, task.error, task.created_at, task.context, task.runtime_id, task.session_id, task.work_dir, task.chat_session_id, task.autopilot_run_id, task.attempt, task.max_attempts, task.parent_task_id, task.failure_reason, task.trigger_summary, task.force_fresh_session, task.wait_reason, task.initiator_user_id, task.handoff_note, task.prepare_lease_expires_at, task.runtime_mcp_overlay, task.fire_at, task.originator_user_id, task.runtime_connected_apps, task.chat_input_task_id, task.chat_finalize_deferred_at, task.originator_source, task.delegated_from_task_id, task.retry_of_task_id, task.rerun_of_task_id, task.rule_version_id, task.trigger_evidence_kind, task.trigger_evidence_ref_id, task.accountable_user_id, task.session_rollout_missing, task.retired_session_id, task.quick_actions_disabled, task.regenerate_quick_actions_for, task.branch_name, task.durable_work_dir, task.channel_context_revision, task.cancelled_by_type, task.cancelled_by_id, task.cancelled_by_name
+RETURNING task.id, task.agent_id, task.status, task.priority, task.dispatched_at, task.started_at, task.completed_at, task.result, task.error, task.created_at, task.context, task.runtime_id, task.session_id, task.work_dir, task.chat_session_id, task.autopilot_run_id, task.attempt, task.max_attempts, task.parent_task_id, task.failure_reason, task.trigger_summary, task.force_fresh_session, task.wait_reason, task.initiator_user_id, task.handoff_note, task.prepare_lease_expires_at, task.runtime_mcp_overlay, task.fire_at, task.originator_user_id, task.runtime_connected_apps, task.chat_input_task_id, task.chat_finalize_deferred_at, task.originator_source, task.retry_of_task_id, task.rule_version_id, task.trigger_evidence_kind, task.trigger_evidence_ref_id, task.accountable_user_id, task.session_rollout_missing, task.retired_session_id, task.quick_actions_disabled, task.branch_name, task.durable_work_dir, task.channel_context_revision, task.cancelled_by_type, task.cancelled_by_id, task.cancelled_by_name
 `
 
 func (q *Queries) PromoteChannelChatTasksIfMediaReady(ctx context.Context, chatSessionID pgtype.UUID) ([]AgentTaskQueue, error) {
@@ -2414,9 +2411,7 @@ func (q *Queries) PromoteChannelChatTasksIfMediaReady(ctx context.Context, chatS
 			&i.ChatInputTaskID,
 			&i.ChatFinalizeDeferredAt,
 			&i.OriginatorSource,
-			&i.DelegatedFromTaskID,
 			&i.RetryOfTaskID,
-			&i.RerunOfTaskID,
 			&i.RuleVersionID,
 			&i.TriggerEvidenceKind,
 			&i.TriggerEvidenceRefID,
@@ -2424,7 +2419,6 @@ func (q *Queries) PromoteChannelChatTasksIfMediaReady(ctx context.Context, chatS
 			&i.SessionRolloutMissing,
 			&i.RetiredSessionID,
 			&i.QuickActionsDisabled,
-			&i.RegenerateQuickActionsFor,
 			&i.BranchName,
 			&i.DurableWorkDir,
 			&i.ChannelContextRevision,
@@ -2467,7 +2461,6 @@ WITH latest_visible AS (
                   FROM agent_task_queue AS head
                   WHERE head.chat_session_id = claimed_input.chat_session_id
                     AND head.status IN ('queued', 'dispatched', 'running', 'waiting_local_directory', 'deferred')
-                    AND head.regenerate_quick_actions_for IS NULL
                   ORDER BY
                     CASE
                       WHEN head.status IN ('dispatched', 'running', 'waiting_local_directory') THEN 0
@@ -2524,13 +2517,11 @@ WHERE queued_input.chat_session_id = $1
       AND queued_task.chat_session_id = queued_input.chat_session_id
       AND queued_task.status = 'queued'
       AND queued_task.chat_input_task_id = queued_task.id
-      AND queued_task.regenerate_quick_actions_for IS NULL
       AND queued_task.id = (
         SELECT head.id
         FROM agent_task_queue AS head
         WHERE head.chat_session_id = queued_input.chat_session_id
           AND head.status IN ('queued', 'dispatched', 'running', 'waiting_local_directory', 'deferred')
-          AND head.regenerate_quick_actions_for IS NULL
         ORDER BY
           CASE
             WHEN head.status IN ('dispatched', 'running', 'waiting_local_directory') THEN 0
@@ -2563,7 +2554,6 @@ SET task_id = (
     WHERE successor.chat_session_id = chat_message.chat_session_id
       AND successor.status = 'queued'
       AND successor.chat_input_task_id = successor.id
-      AND successor.regenerate_quick_actions_for IS NULL
       AND successor.id <> $1
     ORDER BY successor.priority DESC, successor.created_at ASC, successor.id ASC
     LIMIT 1
@@ -2769,7 +2759,7 @@ const setChatTaskInputOwnerSelf = `-- name: SetChatTaskInputOwnerSelf :one
 UPDATE agent_task_queue
 SET chat_input_task_id = id
 WHERE id = $1
-RETURNING id, agent_id, status, priority, dispatched_at, started_at, completed_at, result, error, created_at, context, runtime_id, session_id, work_dir, chat_session_id, autopilot_run_id, attempt, max_attempts, parent_task_id, failure_reason, trigger_summary, force_fresh_session, wait_reason, initiator_user_id, handoff_note, prepare_lease_expires_at, runtime_mcp_overlay, fire_at, originator_user_id, runtime_connected_apps, chat_input_task_id, chat_finalize_deferred_at, originator_source, delegated_from_task_id, retry_of_task_id, rerun_of_task_id, rule_version_id, trigger_evidence_kind, trigger_evidence_ref_id, accountable_user_id, session_rollout_missing, retired_session_id, quick_actions_disabled, regenerate_quick_actions_for, branch_name, durable_work_dir, channel_context_revision, cancelled_by_type, cancelled_by_id, cancelled_by_name
+RETURNING id, agent_id, status, priority, dispatched_at, started_at, completed_at, result, error, created_at, context, runtime_id, session_id, work_dir, chat_session_id, autopilot_run_id, attempt, max_attempts, parent_task_id, failure_reason, trigger_summary, force_fresh_session, wait_reason, initiator_user_id, handoff_note, prepare_lease_expires_at, runtime_mcp_overlay, fire_at, originator_user_id, runtime_connected_apps, chat_input_task_id, chat_finalize_deferred_at, originator_source, retry_of_task_id, rule_version_id, trigger_evidence_kind, trigger_evidence_ref_id, accountable_user_id, session_rollout_missing, retired_session_id, quick_actions_disabled, branch_name, durable_work_dir, channel_context_revision, cancelled_by_type, cancelled_by_id, cancelled_by_name
 `
 
 func (q *Queries) SetChatTaskInputOwnerSelf(ctx context.Context, id pgtype.UUID) (AgentTaskQueue, error) {
@@ -2809,9 +2799,7 @@ func (q *Queries) SetChatTaskInputOwnerSelf(ctx context.Context, id pgtype.UUID)
 		&i.ChatInputTaskID,
 		&i.ChatFinalizeDeferredAt,
 		&i.OriginatorSource,
-		&i.DelegatedFromTaskID,
 		&i.RetryOfTaskID,
-		&i.RerunOfTaskID,
 		&i.RuleVersionID,
 		&i.TriggerEvidenceKind,
 		&i.TriggerEvidenceRefID,
@@ -2819,7 +2807,6 @@ func (q *Queries) SetChatTaskInputOwnerSelf(ctx context.Context, id pgtype.UUID)
 		&i.SessionRolloutMissing,
 		&i.RetiredSessionID,
 		&i.QuickActionsDisabled,
-		&i.RegenerateQuickActionsFor,
 		&i.BranchName,
 		&i.DurableWorkDir,
 		&i.ChannelContextRevision,

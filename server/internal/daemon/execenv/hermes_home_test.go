@@ -756,7 +756,7 @@ func TestPrepareHermesNoSkillsLeavesHomeUnset(t *testing.T) {
 		WorkspaceID:    "ws-hermes-noskill",
 		TaskID:         "aaaa1111-2222-3333-4444-555566667777",
 		Provider:       "hermes",
-		Task:           TaskContextForEnv{IssueID: "no-skill"},
+		Task:           TaskContextForEnv{ChatSessionID: "no-skill"},
 	}, testLogger())
 	if err != nil {
 		t.Fatalf("Prepare failed: %v", err)
@@ -780,8 +780,8 @@ func TestReuseHermesTearsDownWhenSkillsRemoved(t *testing.T) {
 	mustWrite(t, filepath.Join(sharedHome, "config.yaml"), "model: hermes-4\n")
 
 	withSkill := TaskContextForEnv{
-		IssueID:     "hermes-resume",
-		AgentSkills: []SkillContextForEnv{{Name: "Review Helper", Content: "Help review."}},
+		ChatSessionID: "hermes-resume",
+		AgentSkills:   []SkillContextForEnv{{Name: "Review Helper", Content: "Help review."}},
 	}
 	env, err := Prepare(PrepareParams{
 		WorkspacesRoot:   t.TempDir(),
@@ -807,7 +807,7 @@ func TestReuseHermesTearsDownWhenSkillsRemoved(t *testing.T) {
 		t.Error("resume with a bound skill should keep the redirect")
 	}
 
-	noSkill := TaskContextForEnv{IssueID: "hermes-resume"}
+	noSkill := TaskContextForEnv{ChatSessionID: "hermes-resume"}
 	reused := Reuse(ReuseParams{WorkDir: env.WorkDir, Provider: "hermes", HermesSourceHome: sharedHome, Task: noSkill}, testLogger())
 	if reused == nil {
 		t.Fatal("Reuse without skill returned nil")

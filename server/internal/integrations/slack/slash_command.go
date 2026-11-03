@@ -15,42 +15,14 @@ import (
 	db "github.com/auro-ai/auro/server/pkg/db/generated"
 )
 
-// This file implements the Slack `/issue`, `/new`, and `/clear` SLASH COMMANDS. They are
-// deliberately separate from message-prefix commands: on Slack
-// a message whose first character is `/` is intercepted by the client as a
-// slash command and never delivered to the app, so the message-prefix form of
-// `/issue` cannot work here at all (MUL-3908). Registering `/issue` as a real
-// slash command in the app manifest is what makes it reach us — as an
-// `EventTypeSlashCommand` over the same Socket Mode connection.
-//
-// The command is a QUICK-CREATE entry point: it does NOT create the issue
-// itself. It takes the invoker's natural-language description as a prompt and
-// enqueues a quick-create task against the installation's agent — the very same
-// pipeline as the web "quick create" modal (TaskService.EnqueueQuickCreateTask).
-// The agent turns the prompt into a well-formed `auro issue create` in the
-// background, so the issue gets a proper title + structured description instead
-// of the raw one-liner the user typed. Because creation is asynchronous, the
-// command replies with a PRIVATE (ephemeral) acknowledgement via the command's
-// response_url — there is no issue number to hand back yet — and the agent's
-// completion surfaces to the invoker as a Auro inbox notification through the
-// shared quick-create completion path. It starts no chat session / chat run.
-//
-// The installation routing and identity + membership checks mirror the message
-// path (resolvers.go) so a slash-command quick-create respects the same
-// workspace boundary and account binding as every other Slack entry point; they
-// are kept local so the proven inbound pipeline is untouched.
-
-const issueSlashCommand = "/issue"
+// Slack chat controls use slash-command events instead of message-prefix commands.
 const newSlashCommand = "/new"
 const clearSlashCommand = "/clear"
 
 // User-facing ephemeral replies. Kept terse; only the invoker sees them.
 const (
-	slashUsageText            = "Tell me what to file, e.g. `/issue the login button does nothing on Safari`."
-	slashQueuedText           = "✅ On it — I'm turning that into an issue. You'll get a Auro notification when it's ready."
 	slashNotMemberText        = "You're not a member of this Auro workspace."
 	slashLinkAccountFallback  = "Link your Slack account to Auro first, then try the command again."
-	slashIssueLimitText       = "⚠️ This workspace has reached its issue limit. Open Auro to view the available recovery options."
 	slashInternalErrorText    = "⚠️ Something went wrong updating the chat. Please try again."
 	slashDisabledText         = "This Slack app isn't connected to Auro (or was disconnected). Ask a workspace admin to reconnect it."
 	slashNewStartedText       = "✅ Started a new Auro chat."
@@ -76,7 +48,7 @@ type slashControlStarter interface {
 	ClearSlackDMContext(ctx context.Context, inst engine.ResolvedInstallation, userID pgtype.UUID, cmd slack.SlashCommand, envelopeID string) error
 }
 
-// SlashCommandProcessor handles Slack `/issue`, `/new`, and `/clear` commands end to end.
+// SlashCommandProcessor handles Slack `/new` and `/clear` commands end to end.
 type SlashCommandProcessor struct {
 	q           slashQueries
 	control     slashControlStarter

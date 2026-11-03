@@ -1,32 +1,6 @@
-/**
- * Unified chip row for the comment composer's pending pickables.
- *
- * Three chip kinds share the same capsule shape (icon + name + remove ×):
- *
- *   - mention  → `@<name>` (or `@all` for the workspace-wide pick). Tap is a
- *                no-op; only the × button removes. Drives the comment's
- *                mention markdown header on submit.
- *   - image    → filename + image icon. Tap opens the lightbox using the
- *                LOCAL file:// uri so completed and uploading items both
- *                preview without waiting for the server URL.
- *   - file     → filename + document icon. Tap opens the canonical
- *                download_url in Safari once the upload completed; before
- *                completion the tap is a no-op.
- *
- * Capsule (not thumbnail) by design: the previous version showed an actual
- * image preview inside a 64x64 card. The user feedback was that the preview
- * pulled the eye away from the input — the row should be a "what did I
- * attach" summary, not a visual gallery. Click-to-zoom satisfies the
- * "I want to verify it's the right image" need without competing with
- * @ and file chips for visual weight.
- *
- * Lives above the TextInput (between the reply-target chip and the input
- * itself). The composer measures whether the row is non-empty to decide
- * whether to render this component at all — empty composer keeps the
- * vertical footprint minimal.
- */
+/** Pending chat attachments with preview, retry and removal controls. */
 import { useMemo } from "react";
-import { ActivityIndicator, Linking, Pressable, ScrollView, View } from "react-native";
+import { ActivityIndicator, Linking, Pressable, ScrollView } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { resolveAttachmentUrl } from "@/lib/attachment-url";
 import { useLightbox } from "@/lib/markdown/lightbox-provider";
@@ -34,22 +8,6 @@ import { useColorScheme } from "@/lib/use-color-scheme";
 import { THEME } from "@/lib/theme";
 import { Text } from "@/components/ui/text";
 import { useT } from "@/lib/i18n";
-
-/** Mention chip data — composer-local state. No store, no cross-route
- *  sharing. The composer owns the array and passes it in. */
-export type MentionChipType = "member" | "agent" | "squad" | "all" | "issue";
-
-export interface MentionChip {
-  type: MentionChipType;
-  /** UUID for member/agent/squad/issue; literal "all" for @all. */
-  id: string;
-  /** Display name without leading `@`. For type "issue" this stores the
-   *  human identifier (e.g. "MUL-123"), which is what the chip + the
-   *  serialised markdown link both surface (matches web's
-   *  packages/views/editor/extensions/mention-extension.ts:67-74 — issues
-   *  drop the leading `@`). */
-  name: string;
-}
 
 export type ComposerAttachmentStatus = "uploading" | "completed" | "failed";
 
@@ -65,7 +23,7 @@ export interface ComposerAttachmentItem {
   mimeType: string;
   status: ComposerAttachmentStatus;
   /** Populated when status === "completed" — the server-side attachment id
-   *  that the comment mutation will reference via `attachmentIds`. */
+   *  that the chat message will reference via `attachmentIds`. */
   id?: string;
   /** Populated when status === "completed" — canonical `mc://file/<id>`
    *  URL the server returns. The composer submits by id, not url; the
@@ -98,7 +56,6 @@ export function ComposerAttachmentRow({
       contentContainerStyle={{ gap: 6, paddingHorizontal: 2, paddingVertical: 2 }}
       keyboardShouldPersistTaps="handled"
     >
-      
       {attachments.map((a) => (
         <AttachmentChipView
           key={a.localId}

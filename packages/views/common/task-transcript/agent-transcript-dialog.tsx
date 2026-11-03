@@ -807,19 +807,12 @@ export function AgentTranscriptDialog({
   // up front than the runtime/provider diagnostics, which live in the ⓘ popover.
   const triggerLabel = task.parent_task_id
     ? t(($) => $.transcript.trigger_retry)
-    : task.wakeup_id
-      ? t(($) => $.transcript.trigger_wakeup)
-      : task.kind === "comment" || task.trigger_comment_id
-      ? t(($) => $.transcript.trigger_comment)
-      : task.kind === "autopilot" || task.autopilot_run_id
-        ? t(($) => $.transcript.trigger_autopilot)
-        : task.kind === "chat" || task.chat_session_id
-          ? t(($) => $.transcript.trigger_chat)
-          : task.kind === "quick_create"
-            ? t(($) => $.transcript.trigger_quick_create)
-            : task.kind === "direct"
-              ? t(($) => $.transcript.trigger_direct)
-              : t(($) => $.transcript.trigger_initial);
+    : task.kind === "autopilot" || task.autopilot_run_id
+      ? t(($) => $.transcript.trigger_autopilot)
+      : task.kind === "chat" || task.chat_session_id
+        ? t(($) => $.transcript.trigger_chat)
+        : t(($) => $.transcript.trigger_initial);
+
 
   // Diagnostic detail for the ⓘ popover: everything a reader needs only when
   // debugging this specific run, kept off the always-visible surface.

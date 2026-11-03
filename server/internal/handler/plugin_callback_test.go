@@ -43,104 +43,6 @@ func withCallbackTokens(t *testing.T) {
 	t.Cleanup(func() { testHandler.PluginService.Callbacks = previous })
 }
 
-// A ui/manual hook ran because a person asked. Its writes stay that person's,
-// with via_plugin_id recording that a plugin produced them — permission-wise
-// the write is the user's, audit-wise it stays traceable to the plugin.
-func TestCallbackFromAUserTriggeredHookWritesAsTheUser(t *testing.T) {
-	withPluginsV1Flag(t, testHandler, true)
-	cleanupPluginInstallations(t)
-	withCallbackTokens(t)
-	installationID := installHookPlugin(t)
-	issueID := createTestIssue(t, "Callback attribution member", "todo", "none")
-
-	token := issueCallbackToken(t, installationID, service.HookActor{Type: "member", ID: parseUUID(testUserID)})
-	recorder := httptest.NewRecorder()
-	testHandler.CreatePluginComment(recorder, callbackRequest(token, http.MethodPost,
-		"/v1/issues/"+issueID+"/comments",
-		map[string]any{"content": "posted by a manual hook"},
-		map[string]string{"issue_ref": issueID}))
-	if recorder.Code != http.StatusCreated {
-		t.Fatalf("status=%d body=%s", recorder.Code, recorder.Body.String())
-	}
-
-	comment := latestComment(t, issueID)
-	if comment.AuthorType != "member" {
-		t.Fatalf("author_type = %q, want member: a hook the user triggered must stay attributed to them", comment.AuthorType)
-	}
-	if uuidToString(comment.AuthorID) != testUserID {
-		t.Fatalf("author_id = %s, want the triggering user %s", uuidToString(comment.AuthorID), testUserID)
-	}
-	if uuidToString(comment.ViaPluginID) != installationID {
-		t.Fatalf("via_plugin_id = %s, want %s: the plugin must stay traceable", uuidToString(comment.ViaPluginID), installationID)
-	}
-}
-
-// An event hook has nobody behind it. Attributing its writes to the last member
-// who happened to touch the issue would be a lie the audit trail cannot undo.
-func TestCallbackFromAnEventHookWritesAsThePlugin(t *testing.T) {
-	withPluginsV1Flag(t, testHandler, true)
-	cleanupPluginInstallations(t)
-	withCallbackTokens(t)
-	installationID := installHookPlugin(t)
-	issueID := createTestIssue(t, "Callback attribution plugin", "todo", "none")
-
-	token := issueCallbackToken(t, installationID, service.HookActor{Type: "plugin", ID: parseUUID(installationID)})
-	recorder := httptest.NewRecorder()
-	testHandler.CreatePluginComment(recorder, callbackRequest(token, http.MethodPost,
-		"/v1/issues/"+issueID+"/comments",
-		map[string]any{"content": "posted by an event hook"},
-		map[string]string{"issue_ref": issueID}))
-	if recorder.Code != http.StatusCreated {
-		t.Fatalf("status=%d body=%s", recorder.Code, recorder.Body.String())
-	}
-
-	comment := latestComment(t, issueID)
-	if comment.AuthorType != "plugin" {
-		t.Fatalf("author_type = %q, want plugin: an event hook must not borrow a person's identity", comment.AuthorType)
-	}
-	if uuidToString(comment.AuthorID) != installationID {
-		t.Fatalf("author_id = %s, want the installation %s", uuidToString(comment.AuthorID), installationID)
-	}
-}
-
-// A grant is good for the whole invocation, not one request. A handler that
-// reads an issue and then comments on it makes two calls, and the single-use
-// version of this refused the second — the failure a live run surfaced.
-func TestCallbackTokenServesTheWholeInvocation(t *testing.T) {
-	withPluginsV1Flag(t, testHandler, true)
-	cleanupPluginInstallations(t)
-	withCallbackTokens(t)
-	installationID := installHookPlugin(t)
-	issueID := createTestIssue(t, "Callback single use", "todo", "none")
-
-	token := issueCallbackToken(t, installationID, service.HookActor{Type: "member", ID: parseUUID(testUserID)})
-	first := httptest.NewRecorder()
-	testHandler.GetPluginIssue(first, callbackRequest(token, http.MethodGet,
-		"/v1/issues/"+issueID, nil, map[string]string{"issue_ref": issueID}))
-	if first.Code != http.StatusOK {
-		t.Fatalf("first use: status=%d body=%s", first.Code, first.Body.String())
-	}
-
-	// The read-then-write shape every non-trivial handler has.
-	second := httptest.NewRecorder()
-	testHandler.CreatePluginComment(second, callbackRequest(token, http.MethodPost,
-		"/v1/issues/"+issueID+"/comments",
-		map[string]any{"content": "and now a comment about what I read"},
-		map[string]string{"issue_ref": issueID}))
-	if second.Code != http.StatusCreated {
-		t.Fatalf("a handler must be able to write after reading: status=%d body=%s", second.Code, second.Body.String())
-	}
-
-	// Revoked once the invocation is over.
-	testHandler.PluginService.Callbacks.Revoke(token)
-	third := httptest.NewRecorder()
-	testHandler.GetPluginIssue(third, callbackRequest(token, http.MethodGet,
-		"/v1/issues/"+issueID, nil, map[string]string{"issue_ref": issueID}))
-	if third.Code != http.StatusForbidden {
-		t.Fatalf("a revoked grant must be refused: status=%d body=%s", third.Code, third.Body.String())
-	}
-}
-
 // storage:user is per-member state. A caller with no member has no such scope
 // to resolve, and falling through would key every plugin-actor write to the
 // zero UUID — one shared bucket masquerading as somebody's private one.
@@ -148,9 +50,9 @@ func TestPluginActorCannotReachUserStorage(t *testing.T) {
 	withPluginsV1Flag(t, testHandler, true)
 	cleanupPluginInstallations(t)
 	withCallbackTokens(t)
-	installationID := installPluginForAction(t, []string{"issues:read", "comments:write", "storage:user"})
+	installationID := installPluginForAction(t, []string{"storage:user"})
 
-	token := issueCallbackToken(t, installationID, service.HookActor{Type: "plugin", ID: parseUUID(installationID)})
+	token := hookCallbackToken(t, installationID, service.HookActor{Type: "plugin", ID: parseUUID(installationID)})
 	recorder := httptest.NewRecorder()
 	testHandler.PutPluginStorage(recorder, callbackRequest(token, http.MethodPut,
 		"/v1/storage/user/pref",
@@ -170,7 +72,7 @@ func TestPluginContextOmitsTheUserForAPluginActor(t *testing.T) {
 	withCallbackTokens(t)
 	installationID := installHookPlugin(t)
 
-	token := issueCallbackToken(t, installationID, service.HookActor{Type: "plugin", ID: parseUUID(installationID)})
+	token := hookCallbackToken(t, installationID, service.HookActor{Type: "plugin", ID: parseUUID(installationID)})
 	recorder := httptest.NewRecorder()
 	testHandler.GetPluginContext(recorder, callbackRequest(token, http.MethodGet, "/v1/context", nil, nil))
 	if recorder.Code != http.StatusOK {
@@ -186,5 +88,41 @@ func TestPluginContextOmitsTheUserForAPluginActor(t *testing.T) {
 	}
 	if payload["actor"] != "plugin" {
 		t.Fatalf("actor = %v, want plugin", payload["actor"])
+	}
+}
+
+func hookCallbackToken(t *testing.T, installationID string, actor service.HookActor) string {
+	t.Helper()
+	inst, err := testHandler.Queries.GetPluginInstallation(context.Background(), parseUUID(installationID))
+	if err != nil {
+		t.Fatal(err)
+	}
+	token, err := testHandler.PluginService.Callbacks.Issue(context.Background(), service.HookInvocation{Installation: inst, Actor: actor, Trigger: "manual"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return token
+}
+func TestCallbackTokenServesWholeStorageInvocation(t *testing.T) {
+	withPluginsV1Flag(t, testHandler, true)
+	withCallbackTokens(t)
+	installationID := installPluginForAction(t, []string{"storage:user"})
+	token := hookCallbackToken(t, installationID, service.HookActor{Type: "member", ID: parseUUID(testUserID)})
+	params := map[string]string{"scope": "user", "key": "pref"}
+	first := httptest.NewRecorder()
+	testHandler.PutPluginStorage(first, callbackRequest(token, http.MethodPut, "/v1/storage/user/pref", map[string]any{"value": "saved"}, params))
+	if first.Code != http.StatusNoContent {
+		t.Fatalf("write: %d %s", first.Code, first.Body.String())
+	}
+	second := httptest.NewRecorder()
+	testHandler.GetPluginStorage(second, callbackRequest(token, http.MethodGet, "/v1/storage/user/pref", nil, params))
+	if second.Code != http.StatusOK {
+		t.Fatalf("read: %d %s", second.Code, second.Body.String())
+	}
+	testHandler.PluginService.Callbacks.Revoke(token)
+	third := httptest.NewRecorder()
+	testHandler.GetPluginStorage(third, callbackRequest(token, http.MethodGet, "/v1/storage/user/pref", nil, params))
+	if third.Code != http.StatusForbidden {
+		t.Fatalf("revoked: %d %s", third.Code, third.Body.String())
 	}
 }

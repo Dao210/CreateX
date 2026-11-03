@@ -85,7 +85,7 @@ func TestPluginHookScheduleTwoReplicasRetryWithStableDelivery(t *testing.T) {
 		}
 		grant, err := callbacks.Resolve(body.Callback)
 		if err != nil || grant.Trigger != plugincontract.TriggerSchedule ||
-			grant.Actor.Type != "plugin" || grant.IssueID.Valid {
+			grant.Actor.Type != "plugin" {
 			mu.Lock()
 			verificationErr = fmt.Errorf("callback grant mismatch: grant=%+v err=%v", grant, err)
 			mu.Unlock()

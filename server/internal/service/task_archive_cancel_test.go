@@ -42,10 +42,7 @@ func TestCancelTasksForArchivedAgentPublishesCommittedChatCancellations(t *testi
 		})
 		chatByTask[taskID] = chatID
 	}
-	issueID := fx.Issue(t, "Issue task remains part of bulk cancellation")
-	issueTaskID := fx.Task(t, agentID, testutil.Cols{
-		"issue_id": issueID, "runtime_id": runtimeID, "status": "running",
-	})
+	standaloneTaskID := fx.Task(t, agentID, testutil.Cols{"runtime_id": runtimeID, "status": "running"})
 	unchanged := make(map[string]string)
 	for _, status := range []string{"completed", "failed", "cancelled"} {
 		unchanged[fx.Task(t, agentID, testutil.Cols{
@@ -87,7 +84,7 @@ func TestCancelTasksForArchivedAgentPublishesCommittedChatCancellations(t *testi
 		}
 		for key, want := range map[string]any{
 			"task_id": e.TaskID, "agent_id": agentID, "chat_session_id": chatID,
-			"issue_id": "", "status": "cancelled",
+			"status": "cancelled",
 		} {
 			if got := payload[key]; got != want {
 				t.Errorf("task %s payload[%q] = %v, want %v", e.TaskID, key, got, want)
@@ -112,7 +109,7 @@ func TestCancelTasksForArchivedAgentPublishesCommittedChatCancellations(t *testi
 	for _, task := range cancelled {
 		id := util.UUIDToString(task.ID)
 		returned[id]++
-		if _, ok := chatByTask[id]; !ok && id != issueTaskID {
+		if _, ok := chatByTask[id]; !ok && id != standaloneTaskID {
 			t.Errorf("unexpected cancelled row %s", id)
 		}
 		if task.Status != "cancelled" {
@@ -124,8 +121,8 @@ func TestCancelTasksForArchivedAgentPublishesCommittedChatCancellations(t *testi
 			t.Errorf("chat task %s: returned %d times, published %d times; want one each", taskID, returned[taskID], seen[taskID])
 		}
 	}
-	if returned[issueTaskID] != 1 || seen[issueTaskID] != 0 {
-		t.Errorf("issue task: returned %d times, published %d times; want one row and no task event", returned[issueTaskID], seen[issueTaskID])
+	if returned[standaloneTaskID] != 1 || seen[standaloneTaskID] != 0 {
+		t.Errorf("standalone execution: returned %d times, published %d times; want one row and no task event", returned[standaloneTaskID], seen[standaloneTaskID])
 	}
 	if len(seen) != len(chatByTask) {
 		t.Errorf("distinct event tasks = %d, want %d", len(seen), len(chatByTask))

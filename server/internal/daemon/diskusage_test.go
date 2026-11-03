@@ -41,10 +41,10 @@ func TestScanDiskUsage_AggregatesAndCategorizes(t *testing.T) {
 	writeFile(t, filepath.Join(taskA1, "workdir/main.go"), 1000)
 	writeFile(t, filepath.Join(taskA1, "workdir/node_modules/dep/index.js"), 4000)
 	mustWriteMeta(t, taskA1, execenv.GCMeta{
-		Kind:        execenv.GCKindIssue,
-		IssueID:     "issue-1",
-		WorkspaceID: wsA,
-		CompletedAt: time.Now().Add(-3 * time.Hour),
+		Kind:          execenv.GCKindChat,
+		ChatSessionID: "issue-1",
+		WorkspaceID:   wsA,
+		CompletedAt:   time.Now().Add(-3 * time.Hour),
 	})
 
 	taskA2 := filepath.Join(root, wsA, "bbbbbbbb")
@@ -81,8 +81,8 @@ func TestScanDiskUsage_AggregatesAndCategorizes(t *testing.T) {
 	}
 
 	a1 := byShort["aaaaaaaa"]
-	if a1.Kind != string(execenv.GCKindIssue) {
-		t.Errorf("task a1 kind = %q, want %q", a1.Kind, execenv.GCKindIssue)
+	if a1.Kind != string(execenv.GCKindChat) {
+		t.Errorf("task a1 kind = %q, want %q", a1.Kind, execenv.GCKindChat)
 	}
 	// Size includes main.go (1000) + node_modules subtree (4000) + the
 	// .gc_meta.json control file we wrote. Bound the meta overhead so we
@@ -217,20 +217,20 @@ func TestScanDiskUsage_MixedLayoutsUseMetadataIdentity(t *testing.T) {
 	legacyDir := filepath.Join(root, workspaceID, legacyTaskSegment)
 	writeFile(t, filepath.Join(legacyDir, "workdir", "legacy.txt"), 10)
 	mustWriteMeta(t, legacyDir, execenv.GCMeta{
-		Kind:        execenv.GCKindIssue,
-		IssueID:     "issue-legacy",
-		WorkspaceID: workspaceID,
-		CompletedAt: time.Now().Add(-time.Hour),
+		Kind:          execenv.GCKindChat,
+		ChatSessionID: "issue-legacy",
+		WorkspaceID:   workspaceID,
+		CompletedAt:   time.Now().Add(-time.Hour),
 	})
 
 	readableDir := filepath.Join(root, "asset-feed-a548b2390cb2", readableTaskSegment)
 	writeFile(t, filepath.Join(readableDir, "workdir", "readable.txt"), 20)
 	mustWriteMeta(t, readableDir, execenv.GCMeta{
-		Kind:        execenv.GCKindIssue,
-		IssueID:     "issue-readable",
-		TaskID:      readableTaskID,
-		WorkspaceID: workspaceID,
-		CompletedAt: time.Now().Add(-time.Hour),
+		Kind:          execenv.GCKindChat,
+		ChatSessionID: "issue-readable",
+		TaskID:        readableTaskID,
+		WorkspaceID:   workspaceID,
+		CompletedAt:   time.Now().Add(-time.Hour),
 	})
 
 	report, err := ScanDiskUsage(root, nil)
@@ -264,12 +264,12 @@ func TestScanDiskUsage_ReadableActiveRootUsesOwnerIdentityWithoutGCMeta(t *testi
 	workspaceID := "a05b0e10-ee7a-4603-a72d-a548b2390cb2"
 	taskID := "22222222-ee7a-4603-a72d-b659c34a1dc3"
 	env, err := execenv.Prepare(execenv.PrepareParams{
-		WorkspacesRoot:  root,
-		WorkspaceID:     workspaceID,
-		WorkspaceSlug:   "Asset Feed",
-		TaskID:          taskID,
-		IssueIdentifier: "MUL-6063",
-		AgentName:       "Active Task",
+		WorkspacesRoot: root,
+		WorkspaceID:    workspaceID,
+		WorkspaceSlug:  "Asset Feed",
+		TaskID:         taskID,
+
+		AgentName: "Active Task",
 	}, slog.Default())
 	if err != nil {
 		t.Fatalf("Prepare: %v", err)
@@ -339,7 +339,7 @@ func TestScanDiskUsage_LegacyMetaAgeUsesMetaFileMTime(t *testing.T) {
 	taskDir := filepath.Join(root, wsID, "tttttttt")
 	writeFile(t, filepath.Join(taskDir, "workdir/main.go"), 10)
 	mustWriteMeta(t, taskDir, execenv.GCMeta{
-		Kind: execenv.GCKindIssue, IssueID: "issue-legacy", WorkspaceID: wsID,
+		Kind: execenv.GCKindChat, ChatSessionID: "issue-legacy", WorkspaceID: wsID,
 	})
 	oldRoot := time.Now().Add(-30 * 24 * time.Hour)
 	if err := os.Chtimes(taskDir, oldRoot, oldRoot); err != nil {

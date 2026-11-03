@@ -25,15 +25,6 @@ type PluginActionCaller struct {
 	// Scopes is the consented set, read from the installation row rather than
 	// from the manifest the source URL serves today.
 	Scopes []string
-	// IssueScope, when set, is the ONLY issue this caller may touch.
-	//
-	// Set for a callback token issued against a specific issue. A hook called
-	// about one issue has no business reaching another: without this the grant
-	// is worth every issue in the workspace that its actor can see, for the
-	// whole five minutes it lives. Zero means unrestricted — a session caller,
-	// or an invocation that had no issue — and the ordinary workspace and
-	// membership checks still apply on top.
-	IssueScope pgtype.UUID
 }
 
 // AuthorizePluginAction performs the two checks that belong to the plugin: the
@@ -98,7 +89,7 @@ func parseInstallationID(value string) (pgtype.UUID, error) {
 }
 
 // PluginContext is what a surface gets before it has asked for anything: who is
-// looking, where, and which issue the panel is mounted on. It requires no scope
+// looking and in which world. It requires no scope
 // because it contains nothing the user in front of the iframe cannot already
 // see on the page around it.
 type PluginContext struct {
@@ -106,10 +97,9 @@ type PluginContext struct {
 	// User is absent when the caller is the plugin itself — an event hook or a
 	// standing install token has no person behind it, and inventing one here
 	// would let a handler believe it is acting for somebody.
-	User        *PluginContextUser  `json:"user,omitempty"`
-	Issue       *PluginContextIssue `json:"issue,omitempty"`
-	Config      map[string]any      `json:"config"`
-	GrantedURLs []string            `json:"granted_net_domains"`
+	User        *PluginContextUser `json:"user,omitempty"`
+	Config      map[string]any     `json:"config"`
+	GrantedURLs []string           `json:"granted_net_domains"`
 	// Actor names which of the two it is, so a handler can branch without
 	// inferring it from a missing field.
 	Actor string `json:"actor"`
@@ -126,12 +116,6 @@ type PluginContextUser struct {
 	Name string `json:"name"`
 	// Email is deliberately absent: a surface that needs to identify a member
 	// to its own backend should use the opaque id, not a mailbox.
-}
-
-type PluginContextIssue struct {
-	ID         string `json:"id"`
-	Identifier string `json:"identifier"`
-	Title      string `json:"title"`
 }
 
 // BuildPluginContext assembles the context payload. Config carries only the

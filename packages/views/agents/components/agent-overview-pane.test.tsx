@@ -320,15 +320,6 @@ describe("AgentOverviewPane horizontal alignment", () => {
     expect(panelFor(container as HTMLElement)).toHaveClass(GUTTER_SENTINEL);
   });
 
-  it("puts the Work panel on the same rail", () => {
-    const { container } = renderPane([makeRuntime("claude")]);
-    fireEvent.click(screen.getByRole("tab", { name: /^Work$/i }));
-
-    // Work takes a bare rail: the issues toolbar inside it carries the gutter
-    // already, so adding one here would inset it past the tabs.
-    expect(panelFor(container as HTMLElement)).toHaveClass(RAIL_SENTINEL);
-  });
-
   it.each([
     ["Capabilities", openCapabilities],
     ["Settings", openSettings],

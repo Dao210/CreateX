@@ -51,11 +51,10 @@ func TestIsolatedCheckoutIsCommittableOnWindows(t *testing.T) {
 	taskSuffixHash := sha256.Sum256([]byte(sourceRepo))
 	taskID := "a1b2c3d4-e5f6-7890-abcd-" + hex.EncodeToString(taskSuffixHash[:6])
 	envRoot := execenv.PredictRootDir(execenv.RootDirParams{
-		WorkspacesRoot:  workspacesRoot,
-		WorkspaceID:     "a05b0e10-ee7a-4603-a72d-a548b2390cb2",
-		WorkspaceSlug:   strings.Repeat("workspace", 20),
-		TaskID:          taskID,
-		IssueIdentifier: strings.Repeat("issue", 20),
+		WorkspacesRoot: workspacesRoot,
+		WorkspaceID:    "a05b0e10-ee7a-4603-a72d-a548b2390cb2",
+		WorkspaceSlug:  strings.Repeat("workspace", 20),
+		TaskID:         taskID,
 	})
 	if err := os.RemoveAll(envRoot); err != nil {
 		t.Fatalf("clear worst-case readable env root: %v", err)

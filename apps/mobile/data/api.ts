@@ -668,10 +668,8 @@ class ApiClient {
    * RN-shaped `FileAsset` instead of a browser `File`. The fetch FormData
    * polyfill recognises `{ uri, name, type }` and reads the file off disk.
    *
-   * `opts.issueId` / `opts.commentId` link the attachment record. Pass
-   * `issueId` when uploading from a comment composer / reply input; leave
-   * both empty when uploading from a not-yet-created issue (the attachment
-   * is hooked to the issue once it's created — same flow as web).
+   * `opts.chatSessionId` binds the upload to its chat session. The send
+   * request supplies attachment IDs to bind them to the saved message.
    *
    * Does NOT use `this.fetch` because:
    *   - FormData must not have a `Content-Type` header preset (the browser /
@@ -682,7 +680,7 @@ class ApiClient {
    */
   async uploadFile(
     asset: FileAsset,
-    opts?: { issueId?: string; commentId?: string },
+    opts?: { chatSessionId?: string },
   ): Promise<Attachment> {
     const rid = createRequestId();
     const start = Date.now();
@@ -706,8 +704,8 @@ class ApiClient {
       "file",
       { uri: asset.uri, name: asset.name, type: asset.type } as never,
     );
-    if (opts?.issueId) formData.append("issue_id", opts.issueId);
-    if (opts?.commentId) formData.append("comment_id", opts.commentId);
+
+    if (opts?.chatSessionId) formData.append("chat_session_id", opts.chatSessionId);
 
     console.log(`[api] → POST ${path}`, { rid, filename: asset.name });
 

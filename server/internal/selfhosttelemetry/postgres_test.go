@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"math/rand/v2"
 	"os"
+	"regexp"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -124,75 +125,6 @@ func TestPostgresStoreIdentityAndLeaderLock(t *testing.T) {
 	}
 }
 
-func TestTelemetryMigrationsUpAndDown(t *testing.T) {
-	pool := telemetryTestPool(t)
-	ctx := context.Background()
-	if _, err := pool.Exec(ctx, `
-		CREATE TABLE agent_runtime (daemon_id text, last_seen_at timestamptz);
-		CREATE TABLE agent_task_queue (started_at timestamptz)`); err != nil {
-		t.Fatal(err)
-	}
-	up := []string{
-		"479_instance_telemetry_state.up.sql",
-		"480_instance_telemetry_state_singleton_index.up.sql",
-		"481_instance_telemetry_state_primary_key.up.sql",
-		"482_agent_task_queue_telemetry_started_index.up.sql",
-	}
-	for _, name := range up {
-		applyTelemetryMigration(t, pool, name)
-	}
-	var rows int
-	if err := pool.QueryRow(ctx, "SELECT count(*) FROM instance_telemetry_state").Scan(&rows); err != nil {
-		t.Fatal(err)
-	}
-	if rows != 1 {
-		t.Fatalf("singleton rows = %d, want 1", rows)
-	}
-	var originalInstanceID string
-	if err := pool.QueryRow(ctx, "SELECT instance_id::text FROM instance_telemetry_state").Scan(&originalInstanceID); err != nil {
-		t.Fatal(err)
-	}
-	var hasPrimaryKey bool
-	if err := pool.QueryRow(ctx, `
-		SELECT EXISTS (
-			SELECT 1 FROM pg_constraint
-			WHERE conrelid = 'instance_telemetry_state'::regclass AND contype = 'p'
-		)`).Scan(&hasPrimaryKey); err != nil {
-		t.Fatal(err)
-	}
-	if !hasPrimaryKey {
-		t.Fatal("telemetry state primary key was not attached")
-	}
-
-	down := []string{
-		"482_agent_task_queue_telemetry_started_index.down.sql",
-		"481_instance_telemetry_state_primary_key.down.sql",
-		"480_instance_telemetry_state_singleton_index.down.sql",
-		"479_instance_telemetry_state.down.sql",
-	}
-	for _, name := range down {
-		applyTelemetryMigration(t, pool, name)
-	}
-	var stateTable *string
-	if err := pool.QueryRow(ctx, "SELECT to_regclass('instance_telemetry_state')::text").Scan(&stateTable); err != nil {
-		t.Fatal(err)
-	}
-	if stateTable != nil {
-		t.Fatalf("state table remains after down migrations: %s", *stateTable)
-	}
-
-	for _, name := range up {
-		applyTelemetryMigration(t, pool, name)
-	}
-	var rebuiltInstanceID string
-	if err := pool.QueryRow(ctx, "SELECT instance_id::text FROM instance_telemetry_state").Scan(&rebuiltInstanceID); err != nil {
-		t.Fatal(err)
-	}
-	if rebuiltInstanceID == originalInstanceID {
-		t.Fatalf("database rebuild reused deployment identity %s", originalInstanceID)
-	}
-}
-
 type concurrentCollector struct {
 	calls atomic.Int32
 }
@@ -221,13 +153,7 @@ func (*gatedSender) Close() {}
 func TestTwoPostgresBackedWorkersProduceOnePendingAndDelivery(t *testing.T) {
 	pool := telemetryTestPool(t)
 	ctx := context.Background()
-	for _, name := range []string{
-		"479_instance_telemetry_state.up.sql",
-		"480_instance_telemetry_state_singleton_index.up.sql",
-		"481_instance_telemetry_state_primary_key.up.sql",
-	} {
-		applyTelemetryMigration(t, pool, name)
-	}
+	createTelemetryStateTable(t, pool)
 
 	identitySession, leader, err := newPostgresStore(pool).TryLeader(ctx)
 	if err != nil || !leader {
@@ -280,17 +206,6 @@ func TestTwoPostgresBackedWorkersProduceOnePendingAndDelivery(t *testing.T) {
 	}
 	if got := sender.calls.Load(); got != 1 {
 		t.Fatalf("delivery calls = %d, want 1", got)
-	}
-}
-
-func applyTelemetryMigration(t *testing.T, pool *pgxpool.Pool, name string) {
-	t.Helper()
-	body, err := os.ReadFile("../../migrations/" + name)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := pool.Exec(context.Background(), string(body)); err != nil {
-		t.Fatalf("apply %s: %v", name, err)
 	}
 }
 
@@ -413,5 +328,30 @@ func TestSQLCollectorUsesOneBoundaryAndWindowIndexes(t *testing.T) {
 		if !strings.Contains(plan, index) {
 			t.Errorf("EXPLAIN ANALYZE did not use %s:\n%s", index, plan)
 		}
+	}
+}
+
+func createTelemetryStateTable(t *testing.T, pool *pgxpool.Pool) {
+	t.Helper()
+	body, err := os.ReadFile("../../migrations/001_application_schema.up.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	ddl := regexp.MustCompile(`(?s)CREATE TABLE instance_telemetry_state \(.*?\n\);`).FindString(string(body))
+	if ddl == "" {
+		t.Fatal("telemetry table missing from baseline")
+	}
+	if _, err := pool.Exec(context.Background(), ddl); err != nil {
+		t.Fatal(err)
+	}
+	index, err := os.ReadFile("../../migrations/227_instance_telemetry_state_pkey.up.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := pool.Exec(context.Background(), string(index)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := pool.Exec(context.Background(), `ALTER TABLE instance_telemetry_state ADD CONSTRAINT instance_telemetry_state_pkey PRIMARY KEY USING INDEX instance_telemetry_state_pkey`); err != nil {
+		t.Fatal(err)
 	}
 }

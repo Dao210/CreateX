@@ -9,8 +9,10 @@ import (
 	"time"
 
 	"github.com/auro-ai/auro/server/internal/events"
+	"github.com/auro-ai/auro/server/internal/testutil"
 	"github.com/auro-ai/auro/server/internal/util"
 	db "github.com/auro-ai/auro/server/pkg/db/generated"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -43,7 +45,7 @@ func TestClaimTaskConcurrentCapacityRespected(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			<-start
-			task, err := svc.ClaimTask(ctx, agentUUID)
+			task, err := svc.claimTask(ctx, agentUUID, pgtype.UUID{})
 			if err != nil {
 				errs <- err
 				return
@@ -124,4 +126,19 @@ func quoteIdent(s string) string {
 
 func quoteLiteral(s string) string {
 	return `'` + strings.ReplaceAll(s, `'`, `''`) + `'`
+}
+
+func createClaimCapacityFixture(t *testing.T, ctx context.Context, pool *pgxpool.Pool) string {
+	t.Helper()
+	fx := testutil.New(pool, "", "")
+	fx.UserID = fx.User(t, "Claim Capacity", fmt.Sprintf("claim-capacity-%d@example.test", time.Now().UnixNano()))
+	fx.WorkspaceID = fx.Workspace(t, "Claim Capacity", fmt.Sprintf("claim-capacity-%d", time.Now().UnixNano()))
+	fx.Member(t, fx.WorkspaceID, fx.UserID, "owner")
+	rt := fx.Runtime(t, "Capacity Runtime")
+	agent := fx.Agent(t, "Capacity Agent", rt)
+	for range 2 {
+		chat := fx.ChatSession(t, agent)
+		fx.Task(t, agent, testutil.Cols{"runtime_id": rt, "chat_session_id": chat})
+	}
+	return agent
 }

@@ -186,7 +186,7 @@ func TestArchivingInsideTheDebounceWindowRefusesTheLateEnqueue(t *testing.T) {
 	if err != nil {
 		t.Fatalf("load chat session: %v", err)
 	}
-	_, enqueueErr := testHandler.TaskService.EnqueueChatTask(ctx, sess, parseUUID(testUserID), false)
+	_, enqueueErr := testHandler.TaskService.EnqueueChannelChatTask(ctx, sess, parseUUID(testUserID), false, 1, pgtype.UUID{}, 0)
 
 	var tasks int
 	if err := testPool.QueryRow(ctx,

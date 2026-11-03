@@ -103,56 +103,53 @@ type AgentSkill struct {
 }
 
 type AgentTaskQueue struct {
-	ID                        pgtype.UUID        `json:"id"`
-	AgentID                   pgtype.UUID        `json:"agent_id"`
-	Status                    string             `json:"status"`
-	Priority                  int32              `json:"priority"`
-	DispatchedAt              pgtype.Timestamptz `json:"dispatched_at"`
-	StartedAt                 pgtype.Timestamptz `json:"started_at"`
-	CompletedAt               pgtype.Timestamptz `json:"completed_at"`
-	Result                    []byte             `json:"result"`
-	Error                     pgtype.Text        `json:"error"`
-	CreatedAt                 pgtype.Timestamptz `json:"created_at"`
-	Context                   []byte             `json:"context"`
-	RuntimeID                 pgtype.UUID        `json:"runtime_id"`
-	SessionID                 pgtype.Text        `json:"session_id"`
-	WorkDir                   pgtype.Text        `json:"work_dir"`
-	ChatSessionID             pgtype.UUID        `json:"chat_session_id"`
-	AutopilotRunID            pgtype.UUID        `json:"autopilot_run_id"`
-	Attempt                   int32              `json:"attempt"`
-	MaxAttempts               int32              `json:"max_attempts"`
-	ParentTaskID              pgtype.UUID        `json:"parent_task_id"`
-	FailureReason             pgtype.Text        `json:"failure_reason"`
-	TriggerSummary            pgtype.Text        `json:"trigger_summary"`
-	ForceFreshSession         bool               `json:"force_fresh_session"`
-	WaitReason                pgtype.Text        `json:"wait_reason"`
-	InitiatorUserID           pgtype.UUID        `json:"initiator_user_id"`
-	HandoffNote               pgtype.Text        `json:"handoff_note"`
-	PrepareLeaseExpiresAt     pgtype.Timestamptz `json:"prepare_lease_expires_at"`
-	RuntimeMcpOverlay         []byte             `json:"runtime_mcp_overlay"`
-	FireAt                    pgtype.Timestamptz `json:"fire_at"`
-	OriginatorUserID          pgtype.UUID        `json:"originator_user_id"`
-	RuntimeConnectedApps      []byte             `json:"runtime_connected_apps"`
-	ChatInputTaskID           pgtype.UUID        `json:"chat_input_task_id"`
-	ChatFinalizeDeferredAt    pgtype.Timestamptz `json:"chat_finalize_deferred_at"`
-	OriginatorSource          pgtype.Text        `json:"originator_source"`
-	DelegatedFromTaskID       pgtype.UUID        `json:"delegated_from_task_id"`
-	RetryOfTaskID             pgtype.UUID        `json:"retry_of_task_id"`
-	RerunOfTaskID             pgtype.UUID        `json:"rerun_of_task_id"`
-	RuleVersionID             pgtype.UUID        `json:"rule_version_id"`
-	TriggerEvidenceKind       pgtype.Text        `json:"trigger_evidence_kind"`
-	TriggerEvidenceRefID      pgtype.UUID        `json:"trigger_evidence_ref_id"`
-	AccountableUserID         pgtype.UUID        `json:"accountable_user_id"`
-	SessionRolloutMissing     bool               `json:"session_rollout_missing"`
-	RetiredSessionID          pgtype.Text        `json:"retired_session_id"`
-	QuickActionsDisabled      bool               `json:"quick_actions_disabled"`
-	RegenerateQuickActionsFor pgtype.UUID        `json:"regenerate_quick_actions_for"`
-	BranchName                pgtype.Text        `json:"branch_name"`
-	DurableWorkDir            pgtype.Text        `json:"durable_work_dir"`
-	ChannelContextRevision    pgtype.Int8        `json:"channel_context_revision"`
-	CancelledByType           pgtype.Text        `json:"cancelled_by_type"`
-	CancelledByID             pgtype.UUID        `json:"cancelled_by_id"`
-	CancelledByName           pgtype.Text        `json:"cancelled_by_name"`
+	ID                     pgtype.UUID        `json:"id"`
+	AgentID                pgtype.UUID        `json:"agent_id"`
+	Status                 string             `json:"status"`
+	Priority               int32              `json:"priority"`
+	DispatchedAt           pgtype.Timestamptz `json:"dispatched_at"`
+	StartedAt              pgtype.Timestamptz `json:"started_at"`
+	CompletedAt            pgtype.Timestamptz `json:"completed_at"`
+	Result                 []byte             `json:"result"`
+	Error                  pgtype.Text        `json:"error"`
+	CreatedAt              pgtype.Timestamptz `json:"created_at"`
+	Context                []byte             `json:"context"`
+	RuntimeID              pgtype.UUID        `json:"runtime_id"`
+	SessionID              pgtype.Text        `json:"session_id"`
+	WorkDir                pgtype.Text        `json:"work_dir"`
+	ChatSessionID          pgtype.UUID        `json:"chat_session_id"`
+	AutopilotRunID         pgtype.UUID        `json:"autopilot_run_id"`
+	Attempt                int32              `json:"attempt"`
+	MaxAttempts            int32              `json:"max_attempts"`
+	ParentTaskID           pgtype.UUID        `json:"parent_task_id"`
+	FailureReason          pgtype.Text        `json:"failure_reason"`
+	TriggerSummary         pgtype.Text        `json:"trigger_summary"`
+	ForceFreshSession      bool               `json:"force_fresh_session"`
+	WaitReason             pgtype.Text        `json:"wait_reason"`
+	InitiatorUserID        pgtype.UUID        `json:"initiator_user_id"`
+	HandoffNote            pgtype.Text        `json:"handoff_note"`
+	PrepareLeaseExpiresAt  pgtype.Timestamptz `json:"prepare_lease_expires_at"`
+	RuntimeMcpOverlay      []byte             `json:"runtime_mcp_overlay"`
+	FireAt                 pgtype.Timestamptz `json:"fire_at"`
+	OriginatorUserID       pgtype.UUID        `json:"originator_user_id"`
+	RuntimeConnectedApps   []byte             `json:"runtime_connected_apps"`
+	ChatInputTaskID        pgtype.UUID        `json:"chat_input_task_id"`
+	ChatFinalizeDeferredAt pgtype.Timestamptz `json:"chat_finalize_deferred_at"`
+	OriginatorSource       pgtype.Text        `json:"originator_source"`
+	RetryOfTaskID          pgtype.UUID        `json:"retry_of_task_id"`
+	RuleVersionID          pgtype.UUID        `json:"rule_version_id"`
+	TriggerEvidenceKind    pgtype.Text        `json:"trigger_evidence_kind"`
+	TriggerEvidenceRefID   pgtype.UUID        `json:"trigger_evidence_ref_id"`
+	AccountableUserID      pgtype.UUID        `json:"accountable_user_id"`
+	SessionRolloutMissing  bool               `json:"session_rollout_missing"`
+	RetiredSessionID       pgtype.Text        `json:"retired_session_id"`
+	QuickActionsDisabled   bool               `json:"quick_actions_disabled"`
+	BranchName             pgtype.Text        `json:"branch_name"`
+	DurableWorkDir         pgtype.Text        `json:"durable_work_dir"`
+	ChannelContextRevision pgtype.Int8        `json:"channel_context_revision"`
+	CancelledByType        pgtype.Text        `json:"cancelled_by_type"`
+	CancelledByID          pgtype.UUID        `json:"cancelled_by_id"`
+	CancelledByName        pgtype.Text        `json:"cancelled_by_name"`
 }
 
 type AgentToLabel struct {
@@ -824,28 +821,6 @@ type LifeWorld struct {
 	TickMs      int32              `json:"tick_ms"`
 	NextTickAt  pgtype.Timestamptz `json:"next_tick_at"`
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
-}
-
-type MaintenanceJob struct {
-	ID             pgtype.UUID        `json:"id"`
-	JobType        string             `json:"job_type"`
-	JobVersion     int32              `json:"job_version"`
-	ScopeKey       string             `json:"scope_key"`
-	IdempotencyKey string             `json:"idempotency_key"`
-	RequestHash    string             `json:"request_hash"`
-	Status         string             `json:"status"`
-	Revision       int64              `json:"revision"`
-	DryRun         bool               `json:"dry_run"`
-	Options        []byte             `json:"options"`
-	Parameters     []byte             `json:"parameters"`
-	Checkpoint     []byte             `json:"checkpoint"`
-	Progress       []byte             `json:"progress"`
-	Result         []byte             `json:"result"`
-	LastError      string             `json:"last_error"`
-	NextAllowedAt  pgtype.Timestamptz `json:"next_allowed_at"`
-	CreatedAt      pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
-	CompletedAt    pgtype.Timestamptz `json:"completed_at"`
 }
 
 type McpActivity struct {

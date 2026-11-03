@@ -115,10 +115,10 @@ func setupHandlerTestFixture(ctx context.Context, pool *pgxpool.Pool) (string, s
 
 	var workspaceID string
 	if err := pool.QueryRow(ctx, `
-		INSERT INTO workspace (name, slug, description, issue_prefix)
-		VALUES ($1, $2, $3, $4)
+		INSERT INTO workspace (name, slug, description)
+		VALUES ($1, $2, $3)
 		RETURNING id
-	`, "Handler Tests", handlerTestWorkspaceSlug, "Temporary workspace for handler tests", "HAN").Scan(&workspaceID); err != nil {
+	`, "Handler Tests", handlerTestWorkspaceSlug, "Temporary workspace for handler tests").Scan(&workspaceID); err != nil {
 		return "", "", err
 	}
 
@@ -249,7 +249,9 @@ func createHandlerTestAgent(t *testing.T, name string, mcpConfig []byte) string 
 // requires the pair to be present and consistent before granting "agent"
 // actor identity.
 func createHandlerTestTaskForAgent(t *testing.T, agentID string) string {
-	return createHandlerTestTaskForAgentOnIssue(t, agentID, "")
+	t.Helper()
+	chatID := dbfx.ChatSession(t, agentID)
+	return dbfx.Task(t, agentID, testutil.Cols{"chat_session_id": chatID, "runtime_id": handlerTestRuntimeID(t), "status": "running"})
 }
 
 func fetchAgentMcpConfig(t *testing.T, agentID string) []byte {
@@ -335,14 +337,6 @@ func TestUpdateAgentRejectsMalformedRuntimeID(t *testing.T) {
 	})
 	req = withURLParam(req, "id", agentID)
 	testutil.Call(t, testHandler.UpdateAgent, req).Want(http.StatusBadRequest)
-}
-
-func TestCreatePinRejectsMalformedItemID(t *testing.T) {
-	req := newRequest("POST", "/api/pins", map[string]any{
-		"item_type": "issue",
-		"item_id":   "not-a-uuid",
-	})
-	testutil.Call(t, testHandler.CreatePin, req).Want(http.StatusBadRequest)
 }
 
 func TestUpdateWorkspaceRejectsMalformedID(t *testing.T) {
@@ -500,10 +494,9 @@ func insertHandlerTestSkillInForeignWorkspace(t *testing.T, namePrefix, content 
 	slug := "foreign-skill-" + strings.ToLower(strings.ReplaceAll(t.Name(), "_", "-"))
 
 	workspaceID := dbfx.Insert(t, "workspace", testutil.Cols{
-		"name":         "Foreign Skill Workspace " + t.Name(),
-		"slug":         slug,
-		"description":  "",
-		"issue_prefix": "FSW",
+		"name":        "Foreign Skill Workspace " + t.Name(),
+		"slug":        slug,
+		"description": "",
 	})
 
 	name := namePrefix + "-" + t.Name()
@@ -1085,26 +1078,6 @@ func TestVerifyCodeNewUserHasNoWorkspace(t *testing.T) {
 	}
 	if len(workspaces) != 0 {
 		t.Fatalf("ListWorkspaces: expected 0 workspaces for new user, got %d", len(workspaces))
-	}
-}
-
-func TestShouldSuppressActiveSelfAssignmentFailsClosedOnLookupError(t *testing.T) {
-	if testHandler == nil {
-		t.Skip("database not available")
-	}
-	const agentID = "1c331d0b-94fd-412a-a7cc-6a209add00a1"
-	const issueID = "34c44eb2-bd85-455f-b47c-f39cc7b0b913"
-	ctx, cancel := context.WithCancel(context.Background())
-	cancel()
-
-	if !testHandler.shouldSuppressActiveSelfAssignment(
-		ctx,
-		"agent",
-		agentID,
-		parseUUID(issueID),
-		parseUUID(agentID),
-	) {
-		t.Fatal("lookup failure must fail closed and suppress duplicate enqueue")
 	}
 }
 

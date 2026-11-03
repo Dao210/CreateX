@@ -12,7 +12,10 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-// fakeScopeQuerier implements scopeAuthQuerier with in-memory maps.
+type fakeScopeQuerier struct {
+	tasks    map[[16]byte]db.AgentTaskQueue
+	sessions map[[16]byte]db.ChatSession
+}
 
 func (f *fakeScopeQuerier) GetAgentTask(_ context.Context, id pgtype.UUID) (db.AgentTaskQueue, error) {
 	if t, ok := f.tasks[id.Bytes]; ok {

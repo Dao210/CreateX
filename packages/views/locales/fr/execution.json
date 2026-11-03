@@ -1,25 +1,4 @@
 {
-  "comment": {
-    "trigger_blocked_invocation_not_allowed": "Cette cible est introuvable, ou vous n'avez pas la permission de l'utiliser",
-    "trigger_blocked_target_unavailable": "Cette cible est indisponible",
-    "trigger_blocked_runtime_offline": "Le runtime de cette cible est hors ligne",
-    "trigger_blocked_runtime_unusable": "Le CLI d'agent de cette cible ne peut pas s'exécuter sur sa machine — réinstallez-le sur place",
-    "trigger_blocked_runtime_profile_missing": "Le CLI de l'agent cible n'a pas de profil de runtime sur sa machine : installez-le sur celle-ci",
-    "trigger_blocked_agent_runtime_required": "Cette cible n'a pas de runtime — associez-en un pour l'exécuter",
-    "trigger_blocked_runtime_access_denied": "L'agent de cette cible ne peut pas s'exécuter sur son runtime privé — passez le runtime en public, ou réassociez/copiez l'agent vers un runtime que son propriétaire peut utiliser",
-    "trigger_blocked_generic": "Cette cible ne sera pas déclenchée",
-    "trigger_blocked_short_invocation_not_allowed": "Introuvable ou sans permission",
-    "trigger_blocked_short_target_unavailable": "Indisponible",
-    "trigger_blocked_short_runtime_offline": "Runtime hors ligne",
-    "trigger_blocked_short_runtime_unusable": "CLI inexécutable",
-    "trigger_blocked_short_runtime_profile_missing": "Profil de runtime manquant",
-    "trigger_blocked_short_agent_runtime_required": "Runtime requis",
-    "trigger_blocked_short_runtime_access_denied": "Pas d'accès au runtime",
-    "trigger_blocked_short_generic": "Ne démarrera pas"
-  },
-  "wakeups": {
-    "triggered_by_wakeup": "Déclenché par un réveil"
-  },
   "agent_activity": {
     "status_running": "Au travail",
     "status_queued": "En file d'attente",
@@ -70,5 +49,23 @@
     "surface_loading": "Chargement de {{name}}…",
     "surface_navigated": "{{name}} a tenté de remplacer son panneau par une page chargée depuis une autre source. Il a été arrêté et déconnecté : prévenez l'administrateur de votre monde.",
     "surface_unavailable": "{{name}} n'a pas pu charger son interface. La version installée ne la contient peut-être pas."
+  },
+  "invocation": {
+    "trigger_blocked_invocation_not_allowed": "Cette cible est introuvable, ou vous n'avez pas la permission de l'utiliser",
+    "trigger_blocked_target_unavailable": "Cette cible est indisponible",
+    "trigger_blocked_runtime_offline": "Le runtime de cette cible est hors ligne",
+    "trigger_blocked_runtime_unusable": "Le CLI d'agent de cette cible ne peut pas s'exécuter sur sa machine — réinstallez-le sur place",
+    "trigger_blocked_runtime_profile_missing": "Le CLI de l'agent cible n'a pas de profil de runtime sur sa machine : installez-le sur celle-ci",
+    "trigger_blocked_agent_runtime_required": "Cette cible n'a pas de runtime — associez-en un pour l'exécuter",
+    "trigger_blocked_runtime_access_denied": "L'agent de cette cible ne peut pas s'exécuter sur son runtime privé — passez le runtime en public, ou réassociez/copiez l'agent vers un runtime que son propriétaire peut utiliser",
+    "trigger_blocked_generic": "Cette cible ne sera pas déclenchée",
+    "trigger_blocked_short_invocation_not_allowed": "Introuvable ou sans permission",
+    "trigger_blocked_short_target_unavailable": "Indisponible",
+    "trigger_blocked_short_runtime_offline": "Runtime hors ligne",
+    "trigger_blocked_short_runtime_unusable": "CLI inexécutable",
+    "trigger_blocked_short_runtime_profile_missing": "Profil de runtime manquant",
+    "trigger_blocked_short_agent_runtime_required": "Runtime requis",
+    "trigger_blocked_short_runtime_access_denied": "Pas d'accès au runtime",
+    "trigger_blocked_short_generic": "Ne démarrera pas"
   }
 }

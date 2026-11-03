@@ -89,11 +89,11 @@ func TestRenderedSkillListsHideDisableModelInvocationSkills(t *testing.T) {
 	t.Parallel()
 
 	ctx := TaskContextForEnv{
-		IssueID:           "issue-1",
-		QuickCreatePrompt: "create something",
-		AutopilotRunID:    "run-1",
-		AgentName:         "Eve",
-		AgentID:           "eve-1",
+		ChatSessionID: "issue-1",
+
+		AutopilotRunID: "run-1",
+		AgentName:      "Eve",
+		AgentID:        "eve-1",
 		AgentSkills: []SkillContextForEnv{
 			{
 				Name:        "Visible Skill",
@@ -119,8 +119,8 @@ Hidden body.`,
 
 	// The brief is now the only Auro-rendered skill listing, for every kind.
 	for _, kind := range []TaskContextForEnv{
-		{IssueID: ctx.IssueID, AgentName: ctx.AgentName, AgentID: ctx.AgentID, AgentSkills: ctx.AgentSkills},
-		{QuickCreatePrompt: ctx.QuickCreatePrompt, AgentName: ctx.AgentName, AgentID: ctx.AgentID, AgentSkills: ctx.AgentSkills},
+		{ChatSessionID: ctx.ChatSessionID, AgentName: ctx.AgentName, AgentID: ctx.AgentID, AgentSkills: ctx.AgentSkills},
+		{AgentName: ctx.AgentName, AgentID: ctx.AgentID, AgentSkills: ctx.AgentSkills},
 		{AutopilotRunID: ctx.AutopilotRunID, AgentName: ctx.AgentName, AgentID: ctx.AgentID, AgentSkills: ctx.AgentSkills},
 		{ChatSessionID: "c-1", AgentName: ctx.AgentName, AgentID: ctx.AgentID, AgentSkills: ctx.AgentSkills},
 	} {
@@ -230,7 +230,7 @@ func TestRenderedSkillListsOmitSectionWhenOnlyDisabledSkills(t *testing.T) {
 	t.Parallel()
 
 	ctx := TaskContextForEnv{
-		IssueID: "issue-1",
+		ChatSessionID: "issue-1",
 		AgentSkills: []SkillContextForEnv{
 			{
 				Name: "Hidden Skill",
@@ -255,7 +255,7 @@ func TestWriteContextFilesHydratesDisableModelInvocationSkillButDoesNotAdvertise
 
 	dir := t.TempDir()
 	ctx := TaskContextForEnv{
-		IssueID: "issue-1",
+		ChatSessionID: "issue-1",
 		AgentSkills: []SkillContextForEnv{
 			{
 				Name: "Visible Skill",

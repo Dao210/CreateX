@@ -36,7 +36,7 @@ export type BridgeRequest =
       id: string;
       kind: "action";
       method: BridgeMethod;
-      /** Path under the plugin Action API, e.g. "/issues/{id}/comments". */
+      /** Path under the plugin Action API, e.g. "/storage/preferences". */
       path: string;
       body?: unknown;
     }

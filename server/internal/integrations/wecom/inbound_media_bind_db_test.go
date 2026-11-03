@@ -254,7 +254,7 @@ func TestInboundImageBecomesAnAttachmentOnTheChatMessage(t *testing.T) {
 		Group: "群聊", Direct: "单聊", Fallback: "会话",
 	})
 	tasks := &bindTestTasks{}
-	router := engine.NewRouter(bindTestIssues{}, tasks, queries, engine.RouterConfig{
+	router := engine.NewRouter(tasks, queries, engine.RouterConfig{
 		MediaTimeout: 20 * time.Second,
 		Logger:       testLogger(),
 	})
@@ -396,7 +396,7 @@ func TestInboundImageMessageHoldsTheAgentRunUntilMediaLands(t *testing.T) {
 	storage := &fakeMediaStorage{}
 	resolver := newTestResolver(storage, engine.NewDBMediaIntentLedger(queries), nil)
 	session := engine.NewChatSession(queries, pool, TypeWecom, engine.SessionTitles{})
-	router := engine.NewRouter(bindTestIssues{}, &bindTestTasks{}, queries, engine.RouterConfig{
+	router := engine.NewRouter(&bindTestTasks{}, queries, engine.RouterConfig{
 		MediaTimeout: 25 * time.Second,
 		Logger:       testLogger(),
 	})

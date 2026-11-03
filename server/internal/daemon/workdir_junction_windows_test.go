@@ -150,7 +150,7 @@ func TestShouldReusePriorWorkdirThroughJunctionedRoot(t *testing.T) {
 
 	task := leaderReuseTestTask("task-junction-root")
 	task.PriorWorkDir = workDir
-	got, ok := shouldReusePriorWorkdir(task, nil, root)
+	got, ok := shouldReusePriorWorkdir(task, root)
 	if !ok {
 		t.Fatalf("a fully provenanced workdir under a junctioned workspaces root was refused for reuse")
 	}
@@ -162,7 +162,7 @@ func TestShouldReusePriorWorkdirThroughJunctionedRoot(t *testing.T) {
 	// root by its configured (junction) name and locks the resolved env root.
 	d := &Daemon{logger: discardLogger()}
 	d.cfg.WorkspacesRoot = root
-	claim, canonical, _, ok, err := d.lockReusablePriorEnvRoot(context.Background(), task, nil, "")
+	claim, canonical, _, ok, err := d.lockReusablePriorEnvRoot(context.Background(), task, "")
 	if err != nil || !ok {
 		t.Fatalf("lockReusablePriorEnvRoot under a junctioned root: ok=%v err=%v", ok, err)
 	}

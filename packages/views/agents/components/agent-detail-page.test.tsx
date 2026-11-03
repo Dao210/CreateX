@@ -225,7 +225,7 @@ describe("AgentDetailPage direct-detail fallback", () => {
     renderPage();
 
     expect(
-      await screen.findByRole("button", { name: "Assign work" }),
+      await screen.findByRole("button", { name: "DM" }),
     ).toBeInTheDocument();
     expect(mockGetAgent).not.toHaveBeenCalled();
   });
@@ -248,7 +248,7 @@ describe("AgentDetailPage direct-detail fallback", () => {
     renderPage();
 
     expect(
-      await screen.findByRole("button", { name: "Assign work" }),
+      await screen.findByRole("button", { name: "DM" }),
     ).toBeInTheDocument();
     expect(screen.queryByText("Agent not found")).not.toBeInTheDocument();
   });
@@ -279,7 +279,7 @@ describe("AgentDetailPage direct-detail fallback", () => {
     agentsRef.current = [];
     mockGetAgent.mockResolvedValueOnce(baseAgent);
     const { queryClient } = renderPage();
-    await screen.findByRole("button", { name: "Assign work" });
+    await screen.findByRole("button", { name: "DM" });
 
     mockGetAgent.mockRejectedValue(new ApiError("not found", 404, "Not Found"));
     await act(async () => {
@@ -291,7 +291,7 @@ describe("AgentDetailPage direct-detail fallback", () => {
 
     expect(await screen.findByText("Agent not found")).toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: "Assign work" }),
+      screen.queryByRole("button", { name: "DM" }),
     ).not.toBeInTheDocument();
   });
 
@@ -299,7 +299,7 @@ describe("AgentDetailPage direct-detail fallback", () => {
     agentsRef.current = [];
     mockGetAgent.mockResolvedValueOnce(baseAgent);
     const { queryClient } = renderPage();
-    await screen.findByRole("button", { name: "Assign work" });
+    await screen.findByRole("button", { name: "DM" });
 
     mockGetAgent.mockRejectedValue(
       new ApiError("forbidden", 403, "Forbidden"),
@@ -315,7 +315,7 @@ describe("AgentDetailPage direct-detail fallback", () => {
       await screen.findByText("You don't have access to this agent"),
     ).toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: "Assign work" }),
+      screen.queryByRole("button", { name: "DM" }),
     ).not.toBeInTheDocument();
   });
 
@@ -336,7 +336,7 @@ describe("AgentDetailPage direct-detail fallback", () => {
     agentsRef.current = [];
     mockGetAgent.mockResolvedValueOnce(baseAgent);
     const { queryClient } = renderPage();
-    await screen.findByRole("button", { name: "Assign work" });
+    await screen.findByRole("button", { name: "DM" });
 
     mockGetAgent.mockRejectedValue(new Error("Network request failed"));
     await act(async () => {
@@ -347,7 +347,7 @@ describe("AgentDetailPage direct-detail fallback", () => {
     });
 
     expect(
-      screen.getByRole("button", { name: "Assign work" }),
+      screen.getByRole("button", { name: "DM" }),
     ).toBeInTheDocument();
     expect(
       screen.queryByText("Couldn't load this agent"),
@@ -359,7 +359,7 @@ describe("AgentDetailPage direct-detail fallback", () => {
     mockGetAgent.mockResolvedValue(baseAgent);
     mockUpdateAgent.mockImplementation(() => new Promise(() => {}));
     const { queryClient } = renderPage();
-    await screen.findByRole("button", { name: "Assign work" });
+    await screen.findByRole("button", { name: "DM" });
 
     fireEvent.click(screen.getByRole("button", { name: "update model" }));
 
@@ -438,7 +438,7 @@ describe("AgentDetailPage DM button", () => {
     membersRef.current = [{ user_id: "user-1", role: "admin" }];
     renderPage();
 
-    await screen.findByRole("button", { name: "Assign work" });
+    await screen.findByRole("button", { name: "DM" });
     expect(
       screen.queryByLabelText("Agent actions"),
     ).not.toBeInTheDocument();
@@ -452,7 +452,7 @@ describe("AgentDetailPage DM button", () => {
     membersRef.current = [{ user_id: "user-1", role: "member" }];
     renderPage();
 
-    await screen.findByRole("button", { name: "Assign work" });
+    await screen.findByRole("button", { name: "DM" });
     expect(
       screen.getByLabelText("Agent actions"),
     ).toBeInTheDocument();

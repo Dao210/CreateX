@@ -99,27 +99,6 @@ func TestReplierNoticesReadTheAskersLanguage(t *testing.T) {
 				{"offline", engine.Result{Outcome: engine.OutcomeAgentOffline}, want.AgentOffline},
 				{"archived", engine.Result{Outcome: engine.OutcomeAgentArchived}, want.AgentArchived},
 				{"invoke denied", engine.Result{Outcome: engine.OutcomeInvokeDenied}, want.InvokeDenied},
-				{
-					"issue created",
-					engine.Result{
-						Outcome:         engine.OutcomeIngested,
-						IssueID:         pgtype.UUID{Bytes: [16]byte{4}, Valid: true},
-						IssueIdentifier: "MUL-42",
-						IssueTitle:      "Login is broken",
-					},
-					want.issueCreated("MUL-42", "Login is broken"),
-				},
-				{
-					"issue duplicate",
-					engine.Result{
-						Outcome:         engine.OutcomeIngested,
-						IssueID:         pgtype.UUID{Bytes: [16]byte{4}, Valid: true},
-						IssueIdentifier: "MUL-7",
-						IssueTitle:      "Login is broken",
-						IssueDuplicate:  true,
-					},
-					want.issueDuplicate("MUL-7", "Login is broken"),
-				},
 			} {
 				t.Run(outcome.name, func(t *testing.T) {
 					reg := newSendersRegistry()
@@ -238,16 +217,16 @@ func TestInboxCardReadsTheRecipientsLanguage(t *testing.T) {
 				"recipient_type": "member",
 				"recipient_id":   recipient,
 				"workspace_id":   workspace,
-				"type":           "issue_assigned",
-				"title":          "New issue",
+				"type":           "creation_ready",
+				"title":          "Creation ready",
 			}, recipient, workspace) {
 				t.Fatal("tryDeliverInbox returned false; expected delivery to a bound member")
 			}
 
 			want := copyPacks[tc.locale]
 			got := sentMarkdown(t, conn, 0)
-			if !strings.HasPrefix(got, "**["+want.label("issue_assigned")+"]") {
-				t.Fatalf("inbox card = %q, want the %s label %q", got, tc.locale, want.label("issue_assigned"))
+			if !strings.HasPrefix(got, "**["+want.label("creation_ready")+"]") {
+				t.Fatalf("inbox card = %q, want the %s label %q", got, tc.locale, want.label("creation_ready"))
 			}
 			if !strings.Contains(got, "["+want.InboxDetailLink+"](") {
 				t.Fatalf("inbox card = %q, want the %s detail-link anchor %q", got, tc.locale, want.InboxDetailLink)
@@ -279,7 +258,7 @@ func TestInboxCardUnknownTypeUsesTheSamePacksFallback(t *testing.T) {
 		"recipient_id":   recipient,
 		"workspace_id":   workspace,
 		"type":           "something_invented_next_year",
-		"title":          "New issue",
+		"title":          "Creation ready",
 	}, recipient, workspace) {
 		t.Fatal("tryDeliverInbox returned false; expected delivery to a bound member")
 	}

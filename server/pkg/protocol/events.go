@@ -2,24 +2,6 @@ package protocol
 
 // Event types for WebSocket communication between server, web clients, and daemon.
 const (
-	// Issue events
-	EventIssueCreated            = "issue:created"
-	EventIssueUpdated            = "issue:updated"
-	EventIssueDeleted            = "issue:deleted"
-	EventIssueMetadataChanged    = "issue_metadata:changed"
-	EventIssueAttachmentsChanged = "issue_attachments:changed"
-
-	// Comment events
-	EventCommentCreated       = "comment:created"
-	EventCommentUpdated       = "comment:updated"
-	EventCommentDeleted       = "comment:deleted"
-	EventCommentResolved      = "comment:resolved"
-	EventCommentUnresolved    = "comment:unresolved"
-	EventReactionAdded        = "reaction:added"
-	EventReactionRemoved      = "reaction:removed"
-	EventIssueReactionAdded   = "issue_reaction:added"
-	EventIssueReactionRemoved = "issue_reaction:removed"
-
 	// Agent events
 	EventAgentStatus   = "agent:status"
 	EventAgentCreated  = "agent:created"
@@ -59,10 +41,6 @@ const (
 	EventMemberUpdated = "member:updated"
 	EventMemberRemoved = "member:removed"
 
-	// Subscriber events
-	EventSubscriberAdded   = "subscriber:added"
-	EventSubscriberRemoved = "subscriber:removed"
-
 	// Activity events
 	EventActivityCreated = "activity:created"
 
@@ -90,34 +68,10 @@ const (
 	EventChatSessionDeleted  = "chat:session_deleted"
 	EventChatSessionUpdated  = "chat:session_updated"
 
-	// Project events
-	EventProjectCreated         = "project:created"
-	EventProjectUpdated         = "project:updated"
-	EventProjectDeleted         = "project:deleted"
-	EventProjectResourceCreated = "project_resource:created"
-	EventProjectResourceUpdated = "project_resource:updated"
-	EventProjectResourceDeleted = "project_resource:deleted"
-
 	// Label events
-	EventLabelCreated       = "label:created"
-	EventLabelUpdated       = "label:updated"
-	EventLabelDeleted       = "label:deleted"
-	EventIssueLabelsChanged = "issue_labels:changed"
-
-	// Custom property events. Definitions are archived, never deleted, so
-	// there is no property:deleted — archive arrives as property:updated.
-	EventPropertyCreated        = "property:created"
-	EventPropertyUpdated        = "property:updated"
-	EventIssuePropertiesChanged = "issue_properties:changed"
-
-	// Issue status catalog events (MUL-6243). ONE event for all four writes
-	// — create, edit, archive, reorder — rather than a verb per write, because
-	// the catalog is read as a whole table and every client answers all four
-	// the same way: re-read it. Splitting it would mint four contracts that no
-	// consumer can tell apart, and reorder has no single row to name anyway.
-	// The `action` in the payload is advisory (it makes a frame in devtools
-	// self-describing); nothing routes on it.
-	EventIssueStatusChanged = "issue_status:changed"
+	EventLabelCreated = "label:created"
+	EventLabelUpdated = "label:updated"
+	EventLabelDeleted = "label:deleted"
 
 	// Pin events
 	EventPinCreated   = "pin:created"
@@ -137,19 +91,13 @@ const (
 	EventAutopilotRunStart = "autopilot:run_start"
 	EventAutopilotRunDone  = "autopilot:run_done"
 
-	// Squad events
-	EventSquadCreated = "squad:created"
-	EventSquadUpdated = "squad:updated"
-	EventSquadDeleted = "squad:deleted"
-
 	// Daemon events
-	EventDaemonHeartbeat               = "daemon:heartbeat"
-	EventDaemonHeartbeatAck            = "daemon:heartbeat_ack"
-	EventDaemonRegister                = "daemon:register"
-	EventDaemonTaskAvailable           = "daemon:task_available"
-	EventDaemonTaskSupplementAvailable = "daemon:task_supplement_available"
-	EventDaemonRuntimeProfilesChanged  = "daemon:runtime_profiles_changed"
-	EventDaemonWorkspacesChanged       = "daemon:workspaces_changed"
+	EventDaemonHeartbeat              = "daemon:heartbeat"
+	EventDaemonHeartbeatAck           = "daemon:heartbeat_ack"
+	EventDaemonRegister               = "daemon:register"
+	EventDaemonTaskAvailable          = "daemon:task_available"
+	EventDaemonRuntimeProfilesChanged = "daemon:runtime_profiles_changed"
+	EventDaemonWorkspacesChanged      = "daemon:workspaces_changed"
 	// EventDaemonPendingWork is a runtime-scoped hint that a heartbeat-carried
 	// request (model discovery, capability discovery, or local-skill import) is
 	// queued for that runtime. Without it the daemon only learns about the

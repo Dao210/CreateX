@@ -48,7 +48,6 @@ func TestTaskEventCarriesPayloadAndScopeHints(t *testing.T) {
 	task := db.AgentTaskQueue{
 		ID:            testUUID(41),
 		AgentID:       testUUID(42),
-		IssueID:       testUUID(43),
 		ChatSessionID: testUUID(44),
 		Status:        "failed",
 	}
@@ -70,7 +69,6 @@ func TestTaskEventCarriesPayloadAndScopeHints(t *testing.T) {
 	for key, want := range map[string]any{
 		"task_id":         util.UUIDToString(task.ID),
 		"agent_id":        util.UUIDToString(task.AgentID),
-		"issue_id":        util.UUIDToString(task.IssueID),
 		"chat_session_id": util.UUIDToString(task.ChatSessionID),
 		"status":          "failed",
 		"failure_reason":  "timeout",

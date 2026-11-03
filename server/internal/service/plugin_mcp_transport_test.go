@@ -23,7 +23,7 @@ const mcpHookManifest = `{
 	"description": "d",
 	"version": "1.0.0",
 	"author": {"name": "example"},
-	"scopes": ["issues:read", "net:tools.example.com"],
+	"scopes": ["tasks:read", "net:tools.example.com"],
 	"contributes": {"hooks": [{
 		"key": "toolbox",
 		"name": "Toolbox",
@@ -43,7 +43,7 @@ func mcpInstallation(t *testing.T, approvals string) db.PluginInstallation {
 		WorkspaceID:   testInstallationID(t),
 		Enabled:       true,
 		Manifest:      []byte(mcpHookManifest),
-		GrantedScopes: []byte(`["issues:read","net:tools.example.com"]`),
+		GrantedScopes: []byte(`["tasks:read","net:tools.example.com"]`),
 		McpApprovals:  []byte(approvals),
 	}
 }

@@ -119,15 +119,4 @@ describe("useOpenSettingsShortcut", () => {
 
     expect(activeTabUrl()).toBe("/acme/settings");
   });
-
-  // Main routes the chord to the tabbed window; an issue renderer that also
-  // subscribed would mark the channel ready and drain the request into a
-  // window that has no tabs to open it in.
-  it("does not subscribe in a dedicated issue window", () => {
-    const { onOpenSettings } = stubDesktopAPI("issue");
-
-    render(<Probe />);
-
-    expect(onOpenSettings).not.toHaveBeenCalled();
-  });
 });

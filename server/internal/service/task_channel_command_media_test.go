@@ -99,7 +99,7 @@ func TestEnqueueChatTaskConsumesPendingFreshOnlyOnSuccess(t *testing.T) {
 	if _, err := pool.Exec(ctx, `UPDATE agent SET runtime_id = NULL WHERE id = $1`, agentID); err != nil {
 		t.Fatalf("disable agent runtime: %v", err)
 	}
-	if _, err := svc.EnqueueChatTask(ctx, session, initiator, false); !errors.Is(err, ErrChatTaskAgentNoRuntime) {
+	if _, err := svc.enqueueChatTask(ctx, session, initiator, false, 0, false, pgtype.UUID{}, 0); !errors.Is(err, ErrChatTaskAgentNoRuntime) {
 		t.Fatalf("offline enqueue error = %v, want ErrChatTaskAgentNoRuntime", err)
 	}
 	var pending bool
@@ -113,7 +113,7 @@ func TestEnqueueChatTaskConsumesPendingFreshOnlyOnSuccess(t *testing.T) {
 	if _, err := pool.Exec(ctx, `UPDATE agent SET runtime_id = $2 WHERE id = $1`, agentID, runtimeID); err != nil {
 		t.Fatalf("restore agent runtime: %v", err)
 	}
-	task, err := svc.EnqueueChatTask(ctx, session, initiator, false)
+	task, err := svc.enqueueChatTask(ctx, session, initiator, false, 0, false, pgtype.UUID{}, 0)
 	if err != nil {
 		t.Fatalf("EnqueueChatTask: %v", err)
 	}
@@ -158,10 +158,10 @@ func TestEnqueueChatTaskIgnoresHandledCommandMedia(t *testing.T) {
 	}
 
 	svc := &TaskService{Queries: q, TxStarter: pool, Bus: events.New()}
-	task, err := svc.EnqueueChatTask(ctx, db.ChatSession{
+	task, err := svc.enqueueChatTask(ctx, db.ChatSession{
 		ID:      util.MustParseUUID(chatSessionID),
 		AgentID: util.MustParseUUID(agentID),
-	}, util.MustParseUUID(userID), false)
+	}, util.MustParseUUID(userID), false, 0, false, pgtype.UUID{}, 0)
 	if err != nil {
 		t.Fatalf("EnqueueChatTask: %v", err)
 	}
@@ -205,10 +205,10 @@ func TestPromoteChannelChatTasksIgnoresHandledCommandMedia(t *testing.T) {
 	}
 
 	svc := &TaskService{Queries: q, TxStarter: pool, Bus: events.New()}
-	task, err := svc.EnqueueChatTask(ctx, db.ChatSession{
+	task, err := svc.enqueueChatTask(ctx, db.ChatSession{
 		ID:      util.MustParseUUID(chatSessionID),
 		AgentID: util.MustParseUUID(agentID),
-	}, util.MustParseUUID(userID), false)
+	}, util.MustParseUUID(userID), false, 0, false, pgtype.UUID{}, 0)
 	if err != nil {
 		t.Fatalf("EnqueueChatTask: %v", err)
 	}

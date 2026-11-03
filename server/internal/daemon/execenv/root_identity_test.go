@@ -17,11 +17,10 @@ const (
 
 func pruneParams(root, taskID string) RootDirParams {
 	return RootDirParams{
-		WorkspacesRoot:  root,
-		WorkspaceID:     pruneWorkspaceID,
-		WorkspaceSlug:   "Asset Feed",
-		TaskID:          taskID,
-		IssueIdentifier: "MUL-6063",
+		WorkspacesRoot: root,
+		WorkspaceID:    pruneWorkspaceID,
+		WorkspaceSlug:  "Asset Feed",
+		TaskID:         taskID,
 	}
 }
 

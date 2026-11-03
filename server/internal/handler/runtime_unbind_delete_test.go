@@ -243,14 +243,9 @@ func TestRuntimeDeleteLockBlocksConcurrentAgentBinding(t *testing.T) {
 	if _, err := bindTx.Exec(ctx, `SET LOCAL lock_timeout = '50ms'`); err != nil {
 		t.Fatalf("set lock timeout: %v", err)
 	}
-	if _, err := bindTx.Exec(ctx, `
-		INSERT INTO agent (
-			workspace_id, name, description, runtime_mode, runtime_config,
-			runtime_id, visibility, max_concurrent_tasks, owner_id
-		)
-		VALUES ($1, 'concurrent bind probe', '', 'cloud', '{}'::jsonb,
-			$2, 'workspace', 1, $3)
-	`, testWorkspaceID, runtimeID, testUserID); err == nil {
+	if _, err := testHandler.Queries.WithTx(bindTx).CreateAgent(ctx, db.CreateAgentParams{
+		WorkspaceID: parseUUID(testWorkspaceID), Name: "concurrent bind probe", RuntimeMode: "cloud", RuntimeConfig: []byte(`{}`), RuntimeID: parseUUID(runtimeID), Visibility: "workspace", MaxConcurrentTasks: 1, OwnerID: parseUUID(testUserID), CustomEnv: []byte(`{}`), CustomArgs: []byte(`[]`),
+	}); err == nil {
 		t.Fatal("agent bind unexpectedly bypassed the runtime delete lock")
 	}
 }

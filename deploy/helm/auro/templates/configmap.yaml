@@ -7,7 +7,6 @@ metadata:
 data:
   # --- Backend ---
   PORT: "8080"
-  MAINTENANCE_PORT: {{ .Values.backend.config.maintenancePort | quote }}
   AURO_DATABASE_STARTUP_TIMEOUT: {{ .Values.backend.config.databaseStartupTimeout | quote }}
   AURO_DATABASE_CONNECT_TIMEOUT: {{ .Values.backend.config.databaseConnectTimeout | quote }}
   DATABASE_SEARCH_WORK_MEM_MB: {{ .Values.backend.config.databaseSearchWorkMemMB | quote }}

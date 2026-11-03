@@ -1,151 +1,4 @@
 {
-  "issue_statuses": {
-    "title": "Issue Statuses",
-    "loading": "Loading statuses…",
-    "add": "Add status",
-    "show_archived": "Show archived ({{count}})",
-    "archived_badge": "Archived",
-    "archived_hint": "Retired from new assignments. Issues already on it keep it.",
-    "reorder_failed": "Could not save the new order.",
-    "actions": {
-      "move_up": "Move up",
-      "move_down": "Move down",
-      "open": "Actions for {{name}}",
-      "edit": "Edit",
-      "archive": "Archive",
-      "reorder": "Reorder {{name}}"
-    },
-    "reorder_hint": "Drag within a category to reorder boards, lists, and menus.",
-    "built_in_dialog": {},
-    "editor": {
-      "create_title": "New status",
-      "edit_title": "Edit status",
-      "name": "Name",
-      "name_placeholder": "e.g. Code Review",
-      "key_hint": "Referred to as {{key}} by the API and the CLI.",
-      "created": "Status created. The API and the CLI refer to it as {{key}}.",
-      "category": "Category",
-      "category_locked": "Category cannot be changed after a status is created.",
-      "description": "Description",
-      "description_placeholder": "What this status means for your team",
-      "color": "Color",
-      "icon": "Icon shape",
-      "icon_shapes": {
-        "default": "Default",
-        "dotted": "Dotted circle",
-        "circle": "Circle",
-        "half": "Half-filled circle",
-        "three_quarters": "Three-quarter circle",
-        "check": "Checkmark",
-        "slash": "Slash",
-        "cross": "Cross"
-      },
-      "cancel": "Cancel",
-      "save": "Save",
-      "saving": "Saving…",
-      "save_failed": "Could not save the status."
-    },
-    "archive_dialog": {
-      "retry": "Retry archive",
-      "title": "Archive this status?",
-      "description": "Move all issues out of \"{{name}}\" before archiving it. Once empty, it will be removed from boards and status pickers.",
-      "in_use_title": "Move issues before archiving",
-      "in_use": "Issues still using this status: {{count}}. Move them to another status, including completed and canceled issues, then try again.",
-      "view_issues": "View issues",
-      "archiving": "Archiving...",
-      "cancel": "Cancel",
-      "confirm": "Archive",
-      "failed": "Could not archive the status."
-    },
-    "category_labels": {
-      "unstarted": "Unstarted",
-      "started": "Started",
-      "done": "Done",
-      "closed": "Closed"
-    },
-    "categories": {
-      "unstarted": "Work that has not started, whether planned or in the backlog.",
-      "started": "Work that is active, under review, or blocked.",
-      "done": "Work that has been finished.",
-      "closed": "Work that will not be completed."
-    },
-    "built_in_descriptions": {
-      "backlog": "Parked. Assigning an issue here never starts an agent run.",
-      "todo": "Queued. Moving an issue here starts the assigned agent.",
-      "in_progress": "Actively being worked on.",
-      "in_review": "Delivered, waiting on human review. Finalizes the autopilot run.",
-      "blocked": "Stalled on an external dependency.",
-      "done": "Completed.",
-      "cancelled": "Decided not to do."
-    },
-    "pr_auto_complete_badge": "Set when PRs merge",
-    "built_in_locked": "Built-in statuses drive system behavior, so they can't be edited or archived. You can still reorder them."
-  },
-  "wakeups": {
-    "description": "Platform rules that apply to every issue. Each issue can change them in its Wakeups section.",
-    "child_done_title": "When sub-issues finish",
-    "child_done_description": "Wakes the parent's assignee when a stage finishes and a later stage is waiting, and once more when every sub-issue is closed. A member assignee gets an inbox notification instead.",
-    "enabled": "On by default",
-    "instruction": "Default instruction",
-    "instruction_hint": "Sent to the woken agent. Leave empty to use the built-in instruction below.",
-    "instruction_placeholder": "Leave empty to use the built-in instruction",
-    "builtin": "Built-in instruction",
-    "instruction_invalid": "Keep the instruction within 4,000 bytes.",
-    "save": "Save",
-    "saving": "Saving…",
-    "save_error": "Could not save the default.",
-    "customized_one": "{{count}} open issue has its own setting and ignores this default.",
-    "customized_other": "{{count}} open issues have their own setting and ignore this default.",
-    "admin_only": "Only owners and admins can change these defaults.",
-    "load_error": "Could not load wakeup defaults."
-  },
-  "quick_actions": {
-    "title": "Quick Actions",
-    "description": "Run a preset agent and prompt from an issue's sidebar.",
-    "add": "New quick action",
-    "search_placeholder": "Search quick actions",
-    "loading": "Loading quick actions…",
-    "no_results": "No quick actions match your search",
-    "actions_open": "Open actions for {{name}}",
-    "columns": {
-      "name": "Name",
-      "target": "Runs as",
-      "visibility": "Who",
-      "usage": "Used",
-      "updated": "Updated"
-    },
-    "empty_title": "No quick actions yet",
-    "empty_hint": "For example, code review or writing tests.",
-    "archived": "Archived",
-    "visibility_public": "Team",
-    "visibility_private": "Just me",
-    "visibility_public_hint": "Everyone in the world",
-    "visibility_private_hint": "Only you",
-    "field_visibility": "Who can use it",
-    "public_target_hint": "Must be an agent everyone can trigger.",
-    "target_private": "private",
-    "target_missing": "Target unavailable",
-    "archive": "Archive",
-    "unarchive": "Restore",
-    "edit": "Edit",
-    "delete": "Delete",
-    "cancel": "Cancel",
-    "save": "Save",
-    "never_used": "Never used",
-    "used_count": "Used {{count}}×",
-    "create_title": "New quick action",
-    "edit_title": "Edit quick action",
-    "dialog_description": "Runs as a comment on the issue, like an @mention.",
-    "field_name": "Name",
-    "field_name_placeholder": "Code Review",
-    "field_target": "Runs as",
-    "field_prompt": "Prompt",
-    "field_prompt_placeholder": "Review the code linked to this issue. Focus on correctness and edge cases.",
-    "prompt_hint": "Sent as written. The agent already sees the issue.",
-    "template_not_supported": "Variables aren’t supported yet — remove {{token}}. The agent already reads this issue.",
-    "delete_title": "Delete this quick action?",
-    "delete_description": "It disappears from every issue sidebar. Past runs stay in the execution log. Archive instead if you may want it back."
-  },
   "auto_save": {
     "saving": "Saving…",
     "saved": "Saved",
@@ -187,14 +40,7 @@
     },
     "comments_title": "Comments & chat",
     "region_title": "Language & region",
-    "appearance_title": "Appearance",
-    "issue_fields_title": "Fields shown when creating issues",
-    "issue_fields": {
-      "field": "Field",
-      "quick": "Create with agent",
-      "manual": "Manual create",
-      "unsupported": "Not available when creating with an agent"
-    }
+    "appearance_title": "Appearance"
   },
   "shortcuts": {
     "title": "Keyboard Shortcuts",
@@ -230,10 +76,6 @@
         "label": "Open search",
         "description": "Search content or run commands."
       },
-      "createIssue": {
-        "label": "Create issue",
-        "description": "Open your preferred issue creation flow."
-      },
       "toggleSidebar": {
         "label": "Toggle left sidebar",
         "description": "Show or hide the left sidebar."
@@ -241,10 +83,6 @@
       "toggleRightSidebar": {
         "label": "Toggle right sidebar",
         "description": "Available on pages with a right sidebar."
-      },
-      "findInIssue": {
-        "label": "Find in issue",
-        "description": "Search within the open issue detail."
       },
       "archiveInboxItem": {
         "label": "Archive notification",
@@ -269,14 +107,6 @@
       "goChat": {
         "label": "Go to Chat",
         "description": "Open world chat."
-      },
-      "goIssues": {
-        "label": "Go to Issues",
-        "description": "Open the issue list."
-      },
-      "goProjects": {
-        "label": "Go to Projects",
-        "description": "Open the project list."
       },
       "goAutopilots": {
         "label": "Go to Autopilot",
@@ -316,25 +146,6 @@
       "close_dialog": "Close dialog or menu"
     }
   },
-  "issue": {
-    "opening": {
-      "title": "Opening issues",
-      "click": "Clicking a card or row opens",
-      "page": "Full page",
-      "peek": "Side preview",
-      "hint": "Shift+Click opens the other one."
-    },
-    "description": "Choose which fields each create dialog keeps on its toolbar. Hidden fields stay available from the ⋯ menu and reappear while they hold a value.",
-    "fields": {
-      "status": "Status",
-      "priority": "Priority",
-      "assignee": "Assignee",
-      "labels": "Labels",
-      "project": "Project",
-      "due_date": "Due date",
-      "start_date": "Start date"
-    }
-  },
   "mcp": {
     "description": "After adding a server, assign it from an agent's MCP tab.",
     "servers_title": "Shared servers",
@@ -372,17 +183,12 @@
       "profile": "Profile",
       "preferences": "Preferences",
       "shortcuts": "Shortcuts",
-      "issue": "Issue",
       "notifications": "Notifications",
       "tokens": "API Tokens",
       "general": "General",
       "labs": "Labs",
       "members": "Members",
       "labels": "Labels",
-      "issue_statuses": "Issue Statuses",
-      "wakeups": "Wakeups",
-      "properties": "Properties",
-      "quick_actions": "Quick Actions",
       "plugins": "Plugins",
       "mcp": "MCP servers",
       "billing": "Billing",
@@ -457,10 +263,6 @@
       "secret_set": "Saved — enter a new value to replace it"
     },
     "scopes": {
-      "issues_read": "Read issues",
-      "issues_write": "Create and edit issues",
-      "comments_read": "Read comments",
-      "comments_write": "Post comments",
       "tasks_read": "Read agent runs",
       "tasks_write": "Start and update agent runs",
       "agents_read": "Read the agent list",
@@ -495,80 +297,11 @@
       "review_upgrade": "Review and upgrade"
     }
   },
-  "properties": {
-    "title": "Properties",
-    "description": "Add custom fields to issues.",
-    "search_placeholder": "Filter by name...",
-    "new_property": "New property",
-    "show_archived": "Show archived",
-    "columns": {
-      "name": "Name",
-      "type": "Type",
-      "options": "Options",
-      "usage": "Used by",
-      "updated": "Updated"
-    },
-    "usage_count_one": "{{count}} issue",
-    "usage_count_other": "{{count}} issues",
-    "loading": "Loading properties...",
-    "empty": "No properties yet",
-    "empty_hint": "For example, Severity or Environment.",
-    "no_results": "No matching properties",
-    "save_failed": "Couldn't save property",
-    "limit_hint": "{{count}}/{{max}} active properties",
-    "archived_badge": "Archived",
-    "types": {
-      "text": "Text",
-      "number": "Number",
-      "select": "Select",
-      "multi_select": "Multi-select",
-      "date": "Date",
-      "checkbox": "Checkbox",
-      "url": "URL",
-      "actor": "Member",
-      "multi_actor": "Members"
-    },
-    "actions": {
-      "open": "Actions for {{name}}",
-      "edit": "Edit",
-      "archive": "Archive",
-      "unarchive": "Restore"
-    },
-    "editor": {
-      "create_title": "New property",
-      "edit_title": "Edit property",
-      "admin_hint": "Only world owners and admins can manage property definitions.",
-      "icon": "Icon",
-      "choose_icon": "Choose icon",
-      "remove_icon": "Remove icon",
-      "name": "Name",
-      "name_placeholder": "e.g. Severity",
-      "type": "Type",
-      "type_locked_hint": "Type can't be changed after creation.",
-      "description": "Description",
-      "description_placeholder": "What this property means and when to set it",
-      "options": "Options",
-      "option_name_placeholder": "Option name",
-      "add_option": "Add option",
-      "remove_option": "Remove option",
-      "cancel": "Cancel",
-      "save": "Save property",
-      "saving": "Saving..."
-    },
-    "archive_dialog": {
-      "title": "Archive property?",
-      "description": "\"{{name}}\" will be hidden from pickers and filters. Existing values on issues are preserved. You can restore it later.",
-      "cancel": "Cancel",
-      "confirm": "Archive property",
-      "failed": "Couldn't archive property"
-    }
-  },
   "labels": {
     "title": "Labels",
-    "description": "Issue labels and skill labels are separate.",
     "scopes": {
-      "issue": "Issues",
-      "skill": "Skills"
+      "skill": "Skills",
+      "agent": "Agents"
     },
     "search_placeholder": "Filter by name or description...",
     "new_label": "New label",
@@ -755,7 +488,7 @@
   },
   "delete_workspace_dialog": {
     "title": "Delete world",
-    "description": "This cannot be undone. All issues, agents, chats, and run history will be permanently removed.",
+    "description": "This cannot be undone. Agents, chats, creations and run history in this world will be permanently removed.",
     "type_to_confirm_prefix": "To confirm, type",
     "type_to_confirm_suffix": " below.",
     "cancel": "Cancel",

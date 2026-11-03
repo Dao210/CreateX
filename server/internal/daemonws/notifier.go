@@ -25,12 +25,8 @@ func (n *RelayNotifier) NotifyTaskAvailable(runtimeID, taskID string) {
 	n.notifyTask(protocol.EventDaemonTaskAvailable, runtimeID, taskID)
 }
 
-func (n *RelayNotifier) NotifyTaskSupplementAvailable(runtimeID, taskID string) {
-	n.notifyTask(protocol.EventDaemonTaskSupplementAvailable, runtimeID, taskID)
-}
-
 func (n *RelayNotifier) notifyTask(eventType, runtimeID, taskID string) {
-	if runtimeID == "" || (eventType == protocol.EventDaemonTaskSupplementAvailable && taskID == "") {
+	if runtimeID == "" {
 		return
 	}
 	eventID := ulid.Make().String()

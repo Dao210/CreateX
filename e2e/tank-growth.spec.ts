@@ -62,6 +62,5 @@ test("permanent character experience reaches me and the next frozen deployment",
     await page.screenshot({ path: "test-results/tank-growth/garage-grown-tank.png", fullPage: true });
   } finally {
     if (workspace) await api.deleteWorkspace();
-    await api.cleanup();
   }
 });

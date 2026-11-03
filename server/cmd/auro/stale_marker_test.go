@@ -133,5 +133,5 @@ func TestLeftoverMarkerNotReportedUnderRealTaskIdentity(t *testing.T) {
 
 func seedDaemonTaskMarker(t *testing.T) string {
 	t.Helper()
-	return seedMarker(t, issueTaskMarker())
+	return seedMarker(t, `{"managed_by":"auro-daemon-task","agent_id":"agent-1","chat_session_id":"chat-1"}`)
 }

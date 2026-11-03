@@ -45,9 +45,8 @@ test.beforeAll(async () => {
 });
 test.afterAll(async () => {
   for (const policy of baseline) await save(policy.gameId, { scope: policy.scope, defaultVisible: policy.defaultVisible, overrides: policy.overrides });
-  if (outsider) { await outsider.deleteWorkspace();await outsider.cleanup(); }
+  if (outsider) { await outsider.deleteWorkspace(); }
   for (const world of worlds) { admin.setWorkspaceId(world.id);admin.setWorkspaceSlug(world.slug);await admin.deleteWorkspace(); }
-  await admin?.cleanup();
 });
 
 test("global policies, module routes, world inheritance, hidden access and server restrictions", async ({ page, baseURL }, testInfo) => {

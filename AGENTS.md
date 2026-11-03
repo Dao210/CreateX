@@ -1,6 +1,6 @@
 # Repository Instructions
 
-Auro is a task management platform where people and agents collaborate on issues. These instructions apply to all coding agents working in this repository.
+Auro is a world-based platform for personal creations, games, and conversations with agents. These instructions apply to all coding agents working in this repository.
 
 ## Scope and Reading Order
 
@@ -86,6 +86,7 @@ Installed desktop clients may talk to newer backends. Preserve response compatib
 
 ## Database and Migration Rules
 
+- The migration history initializes the current application schema in an empty database. Databases carrying retired migration ledgers require an explicit backup, rebuild, and selective import; never auto-run the retired history. Database fixture tests use disposable databases or schemas.
 - Do not add foreign keys, cascading deletes, or cascading updates. Validate relationships and clean up dependents in application code, using a transaction when the operation must be atomic.
 - Every migration-created index, including indexes on new tables, uses `CREATE [UNIQUE] INDEX CONCURRENTLY`. Each concurrent index build gets its own single-statement migration file; the runner executes files outside an explicit transaction.
 - Conditionally skipped migrations are still recorded in `schema_migrations`. Later DDL touching conditional objects must be idempotent (`IF EXISTS` / `IF NOT EXISTS`); document recovery if the missing object would break runtime behavior.
@@ -94,7 +95,7 @@ Installed desktop clients may talk to newer backends. Preserve response compatib
 
 In `server/internal/handler/`, distinguish UUID sources before using them in writes:
 
-- UUID-or-human-readable resource params: resolve with loaders such as `loadIssueForUser`, `loadSkillForUser`, `loadAgentForUser`, or `requireDaemonRuntimeAccess`, then write using the resolved `entity.ID`.
+- UUID-or-human-readable resource params: resolve with loaders such as `loadSkillForUser`, `loadAgentForUser`, or `requireDaemonRuntimeAccess`, then write using the resolved `entity.ID`.
 - Pure UUID request input: `parseUUIDOrBadRequest(w, s, fieldName)`; return immediately when `ok=false`.
 - Trusted sqlc/test-fixture round-trips: `parseUUID(s)`, which panics on invalid input.
 - Outside handlers: `util.ParseUUID(s)` and check the error.
@@ -131,7 +132,7 @@ Workspace-scoped queries filter by `workspace_id`; membership gates access and `
 - DOM-free `.test.ts` files start with `// @vitest-environment node`; do not use it if it would silently switch the code under test to an SSR path.
 - Views tests must not mock `next/*` or `react-router-dom`. Mock stores with their Zustand callable shape plus `getState`; mock API calls at `@auro/core/api`.
 - E2E setup/teardown uses `TestApiClient`.
-- DB-backed Go tests use `server/internal/testutil` fixtures (`dbfx.Issue`, `dbfx.Task`, `dbfx.Insert`) and `testutil.Call(h, req).Want(status).JSON(&out)`. Keep product assertions and case-specific diagnostics in the test, not fixture helpers.
+- DB-backed Go tests use `server/internal/testutil` fixtures (`dbfx.ChatSession`, `dbfx.Task`, `dbfx.Insert`) and `testutil.Call(h, req).Want(status).JSON(&out)`. Keep product assertions and case-specific diagnostics in the test, not fixture helpers.
 - Default tests must not resolve or execute user-installed agent CLIs; pass test-created fake or missing executable paths. New default agent commands go in `scripts/agent-cli-command-names.txt`.
 - Only run real-agent smoke tests when explicitly authorized. Gate them behind `agentintegration` and check `AURO_RUN_REAL_AGENT_SMOKE=1` before executable lookup/account access. Run the specific test: `(cd server && AURO_RUN_REAL_AGENT_SMOKE=1 go test -tags=agentintegration ./pkg/agent -run '<test-name>' -count=1 -v)`.
 

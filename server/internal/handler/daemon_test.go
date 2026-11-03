@@ -170,7 +170,7 @@ func createDispatchedClaimFixtureTask(t *testing.T, ctx context.Context, agentID
 	var taskID string
 	dbfx.QueryRow(t, `
 		INSERT INTO agent_task_queue (
-			agent_id, runtime_id, issue_id, status, priority, dispatched_at, started_at
+			agent_id, runtime_id, chat_session_id, status, priority, dispatched_at, started_at
 		)
 		VALUES ($1, $2, $3, 'dispatched', 0, now() - ($4::interval), CASE WHEN $5::boolean THEN now() ELSE NULL END)
 		RETURNING id
@@ -208,92 +208,6 @@ func claimTaskByRuntimeForTest(t *testing.T, runtimeID string) (*struct {
 	return resp.Task, w.Body.String()
 }
 
-// claimChatIntroForTest claims the next task for a runtime and returns the
-// claimed task id plus its chat_intro flag (false when the field is absent, as
-// it is omitempty).
-func claimChatIntroForTest(t *testing.T, runtimeID string) (string, bool, string) {
-	t.Helper()
-
-	req := newDaemonTokenRequest("POST", "/api/daemon/runtimes/"+runtimeID+"/tasks/claim", nil,
-		testWorkspaceID, "chat-intro-review")
-	req = withURLParam(req, "runtimeId", runtimeID)
-	w := testutil.Call(t, testHandler.ClaimTaskByRuntime, req).Want(http.StatusOK)
-
-	var resp struct {
-		Task *struct {
-			ID        string `json:"id"`
-			ChatIntro bool   `json:"chat_intro"`
-		} `json:"task"`
-	}
-	w.JSON(&resp)
-	if resp.Task == nil {
-		t.Fatalf("expected a claimable task, got none: %s", w.Body.String())
-	}
-	return resp.Task.ID, resp.Task.ChatIntro, w.Body.String()
-}
-
-// TestClaimTaskByRuntime_ChatIntroGateClearsAfterUserReplies pins the MUL-4259
-// fix: an is_agent_intro session drives the self-introduction prompt only on
-// its first, message-less turn. Once the creator has replied, later turns on
-// the same (still is_agent_intro) session must claim with chat_intro=false so
-// the agent answers instead of repeating its introduction.
-func TestClaimTaskByRuntime_ChatIntroGateClearsAfterUserReplies(t *testing.T) {
-	if testHandler == nil || testPool == nil {
-		t.Skip("database not available")
-	}
-
-	ctx := context.Background()
-	runtimeID := createClaimReclaimRuntime(t, ctx, "Chat intro gate runtime")
-	agentID, _ := createClaimReclaimAgentAndIssue(t, ctx, runtimeID, "Chat intro gate agent")
-	// Allow more than one in-flight task so the second claim isn't blocked by
-	// the first (which stays 'dispatched') on the concurrency limit.
-	dbfx.Exec(t, `UPDATE agent SET max_concurrent_tasks = 5 WHERE id = $1`, agentID)
-
-	sessionID := dbfx.ChatSession(t, agentID, testutil.Cols{
-		"title":          "👋 intro",
-		"runtime_id":     runtimeID,
-		"is_agent_intro": true,
-	})
-
-	seedQueuedChatTask := func() string {
-		taskID := dbfx.Task(t, agentID, testutil.Cols{
-			"runtime_id":      runtimeID,
-			"chat_session_id": sessionID,
-		})
-		return taskID
-	}
-
-	// First turn: no user message yet → the server-driven intro run.
-	introTaskID := seedQueuedChatTask()
-	claimedID, chatIntro, body := claimChatIntroForTest(t, runtimeID)
-	if claimedID != introTaskID {
-		t.Fatalf("claimed task id = %s, want intro task %s: %s", claimedID, introTaskID, body)
-	}
-	if !chatIntro {
-		t.Fatalf("expected chat_intro=true for the message-less intro turn: %s", body)
-	}
-
-	// The intro run finishes. Chat tasks serialize on chat_session_id, so the
-	// next turn only becomes claimable once this one leaves an in-flight state.
-	dbfx.Exec(t, `UPDATE agent_task_queue SET status = 'completed' WHERE id = $1`, introTaskID)
-
-	// The creator replies: persist a user message on the same session.
-	dbfx.Exec(t, `
-		INSERT INTO chat_message (chat_session_id, role, content)
-		VALUES ($1, 'user', 'thanks! can you help me with X?')
-	`, sessionID)
-
-	// Second turn on the same is_agent_intro session must NOT re-introduce.
-	followupTaskID := seedQueuedChatTask()
-	claimedID, chatIntro, body = claimChatIntroForTest(t, runtimeID)
-	if claimedID != followupTaskID {
-		t.Fatalf("claimed task id = %s, want follow-up task %s: %s", claimedID, followupTaskID, body)
-	}
-	if chatIntro {
-		t.Fatalf("expected chat_intro=false once the creator has replied: %s", body)
-	}
-}
-
 func TestClaimTaskByRuntime_ReclaimsStaleDispatchedTask(t *testing.T) {
 	if testHandler == nil || testPool == nil {
 		t.Skip("database not available")
@@ -301,7 +215,7 @@ func TestClaimTaskByRuntime_ReclaimsStaleDispatchedTask(t *testing.T) {
 
 	ctx := context.Background()
 	runtimeID := createClaimReclaimRuntime(t, ctx, "Stale dispatch reclaim runtime")
-	agentID, issueID := createClaimReclaimAgentAndIssue(t, ctx, runtimeID, "Stale dispatch reclaim agent")
+	agentID, issueID := createClaimReclaimAgentAndChat(t, ctx, runtimeID, "Stale dispatch reclaim agent")
 	taskID := createDispatchedClaimFixtureTask(t, ctx, agentID, runtimeID, issueID, "120 seconds", false)
 
 	task, body := claimTaskByRuntimeForTest(t, runtimeID)
@@ -330,7 +244,7 @@ func TestClaimTaskByRuntime_DoesNotReclaimFreshDispatchedTask(t *testing.T) {
 
 	ctx := context.Background()
 	runtimeID := createClaimReclaimRuntime(t, ctx, "Fresh dispatch reclaim runtime")
-	agentID, issueID := createClaimReclaimAgentAndIssue(t, ctx, runtimeID, "Fresh dispatch reclaim agent")
+	agentID, issueID := createClaimReclaimAgentAndChat(t, ctx, runtimeID, "Fresh dispatch reclaim agent")
 	taskID := createDispatchedClaimFixtureTask(t, ctx, agentID, runtimeID, issueID, "75 seconds", false)
 
 	task, body := claimTaskByRuntimeForTest(t, runtimeID)
@@ -356,7 +270,7 @@ func TestClaimTaskByRuntime_DoesNotReclaimActivePrepareLease(t *testing.T) {
 
 	ctx := context.Background()
 	runtimeID := createClaimReclaimRuntime(t, ctx, "Active prepare lease runtime")
-	agentID, issueID := createClaimReclaimAgentAndIssue(t, ctx, runtimeID, "Active prepare lease agent")
+	agentID, issueID := createClaimReclaimAgentAndChat(t, ctx, runtimeID, "Active prepare lease agent")
 	taskID := createDispatchedClaimFixtureTask(t, ctx, agentID, runtimeID, issueID, "240 seconds", false)
 	setTaskPrepareLeaseForTest(t, ctx, taskID, "30 seconds")
 
@@ -383,7 +297,7 @@ func TestClaimTaskByRuntime_ReclaimsExpiredPrepareLease(t *testing.T) {
 
 	ctx := context.Background()
 	runtimeID := createClaimReclaimRuntime(t, ctx, "Expired prepare lease runtime")
-	agentID, issueID := createClaimReclaimAgentAndIssue(t, ctx, runtimeID, "Expired prepare lease agent")
+	agentID, issueID := createClaimReclaimAgentAndChat(t, ctx, runtimeID, "Expired prepare lease agent")
 	taskID := createDispatchedClaimFixtureTask(t, ctx, agentID, runtimeID, issueID, "240 seconds", false)
 	setTaskPrepareLeaseForTest(t, ctx, taskID, "-5 seconds")
 
@@ -414,7 +328,7 @@ func TestExtendTaskPrepareLease(t *testing.T) {
 	ctx := context.Background()
 	runtimeID := createClaimReclaimRuntime(t, ctx, "Extend prepare lease runtime")
 	otherRuntimeID := createClaimReclaimRuntime(t, ctx, "Other prepare lease runtime")
-	agentID, issueID := createClaimReclaimAgentAndIssue(t, ctx, runtimeID, "Extend prepare lease agent")
+	agentID, issueID := createClaimReclaimAgentAndChat(t, ctx, runtimeID, "Extend prepare lease agent")
 	taskID := createDispatchedClaimFixtureTask(t, ctx, agentID, runtimeID, issueID, "120 seconds", false)
 
 	req := newDaemonTokenRequest("POST", "/api/daemon/runtimes/"+otherRuntimeID+"/tasks/"+taskID+"/prepare-lease", nil,
@@ -445,7 +359,7 @@ func TestClaimTaskByRuntime_DoesNotReclaimAlreadyStartedTask(t *testing.T) {
 
 	ctx := context.Background()
 	runtimeID := createClaimReclaimRuntime(t, ctx, "Started dispatch reclaim runtime")
-	agentID, issueID := createClaimReclaimAgentAndIssue(t, ctx, runtimeID, "Started dispatch reclaim agent")
+	agentID, issueID := createClaimReclaimAgentAndChat(t, ctx, runtimeID, "Started dispatch reclaim agent")
 	taskID := createDispatchedClaimFixtureTask(t, ctx, agentID, runtimeID, issueID, "120 seconds", true)
 
 	task, body := claimTaskByRuntimeForTest(t, runtimeID)
@@ -472,7 +386,7 @@ func TestClaimTaskByRuntime_DoesNotReclaimDifferentRuntimeTask(t *testing.T) {
 	ctx := context.Background()
 	claimingRuntimeID := createClaimReclaimRuntime(t, ctx, "Claiming dispatch reclaim runtime")
 	owningRuntimeID := createClaimReclaimRuntime(t, ctx, "Owning dispatch reclaim runtime")
-	agentID, issueID := createClaimReclaimAgentAndIssue(t, ctx, owningRuntimeID, "Different runtime reclaim agent")
+	agentID, issueID := createClaimReclaimAgentAndChat(t, ctx, owningRuntimeID, "Different runtime reclaim agent")
 	taskID := createDispatchedClaimFixtureTask(t, ctx, agentID, owningRuntimeID, issueID, "120 seconds", false)
 
 	task, body := claimTaskByRuntimeForTest(t, claimingRuntimeID)
@@ -498,7 +412,7 @@ func TestClaimTaskByRuntime_SkillBundleRefsAndResolve(t *testing.T) {
 
 	ctx := context.Background()
 	runtimeID := createClaimReclaimRuntime(t, ctx, "Skill refs runtime")
-	agentID, issueID := createClaimReclaimAgentAndIssue(t, ctx, runtimeID, "Skill refs agent")
+	agentID, issueID := createClaimReclaimAgentAndChat(t, ctx, runtimeID, "Skill refs agent")
 
 	skillID := dbfx.Insert(t, "skill", testutil.Cols{
 		"workspace_id": testWorkspaceID,
@@ -517,8 +431,8 @@ func TestClaimTaskByRuntime_SkillBundleRefsAndResolve(t *testing.T) {
 	dbfx.Exec(t, `INSERT INTO agent_skill (agent_id, skill_id) VALUES ($1, $2)`, agentID, skillID)
 
 	taskID := dbfx.Task(t, agentID, testutil.Cols{
-		"runtime_id": runtimeID,
-		"issue_id":   issueID,
+		"runtime_id":      runtimeID,
+		"chat_session_id": issueID,
 	})
 
 	req := newDaemonTokenRequest("POST", "/api/daemon/runtimes/"+runtimeID+"/tasks/claim", nil, testWorkspaceID, "skill-refs-daemon")
@@ -605,7 +519,7 @@ func TestClaimTaskByRuntime_WorkspaceContextEmptyWhenUnset(t *testing.T) {
 	})
 
 	runtimeID := createClaimReclaimRuntime(t, ctx, "Workspace context empty claim runtime")
-	agentID, issueID := createClaimReclaimAgentAndIssue(t, ctx, runtimeID, "Workspace context empty claim agent")
+	agentID, issueID := createClaimReclaimAgentAndChat(t, ctx, runtimeID, "Workspace context empty claim agent")
 	taskID := createDispatchedClaimFixtureTask(t, ctx, agentID, runtimeID, issueID, "120 seconds", false)
 
 	req := newDaemonTokenRequest("POST", "/api/daemon/runtimes/"+runtimeID+"/tasks/claim", nil,
@@ -647,7 +561,7 @@ func TestClaimTaskByRuntime_MissingRuntimeOwnerCancelsAndRejects(t *testing.T) {
 		"visibility":   "private",
 	})
 
-	agentID, issueID := createClaimReclaimAgentAndIssue(t, ctx, runtimeID, "Missing owner claim agent")
+	agentID, issueID := createClaimReclaimAgentAndChat(t, ctx, runtimeID, "Missing owner claim agent")
 	taskID := createDispatchedClaimFixtureTask(t, ctx, agentID, runtimeID, issueID, "120 seconds", false)
 
 	req := newDaemonTokenRequest("POST", "/api/daemon/runtimes/"+runtimeID+"/tasks/claim", nil,
@@ -851,10 +765,9 @@ func TestHandleDaemonWSHeartbeat_AllowsAnyAuthorizedWorkspace(t *testing.T) {
 	ctx := context.Background()
 	slug := "handler-ws-heartbeat-" + uuid.New().String()
 	workspaceID := dbfx.Insert(t, "workspace", testutil.Cols{
-		"name":         "WS Heartbeat Scope",
-		"slug":         slug,
-		"description":  "Temporary workspace for WS heartbeat tests",
-		"issue_prefix": "HWS",
+		"name":        "WS Heartbeat Scope",
+		"slug":        slug,
+		"description": "Temporary workspace for WS heartbeat tests",
 	})
 
 	runtimeID := dbfx.Runtime(t, "WS Heartbeat Runtime", testutil.Cols{
@@ -1037,57 +950,6 @@ func TestListTaskMessagesByUser_InvalidTaskIDReturnsBadRequest(t *testing.T) {
 	if !strings.Contains(w.Body.String(), "task_id") {
 		t.Fatalf("expected task_id validation error, got %s", w.Body.String())
 	}
-}
-
-// setupForeignWorkspaceFixture creates an isolated workspace (not reachable
-// from testUserID) with its own agent, runtime, issue, and queued task.
-// Returns (issueID, taskID). All rows are cleaned up when the test ends.
-func setupForeignWorkspaceFixture(t *testing.T) (string, string) {
-	t.Helper()
-
-	foreignWorkspaceID := dbfx.Insert(t, "workspace", testutil.Cols{
-		"name":         "Foreign Workspace",
-		"slug":         "foreign-idor-tests",
-		"description":  "Cross-tenant IDOR test workspace",
-		"issue_prefix": "FOR",
-	})
-
-	runtimeID := dbfx.Insert(t, "agent_runtime", testutil.Cols{
-		"workspace_id": foreignWorkspaceID,
-		"daemon_id":    nil,
-		"name":         "Foreign Runtime",
-		"runtime_mode": "cloud",
-		"provider":     "foreign_runtime",
-		"status":       "online",
-		"device_info":  "Foreign runtime",
-		"metadata":     testutil.Raw("'{}'::jsonb"),
-		"last_seen_at": testutil.Raw("now()"),
-	})
-
-	agentID := dbfx.Insert(t, "agent", testutil.Cols{
-		"workspace_id":         foreignWorkspaceID,
-		"name":                 "Foreign Agent",
-		"description":          "",
-		"runtime_mode":         "cloud",
-		"runtime_config":       testutil.Raw("'{}'::jsonb"),
-		"runtime_id":           runtimeID,
-		"visibility":           "workspace",
-		"max_concurrent_tasks": 1,
-	})
-
-	issueID := dbfx.Issue(t, "foreign-workspace-issue", testutil.Cols{
-		"workspace_id": foreignWorkspaceID,
-		"priority":     "medium",
-		"creator_id":   agentID,
-		"creator_type": "agent",
-	})
-
-	taskID := dbfx.Task(t, agentID, testutil.Cols{
-		"issue_id":   issueID,
-		"runtime_id": runtimeID,
-	})
-
-	return issueID, taskID
 }
 
 func TestGetDaemonWorkspaceRepos_WithDaemonToken(t *testing.T) {
@@ -1413,7 +1275,14 @@ func TestStartTask_AutopilotRunOnlyTask_ResolvesWorkspace(t *testing.T) {
 		"created_by_type": "member",
 		"created_by_id":   testUserID,
 	})
-	defer testPool.Exec(ctx, `DELETE FROM autopilot WHERE id = $1`, autopilotID)
+	defer testPool.Exec(ctx, `WITH runs AS MATERIALIZED (SELECT id FROM autopilot_run WHERE autopilot_id=$1),
+ removed_deliveries AS (DELETE FROM webhook_delivery WHERE autopilot_id=$1),
+ removed_triggers AS (DELETE FROM autopilot_trigger WHERE autopilot_id=$1),
+ removed_versions AS (DELETE FROM autopilot_rule_version WHERE autopilot_id=$1),
+ removed_collaborators AS (DELETE FROM autopilot_collaborator WHERE autopilot_id=$1),
+ detached_tasks AS (UPDATE agent_task_queue SET autopilot_run_id=NULL WHERE autopilot_run_id IN (SELECT id FROM runs)),
+ removed_runs AS (DELETE FROM autopilot_run WHERE autopilot_id=$1)
+ DELETE FROM autopilot WHERE id=$1`, autopilotID)
 
 	runID := dbfx.Insert(t, "autopilot_run", testutil.Cols{
 		"autopilot_id": autopilotID,
@@ -1421,10 +1290,9 @@ func TestStartTask_AutopilotRunOnlyTask_ResolvesWorkspace(t *testing.T) {
 		"status":       "running",
 	})
 
-	// issue_id is explicitly NULL — the condition that used to trigger 404.
+	// chat_session_id is explicitly NULL — the condition that used to trigger 404.
 	taskID := dbfx.Task(t, agentID, testutil.Cols{
 		"runtime_id":       runtimeID,
-		"issue_id":         nil,
 		"status":           "dispatched",
 		"autopilot_run_id": runID,
 	})
@@ -1445,9 +1313,7 @@ func TestStartTask_AutopilotRunOnlyTask_ResolvesWorkspace(t *testing.T) {
 
 	// Same-workspace daemon token must succeed — this is the bug in #1224.
 	w = httptest.NewRecorder()
-	req = newDaemonTokenRequest("POST", "/api/daemon/tasks/"+taskID+"/start", map[string]any{
-		"capabilities": []string{protocol.DaemonCapabilityTaskSupplementV1},
-	},
+	req = newDaemonTokenRequest("POST", "/api/daemon/tasks/"+taskID+"/start", nil,
 		testWorkspaceID, "legit-daemon")
 	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
 
@@ -1461,77 +1327,7 @@ func TestStartTask_AutopilotRunOnlyTask_ResolvesWorkspace(t *testing.T) {
 	if status != "running" {
 		t.Fatalf("expected task status 'running' after StartTask, got %q", status)
 	}
-	var capabilityRows int
-	dbfx.QueryRow(t, `SELECT count(*) FROM task_supplement_capability WHERE task_id = $1`, taskID).Scan(&capabilityRows)
-	if capabilityRows != 0 {
-		t.Fatalf("run-only autopilot persisted %d supplement capabilities, want 0", capabilityRows)
-	}
-}
 
-// TestClaimTaskByRuntime_TaskWorkspaceMismatch_CancelsAndRejects verifies
-// the defense-in-depth check in ClaimTaskByRuntime: if a task is somehow
-// dispatched to a runtime whose workspace doesn't match the task's
-// resolved workspace (upstream routing / data-integrity bug), the handler
-// must 500 AND cancel the dispatched task so it doesn't sit in
-// 'dispatched' until the 5-minute sweeper — which would also leave the
-// agent stuck reporting 'working' in the UI.
-func TestClaimTaskByRuntime_TaskWorkspaceMismatch_CancelsAndRejects(t *testing.T) {
-	if testHandler == nil {
-		t.Skip("database not available")
-	}
-
-	// Local agent/runtime (belongs to testWorkspace).
-	var localAgentID, localRuntimeID string
-	dbfx.QueryRow(t,
-		`SELECT id, runtime_id FROM agent WHERE workspace_id = $1 LIMIT 1`,
-		testWorkspaceID,
-	).Scan(&localAgentID, &localRuntimeID)
-
-	// Foreign workspace with its own issue — what the misrouted task will
-	// resolve to.
-	foreignWorkspaceID := dbfx.Insert(t, "workspace", testutil.Cols{
-		"name":         "Mismatch Foreign",
-		"slug":         "mismatch-foreign-claim",
-		"description":  "",
-		"issue_prefix": "MFC",
-	})
-
-	foreignIssueID := dbfx.Issue(t, "mismatch-foreign-issue", testutil.Cols{
-		"workspace_id": foreignWorkspaceID,
-		"priority":     "medium",
-		"number":       77001,
-	})
-
-	// Construct the inconsistent task: runtime_id belongs to testWorkspace,
-	// but issue_id is in foreignWorkspace. This is the data shape a routing
-	// bug would produce.
-	taskID := dbfx.Task(t, localAgentID, testutil.Cols{
-		"runtime_id": localRuntimeID,
-		"issue_id":   foreignIssueID,
-		"priority":   2,
-	})
-
-	w := httptest.NewRecorder()
-	req := newDaemonTokenRequest("POST", "/api/daemon/runtimes/"+localRuntimeID+"/claim", nil,
-		testWorkspaceID, "legit-daemon")
-	rctx := chi.NewRouteContext()
-	rctx.URLParams.Add("runtimeId", localRuntimeID)
-	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
-
-	testHandler.ClaimTaskByRuntime(w, req)
-	if w.Code != http.StatusInternalServerError {
-		t.Fatalf("ClaimTaskByRuntime (mismatch): expected 500, got %d: %s", w.Code, w.Body.String())
-	}
-
-	// Task must NOT remain dispatched — it has to be cancelled so the agent
-	// is released immediately rather than stuck until the sweeper fires.
-	var status string
-	dbfx.QueryRow(t,
-		`SELECT status FROM agent_task_queue WHERE id = $1`, taskID,
-	).Scan(&status)
-	if status != "cancelled" {
-		t.Fatalf("ClaimTaskByRuntime (mismatch): expected task status=cancelled, got %q", status)
-	}
 }
 
 func TestClaimResponseAgentIdentityMatches(t *testing.T) {
@@ -1566,7 +1362,7 @@ type claimRuntimeGuardTask struct {
 	QuickCreateDueDate            string          `json:"quick_create_due_date"`
 	ProjectID                     string          `json:"project_id"`
 	ProjectDescription            string          `json:"project_description"`
-	ParentIssueID                 string          `json:"parent_issue_id"`
+	ParentChatSessionID           string          `json:"parent_chat_session_id"`
 	QuickCreateSourceContext      json.RawMessage `json:"quick_create_source_context"`
 }
 
@@ -1764,134 +1560,6 @@ func TestChatSessionRuntimeBackfillRequiresMatchingSessionID(t *testing.T) {
 	}
 }
 
-// TestClaimTask_ManualRetryReusesWorkdir is the MUL-4869 claim-layer contract: a
-// manual retry (rerun_of_task_id set) ALWAYS hands back the source task's
-// workdir, and resumes the session only when the source failure did not poison
-// the conversation AND the source ran on the claiming runtime. The rerun row's
-// force_fresh_session is always true (rollback-safe); the session decision is
-// computed here from the source task, including the legacy 400 error-text guard.
-// Contrast with a plain force_fresh task carrying no rerun lineage, which resumes
-// nothing — covered by TestClaimTask_IssuePriorSessionRuntimeGuard.
-func TestClaimTask_ManualRetryReusesWorkdir(t *testing.T) {
-	if testHandler == nil {
-		t.Skip("database not available")
-	}
-	ctx := context.Background()
-
-	agentID, runtimeID, daemonID := createRuntimeGuardAgent(t, ctx)
-	otherRuntimeID := createRuntimeGuardRuntime(t, ctx, "kimi")
-
-	// insertRerun persists a terminal source task plus a queued rerun that points
-	// at it (rerun_of_task_id) with force_fresh_session=true, mimicking what
-	// RerunIssue writes, then claims and returns the resolved task. Each case uses
-	// a fresh issue so the partial unique index (one pending task per issue+agent)
-	// never trips across cases. The source's runtime, failure_reason, and error
-	// text drive the runtime-match and resume-safety gates.
-	issueNum := 81207
-	insertRerun := func(t *testing.T, sourceRuntimeID, failureReason, errorText, session, workdir string) *claimRuntimeGuardTask {
-		t.Helper()
-		issueNum++
-		issueID := dbfx.Issue(t, "manual-retry-reuse fixture", testutil.Cols{
-			"status": "in_progress",
-			"number": issueNum,
-		})
-		sourceID := dbfx.Task(t, agentID, testutil.Cols{
-			"runtime_id":     sourceRuntimeID,
-			"issue_id":       issueID,
-			"status":         "failed",
-			"failure_reason": failureReason,
-			"error":          errorText,
-			"session_id":     session,
-			"work_dir":       workdir,
-		})
-		// force_fresh_session is always true on a rerun row (rollback-safe); the
-		// new claim handler resumes from the source task regardless.
-		dbfx.Exec(t, `
-			INSERT INTO agent_task_queue (
-				agent_id, runtime_id, issue_id, status, priority,
-				rerun_of_task_id, force_fresh_session
-			)
-			VALUES ($1, $2, $3, 'queued', 0, $4, TRUE)
-		`, agentID, runtimeID, issueID, sourceID)
-		return claimTaskForRuntimeGuard(t, runtimeID, daemonID)
-	}
-
-	t.Run("resume_safe_same_runtime_reuses_both", func(t *testing.T) {
-		task := insertRerun(t, runtimeID, "timeout", "", "safe-session", "/tmp/retry-safe-workdir")
-		if task.PriorWorkDir != "/tmp/retry-safe-workdir" {
-			t.Fatalf("PriorWorkDir = %q, want /tmp/retry-safe-workdir", task.PriorWorkDir)
-		}
-		if task.PriorSessionID != "safe-session" {
-			t.Fatalf("PriorSessionID = %q, want safe-session (transient failure resumes)", task.PriorSessionID)
-		}
-	})
-
-	t.Run("poisoned_reason_same_runtime_reuses_workdir_fresh_session", func(t *testing.T) {
-		task := insertRerun(t, runtimeID, "agent_error.context_overflow", "", "poison-session", "/tmp/retry-poison-workdir")
-		if task.PriorWorkDir != "/tmp/retry-poison-workdir" {
-			t.Fatalf("PriorWorkDir = %q, want /tmp/retry-poison-workdir (workdir reused even when session poisoned)", task.PriorWorkDir)
-		}
-		if task.PriorSessionID != "" {
-			t.Fatalf("PriorSessionID = %q, want empty (poisoned session starts fresh)", task.PriorSessionID)
-		}
-	})
-
-	t.Run("legacy_400_error_text_reuses_workdir_fresh_session", func(t *testing.T) {
-		// failure_reason is a benign generic 'agent_error', but the raw error
-		// carries the Anthropic 400 invalid_request_error marker — the exact
-		// source path must still refuse to resume that session (defense-in-depth
-		// mirrored from GetLastTaskSession).
-		task := insertRerun(t, runtimeID, "agent_error", "API error 400 invalid_request_error: prompt is too long", "legacy400-session", "/tmp/retry-legacy400-workdir")
-		if task.PriorWorkDir != "/tmp/retry-legacy400-workdir" {
-			t.Fatalf("PriorWorkDir = %q, want /tmp/retry-legacy400-workdir", task.PriorWorkDir)
-		}
-		if task.PriorSessionID != "" {
-			t.Fatalf("PriorSessionID = %q, want empty (legacy 400 invalid_request_error must not resume)", task.PriorSessionID)
-		}
-	})
-
-	t.Run("different_runtime_reuses_workdir_drops_session", func(t *testing.T) {
-		task := insertRerun(t, otherRuntimeID, "timeout", "", "cross-session", "/tmp/retry-cross-workdir")
-		if task.PriorWorkDir != "/tmp/retry-cross-workdir" {
-			t.Fatalf("PriorWorkDir = %q, want /tmp/retry-cross-workdir (workdir offered regardless of runtime, best-effort)", task.PriorWorkDir)
-		}
-		if task.PriorSessionID != "" {
-			t.Fatalf("PriorSessionID = %q, want empty (cross-runtime session cannot resolve)", task.PriorSessionID)
-		}
-	})
-
-	t.Run("different_agent_source_starts_fresh", func(t *testing.T) {
-		issueNum++
-		issueID := dbfx.Issue(t, "manual-retry-cross-agent fixture", testutil.Cols{
-			"status": "in_progress",
-			"number": issueNum,
-		})
-		otherAgentID := dbfx.Agent(t, "Rerun Source Other Agent", runtimeID, testutil.Cols{})
-		sourceID := dbfx.Task(t, otherAgentID, testutil.Cols{
-			"runtime_id": runtimeID,
-			"issue_id":   issueID,
-			"status":     "failed",
-			"session_id": "other-agent-session",
-			"work_dir":   "/tmp/other-agent-workdir",
-		})
-		dbfx.Exec(t, `
-			INSERT INTO agent_task_queue (
-				agent_id, runtime_id, issue_id, status, priority,
-				rerun_of_task_id, force_fresh_session
-			)
-			VALUES ($1, $2, $3, 'queued', 0, $4, TRUE)
-		`, agentID, runtimeID, issueID, sourceID)
-
-		task := claimTaskForRuntimeGuard(t, runtimeID, daemonID)
-		if task.PriorWorkDir != "" || task.PriorSessionID != "" {
-			t.Fatalf("cross-agent rerun inherited source pointers: session=%q workdir=%q", task.PriorSessionID, task.PriorWorkDir)
-		}
-		if !task.PriorSessionResumeUnavailable {
-			t.Fatal("cross-agent rerun must disclose that the requested source was not resumable")
-		}
-	})
-}
-
 // createAutoRetryForTest runs the production retry insert against a failed
 // parent, so a claim test exercises the row CreateRetryTask actually writes.
 func createAutoRetryForTest(t *testing.T, ctx context.Context, parentID string) {
@@ -1903,83 +1571,6 @@ func createAutoRetryForTest(t *testing.T, ctx context.Context, parentID string) 
 	t.Cleanup(func() {
 		testPool.Exec(context.Background(), `DELETE FROM agent_task_queue WHERE id = $1`, child.ID)
 	})
-}
-
-// TestClaimTask_AutoRetryFreshSessionReusesParentWorkdir is the MUL-7034
-// claim-layer contract for an automatic retry of a conversation-poisoning
-// failure: a fresh session, the parent's workdir, and a disclosed continuity
-// gap. The retry row comes from the real CreateRetryTask so the query and the
-// claim are pinned together; the workdir reaches the daemon only when both
-// carry it (GH #7998). The workdir is offered only to a daemon whose
-// `auro repo checkout` keeps an existing checkout's work; an older daemon
-// keeps getting a fresh directory, because its checkout would reset the very
-// checkout being kept. Contrast a
-// force_fresh task with no retry lineage, which resumes nothing
-// (TestClaimTask_IssuePriorSessionRuntimeGuard).
-func TestClaimTask_AutoRetryFreshSessionReusesParentWorkdir(t *testing.T) {
-	if testHandler == nil {
-		t.Skip("database not available")
-	}
-
-	for _, tc := range []struct {
-		name         string
-		capabilities string
-		wantWorkDir  string
-	}{
-		{
-			name:         "daemon_checkout_keeps_work",
-			capabilities: protocol.DaemonCapabilityCheckoutKeepsWorkV1,
-			wantWorkDir:  "/tmp/codex-stuck-workdir",
-		},
-		{
-			name:         "older_daemon_gets_fresh_directory",
-			capabilities: protocol.DaemonCapabilityCoalescedCommentsV1,
-			wantWorkDir:  "",
-		},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			ctx := context.Background()
-			agentID, runtimeID, daemonID := createRuntimeGuardAgent(t, ctx)
-			issueID := dbfx.Issue(t, "auto-retry fresh-session fixture", testutil.Cols{"status": "in_progress"})
-
-			// An earlier healthy turn is what the (agent, issue) resume lookup
-			// returns, since it skips the poisoned parent. Getting its session or
-			// workdir back would mean the retry fell through to that lookup.
-			dbfx.Task(t, agentID, testutil.Cols{
-				"runtime_id":   runtimeID,
-				"issue_id":     issueID,
-				"status":       "completed",
-				"started_at":   testutil.Raw("now() - interval '30 minutes'"),
-				"completed_at": testutil.Raw("now() - interval '25 minutes'"),
-				"session_id":   "earlier-healthy-session",
-				"work_dir":     "/tmp/earlier-healthy-workdir",
-			})
-			parentID := dbfx.Task(t, agentID, testutil.Cols{
-				"runtime_id":     runtimeID,
-				"issue_id":       issueID,
-				"status":         "failed",
-				"failure_reason": "codex_semantic_inactivity",
-				"started_at":     testutil.Raw("now() - interval '20 minutes'"),
-				"completed_at":   testutil.Raw("now() - interval '1 minute'"),
-				"session_id":     "codex-stuck-session",
-				"work_dir":       "/tmp/codex-stuck-workdir",
-				"attempt":        1,
-				"max_attempts":   2,
-			})
-			createAutoRetryForTest(t, ctx, parentID)
-
-			task := claimTaskForRuntimeGuardWithCapabilities(t, runtimeID, daemonID, tc.capabilities)
-			if task.PriorWorkDir != tc.wantWorkDir {
-				t.Fatalf("PriorWorkDir = %q, want %q", task.PriorWorkDir, tc.wantWorkDir)
-			}
-			if task.PriorSessionID != "" {
-				t.Fatalf("PriorSessionID = %q, want empty (the poisoned session must not resume)", task.PriorSessionID)
-			}
-			if !task.PriorSessionResumeUnavailable {
-				t.Fatal("auto-retry must disclose that the failed attempt's context did not come back")
-			}
-		})
-	}
 }
 
 // TestClaimTask_ChatAutoRetryFreshSessionReusesParentWorkdir is the chat half
@@ -2430,7 +2021,14 @@ func TestGetAutopilotRunGCCheck(t *testing.T) {
 		"created_by_type": "member",
 		"created_by_id":   testUserID,
 	})
-	defer testPool.Exec(ctx, `DELETE FROM autopilot WHERE id = $1`, autopilotID)
+	defer testPool.Exec(ctx, `WITH runs AS MATERIALIZED (SELECT id FROM autopilot_run WHERE autopilot_id=$1),
+ removed_deliveries AS (DELETE FROM webhook_delivery WHERE autopilot_id=$1),
+ removed_triggers AS (DELETE FROM autopilot_trigger WHERE autopilot_id=$1),
+ removed_versions AS (DELETE FROM autopilot_rule_version WHERE autopilot_id=$1),
+ removed_collaborators AS (DELETE FROM autopilot_collaborator WHERE autopilot_id=$1),
+ detached_tasks AS (UPDATE agent_task_queue SET autopilot_run_id=NULL WHERE autopilot_run_id IN (SELECT id FROM runs)),
+ removed_runs AS (DELETE FROM autopilot_run WHERE autopilot_id=$1)
+ DELETE FROM autopilot WHERE id=$1`, autopilotID)
 
 	runID := dbfx.Insert(t, "autopilot_run", testutil.Cols{
 		"autopilot_id": autopilotID,
@@ -2477,20 +2075,13 @@ func TestGetTaskGCCheck(t *testing.T) {
 		SELECT a.id, a.runtime_id FROM agent a WHERE a.workspace_id = $1 LIMIT 1
 	`, testWorkspaceID).Scan(&agentID, &runtimeID)
 
-	// Quick-create-shaped task: no issue_id, no chat_session_id, no run id.
-	// context.type is set so ResolveTaskWorkspaceID can recover workspace.
-	quickContext, _ := json.Marshal(map[string]any{
-		"type":         "quick_create",
-		"prompt":       "fixture",
-		"requester_id": testUserID,
-		"workspace_id": testWorkspaceID,
-	})
+	chatID := dbfx.ChatSession(t, agentID)
 
 	taskID := dbfx.Task(t, agentID, testutil.Cols{
-		"runtime_id":   runtimeID,
-		"status":       "completed",
-		"context":      quickContext,
-		"completed_at": testutil.Raw("NOW()"),
+		"runtime_id":      runtimeID,
+		"status":          "completed",
+		"chat_session_id": chatID,
+		"completed_at":    testutil.Raw("NOW()"),
 	})
 	defer testPool.Exec(ctx, `DELETE FROM agent_task_queue WHERE id = $1`, taskID)
 
@@ -2717,10 +2308,9 @@ func TestMembershipCache_InvalidatedOnDeleteWorkspace(t *testing.T) {
 	const slug = "membership-cache-delete-ws"
 	_, _ = testPool.Exec(ctx, `DELETE FROM workspace WHERE slug = $1`, slug)
 	wsID := dbfx.Insert(t, "workspace", testutil.Cols{
-		"name":         "Membership Cache Delete WS",
-		"slug":         slug,
-		"description":  "DeleteWorkspace cache invalidation test",
-		"issue_prefix": "MCD",
+		"name":        "Membership Cache Delete WS",
+		"slug":        slug,
+		"description": "DeleteWorkspace cache invalidation test",
 	})
 
 	// testUser must be an owner of the isolated workspace to call
@@ -2776,381 +2366,6 @@ func claimCommentTask(t *testing.T, runtimeID, daemonID string) claimCommentTask
 	return resp
 }
 
-// TestClaimTaskByRuntime_CommentTaskPopulatesNewCommentCount
-// verifies the claim response carries new_comment_count + new_comments_since for
-// a comment task when the agent ran before: the count is ISSUE-WIDE (covers
-// every thread, not just the triggering one), excludes the injected trigger
-// comment, excludes the agent's own comments, and the since anchor is the prior
-// run's started_at.
-func TestClaimTaskByRuntime_CommentTaskPopulatesNewCommentCount(t *testing.T) {
-	if testHandler == nil || testPool == nil {
-		t.Skip("database not available")
-	}
-	ctx := context.Background()
-	runtimeID := createClaimReclaimRuntime(t, ctx, "Comment newcount runtime")
-	agentID, issueID := createClaimReclaimAgentAndIssue(t, ctx, runtimeID, "Comment newcount agent")
-
-	// A prior run establishes the "since" anchor (its started_at, in the past).
-	// It must be RESUMABLE — the delta is measured from the run whose session
-	// the claim hands back, so a prior run with no session is a cold start and
-	// reports no delta at all (MUL-7344).
-	dbfx.Task(t, agentID, testutil.Cols{
-		"runtime_id":   runtimeID,
-		"issue_id":     issueID,
-		"status":       "completed",
-		"session_id":   "newcount-prior-session",
-		"started_at":   testutil.Raw("now() - interval '1 hour'"),
-		"completed_at": testutil.Raw("now() - interval '50 minutes'"),
-	})
-
-	threadRootID := dbfx.Comment(t, issueID, "same-thread context")
-
-	dbfx.Comment(t, issueID, "unrelated thread context")
-
-	dbfx.Comment(t, issueID, "agent self reply", testutil.Cols{
-		"author_type": "agent",
-		"author_id":   agentID,
-		"parent_id":   threadRootID,
-	})
-
-	// The trigger comment (member-authored, created now) lands after the anchor
-	// but is injected into the prompt, so it should not be counted.
-	_, triggerID := createCommentTriggeredClaimTask(t, ctx, agentID, runtimeID, issueID, &threadRootID)
-
-	resp := claimCommentTask(t, runtimeID, "comment-newcount-claim")
-	if resp.Task.TriggerCommentID != triggerID {
-		t.Fatalf("trigger_comment_id = %s, want %s", resp.Task.TriggerCommentID, triggerID)
-	}
-	if resp.Task.NewCommentsSince == "" {
-		t.Errorf("new_comments_since must be set when a prior run exists, got empty")
-	}
-	// Issue-wide: the same-thread context comment AND the unrelated-thread root
-	// both count; only the agent's own reply and the injected trigger are excluded.
-	if resp.Task.NewCommentCount != 2 {
-		t.Errorf("new_comment_count = %d, want 2 (issue-wide: same-thread + unrelated thread)", resp.Task.NewCommentCount)
-	}
-	if !resp.Task.DeltaKnown {
-		t.Errorf("new_comments_delta_known must be true when the delta was computed")
-	}
-}
-
-// TestClaimTaskByRuntime_CommentTaskMarksComputedZeroDelta covers the state the
-// count fields cannot express on their own.
-//
-// A prior run exists and nothing was said on the issue since it started, so the
-// delta is a real, server-checked zero — but the response carries the same
-// new_comment_count: 0 as a failed anchor read, a failed count query, a cold
-// start, and an old server that never sends these fields. Only the checked zero
-// answers "has anything else been said here", and that is the only one allowed
-// to waive the daemon's mandatory comment scan, so the claim has to say which
-// zero this is (MUL-6984).
-func TestClaimTaskByRuntime_CommentTaskMarksComputedZeroDelta(t *testing.T) {
-	if testHandler == nil || testPool == nil {
-		t.Skip("database not available")
-	}
-	ctx := context.Background()
-	runtimeID := createClaimReclaimRuntime(t, ctx, "Zero delta runtime")
-	agentID, issueID := createClaimReclaimAgentAndIssue(t, ctx, runtimeID, "Zero delta agent")
-
-	// A prior RESUMABLE run supplies the anchor, so the count query runs and
-	// returns 0. Without a session there would be nothing to resume, hence no
-	// delta to report (MUL-7344).
-	dbfx.Task(t, agentID, testutil.Cols{
-		"runtime_id":   runtimeID,
-		"issue_id":     issueID,
-		"status":       "completed",
-		"session_id":   "zero-delta-prior-session",
-		"started_at":   testutil.Raw("now() - interval '1 hour'"),
-		"completed_at": testutil.Raw("now() - interval '50 minutes'"),
-	})
-
-	// Only the trigger, which is injected into the prompt and never counted.
-	_, triggerID := createCommentTriggeredClaimTask(t, ctx, agentID, runtimeID, issueID, nil)
-
-	resp := claimCommentTask(t, runtimeID, "zero-delta-claim")
-	if resp.Task.TriggerCommentID != triggerID {
-		t.Fatalf("trigger_comment_id = %s, want %s", resp.Task.TriggerCommentID, triggerID)
-	}
-	if resp.Task.NewCommentCount != 0 {
-		t.Fatalf("new_comment_count = %d, want 0 for this fixture", resp.Task.NewCommentCount)
-	}
-	if !resp.Task.DeltaKnown {
-		t.Errorf("new_comments_delta_known must be true for a computed zero — without it the daemon cannot tell this from a failed read and must re-scan")
-	}
-	// The count fields stay suppressed at zero: there is no delta hint to render
-	// from a zero, and the anchor would only invite a read that returns nothing.
-	if resp.Task.NewCommentsSince != "" {
-		t.Errorf("new_comments_since = %q, want empty when the count is zero", resp.Task.NewCommentsSince)
-	}
-}
-
-// TestClaimTaskByRuntime_CommentTaskPopulatesInitiator verifies the common
-// member-comment path: the trigger author and authorization human are the same
-// member. The claim uses the originator for the existing initiator wire fields.
-func TestClaimTaskByRuntime_CommentTaskPopulatesInitiator(t *testing.T) {
-	if testHandler == nil || testPool == nil {
-		t.Skip("database not available")
-	}
-	ctx := context.Background()
-	runtimeID := createClaimReclaimRuntime(t, ctx, "Comment initiator runtime")
-	agentID, issueID := createClaimReclaimAgentAndIssue(t, ctx, runtimeID, "Comment initiator agent")
-	taskID, _ := createCommentTriggeredClaimTask(t, ctx, agentID, runtimeID, issueID, nil)
-	dbfx.Exec(t, `UPDATE agent_task_queue SET originator_user_id = $2, accountable_user_id = $2, originator_source = 'direct_human' WHERE id = $1`, taskID, testUserID)
-
-	req := newDaemonTokenRequest("POST", "/api/daemon/runtimes/"+runtimeID+"/tasks/claim", nil, testWorkspaceID, "comment-initiator-claim")
-	req = withURLParam(req, "runtimeId", runtimeID)
-	w := testutil.Call(t, testHandler.ClaimTaskByRuntime, req).Want(http.StatusOK)
-	var resp struct {
-		Task *struct {
-			ID             string `json:"id"`
-			InitiatorType  string `json:"initiator_type"`
-			InitiatorID    string `json:"initiator_id"`
-			InitiatorName  string `json:"initiator_name"`
-			InitiatorEmail string `json:"initiator_email"`
-		} `json:"task"`
-	}
-	w.JSON(&resp)
-	if resp.Task == nil || resp.Task.ID != taskID {
-		t.Fatalf("expected claimed task %s, got %s", taskID, w.Body.String())
-	}
-	if resp.Task.InitiatorType != "member" {
-		t.Errorf("initiator_type = %q, want %q", resp.Task.InitiatorType, "member")
-	}
-	if resp.Task.InitiatorID != testUserID {
-		t.Errorf("initiator_id = %q, want %q", resp.Task.InitiatorID, testUserID)
-	}
-	if resp.Task.InitiatorName != handlerTestName {
-		t.Errorf("initiator_name = %q, want %q", resp.Task.InitiatorName, handlerTestName)
-	}
-	if resp.Task.InitiatorEmail != handlerTestEmail {
-		t.Errorf("initiator_email = %q, want %q", resp.Task.InitiatorEmail, handlerTestEmail)
-	}
-}
-
-// Assign-triggered runs have no comment author. The claim must still identify
-// the human whose authority the task uses through the existing flat fields.
-func TestClaimTaskByRuntime_AssignmentHydratesOriginator(t *testing.T) {
-	if testHandler == nil || testPool == nil {
-		t.Skip("database not available")
-	}
-	ctx := context.Background()
-	runtimeID := createClaimReclaimRuntime(t, ctx, "Assignment originator runtime")
-	agentID, issueID := createClaimReclaimAgentAndIssue(t, ctx, runtimeID, "Assignment originator agent")
-	taskID := dbfx.Task(t, agentID, testutil.Cols{
-		"runtime_id":          runtimeID,
-		"issue_id":            issueID,
-		"originator_source":   "direct_human",
-		"originator_user_id":  testUserID,
-		"accountable_user_id": testUserID,
-	})
-
-	req := newDaemonTokenRequest("POST", "/api/daemon/runtimes/"+runtimeID+"/tasks/claim", nil, testWorkspaceID, "assignment-originator-claim")
-	req = withURLParam(req, "runtimeId", runtimeID)
-	var resp struct {
-		Task *AgentTaskResponse `json:"task"`
-	}
-	testutil.Call(t, testHandler.ClaimTaskByRuntime, req).Want(http.StatusOK).JSON(&resp)
-	if resp.Task == nil || resp.Task.ID != taskID {
-		t.Fatalf("expected claimed task %s, got %+v", taskID, resp.Task)
-	}
-	if resp.Task.InitiatorType != "member" || resp.Task.InitiatorID != testUserID ||
-		resp.Task.InitiatorName != handlerTestName || resp.Task.InitiatorEmail != handlerTestEmail {
-		t.Fatalf("on-behalf-of = {%q %q %q %q}, want originator {%q %q %q}",
-			resp.Task.InitiatorType, resp.Task.InitiatorID, resp.Task.InitiatorName, resp.Task.InitiatorEmail,
-			testUserID, handlerTestName, handlerTestEmail)
-	}
-}
-
-// TestClaimTaskByRuntime_DelegatedRunHydratesOriginator covers GH-8674: the
-// agent-authored trigger remains in trigger_author_*, while the existing
-// initiator wire fields carry the human whose authority the run uses.
-func TestClaimTaskByRuntime_DelegatedRunHydratesOriginator(t *testing.T) {
-	if testHandler == nil || testPool == nil {
-		t.Skip("database not available")
-	}
-	ctx := context.Background()
-	targetRuntimeID := createClaimReclaimRuntime(t, ctx, "Delegated originator target runtime")
-	targetAgentID, issueID := createClaimReclaimAgentAndIssue(t, ctx, targetRuntimeID, "Delegated originator target")
-	sourceRuntimeID := createClaimReclaimRuntime(t, ctx, "Delegated originator source runtime")
-	sourceAgentID := dbfx.Agent(t, "Delegating agent", sourceRuntimeID)
-	sourceTaskID := dbfx.Task(t, sourceAgentID, testutil.Cols{
-		"runtime_id":          sourceRuntimeID,
-		"issue_id":            issueID,
-		"status":              "completed",
-		"originator_source":   "direct_human",
-		"originator_user_id":  testUserID,
-		"accountable_user_id": testUserID,
-	})
-	triggerID := dbfx.Comment(t, issueID, "Please take over this investigation", testutil.Cols{
-		"author_type":    "agent",
-		"author_id":      sourceAgentID,
-		"source_task_id": sourceTaskID,
-	})
-	taskID := dbfx.Task(t, targetAgentID, testutil.Cols{
-		"runtime_id":             targetRuntimeID,
-		"issue_id":               issueID,
-		"trigger_comment_id":     triggerID,
-		"originator_source":      "delegation",
-		"originator_user_id":     testUserID,
-		"accountable_user_id":    testUserID,
-		"delegated_from_task_id": sourceTaskID,
-	})
-
-	req := newDaemonTokenRequest("POST", "/api/daemon/runtimes/"+targetRuntimeID+"/tasks/claim", nil, testWorkspaceID, "delegated-originator-claim")
-	req = withURLParam(req, "runtimeId", targetRuntimeID)
-	var resp struct {
-		Task *AgentTaskResponse `json:"task"`
-	}
-	testutil.Call(t, testHandler.ClaimTaskByRuntime, req).Want(http.StatusOK).JSON(&resp)
-	if resp.Task == nil || resp.Task.ID != taskID {
-		t.Fatalf("expected claimed task %s, got %+v", taskID, resp.Task)
-	}
-	if resp.Task.TriggerAuthorType != "agent" || resp.Task.TriggerAuthorName != "Delegating agent" {
-		t.Fatalf("trigger author = {%q %q}, want delegating agent", resp.Task.TriggerAuthorType, resp.Task.TriggerAuthorName)
-	}
-	if resp.Task.InitiatorType != "member" || resp.Task.InitiatorID != testUserID ||
-		resp.Task.InitiatorName != handlerTestName || resp.Task.InitiatorEmail != handlerTestEmail {
-		t.Fatalf("on-behalf-of = {%q %q %q %q}, want originator {%q %q %q}",
-			resp.Task.InitiatorType, resp.Task.InitiatorID, resp.Task.InitiatorName, resp.Task.InitiatorEmail,
-			testUserID, handlerTestName, handlerTestEmail)
-	}
-	if resp.Task.Attribution == nil || resp.Task.Attribution.Originator == nil {
-		t.Fatalf("delegated task lost originator attribution: %+v", resp.Task.Attribution)
-	}
-	if got := resp.Task.Attribution.Originator; got.ID != testUserID || got.Name != handlerTestName || got.Email != handlerTestEmail {
-		t.Fatalf("originator = {%q %q %q}, want {%q %q %q}",
-			got.ID, got.Name, got.Email, testUserID, handlerTestName, handlerTestEmail)
-	}
-}
-
-// A retained trigger comment can name someone other than the member who
-// manually reran the task. The claim identity must follow the latter.
-func TestClaimTaskByRuntime_CommentAuthorDiffersFromOriginator(t *testing.T) {
-	if testHandler == nil || testPool == nil {
-		t.Skip("database not available")
-	}
-	ctx := context.Background()
-	runtimeID := createClaimReclaimRuntime(t, ctx, "Rerun originator runtime")
-	agentID, issueID := createClaimReclaimAgentAndIssue(t, ctx, runtimeID, "Rerun originator agent")
-	commentAuthorID, _ := createEphemeralMember(t, testWorkspaceID, "rerun-original-commenter", "member")
-	commentID := dbfx.Comment(t, issueID, "Original request", testutil.Cols{
-		"author_type": "member",
-		"author_id":   commentAuthorID,
-	})
-	taskID := dbfx.Task(t, agentID, testutil.Cols{
-		"runtime_id":          runtimeID,
-		"issue_id":            issueID,
-		"trigger_comment_id":  commentID,
-		"originator_source":   "direct_human",
-		"originator_user_id":  testUserID,
-		"accountable_user_id": testUserID,
-	})
-
-	req := newDaemonTokenRequest("POST", "/api/daemon/runtimes/"+runtimeID+"/tasks/claim", nil, testWorkspaceID, "rerun-originator-claim")
-	req = withURLParam(req, "runtimeId", runtimeID)
-	var resp struct {
-		Task *AgentTaskResponse `json:"task"`
-	}
-	testutil.Call(t, testHandler.ClaimTaskByRuntime, req).Want(http.StatusOK).JSON(&resp)
-	if resp.Task == nil || resp.Task.ID != taskID {
-		t.Fatalf("expected claimed task %s, got %+v", taskID, resp.Task)
-	}
-	if resp.Task.TriggerAuthorType != "member" || resp.Task.TriggerAuthorName != "Membership Cache Test rerun-original-commenter" {
-		t.Fatalf("trigger author = {%q %q}, want original commenter", resp.Task.TriggerAuthorType, resp.Task.TriggerAuthorName)
-	}
-	if resp.Task.InitiatorType != "member" || resp.Task.InitiatorID != testUserID ||
-		resp.Task.InitiatorName != handlerTestName || resp.Task.InitiatorEmail != handlerTestEmail {
-		t.Fatalf("on-behalf-of = {%q %q %q %q}, want rerunning member {%q %q %q}",
-			resp.Task.InitiatorType, resp.Task.InitiatorID, resp.Task.InitiatorName, resp.Task.InitiatorEmail,
-			testUserID, handlerTestName, handlerTestEmail)
-	}
-}
-
-func TestClaimTaskByRuntime_CommentWithoutOriginatorOmitsOnBehalfOf(t *testing.T) {
-	if testHandler == nil || testPool == nil {
-		t.Skip("database not available")
-	}
-	ctx := context.Background()
-	runtimeID := createClaimReclaimRuntime(t, ctx, "Unattributed comment runtime")
-	agentID, issueID := createClaimReclaimAgentAndIssue(t, ctx, runtimeID, "Unattributed comment agent")
-	taskID, _ := createCommentTriggeredClaimTask(t, ctx, agentID, runtimeID, issueID, nil)
-
-	req := newDaemonTokenRequest("POST", "/api/daemon/runtimes/"+runtimeID+"/tasks/claim", nil, testWorkspaceID, "unattributed-comment-claim")
-	req = withURLParam(req, "runtimeId", runtimeID)
-	var resp struct {
-		Task *AgentTaskResponse `json:"task"`
-	}
-	testutil.Call(t, testHandler.ClaimTaskByRuntime, req).Want(http.StatusOK).JSON(&resp)
-	if resp.Task == nil || resp.Task.ID != taskID {
-		t.Fatalf("expected claimed task %s, got %+v", taskID, resp.Task)
-	}
-	if resp.Task.TriggerAuthorType != "member" || resp.Task.TriggerAuthorName != handlerTestName {
-		t.Fatalf("trigger author lost: {%q %q}", resp.Task.TriggerAuthorType, resp.Task.TriggerAuthorName)
-	}
-	if resp.Task.InitiatorType != "" || resp.Task.InitiatorID != "" || resp.Task.InitiatorName != "" || resp.Task.InitiatorEmail != "" {
-		t.Fatalf("unattributed run invented on-behalf-of identity: %+v", resp.Task)
-	}
-}
-
-func TestClaimTaskByRuntime_CommentTaskOmitsDeltaWhenOnlyTriggerIsNew(t *testing.T) {
-	if testHandler == nil || testPool == nil {
-		t.Skip("database not available")
-	}
-	ctx := context.Background()
-	runtimeID := createClaimReclaimRuntime(t, ctx, "Comment trigger-only runtime")
-	agentID, issueID := createClaimReclaimAgentAndIssue(t, ctx, runtimeID, "Comment trigger-only agent")
-
-	dbfx.Task(t, agentID, testutil.Cols{
-		"runtime_id":   runtimeID,
-		"issue_id":     issueID,
-		"status":       "completed",
-		"started_at":   testutil.Raw("now() - interval '1 hour'"),
-		"completed_at": testutil.Raw("now() - interval '50 minutes'"),
-	})
-
-	_, triggerID := createCommentTriggeredClaimTask(t, ctx, agentID, runtimeID, issueID, nil)
-
-	resp := claimCommentTask(t, runtimeID, "comment-trigger-only-claim")
-	if resp.Task.TriggerCommentID != triggerID {
-		t.Fatalf("trigger_comment_id = %s, want %s", resp.Task.TriggerCommentID, triggerID)
-	}
-	if resp.Task.NewCommentCount != 0 {
-		t.Errorf("new_comment_count = %d, want 0 when only the injected trigger is new", resp.Task.NewCommentCount)
-	}
-	if resp.Task.NewCommentsSince != "" {
-		t.Errorf("new_comments_since = %q, want empty when only the injected trigger is new", resp.Task.NewCommentsSince)
-	}
-}
-
-// TestClaimTaskByRuntime_CommentResumeDefaultOn verifies comment-triggered tasks
-// resume the prior session by default (no env flag), as long as the prior
-// session ran on the same runtime.
-func TestClaimTaskByRuntime_CommentResumeDefaultOn(t *testing.T) {
-	if testHandler == nil || testPool == nil {
-		t.Skip("database not available")
-	}
-	ctx := context.Background()
-	runtimeID := createClaimReclaimRuntime(t, ctx, "Comment resume runtime")
-	agentID, issueID := createClaimReclaimAgentAndIssue(t, ctx, runtimeID, "Comment resume agent")
-
-	// A prior completed task on the same (agent, issue, runtime) with a session.
-	const priorSession = "sess-prior-123"
-	dbfx.Task(t, agentID, testutil.Cols{
-		"runtime_id":   runtimeID,
-		"issue_id":     issueID,
-		"status":       "completed",
-		"session_id":   priorSession,
-		"completed_at": testutil.Raw("now()"),
-	})
-
-	createCommentTriggeredClaimTask(t, ctx, agentID, runtimeID, issueID, nil)
-
-	resp := claimCommentTask(t, runtimeID, "comment-resume-default")
-	if resp.Task.PriorSessionID != priorSession {
-		t.Errorf("prior_session_id = %q, want %q (comment resume is default-on)", resp.Task.PriorSessionID, priorSession)
-	}
-}
-
 // TestAckTaskCancelled verifies the cancel-ack endpoint settles a deferred
 // chat finalization (marker claimed, Stopped. row written for a transcript
 // that filled in late) and keeps the anti-enumeration shape of
@@ -3175,7 +2390,6 @@ func TestAckTaskCancelled(t *testing.T) {
 	// transcript row that landed after the cancel (the daemon's late flush).
 	taskID := dbfx.Task(t, agentID, testutil.Cols{
 		"runtime_id":                runtimeID,
-		"issue_id":                  nil,
 		"chat_session_id":           chatSessionID,
 		"status":                    "cancelled",
 		"started_at":                testutil.Raw("now()"),
@@ -3257,4 +2471,10 @@ func TestDaemonRegister_ProfileUsesStoredRuntimeIdentity(t *testing.T) {
 	if provider != "omp" {
 		t.Fatalf("provider = %q, want stored omp identity", provider)
 	}
+}
+
+func createClaimReclaimAgentAndChat(t *testing.T, ctx context.Context, runtimeID, name string) (string, string) {
+	t.Helper()
+	agentID := dbfx.Agent(t, name, runtimeID)
+	return agentID, dbfx.ChatSession(t, agentID, testutil.Cols{"title": name + " chat"})
 }

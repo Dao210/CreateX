@@ -10,19 +10,19 @@ import (
 func TestBuildInboxMarkdown_TitleBodyLink(t *testing.T) {
 	t.Setenv("WECOM_APP_URL", "https://example.com")
 	item := map[string]any{
-		"type":     "status_changed",
-		"title":    "登录页 500 错误",
-		"body":     "from: todo\nto: in_review",
-		"issue_id": "9194c058-e8a4-4c15-9c65-86d1784ba715",
+		"type":  "creation_ready",
+		"title": "登录页 500 错误",
+		"body":  "from: todo\nto: in_review",
+		"id":    "9194c058-e8a4-4c15-9c65-86d1784ba715",
 	}
 	got := buildInboxMarkdown(item, "ws-uuid", "acme", copyFor(DefaultLocale))
-	if !strings.Contains(got, "**[状态变更] 登录页 500 错误**") {
+	if !strings.Contains(got, "**[创作完成] 登录页 500 错误**") {
 		t.Fatalf("missing typed title header: %q", got)
 	}
 	if !strings.Contains(got, "from: todo\nto: in_review") {
 		t.Fatalf("missing body: %q", got)
 	}
-	if !strings.Contains(got, "[查看详情](https://example.com/acme/inbox?issue=9194c058-e8a4-4c15-9c65-86d1784ba715)") {
+	if !strings.Contains(got, "[查看详情](https://example.com/acme/inbox?item=9194c058-e8a4-4c15-9c65-86d1784ba715)") {
 		t.Fatalf("missing detail link: %q", got)
 	}
 }
@@ -38,9 +38,9 @@ func TestBuildInboxMarkdown_UnknownTypeFallsBackToDefault(t *testing.T) {
 
 func TestBuildInboxMarkdown_FallsBackToWorkspaceUUIDWhenSlugMissing(t *testing.T) {
 	t.Setenv("WECOM_APP_URL", "https://example.com")
-	item := map[string]any{"type": "new_comment", "title": "t", "issue_id": "iid"}
+	item := map[string]any{"type": "creation_ready", "title": "t", "id": "iid"}
 	got := buildInboxMarkdown(item, "ws-uuid", "", copyFor(DefaultLocale))
-	if !strings.Contains(got, "https://example.com/ws-uuid/inbox?issue=iid") {
+	if !strings.Contains(got, "https://example.com/ws-uuid/inbox?item=iid") {
 		t.Fatalf("expected workspace uuid path segment, got %q", got)
 	}
 }
@@ -53,7 +53,7 @@ func TestBuildInboxMarkdown_NoAppURLDropsLink(t *testing.T) {
 		}
 		os.Unsetenv(k)
 	}
-	item := map[string]any{"type": "new_comment", "title": "t"}
+	item := map[string]any{"type": "creation_ready", "title": "t"}
 	got := buildInboxMarkdown(item, "ws-uuid", "acme", copyFor(DefaultLocale))
 	if strings.Contains(got, "查看详情") {
 		t.Fatalf("link section must be omitted when no app url is configured: %q", got)
@@ -68,7 +68,7 @@ func TestBuildInboxMarkdown_NonHTTPSAppURLIsRejected(t *testing.T) {
 		os.Unsetenv(k)
 	}
 	t.Setenv("WECOM_APP_URL", "http://insecure.example.com")
-	item := map[string]any{"type": "new_comment", "title": "t"}
+	item := map[string]any{"type": "creation_ready", "title": "t"}
 	got := buildInboxMarkdown(item, "ws-uuid", "acme", copyFor(DefaultLocale))
 	if strings.Contains(got, "insecure.example.com") {
 		t.Fatalf("http:// override must be dropped, got %q", got)
@@ -78,12 +78,12 @@ func TestBuildInboxMarkdown_NonHTTPSAppURLIsRejected(t *testing.T) {
 func TestBuildInboxMarkdown_TruncatesLongBody(t *testing.T) {
 	t.Setenv("WECOM_APP_URL", "https://example.com")
 	body := strings.Repeat("我", 5000) // 5000 runes, exceeds 4000 cap
-	item := map[string]any{"type": "new_comment", "title": "hi", "body": body, "issue_id": "iid"}
+	item := map[string]any{"type": "creation_ready", "title": "hi", "body": body, "id": "iid"}
 	got := buildInboxMarkdown(item, "ws-uuid", "acme", copyFor(DefaultLocale))
 	if !strings.Contains(got, "...") {
 		t.Fatalf("expected truncation marker, got tail %q", got[len(got)-50:])
 	}
-	if !strings.HasSuffix(got, "acme/inbox?issue=iid)") {
+	if !strings.HasSuffix(got, "acme/inbox?item=iid)") {
 		t.Fatalf("link must survive truncation, got tail %q", got[len(got)-80:])
 	}
 }
@@ -162,12 +162,12 @@ func TestInboxCardKeepsAnOrdinaryBracketedTitleVerbatim(t *testing.T) {
 	t.Setenv("FRONTEND_ORIGIN", "")
 
 	item := map[string]any{
-		"type":  "status_changed",
+		"type":  "creation_ready",
 		"title": "[Bug] 登录失败",
 		"body":  "从 (todo) 到 (in_review)!",
 	}
 	out := buildInboxMarkdown(item, "ws-uuid", "acme", copyFor(DefaultLocale))
-	want := "**[状态变更] [Bug] 登录失败**\n从 (todo) 到 (in_review)!"
+	want := "**[创作完成] [Bug] 登录失败**\n从 (todo) 到 (in_review)!"
 	if out != want {
 		t.Fatalf("member text did not survive verbatim:\n got %q\nwant %q", out, want)
 	}
@@ -331,12 +331,12 @@ func TestInboxCardKeepsAReferenceLikeTitleVerbatim(t *testing.T) {
 	t.Setenv("FRONTEND_ORIGIN", "")
 
 	item := map[string]any{
-		"type":  "status_changed",
+		"type":  "creation_ready",
 		"title": "[Bug]: 登录失败",
 		"body":  "[WIP]: 明天再看\n\n[复现步骤]: 见 (todo) 到 (in_review)!",
 	}
 	out := buildInboxMarkdown(item, "ws-uuid", "acme", copyFor(DefaultLocale))
-	want := "**[状态变更] [Bug]: 登录失败**\n[WIP]: 明天再看\n\n[复现步骤]: 见 (todo) 到 (in_review)!"
+	want := "**[创作完成] [Bug]: 登录失败**\n[WIP]: 明天再看\n\n[复现步骤]: 见 (todo) 到 (in_review)!"
 	if out != want {
 		t.Fatalf("member text did not survive verbatim:\n got %q\nwant %q", out, want)
 	}

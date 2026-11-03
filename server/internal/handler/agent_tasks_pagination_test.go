@@ -22,18 +22,8 @@ func TestListAgentTasksPagination(t *testing.T) {
 		id := dbfx.Task(t, agentID, testutil.Cols{"runtime_id": runtimeID, "status": "completed", "created_at": createdAt})
 		visible[id] = true
 	}
-	var parentID string
-	for id := range visible {
-		parentID = id
-		break
-	}
 	dbfx.Task(t, otherAgentID, testutil.Cols{"runtime_id": runtimeID, "status": "completed", "created_at": createdAt})
-	// These sort ahead of the visible history. Filtering after LIMIT would
-	// produce an empty/short page and incorrectly make older work inaccessible.
-	for _, status := range []string{"cancelled", "deferred"} {
-		dbfx.Task(t, agentID, testutil.Cols{"runtime_id": runtimeID, "status": status, "created_at": createdAt.Add(time.Second), "escalation_for_task_id": parentID})
-	}
-	startedFallback := dbfx.Task(t, agentID, testutil.Cols{"runtime_id": runtimeID, "status": "cancelled", "created_at": createdAt, "started_at": createdAt, "escalation_for_task_id": parentID})
+	startedFallback := dbfx.Task(t, agentID, testutil.Cols{"runtime_id": runtimeID, "status": "cancelled", "created_at": createdAt, "started_at": createdAt})
 	visible[startedFallback] = true
 
 	readPage := func(query string, wantStatus int) ([]AgentTaskResponse, string) {

@@ -22,13 +22,7 @@ import (
 // silently destroy real secrets by saving the masked placeholder.
 const envSentinel = "****"
 
-// agentEnvActivityRevealed and agentEnvActivityUpdated are the
-// activity_log `action` constants for the two env-management
-// endpoints. Stored on rows where `issue_id IS NULL` (env access is not
-// tied to any issue). Owners can later query them — a queryable audit
-// UI is out of scope for this PR, but the rows are written now so the
-// data is captured from day one. Workspace activity history will
-// eventually surface them; for now they're forensic-only.
+// Environment access records use these workspace activity action names.
 const (
 	agentEnvActivityRevealed = "agent_env_revealed"
 	agentEnvActivityUpdated  = "agent_env_updated"

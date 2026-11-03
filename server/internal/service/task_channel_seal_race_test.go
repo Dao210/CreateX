@@ -45,7 +45,7 @@ func TestEnqueueChatTaskSealsMessageStrandedByPredecessorReply(t *testing.T) {
 	// Turn 1: an inbound channel message lands unowned; the debounce fires and
 	// EnqueueChatTask seals it into its own task, which then starts running.
 	appendChannelUserMessage(t, ctx, pool, chatSessionID, "测试下")
-	first, err := svc.EnqueueChatTask(ctx, session, initiator, false)
+	first, err := svc.enqueueChatTask(ctx, session, initiator, false, 0, false, pgtype.UUID{}, 0)
 	if err != nil {
 		t.Fatalf("EnqueueChatTask (turn 1): %v", err)
 	}
@@ -60,12 +60,12 @@ func TestEnqueueChatTaskSealsMessageStrandedByPredecessorReply(t *testing.T) {
 
 	// Turn 1 completes inside that window: its reply row is NEWER than the
 	// waiting message, but it answers turn 1's batch, not this message.
-	if _, err := svc.CompleteTask(ctx, first.ID, []byte(`{"output":"通了。"}`), "", "", "", false, "", ""); err != nil {
+	if _, _, err := svc.CompleteTaskWithTransition(ctx, first.ID, []byte(`{"output":"通了。"}`), "", "", "", false, "", ""); err != nil {
 		t.Fatalf("complete turn 1: %v", err)
 	}
 
 	// The debounce fires.
-	next, err := svc.EnqueueChatTask(ctx, session, initiator, false)
+	next, err := svc.enqueueChatTask(ctx, session, initiator, false, 0, false, pgtype.UUID{}, 0)
 	if err != nil {
 		t.Fatalf("EnqueueChatTask (turn 2): %v", err)
 	}
@@ -104,7 +104,7 @@ func TestEnqueueChatTaskSealsMessageWhenReplyCommitsDuringEnqueue(t *testing.T) 
 	svc := &TaskService{Queries: q, TxStarter: pool, Bus: events.New()}
 
 	appendChannelUserMessage(t, ctx, pool, chatSessionID, "测试下")
-	first, err := svc.EnqueueChatTask(ctx, session, initiator, false)
+	first, err := svc.enqueueChatTask(ctx, session, initiator, false, 0, false, pgtype.UUID{}, 0)
 	if err != nil {
 		t.Fatalf("EnqueueChatTask (turn 1): %v", err)
 	}
@@ -126,7 +126,7 @@ func TestEnqueueChatTaskSealsMessageWhenReplyCommitsDuringEnqueue(t *testing.T) 
 			injected = true
 		}},
 	}
-	next, err := racing.EnqueueChatTask(ctx, session, initiator, false)
+	next, err := racing.enqueueChatTask(ctx, session, initiator, false, 0, false, pgtype.UUID{}, 0)
 	if err != nil {
 		t.Fatalf("EnqueueChatTask (turn 2): %v", err)
 	}
@@ -191,7 +191,7 @@ func TestEnqueueChatTaskLeavesAlreadyPassedMessagesUnowned(t *testing.T) {
 	session := db.ChatSession{ID: util.MustParseUUID(chatSessionID), AgentID: util.MustParseUUID(agentID)}
 	svc := &TaskService{Queries: q, TxStarter: pool, Bus: events.New()}
 	fresh := appendChannelUserMessage(t, ctx, pool, chatSessionID, "新消息")
-	task, err := svc.EnqueueChatTask(ctx, session, util.MustParseUUID(userID), false)
+	task, err := svc.enqueueChatTask(ctx, session, util.MustParseUUID(userID), false, 0, false, pgtype.UUID{}, 0)
 	if err != nil {
 		t.Fatalf("EnqueueChatTask: %v", err)
 	}

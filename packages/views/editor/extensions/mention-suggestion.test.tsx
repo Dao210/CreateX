@@ -21,14 +21,14 @@ const TEST_RESOURCES = {
     auth: enAuth,
     settings: enSettings,
     editor: enEditor,
-    issues: enIssues,
+    execution: enIssues,
   },
   "zh-Hans": {
     common: zhCommon,
     auth: zhAuth,
     settings: zhSettings,
     editor: zhEditor,
-    issues: zhIssues,
+    execution: zhIssues,
   },
 };
 
@@ -358,7 +358,7 @@ describe("createMentionSuggestion", () => {
 
     render(
       <I18nWrapper>
-        <MentionList ref={ref} items={items} query="" command={command} includeProjectSearch />
+        <MentionList ref={ref} items={items} query="" command={command} />
       </I18nWrapper>,
     );
 
@@ -554,7 +554,7 @@ describe("createMentionSuggestion", () => {
     const result = config.items!(itemArgs("bug"));
 
     const items = result as MentionItem[];
-    expect(items.some((i) => i.type === "issue" && i.id === "i1")).toBe(false);
+    expect(items.some((i) => i.id === "i1")).toBe(false);
   });
 
   it("does not inject current/recent chat context into the normal @ results", () => {

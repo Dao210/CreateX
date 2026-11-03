@@ -152,7 +152,7 @@ describe("DesktopShell workspace gating", () => {
     expect(queryByTestId("search-command")).not.toBeNull();
     expect(queryByTestId("global-shortcuts")).not.toBeNull();
     expect(queryByTestId("modal-registry")).not.toBeNull();
-    expect(queryByRole("status", { name: /loading workspace/i })).toBeNull();
+    expect(queryByRole("status", { name: /loading world/i })).toBeNull();
   });
 
   it("keeps traffic-light clearance and a loading shell while the slug is unresolved", () => {
@@ -168,7 +168,7 @@ describe("DesktopShell workspace gating", () => {
       container.querySelector('[data-slot="main-top-bar"]'),
     ).toHaveStyle({ paddingLeft: "200px" });
     expect(
-      getByRole("status", { name: /loading workspace/i }),
+      getByRole("status", { name: /loading world/i }),
     ).toBeVisible();
     expect(getByTestId("tab-content")).toBeInTheDocument();
   });

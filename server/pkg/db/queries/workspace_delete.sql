@@ -125,6 +125,20 @@ WITH batch AS MATERIALIZED (
     SELECT id FROM unnest(@task_ids::uuid[]) AS t(id)
 ),
 
+detached_messages AS (UPDATE chat_message SET task_id=NULL WHERE task_id IN (SELECT id FROM batch)),
+detached_attachments AS (UPDATE attachment SET task_id=NULL WHERE task_id IN (SELECT id FROM batch)),
+detached_runs AS (UPDATE autopilot_run SET task_id=NULL WHERE task_id IN (SELECT id FROM batch)),
+detached_lineage AS (
+ UPDATE agent_task_queue SET
+ parent_task_id=CASE WHEN parent_task_id=ANY(@task_ids::uuid[]) THEN NULL ELSE parent_task_id END,
+ retry_of_task_id=CASE WHEN retry_of_task_id=ANY(@task_ids::uuid[]) THEN NULL ELSE retry_of_task_id END,
+ chat_input_task_id=CASE WHEN chat_input_task_id=ANY(@task_ids::uuid[]) THEN NULL ELSE chat_input_task_id END
+ WHERE (parent_task_id=ANY(@task_ids::uuid[]) OR retry_of_task_id=ANY(@task_ids::uuid[]) OR chat_input_task_id=ANY(@task_ids::uuid[]))
+ AND id NOT IN (SELECT id FROM batch)
+),
+deleted_outbound_messages AS (DELETE FROM channel_outbound_message WHERE task_id IN (SELECT id FROM batch)),
+deleted_reply_deliveries AS (DELETE FROM channel_reply_delivery WHERE task_id IN (SELECT id FROM batch)),
+
 deleted_task_usage AS (
     DELETE FROM task_usage WHERE task_id IN (SELECT id FROM batch)
 ),
@@ -154,6 +168,14 @@ deleted_draft_restores AS (
 )
 DELETE FROM agent_task_queue WHERE id IN (SELECT id FROM batch);
 
+-- name: ListWorkspaceChatTaskIDsFirstPage :many
+SELECT t.id FROM agent_task_queue t JOIN chat_session c ON c.id = t.chat_session_id
+WHERE c.workspace_id = $1 ORDER BY t.id LIMIT $2 FOR UPDATE OF t;
+
+-- name: ListWorkspaceChatTaskIDsPage :many
+SELECT t.id FROM agent_task_queue t JOIN chat_session c ON c.id = t.chat_session_id
+WHERE c.workspace_id = $1 AND t.id > $2 ORDER BY t.id LIMIT $3 FOR UPDATE OF t;
+
 -- name: DeleteTaskTokensByAgent :exec
 DELETE FROM task_token WHERE agent_id = $1;
 
@@ -180,6 +202,10 @@ ws_skills AS MATERIALIZED (
 
 ws_sessions AS MATERIALIZED (
     SELECT id FROM chat_session WHERE workspace_id = $1
+    UNION
+    SELECT binding.chat_session_id FROM channel_chat_session_binding binding
+    JOIN channel_installation installation ON installation.id=binding.installation_id
+    WHERE installation.workspace_id=$1
 ),
 
 ws_autopilots AS MATERIALIZED (
@@ -326,6 +352,10 @@ deleted_channel_inbound_dedup AS (
 deleted_channel_inbound_audit AS (
     DELETE FROM channel_inbound_audit
     WHERE installation_id IN (SELECT id FROM ws_channel_installations)
+),
+
+deleted_labels AS (
+    DELETE FROM label WHERE workspace_id = $1
 ),
 
 deleted_channel_user_bindings AS (
@@ -519,7 +549,19 @@ deleted_profiles AS (
 SELECT 1;
 
 -- name: DeleteWorkspaceAdministration :exec
-WITH game_overrides_deleted AS (
+WITH life_worlds AS MATERIALIZED (
+    SELECT id FROM life_world WHERE workspace_id = $1
+), removed_life_actions AS (
+    DELETE FROM life_action WHERE world_id IN (SELECT id FROM life_worlds)
+), removed_life_events AS (
+    DELETE FROM life_event WHERE world_id IN (SELECT id FROM life_worlds)
+), removed_life_resources AS (
+    DELETE FROM life_resource WHERE world_id IN (SELECT id FROM life_worlds)
+), removed_life_agents AS (
+    DELETE FROM life_agent WHERE world_id IN (SELECT id FROM life_worlds)
+), removed_life_worlds AS (
+    DELETE FROM life_world WHERE id IN (SELECT id FROM life_worlds)
+), game_overrides_deleted AS (
     DELETE FROM game_world_override WHERE workspace_id = $1
 ),
 

@@ -153,9 +153,7 @@ func TestAQuotedScreenshotWithWordsKeepsTheTypedCommand(t *testing.T) {
 	if msg.CommandText != "/issue 登录坏了" {
 		t.Fatalf("CommandText = %q, want the sender's own typed command", msg.CommandText)
 	}
-	if !msg.SkipAgentRun {
-		t.Fatal("a pure /issue must still skip the agent run")
-	}
+
 }
 
 // TestABareDirectiveWithNoQuoteIsStillTheSentinel is the gate's other side: no

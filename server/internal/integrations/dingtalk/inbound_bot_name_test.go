@@ -287,14 +287,6 @@ func TestInboundFromCallbackWithBotName_AllSharedCommandsKeepFirstTextLineContra
 				return ok
 			},
 		},
-		{
-			name:    "issue",
-			content: "@Auro Bot - Local /issue login failed",
-			parse: func(body string) bool {
-				_, ok := engine.ParseIssueCommand(body)
-				return ok
-			},
-		},
 	}
 
 	for _, tc := range tests {

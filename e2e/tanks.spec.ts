@@ -28,7 +28,6 @@ test.afterAll(async () => {
     api.setWorkspaceId(workspace.id); api.setWorkspaceSlug(workspace.slug);
     await api.deleteWorkspace();
   }
-  await api.cleanup();
 });
 
 test.beforeEach(async ({ page, baseURL }) => {

@@ -152,15 +152,6 @@ func TestGetPendingChatTask_ReturnsActiveHeadAndFIFOQueue(t *testing.T) {
 	activeID := insertPendingChatTask(t, agentID, sessionID, "running")
 	nextID := insertPendingChatTask(t, agentID, sessionID, "queued")
 	laterID := insertPendingChatTask(t, agentID, sessionID, "queued")
-	regenerateID := insertPendingChatTask(t, agentID, sessionID, "queued")
-	if _, err := testPool.Exec(
-		context.Background(),
-		`UPDATE agent_task_queue SET regenerate_quick_actions_for = $2 WHERE id = $1`,
-		regenerateID,
-		uuid.New(),
-	); err != nil {
-		t.Fatalf("mark quick-actions regeneration task: %v", err)
-	}
 
 	for _, row := range []struct {
 		id        string
@@ -435,7 +426,7 @@ func TestPendingQueueHeadMatchesClaimForEqualCreatedAt(t *testing.T) {
 		t.Fatalf("pending head = %+v, want lower id %s", pending, lowID)
 	}
 
-	claimed, err := testHandler.TaskService.ClaimTask(ctx, parseUUID(agentID))
+	claimed, err := testHandler.TaskService.ClaimTaskForRuntime(ctx, parseUUID(handlerTestRuntimeID(t)))
 	if err != nil {
 		t.Fatalf("claim task: %v", err)
 	}

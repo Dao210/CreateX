@@ -104,7 +104,7 @@ func newAnchorHarness(t *testing.T) *anchorHarness {
 
 	tasks := &service.TaskService{Queries: queries, TxStarter: pool, Bus: events.New()}
 	binder := realSessionBinder{session: NewChatSession(queries, pool, channel.Type("lark"), SessionTitles{})}
-	router := NewRouter(&fakeIssues{}, tasks, queries, RouterConfig{Logger: discardLogger()})
+	router := NewRouter(tasks, queries, RouterConfig{Logger: discardLogger()})
 	timers := &fakeTimerFactory{}
 	router.batcher = newTestBatcher(timers)
 	router.Register(channel.TypeFeishu, ResolverSet{
@@ -268,13 +268,8 @@ func TestRouterAnchorsPendingGenerationToItsOwnTriggerAcrossClear(t *testing.T) 
 	}
 }
 
-// TestRouterKeepsCommandTurnOutOfGenerationTrigger covers the `cmd == nil`
-// guard from the production side. A `/issue` turn is durable and advances the
-// binding cursor, but it is excluded from agent input — so it is not the
-// question being answered and must not become the message the answer quotes.
-// Nothing about a context revision distinguishes this case: the command lands
-// in the SAME generation as the question.
-func TestRouterKeepsCommandTurnOutOfGenerationTrigger(t *testing.T) {
+// A retired slash command is ordinary input and updates the current reply target.
+func TestRouterRetiredCommandUpdatesGenerationTrigger(t *testing.T) {
 	h := newAnchorHarness(t)
 	ctx := context.Background()
 
@@ -286,8 +281,8 @@ func TestRouterKeepsCommandTurnOutOfGenerationTrigger(t *testing.T) {
 	}
 
 	msgID, threadID, senderID := h.generationTrigger(t, h.fixture.sessionID, 1)
-	if msgID.String != "msg-user" || threadID.String != "thread-user" || senderID.String != "ou_alice" {
-		t.Fatalf("generation trigger = (%q, %q, %q), want the question's — a command turn is not agent input and must not overwrite it",
+	if msgID.String != "msg-command" || threadID.String != "thread-command" || senderID.String != "ou_bob" {
+		t.Fatalf("generation trigger = (%q, %q, %q), want the latest input",
 			msgID.String, threadID.String, senderID.String)
 	}
 
@@ -307,8 +302,8 @@ func TestRouterKeepsCommandTurnOutOfGenerationTrigger(t *testing.T) {
 	h.waitForDeliveries(t, 1)
 
 	_, deliveryMessage, _, deliverySender := h.deliveryForRevision(t, 1)
-	if deliveryMessage.String != "msg-user" || deliverySender.String != "ou_alice" {
-		t.Errorf("delivery = (%q, %q), want the question's message and sender", deliveryMessage.String, deliverySender.String)
+	if deliveryMessage.String != "msg-command" || deliverySender.String != "ou_bob" {
+		t.Errorf("delivery = (%q, %q), want the latest message and sender", deliveryMessage.String, deliverySender.String)
 	}
 }
 

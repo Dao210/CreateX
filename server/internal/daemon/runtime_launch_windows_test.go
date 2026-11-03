@@ -62,12 +62,12 @@ func TestHandleTaskReportsWindowsCodexProcessStartFailure(t *testing.T) {
 	}
 
 	d.handleTask(context.Background(), Task{
-		ID:          "task-windows-launch-failure",
-		WorkspaceID: "workspace-windows-launch-failure",
-		RuntimeID:   "rt-custom-codex",
-		IssueID:     "issue-windows-launch-failure",
-		AgentID:     "agent-windows-launch-failure",
-		AuthToken:   "mat_windows_launch_failure",
+		ID:            "task-windows-launch-failure",
+		WorkspaceID:   "workspace-windows-launch-failure",
+		RuntimeID:     "rt-custom-codex",
+		ChatSessionID: "issue-windows-launch-failure",
+		AgentID:       "agent-windows-launch-failure",
+		AuthToken:     "mat_windows_launch_failure",
 		Agent: &AgentData{
 			ID:   "agent-windows-launch-failure",
 			Name: "Windows launch failure agent",

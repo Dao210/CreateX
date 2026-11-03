@@ -29,14 +29,14 @@ const hookHandlerTestManifest = `{
   "name": "Hooked",
   "version": "1.0.0",
   "author": { "name": "example" },
-  "scopes": ["issues:read", "comments:write", "net:example.com"],
+  "scopes": ["tasks:read", "storage:workspace", "net:example.com"],
   "contributes": {
     "hooks": [{
       "key": "summarize",
       "name": "Summarize",
       "description": "Compress the discussion.",
       "triggers": ["ui", "manual", "event"],
-      "events": ["issue.created"],
+      "events": ["task.completed"],
       "transport": { "type": "http", "url": "https://example.com/hooks/summarize" }
     }, {
       "key": "manual_only",
@@ -53,7 +53,7 @@ func installHookPlugin(t *testing.T) string {
 	versionID := withLocalPluginSource(t, hookHandlerTestManifest)
 	body, _ := json.Marshal(map[string]any{
 		"version_id":     versionID,
-		"granted_scopes": []string{"issues:read", "comments:write", "net:example.com"},
+		"granted_scopes": []string{"tasks:read", "storage:workspace", "net:example.com"},
 	})
 	recorder := httptest.NewRecorder()
 	testHandler.InstallPlugin(recorder, pluginHandlerRequest(http.MethodPost, "/plugins", body, map[string]string{"id": testWorkspaceID}))
@@ -309,7 +309,7 @@ func TestEventDispatchRespectsTheFeatureFlagEndToEnd(t *testing.T) {
 
 	body, _ := json.Marshal(map[string]any{
 		"version_id":     versionID,
-		"granted_scopes": []string{"issues:read", "comments:write", "net:" + host},
+		"granted_scopes": []string{"tasks:read", "storage:workspace", "net:" + host},
 	})
 	install := httptest.NewRecorder()
 	testHandler.InstallPlugin(install, pluginHandlerRequest(http.MethodPost, "/plugins", body, map[string]string{"id": testWorkspaceID}))
@@ -319,7 +319,7 @@ func TestEventDispatchRespectsTheFeatureFlagEndToEnd(t *testing.T) {
 
 	dispatch := func() *service.PluginEventDispatcher {
 		dispatcher := service.NewPluginEventDispatcher(testHandler.PluginService)
-		dispatcher.Dispatch(plugincontract.EventIssueCreated, testWorkspaceID, map[string]any{})
+		dispatcher.Dispatch(plugincontract.EventTaskCompleted, testWorkspaceID, map[string]any{})
 		return dispatcher
 	}
 

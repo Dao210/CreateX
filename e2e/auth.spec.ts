@@ -14,11 +14,11 @@ test.describe("Authentication", () => {
     await expect(page.getByRole("button", { name: "Sign in", exact: true })).toBeDisabled();
   });
 
-  test("login and redirect to /issues", async ({ page }) => {
+  test("login and redirect to /me", async ({ page }) => {
     const workspaceSlug = await loginAsDefault(page);
 
-    await expect(page).toHaveURL(new RegExp(`/${workspaceSlug}/issues$`));
-    await expect(page.getByRole("button", { name: "New Issue" })).toBeVisible();
+    await expect(page).toHaveURL(new RegExp(`/${workspaceSlug}/me$`));
+    await expect(page.getByRole("heading", { name: "My Creations" })).toBeVisible();
   });
 
   test("password login enters the account's workspace", async ({ page }) => {
@@ -38,11 +38,11 @@ test.describe("Authentication", () => {
       await page.getByRole("textbox", { name: "Email" }).fill(email);
       await page.getByLabel("Password", { exact: true }).fill(password);
       await page.getByRole("button", { name: "Sign in", exact: true }).click();
-      await expect(page).toHaveURL(new RegExp(`/${workspace.slug}/issues$`), { timeout: 30000 });
-      await expect(page.getByRole("heading", { name: "Issues", exact: true })).toBeVisible({ timeout: 30000 });
+      await expect(page).toHaveURL(new RegExp(`/${workspace.slug}/me$`), { timeout: 30000 });
+      await expect(page.getByRole("heading", { name: "My Creations", exact: true })).toBeVisible({ timeout: 30000 });
       await page.reload({ waitUntil: "domcontentloaded" });
-      await expect(page).toHaveURL(new RegExp(`/${workspace.slug}/issues$`));
-      await expect(page.getByRole("heading", { name: "Issues", exact: true })).toBeVisible({ timeout: 30000 });
+      await expect(page).toHaveURL(new RegExp(`/${workspace.slug}/me$`));
+      await expect(page.getByRole("heading", { name: "My Creations", exact: true })).toBeVisible({ timeout: 30000 });
     } finally {
       await api.deleteWorkspace();
     }
@@ -55,7 +55,7 @@ test.describe("Authentication", () => {
       throw new Error("E2E workspace was not created");
     }
 
-    await page.goto(`/${workspace.slug}/issues`, { waitUntil: "domcontentloaded" });
+    await page.goto(`/${workspace.slug}/me`, { waitUntil: "domcontentloaded" });
     await page.waitForURL("**/login", { timeout: 10000, waitUntil: "domcontentloaded" });
     await waitForPageText(page, "Sign in to Auro");
   });

@@ -115,7 +115,6 @@ export function useInvokePluginHook() {
       installationId: string;
       hookKey: string;
       trigger: "ui" | "manual";
-      issueId?: string;
       input?: unknown;
     }) => api.invokePluginHook(installationId, hookKey, request),
   });

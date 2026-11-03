@@ -48,7 +48,7 @@ func TestGetLastChatTaskSessionDoesNotResurrectFromOlderCompletedRow(t *testing.
 		t.Skip("no database connection")
 	}
 
-	_, agentID, runtimeID := setupRerunTestFixture(t)
+	_, agentID, runtimeID := setupChatRecoveryFixture(t)
 	chatSessionID := newPoisonTestChatSession(t, agentID, runtimeID, "poison-resurrect")
 	ctx := context.Background()
 
@@ -79,7 +79,7 @@ func TestGetLastChatTaskSessionKeepsHealthyDistinctSession(t *testing.T) {
 		t.Skip("no database connection")
 	}
 
-	_, agentID, runtimeID := setupRerunTestFixture(t)
+	_, agentID, runtimeID := setupChatRecoveryFixture(t)
 	chatSessionID := newPoisonTestChatSession(t, agentID, runtimeID, "poison-distinct")
 	ctx := context.Background()
 
@@ -108,7 +108,7 @@ func TestGetLastChatTaskSessionKeepsHealthyDistinctSession(t *testing.T) {
 }
 
 // TestGetLastChatTaskSessionExcludesAuthResolutionFailure is the chat half of
-// the auth-resolution resume fix, mirroring GetLastTaskSession: a provider that
+// the auth-resolution resume fix, mirroring GetLastChatTaskSession: a provider that
 // cannot resolve its own authentication method must not be handed back to the
 // next task on the same chat. The row carries agent_error.unknown — what every
 // daemon version writes for this text — so only the ILIKE guard drops it.
@@ -117,7 +117,7 @@ func TestGetLastChatTaskSessionExcludesAuthResolutionFailure(t *testing.T) {
 		t.Skip("no database connection")
 	}
 
-	_, agentID, runtimeID := setupRerunTestFixture(t)
+	_, agentID, runtimeID := setupChatRecoveryFixture(t)
 	chatSessionID := newPoisonTestChatSession(t, agentID, runtimeID, "poison-auth-resolve")
 	ctx := context.Background()
 
@@ -143,7 +143,7 @@ func TestGetLastChatTaskSessionKeepsSessionOnAuthAdjacentError(t *testing.T) {
 		t.Skip("no database connection")
 	}
 
-	_, agentID, runtimeID := setupRerunTestFixture(t)
+	_, agentID, runtimeID := setupChatRecoveryFixture(t)
 	chatSessionID := newPoisonTestChatSession(t, agentID, runtimeID, "poison-auth-adjacent")
 	ctx := context.Background()
 
@@ -171,7 +171,7 @@ func TestRetiredSessionExcludedFromChatResume(t *testing.T) {
 		t.Skip("no database connection")
 	}
 
-	_, agentID, runtimeID := setupRerunTestFixture(t)
+	_, agentID, runtimeID := setupChatRecoveryFixture(t)
 	chatSessionID := newPoisonTestChatSession(t, agentID, runtimeID, "poison-retired")
 	ctx := context.Background()
 
@@ -204,7 +204,7 @@ func TestFailTaskClearsPoisonedChatPointer(t *testing.T) {
 		t.Skip("no database connection")
 	}
 
-	_, agentID, runtimeID := setupRerunTestFixture(t)
+	_, agentID, runtimeID := setupChatRecoveryFixture(t)
 	chatSessionID := newPoisonTestChatSession(t, agentID, runtimeID, "poison-pointer")
 	ctx := context.Background()
 
@@ -251,7 +251,7 @@ func TestFailTaskKeepsChatPointerOnTransientFailure(t *testing.T) {
 		t.Skip("no database connection")
 	}
 
-	_, agentID, runtimeID := setupRerunTestFixture(t)
+	_, agentID, runtimeID := setupChatRecoveryFixture(t)
 	chatSessionID := newPoisonTestChatSession(t, agentID, runtimeID, "transient-pointer")
 	ctx := context.Background()
 
@@ -303,7 +303,7 @@ func TestGetLastChatTaskSessionExcludesOverflowedResumeFromOlderCompletedRow(t *
 		t.Skip("no database connection")
 	}
 
-	_, agentID, runtimeID := setupRerunTestFixture(t)
+	_, agentID, runtimeID := setupChatRecoveryFixture(t)
 	chatSessionID := newPoisonTestChatSession(t, agentID, runtimeID, "overflow-resume")
 	ctx := context.Background()
 

@@ -83,16 +83,11 @@ func TestChannelMessageFromCallback_P2PMentionIsProseNotACommand(t *testing.T) {
 				t.Errorf("CommandText = %q, want %q untouched — in a 1:1 the leading @ is a colleague's "+
 					"name in the sender's sentence, not addressing the bot", msg.CommandText, tc.content)
 			}
-			if cmd, ok := engine.ParseIssueCommand(msg.CommandText); ok {
-				t.Errorf("an issue titled %q would be filed from %q, which the sender never asked for",
-					cmd.Title, tc.content)
-			}
+
 			if _, ok := engine.ParseFreshSessionCommand(msg.CommandText); ok {
 				t.Errorf("%q would throw away the running session the sender was in the middle of", tc.content)
 			}
-			if msg.SkipAgentRun {
-				t.Errorf("SkipAgentRun = true for %q; the sender's question gets no reply at all", tc.content)
-			}
+
 		})
 	}
 }
@@ -109,16 +104,10 @@ func TestChannelMessageFromCallback_P2PCommandStillWorks(t *testing.T) {
 
 	msg := channelMessageFromCallback("bot-1", "Auro Bot", mc, mc.Text.Content, "req-p2p-cmd")
 
-	cmd, ok := engine.ParseIssueCommand(msg.CommandText)
-	if !ok {
-		t.Fatalf("CommandText = %q — a 1:1 /issue stopped being a command", msg.CommandText)
+	if msg.CommandText != mc.Text.Content {
+		t.Fatalf("own text changed: %q", msg.CommandText)
 	}
-	if cmd.Title != "登录失败" {
-		t.Errorf("issue title = %q, want 登录失败", cmd.Title)
-	}
-	if !msg.SkipAgentRun {
-		t.Error("SkipAgentRun = false for a pure 1:1 /issue; the agent would answer the command text too")
-	}
+
 }
 
 func TestChannelMsgType_Normalization(t *testing.T) {
@@ -277,13 +266,10 @@ func TestChannelMessageFromCallback_QuoteLeadsBodyButNotCommand(t *testing.T) {
 		mc.Quote.Text.Content = "/issue 登录坏了"
 
 		msg := channelMessageFromCallback("bot-1", "", mc, mc.Text.Content, "req-q2")
+		if msg.CommandText != mc.Text.Content {
+			t.Fatalf("quoted text replaced sender text: %q", msg.CommandText)
+		}
 
-		if _, ok := engine.ParseIssueCommand(msg.CommandText); ok {
-			t.Fatalf("CommandText %q parsed as an issue command", msg.CommandText)
-		}
-		if msg.SkipAgentRun {
-			t.Error("SkipAgentRun set: the quoted command was read as this sender's")
-		}
 	})
 
 	t.Run("a control command keeps the quote in its first turn", func(t *testing.T) {

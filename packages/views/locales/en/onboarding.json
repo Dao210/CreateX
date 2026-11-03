@@ -144,41 +144,18 @@
     "success_toast": "You're on the list. We'll email when cloud runtimes are live.",
     "failed_toast": "Failed to join waitlist"
   },
-  "welcome_after_onboarding": {
-    "skip": {
-      "loading": "Setting up your world…",
-      "title": "Welcome to Weave a World!",
-      "subtitle": "We've added one issue to help you connect a runtime. When it's ready, start with Mika from Runtimes.",
-      "got_it": "Got it",
-      "status_in_progress": "In progress",
-      "error_title": "We couldn't set that up",
-      "error_body": "The runtime guide didn't get created. You can try again, or connect a runtime from the Runtimes page whenever you're ready.",
-      "retry": "Try again",
-      "dismiss": "Not now",
-      "cards": {
-        "install_runtime": {
-          "title": "Connect a runtime",
-          "subtitle": "Install Codex or Kimi, then start the guided Mika chat from Runtimes."
-        }
-      }
-    }
-  },
   "step_workspace": {
     "eyebrow_first": "Your first world",
     "eyebrow_resume": "Pick up or start fresh",
     "headline_first": "Name your world.",
     "headline_resume": "Continue with {{name}}, or start another.",
-    "lede_first": "A world is where your issues, agents, and projects live. You can invite teammates or spin up more worlds later.",
+    "lede_first": "Agents, chats and creations live in your world. You can invite members later.",
     "lede_resume": "Resume setup with the world you already have, or create a new one alongside it — you can belong to any number of worlds.",
     "name_label": "World name",
     "name_placeholder": "Acme Inc, My Lab, Side Projects…",
     "random_name": "Random",
     "url_label": "URL",
     "slug_placeholder": "acme",
-    "issue_prefix_label": "Issue prefix",
-    "issue_prefix_prefix": "Issues will look like ",
-    "issue_prefix_suffix": ". You can change this later in settings.",
-    "issue_prefix_pending": "Set the URL above and issue numbers will follow it — or type a prefix here.",
     "create_new_title": "Create a new world",
     "hint_opening": "Opening {{name}}.",
     "hint_creating": "Creating {{name}}.",
@@ -267,6 +244,6 @@
     "headline": "Meet Mika, your first agent teammate.",
     "name": "Mika",
     "role": "Chief of Staff",
-    "blurb": "Tell Mika what you want done. It becomes an issue, with the right agent on it."
+    "blurb": "Tell Mika what you want to do and work together in chat."
   }
 }

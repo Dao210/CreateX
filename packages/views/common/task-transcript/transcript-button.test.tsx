@@ -60,7 +60,6 @@ const baseTask: AgentTask = {
   id: LIVE_TASK_ID,
   agent_id: "agent-1",
   runtime_id: "",
-  issue_id: "issue-1",
   status: "running",
   priority: 0,
   dispatched_at: "2026-05-15T10:00:05.000Z",
@@ -73,7 +72,6 @@ const baseTask: AgentTask = {
 
 const msg = (seq: number, tool: string): TaskMessagePayload => ({
   task_id: LIVE_TASK_ID,
-  issue_id: "issue-1",
   seq,
   type: "tool_use",
   tool,
@@ -120,7 +118,7 @@ describe("TranscriptButton", () => {
     act(() => {
       window.dispatchEvent(
         new CustomEvent("auro:navigate", {
-          detail: { path: "/acme/inbox?issue=MUL-123" },
+          detail: { path: "/acme/inbox?item=MUL-123" },
         }),
       );
     });

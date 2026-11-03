@@ -52,23 +52,22 @@ function seed(qc: QueryClient) {
     { id: "s2", title: "  ", status: "active" },
   ] as never);
   qc.setQueryData(inboxListOptions("ws1").queryKey, [
-    { id: "n1", issue_id: "i9", title: "Assigned to you", type: "issue_assigned" },
-    { id: "n2", issue_id: null, title: "Autopilot paused", type: "autopilot_paused" },
+    { id: "n1", title: "Assigned to you", type: "issue_assigned" },
+    { id: "n2", title: "Autopilot paused", type: "autopilot_paused" },
   ] as never);
   const archiveRow = {
     workspace_id: "ws1", recipient_type: "member" as const, recipient_id: "user",
-    actor_type: null, actor_id: null, severity: "info" as const, body: null,
-    issue_status: null, read: true, archived: true, created_at: "2026-09-01T00:00:00Z", details: null,
+    actor_type: null, actor_id: null, severity: "info" as const, body: null, read: true, archived: true, created_at: "2026-09-01T00:00:00Z", details: null,
   };
   // Archived list is a distinct cache; these items are NOT in the main list.
   qc.setQueryData(archivedInboxPagesOptions("ws1", EMPTY_INBOX_FILTERS).queryKey, {
     pages: [{ items: [
-      { ...archiveRow, id: "a1", issue_id: "i1", title: "Old assignment", type: "issue_assigned" },
-      { ...archiveRow, id: "a2", issue_id: null, title: "Archived note", type: "autopilot_paused" },
+      { ...archiveRow, id: "a1", title: "Old assignment", type: "issue_assigned" },
+      { ...archiveRow, id: "a2", title: "Archived note", type: "autopilot_paused" },
     ], hasMore: false, nextCursor: null }], pageParams: [null],
   });
   qc.setQueryData(archivedInboxLookupOptions("ws1", "a3").queryKey, {
-    items: [{ ...archiveRow, id: "a3", issue_id: null, title: "Deep archived note", type: "autopilot_paused" }],
+    items: [{ ...archiveRow, id: "a3", title: "Deep archived note", type: "autopilot_paused" }],
     hasMore: false, nextCursor: null,
   });
   qc.setQueryData(agentListOptions("ws1").queryKey, [

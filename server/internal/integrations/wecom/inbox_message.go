@@ -61,7 +61,7 @@ func inboxAppURL() string {
 //
 //	**[{type}] {title}**
 //	{body}
-//	[{detail link}]({appURL}/{slug|workspaceID}/inbox?issue={issueID})
+//	[{detail link}]({appURL}/{slug|workspaceID}/inbox?item={messageID})
 //
 // The type label and the link's anchor text come from the reader's copyPack.
 // The link segment is omitted entirely when no appURL is configured — we
@@ -170,7 +170,7 @@ func inboxItemBody(item map[string]any) string {
 	return ""
 }
 
-// inboxItemLink builds the {appURL}/{slug|wsUUID}/inbox?issue={issueID}
+// inboxItemLink builds the {appURL}/{slug|wsUUID}/inbox?item={messageID}
 // deep link. Returns "" when no appURL is configured — the caller uses that
 // as a signal to drop the entire link segment.
 func inboxItemLink(item map[string]any, workspaceID, slug string) string {
@@ -187,26 +187,11 @@ func inboxItemLink(item map[string]any, workspaceID, slug string) string {
 	b.WriteString("/")
 	b.WriteString(url.PathEscape(seg))
 	b.WriteString("/inbox")
-	// Optional ?issue=... — chat-only inbox items have no issue.
-	if issueID := inboxItemIssueID(item); issueID != "" {
-		b.WriteString("?issue=")
-		b.WriteString(url.QueryEscape(issueID))
+	if id := itemIDOf(item); id != "" {
+		b.WriteString("?item=")
+		b.WriteString(url.QueryEscape(id))
 	}
 	return b.String()
-}
-
-// inboxItemIssueID extracts issue_id when present. Chat-type notifications
-// have no issue_id and we return "" — the link then omits the query param.
-func inboxItemIssueID(item map[string]any) string {
-	switch v := item["issue_id"].(type) {
-	case *string:
-		if v != nil {
-			return *v
-		}
-	case string:
-		return v
-	}
-	return ""
 }
 
 // truncateRunes trims s to at most maxRunes runes. Rune-based rather than

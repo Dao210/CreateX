@@ -91,7 +91,7 @@ function useTabEntityData(subject: TabSubject, wsId: string): TabEntityData {
   const inboxItem =
     subject.kind === "inbox" && subject.selectedKey
       ? (activeInboxList?.find(
-          (i) => (i.issue_id ?? i.id) === subject.selectedKey,
+          (i) => i.id === subject.selectedKey,
         ) ?? null)
       : null;
 

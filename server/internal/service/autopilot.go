@@ -266,34 +266,10 @@ func (s *AutopilotService) repairAutopilotRunTaskLink(ctx context.Context, run d
 	return &updated, true, nil
 }
 
-// DispatchAutopilotForPlan is the entry point for scheduled triggers that
-// already know the canonical UTC plan_time of the occurrence they are
-// firing. The plan_time is persisted on autopilot_run.planned_at, and the
-// (trigger_id, planned_at) partial unique index — combined with this
-// method's idempotent lookup — guarantees that the SAME planned occurrence
-// cannot produce two SUCCESSFUL runs even if a stale-steal in
-// sys_cron_executions re-enters this method after a prior attempt.
-//
-// Semantics for an already-existing run at (trigger_id, planned_at):
-//
-//   - If the existing run is COMPLETE (terminal status, or in-flight
-//     with the appropriate downstream linkage — issue_id for
-//     create_issue, task_id for run_only), it is returned unchanged.
-//     The handler then writes SUCCESS in sys_cron_executions; no
-//     duplicate issue/task is produced.
-//   - If the existing run is in a PARTIAL state (a prior attempt
-//     wrote the run row but crashed before creating its downstream
-//     issue/task), it is marked FAILED with a recovery reason and
-//     its planned_at is cleared, releasing the partial-unique slot.
-//     Dispatch then proceeds normally and creates a fresh run at the
-//     same plan_time. Without this branch, a crash-during-dispatch
-//     would let a subsequent retry see the in-flight run, return it
-//     unchanged, and let the scheduler mark the occurrence SUCCESS
-//     without an actual issue/task ever being created (#4443 review).
-//
-// triggerID and plannedAt MUST both be valid; passing zero values
-// would silently disable the idempotency guard. Manual / webhook /
-// api callers should use DispatchAutopilot instead.
+// DispatchAutopilotForPlan persists the canonical UTC plan time for scheduled
+// triggers. The (trigger_id, planned_at) unique index prevents duplicate runs.
+// A terminal run or a running row linked to its task is reused on retry.
+// Partial dispatches are failed and release their planned slot before retry.
 func (s *AutopilotService) DispatchAutopilotForPlan(
 	ctx context.Context,
 	autopilot db.Autopilot,
@@ -367,28 +343,8 @@ func (s *AutopilotService) DispatchAutopilotForPlan(
 	return run, err
 }
 
-// isAutopilotRunComplete decides whether an existing autopilot_run row
-// for (trigger_id, planned_at) is safe to reuse on a stale-steal retry.
-//
-// A run is "complete" if either:
-//
-//   - It is in a terminal state (completed / failed / skipped). Nothing
-//     more to do downstream; the caller can return it as-is.
-//
-//   - It is in-flight in a state whose downstream side effect is
-//     observable:
-//
-//   - issue_created with a valid issue_id — the issue exists and
-//     the issue-event listener owns task creation from here.
-//
-//   - running with a valid task_id — the task is queued, the
-//     listener will close the run when the task terminates.
-//
-// Anything else — most importantly issue_created/running with NULL
-// issue_id/task_id, or the brief 'pending' state — is a partial run:
-// the run row was inserted before the dispatch path could create the
-// downstream resource, and a stale-steal retry MUST NOT treat it as
-// complete (#4443 review).
+// isAutopilotRunComplete permits reuse of terminal runs and running rows with
+// a queued task. A partial dispatch without task linkage must be repaired.
 func isAutopilotRunComplete(run db.AutopilotRun) bool {
 	switch run.Status {
 	case "completed", "failed", "skipped":
@@ -583,7 +539,7 @@ func (s *AutopilotService) dispatchRunOnly(ctx context.Context, ap db.Autopilot,
 	if err != nil {
 		return &errDispatchSkipped{reason: formatAdmissionReason(ap, "workspace fail-closed: no accountable human for autopilot run"), code: dispatch.ReasonAttributionBlocked}
 	}
-	apSource, _, apEvidenceKind, apEvidenceRef := attributionCreateParams(autopilotAttr)
+	apSource, apEvidenceKind, apEvidenceRef := attributionCreateParams(autopilotAttr)
 	task, err := s.Queries.CreateAutopilotTask(ctx, db.CreateAutopilotTaskParams{
 		ID:             dbid.NewV7(),
 		AgentID:        agent.ID,
@@ -805,10 +761,6 @@ func (s *AutopilotService) shouldSkipDispatch(ctx context.Context, ap db.Autopil
 // admission-gate phrasing the failure monitor and existing alerting are tuned
 // for. Keeping the prefix stable matters: dashboards group skip reasons by
 // substring ("offline at dispatch time" is how the MUL-1899 alert fires).
-//
-// For squad autopilots the message names the squad so an operator looking at
-// the failure_reason field knows which squad's leader is down without
-// joining back to autopilot_run.squad_id.
 func formatAdmissionReason(ap db.Autopilot, raw string) string {
 	prefix := "assignee "
 	switch raw {
@@ -824,37 +776,10 @@ func formatAdmissionReason(ap db.Autopilot, raw string) string {
 	}
 }
 
-// errSquadArchived signals that an autopilot's squad assignee has been
-// archived. Distinct from a missing/loadable-but-failed squad so the
-// admission gate can phrase the skip reason precisely and the failure
-// monitor does not see "cannot be resolved" wear noise for what is a
-// known, expected post-archive condition.
-
-// resolveAutopilotLeader returns the agent that will actually execute the
-// autopilot's work. For assignee_type='agent' the agent is the assignee
-// itself; for assignee_type='squad' it is the squad's leader_id. The second
-// return is true when the resolver took the squad branch — callers use this
-// to distinguish "failed loading an agent" from "failed loading a squad", so
-// the admission gate can choose between fail-open (transient DB error on a
-// known-good agent) and fail-closed (squad row gone, no point retrying).
-//
-// Archived squads are rejected here too: TransferSquadAutopilotsToLeader
-// flips surviving autopilots to assignee_type='agent' on DeleteSquad, but
-// the gate still has to fail closed for any row that slips through that
-// transfer (e.g. squad archived through a code path that bypasses the
-// handler) so an archived squad never produces work.
-//
-// Unknown assignee_type values return an error. assignee_type is gated by a
-// CHECK constraint at the DB layer, so this only fires if a future code path
-// inserts a row that bypasses the check.
+// resolveAutopilotAgent loads the agent assigned to this automation.
 func (s *AutopilotService) resolveAutopilotAgent(ctx context.Context, ap db.Autopilot) (db.Agent, error) {
 	return s.Queries.GetAgent(ctx, ap.AssigneeID)
 }
-
-// autopilotSquadAttribution returns the squad_id attribution hook for an
-// autopilot_run row. Only populated when assignee_type='squad'. First-version
-// reports do not consume this; it exists so a future squad-cost view does not
-// need to backfill — see RFC §4.e (MUL-2429).
 
 // recordSkippedRun persists a `skipped` autopilot_run with the given reason
 // and emits the same WS / analytics signals that a normal terminal transition

@@ -12,30 +12,9 @@ import (
 	"github.com/auro-ai/auro/server/pkg/protocol"
 )
 
-// internalOnlyPayloadKeys lists payload keys that exist purely for in-process
-// listeners and must never be serialized to a WebSocket client.
-//
-// `issue:updated` carries prev_description and prev_title so the in-process
-// listeners can diff against the new values: subscriber_listeners.go adds newly
-// @mentioned users, notification_listeners.go builds mention notifications, and
-// activity_listeners.go records the title change. Those all run on
-// bus.Subscribe, which Publish dispatches BEFORE the SubscribeAll forwarder
-// below, so removing the keys on the way out cannot affect them.
-//
-// No client reads either key — IssueUpdatedPayload in
-// packages/core/types/events.ts does not declare them. They reached the wire
-// only because the forwarder reuses the producer's payload map verbatim, which
-// meant every description autosave broadcast TWO full copies of the description
-// (the new one inside `issue`, plus prev_description) to every connection in the
-// workspace, including users who did not have the issue open. The DB write is
-// O(1); the fanout was O(workspace connections × description size) (MUL-5492).
-//
-// This is a table rather than an `if` on one event type because the bug was
-// structural, not a typo: the next large field added to a published payload
-// inherits the same cost silently. Keeping the list declarative puts the
-// internal/external payload boundary in one reviewable place.
+// internalOnlyPayloadKeys prevents private execution details from reaching
+// workspace-wide WebSocket consumers. In-process listeners receive the original.
 var internalOnlyPayloadKeys = map[string][]string{
-	protocol.EventIssueUpdated: {"prev_description", "prev_title"},
 	// task:failed error text is consumed synchronously by channel outbounds.
 	// It may contain provider/runtime detail that belongs in the originating
 	// chat transcript, not in the workspace-wide realtime fanout.

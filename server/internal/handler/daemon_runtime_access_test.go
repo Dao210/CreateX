@@ -24,9 +24,9 @@ func TestClaimTaskByRuntime_OwnerlessAgentOnPrivateRuntimeFailsExplicitly(t *tes
 	}
 	ctx := context.Background()
 	runtimeID := createClaimReclaimRuntime(t, ctx, "Ownerless agent private runtime")
-	agentID, issueID := createClaimReclaimAgentAndIssue(t, ctx, runtimeID, "Ownerless private agent")
+	agentID, issueID := createClaimReclaimAgentAndChat(t, ctx, runtimeID, "Ownerless private agent")
 	dbfx.Exec(t, `UPDATE agent SET owner_id = NULL WHERE id = $1`, agentID)
-	taskID := seedQueuedIssueTask(t, ctx, agentID, runtimeID, issueID)
+	taskID := seedQueuedChatTask(t, ctx, agentID, runtimeID, issueID)
 
 	req := newDaemonTokenRequest(http.MethodPost, "/api/daemon/runtimes/"+runtimeID+"/tasks/claim", nil,
 		testWorkspaceID, "ownerless-agent-claim")
@@ -61,9 +61,9 @@ func TestClaimTaskByRuntime_SettlesPrivateOwnerMismatch(t *testing.T) {
 	foreignOwnerID := dbfx.User(t, "Daemon mismatch owner", "daemon-mismatch-owner-"+uuid.NewString()+"@example.com")
 	dbfx.Member(t, testWorkspaceID, foreignOwnerID, "member")
 	runtimeID := createClaimReclaimRuntime(t, ctx, "Mismatch issue runtime")
-	agentID, issueID := createClaimReclaimAgentAndIssue(t, ctx, runtimeID, "Mismatch issue agent")
+	agentID, issueID := createClaimReclaimAgentAndChat(t, ctx, runtimeID, "Mismatch issue agent")
 	dbfx.Exec(t, `UPDATE agent SET owner_id = $1 WHERE id = $2`, foreignOwnerID, agentID)
-	taskID := seedQueuedIssueTask(t, ctx, agentID, runtimeID, issueID)
+	taskID := seedQueuedChatTask(t, ctx, agentID, runtimeID, issueID)
 
 	req := newDaemonTokenRequest(http.MethodPost, "/api/daemon/runtimes/"+runtimeID+"/tasks/claim", nil,
 		testWorkspaceID, "mismatch-issue-claim")
@@ -92,10 +92,10 @@ func TestClaimTaskByRuntime_SettlesPrivateOwnerMismatchChatFailure(t *testing.T)
 	foreignOwnerID := dbfx.User(t, "Daemon chat mismatch owner", "daemon-chat-mismatch-owner-"+uuid.NewString()+"@example.com")
 	dbfx.Member(t, testWorkspaceID, foreignOwnerID, "member")
 	runtimeID := createClaimReclaimRuntime(t, ctx, "Mismatch chat runtime")
-	agentID, _ := createClaimReclaimAgentAndIssue(t, ctx, runtimeID, "Mismatch chat agent")
+	agentID, _ := createClaimReclaimAgentAndChat(t, ctx, runtimeID, "Mismatch chat agent")
 	dbfx.Exec(t, `UPDATE agent SET owner_id = $1 WHERE id = $2`, foreignOwnerID, agentID)
 	sessionID := createHandlerTestChatSession(t, agentID)
-	taskID := dbfx.Task(t, agentID, testutil.Cols{"runtime_id": runtimeID, "chat_session_id": sessionID, "issue_id": nil})
+	taskID := dbfx.Task(t, agentID, testutil.Cols{"runtime_id": runtimeID, "chat_session_id": sessionID})
 
 	req := newDaemonTokenRequest(http.MethodPost, "/api/daemon/runtimes/"+runtimeID+"/tasks/claim", nil,
 		testWorkspaceID, "mismatch-chat-claim")
@@ -127,11 +127,11 @@ func TestClaimTasksByRuntime_SettlesMismatchAndReturnsValidTask(t *testing.T) {
 	foreignOwnerID := dbfx.User(t, "Daemon batch mismatch owner", "daemon-batch-mismatch-owner-"+uuid.NewString()+"@example.com")
 	dbfx.Member(t, testWorkspaceID, foreignOwnerID, "member")
 	runtimeID := createClaimReclaimRuntime(t, ctx, "Mismatch batch runtime")
-	mismatchAgentID, mismatchIssueID := createClaimReclaimAgentAndIssue(t, ctx, runtimeID, "Mismatch batch agent")
+	mismatchAgentID, mismatchChatSessionID := createClaimReclaimAgentAndChat(t, ctx, runtimeID, "Mismatch batch agent")
 	dbfx.Exec(t, `UPDATE agent SET owner_id = $1 WHERE id = $2`, foreignOwnerID, mismatchAgentID)
-	validAgentID, validIssueID := createClaimReclaimAgentAndIssue(t, ctx, runtimeID, "Valid batch agent")
-	mismatchTaskID := seedQueuedIssueTask(t, ctx, mismatchAgentID, runtimeID, mismatchIssueID)
-	validTaskID := seedQueuedIssueTask(t, ctx, validAgentID, runtimeID, validIssueID)
+	validAgentID, validChatSessionID := createClaimReclaimAgentAndChat(t, ctx, runtimeID, "Valid batch agent")
+	mismatchTaskID := seedQueuedChatTask(t, ctx, mismatchAgentID, runtimeID, mismatchChatSessionID)
+	validTaskID := seedQueuedChatTask(t, ctx, validAgentID, runtimeID, validChatSessionID)
 
 	w := postBatchClaim(t, testWorkspaceID, []string{runtimeID}, 2)
 	if w.Code != http.StatusOK {
@@ -164,8 +164,8 @@ func TestBuildClaimedTaskResponseRejectsAgentOwnerChangedAfterClaim(t *testing.T
 	newOwnerID := dbfx.User(t, "Claim owner mismatch", "claim-owner-mismatch-"+uuid.NewString()+"@example.com")
 	dbfx.Member(t, testWorkspaceID, newOwnerID, "member")
 	runtimeID := createClaimReclaimRuntime(t, ctx, "Claim then change owner runtime")
-	agentID, issueID := createClaimReclaimAgentAndIssue(t, ctx, runtimeID, "Claim then change owner agent")
-	taskID := seedQueuedIssueTask(t, ctx, agentID, runtimeID, issueID)
+	agentID, issueID := createClaimReclaimAgentAndChat(t, ctx, runtimeID, "Claim then change owner agent")
+	taskID := seedQueuedChatTask(t, ctx, agentID, runtimeID, issueID)
 
 	task, err := testHandler.TaskService.ClaimTaskForRuntime(ctx, parseUUID(runtimeID))
 	if err != nil {
@@ -185,7 +185,7 @@ func TestBuildClaimedTaskResponseRejectsAgentOwnerChangedAfterClaim(t *testing.T
 	}
 	req := newDaemonTokenRequest(http.MethodPost, "/api/daemon/runtimes/"+runtimeID+"/tasks/claim", nil,
 		testWorkspaceID, "claim-then-owner-change")
-	_, _, _, _, _, failure := testHandler.buildClaimedTaskResponse(
+	_, _, _, failure := testHandler.buildClaimedTaskResponse(
 		req, task, runtime, runtimeID, testWorkspaceID,
 	)
 	if failure == nil || failure.status != http.StatusForbidden || failure.outcome != "error_runtime_access_denied" {
@@ -219,8 +219,8 @@ func TestBuildClaimedTaskResponseRejectsAgentReboundAfterClaim(t *testing.T) {
 	ctx := context.Background()
 	oldRuntimeID := createClaimReclaimRuntime(t, ctx, "Claim then rebind old runtime")
 	newRuntimeID := createClaimReclaimRuntime(t, ctx, "Claim then rebind new runtime")
-	agentID, issueID := createClaimReclaimAgentAndIssue(t, ctx, oldRuntimeID, "Claim then rebind agent")
-	taskID := seedQueuedIssueTask(t, ctx, agentID, oldRuntimeID, issueID)
+	agentID, issueID := createClaimReclaimAgentAndChat(t, ctx, oldRuntimeID, "Claim then rebind agent")
+	taskID := seedQueuedChatTask(t, ctx, agentID, oldRuntimeID, issueID)
 
 	task, err := testHandler.TaskService.ClaimTaskForRuntime(ctx, parseUUID(oldRuntimeID))
 	if err != nil {
@@ -240,7 +240,7 @@ func TestBuildClaimedTaskResponseRejectsAgentReboundAfterClaim(t *testing.T) {
 	}
 	req := newDaemonTokenRequest(http.MethodPost, "/api/daemon/runtimes/"+oldRuntimeID+"/tasks/claim", nil,
 		testWorkspaceID, "claim-then-rebind")
-	_, _, _, _, _, failure := testHandler.buildClaimedTaskResponse(
+	_, _, _, failure := testHandler.buildClaimedTaskResponse(
 		req, task, runtime, oldRuntimeID, testWorkspaceID,
 	)
 	if failure == nil || failure.status != http.StatusConflict || failure.outcome != "error_agent_runtime_changed" {
@@ -293,26 +293,25 @@ func (h *Handler) finalizeClaimDeliveryForTest(
 func (h *Handler) finalizeClaimDeliveryForTestWithRuntime(
 	r *http.Request, task *db.AgentTaskQueue, runtime db.AgentRuntime, runtimeID, runtimeWorkspaceID string,
 ) (AgentTaskResponse, []pgtype.UUID, int, int, *claimBuildFailure, error) {
-	resp, deliveredCommentIDs, _, agentSkillCount, builtinSkillCount, buildFailure := h.buildClaimedTaskResponse(
+	resp, agentSkillCount, builtinSkillCount, buildFailure := h.buildClaimedTaskResponse(
 		r, task, runtime, runtimeID, runtimeWorkspaceID,
 	)
 	if buildFailure != nil {
-		return resp, deliveredCommentIDs, agentSkillCount, builtinSkillCount, buildFailure, nil
+		return resp, nil, agentSkillCount, builtinSkillCount, buildFailure, nil
 	}
 	if !runtime.OwnerID.Valid {
-		return resp, deliveredCommentIDs, agentSkillCount, builtinSkillCount,
+		return resp, nil, agentSkillCount, builtinSkillCount,
 			&claimBuildFailure{outcome: "error_token", status: http.StatusInternalServerError, message: "runtime owner required"}, nil
 	}
 	tokenStr, terr := auth.GenerateAgentTaskToken()
 	if terr != nil {
-		return resp, deliveredCommentIDs, agentSkillCount, builtinSkillCount, nil, fmt.Errorf("generate token: %w", terr)
+		return resp, nil, agentSkillCount, builtinSkillCount, nil, fmt.Errorf("generate token: %w", terr)
 	}
 	remoteMCPToken, daemonTokens, derr := remoteMCPDaemonTokenForClaim(resp, runtime)
 	if derr != nil {
-		return resp, deliveredCommentIDs, agentSkillCount, builtinSkillCount, nil, fmt.Errorf("remote mcp token: %w", derr)
+		return resp, nil, agentSkillCount, builtinSkillCount, nil, fmt.Errorf("remote mcp token: %w", derr)
 	}
-	commentBackedTask := task.TriggerCommentID.Valid || len(task.CoalescedCommentIds) > 0
-	receipt, deliveryFailure, ferr := h.finalizeClaimDelivery(r.Context(), task, runtime, runtimeID, runtimeWorkspaceID, &resp, db.CreateTaskTokenParams{
+	deliveryFailure, ferr := h.finalizeClaimDelivery(r.Context(), task, runtime, runtimeID, runtimeWorkspaceID, &resp, db.CreateTaskTokenParams{
 		ID:          dbid.NewV7(),
 		TokenHash:   auth.HashToken(tokenStr),
 		TaskID:      task.ID,
@@ -320,17 +319,16 @@ func (h *Handler) finalizeClaimDeliveryForTestWithRuntime(
 		WorkspaceID: parseUUID(resp.WorkspaceID),
 		UserID:      runtime.OwnerID,
 		ExpiresAt:   pgtype.Timestamptz{Time: time.Now().Add(24 * time.Hour), Valid: true},
-	}, deliveredCommentIDs, commentBackedTask, nil, daemonTokens...)
+	}, daemonTokens...)
 	if ferr != nil {
-		return resp, deliveredCommentIDs, agentSkillCount, builtinSkillCount, nil, ferr
+		return resp, nil, agentSkillCount, builtinSkillCount, nil, ferr
 	}
 	if deliveryFailure != nil {
-		return AgentTaskResponse{}, deliveredCommentIDs, agentSkillCount, builtinSkillCount, deliveryFailure, nil
+		return AgentTaskResponse{}, nil, agentSkillCount, builtinSkillCount, deliveryFailure, nil
 	}
 	resp.AuthToken = tokenStr
 	resp.RemoteMCPDaemonToken = remoteMCPToken
-	resp.DeliveredCommentIDs = uuidStringsOrEmpty(receipt)
-	return resp, deliveredCommentIDs, agentSkillCount, builtinSkillCount, nil, nil
+	return resp, nil, agentSkillCount, builtinSkillCount, nil, nil
 }
 
 func TestClaimTaskByRuntime_RuntimeOwnerChangedAfterClaimNeverDelivered(t *testing.T) {
@@ -341,8 +339,8 @@ func TestClaimTaskByRuntime_RuntimeOwnerChangedAfterClaimNeverDelivered(t *testi
 	newOwnerID := dbfx.User(t, "Delivery gate owner", "delivery-gate-owner-"+uuid.NewString()+"@example.com")
 	dbfx.Member(t, testWorkspaceID, newOwnerID, "member")
 	runtimeID := createClaimReclaimRuntime(t, ctx, "Delivery gate runtime")
-	agentID, issueID := createClaimReclaimAgentAndIssue(t, ctx, runtimeID, "Delivery gate agent")
-	taskID := seedQueuedIssueTask(t, ctx, agentID, runtimeID, issueID)
+	agentID, issueID := createClaimReclaimAgentAndChat(t, ctx, runtimeID, "Delivery gate agent")
+	taskID := seedQueuedChatTask(t, ctx, agentID, runtimeID, issueID)
 
 	// Initial runtime access read (owner = the workspace fixture user) happens
 	// inside the handler; flip the runtime owner AFTER the task is claimed by
@@ -370,7 +368,7 @@ func TestClaimTaskByRuntime_RuntimeOwnerChangedAfterClaimNeverDelivered(t *testi
 
 	req := newDaemonTokenRequest(http.MethodPost, "/api/daemon/runtimes/"+runtimeID+"/tasks/claim", nil,
 		testWorkspaceID, "delivery-gate-owner-change")
-	resp, deliveredCommentIDs, _, _, settledFailure, finalizeErr := testHandler.finalizeClaimDeliveryForTestWithRuntime(
+	resp, _, _, _, settledFailure, finalizeErr := testHandler.finalizeClaimDeliveryForTestWithRuntime(
 		req, task, runtimeSnapshot, runtimeID, testWorkspaceID,
 	)
 	if finalizeErr != nil {
@@ -378,9 +376,6 @@ func TestClaimTaskByRuntime_RuntimeOwnerChangedAfterClaimNeverDelivered(t *testi
 	}
 	if settledFailure == nil || settledFailure.outcome != "error_runtime_access_denied" || !settledFailure.settled {
 		t.Fatalf("settled failure = %+v, want settled runtime-access denial", settledFailure)
-	}
-	if len(deliveredCommentIDs) != 0 {
-		t.Fatalf("delivered comment ids = %v, want none", deliveredCommentIDs)
 	}
 	if resp.AuthToken != "" || resp.RemoteMCPDaemonToken != "" {
 		t.Fatalf("resp carries credentials %+v/%+v, want none — nothing may be delivered", resp.AuthToken, resp.RemoteMCPDaemonToken)
@@ -430,8 +425,8 @@ func TestFinalizeClaimDelivery_UsesCurrentRuntimeOwnerForTaskToken(t *testing.T)
 	newOwnerID := dbfx.User(t, "Public delivery owner", "public-delivery-owner-"+uuid.NewString()+"@example.com")
 	dbfx.Member(t, testWorkspaceID, newOwnerID, "member")
 	runtimeID := createClaimReclaimRuntime(t, ctx, "Public delivery owner runtime")
-	agentID, issueID := createClaimReclaimAgentAndIssue(t, ctx, runtimeID, "Public delivery owner agent")
-	taskID := seedQueuedIssueTask(t, ctx, agentID, runtimeID, issueID)
+	agentID, issueID := createClaimReclaimAgentAndChat(t, ctx, runtimeID, "Public delivery owner agent")
+	taskID := seedQueuedChatTask(t, ctx, agentID, runtimeID, issueID)
 
 	task, err := testHandler.TaskService.ClaimTaskForRuntime(ctx, parseUUID(runtimeID))
 	if err != nil || task == nil {
@@ -497,8 +492,8 @@ func TestFinalizeClaimDelivery_CurrentRuntimeOwnerMissingNeverMintsToken(t *test
 	}
 	ctx := context.Background()
 	runtimeID := createClaimReclaimRuntime(t, ctx, "Ownerless delivery runtime")
-	agentID, issueID := createClaimReclaimAgentAndIssue(t, ctx, runtimeID, "Ownerless delivery agent")
-	taskID := seedQueuedIssueTask(t, ctx, agentID, runtimeID, issueID)
+	agentID, issueID := createClaimReclaimAgentAndChat(t, ctx, runtimeID, "Ownerless delivery agent")
+	taskID := seedQueuedChatTask(t, ctx, agentID, runtimeID, issueID)
 
 	task, err := testHandler.TaskService.ClaimTaskForRuntime(ctx, parseUUID(runtimeID))
 	if err != nil || task == nil {
@@ -613,8 +608,8 @@ func TestFinalizeClaimDelivery_SettlementFailureIsUnsettled(t *testing.T) {
 	foreignOwnerID := dbfx.User(t, "Settlement failure owner", "settlement-failure-owner-"+uuid.NewString()+"@example.com")
 	dbfx.Member(t, testWorkspaceID, foreignOwnerID, "member")
 	runtimeID := createClaimReclaimRuntime(t, ctx, "Settlement failure runtime")
-	agentID, issueID := createClaimReclaimAgentAndIssue(t, ctx, runtimeID, "Settlement failure agent")
-	taskID := seedQueuedIssueTask(t, ctx, agentID, runtimeID, issueID)
+	agentID, issueID := createClaimReclaimAgentAndChat(t, ctx, runtimeID, "Settlement failure agent")
+	taskID := seedQueuedChatTask(t, ctx, agentID, runtimeID, issueID)
 	injectRuntimeOwnerFlipAfterClaim(t, ctx, taskID, runtimeID, foreignOwnerID)
 	injectFailTaskSettlementFailure(t, ctx, taskID)
 
@@ -648,10 +643,10 @@ func TestClaimTasksByRuntime_OwnerChangedAfterSnapshotSettlesMismatchReturnsVali
 	newOwnerID := dbfx.User(t, "Batch delivery gate owner", "batch-delivery-gate-owner-"+uuid.NewString()+"@example.com")
 	dbfx.Member(t, testWorkspaceID, newOwnerID, "member")
 	runtimeID := createClaimReclaimRuntime(t, ctx, "Batch delivery gate runtime")
-	mismatchAgentID, mismatchIssueID := createClaimReclaimAgentAndIssue(t, ctx, runtimeID, "Batch delivery gate mismatch agent")
-	validAgentID, validIssueID := createClaimReclaimAgentAndIssue(t, ctx, runtimeID, "Batch delivery gate valid agent")
-	mismatchTaskID := seedQueuedIssueTask(t, ctx, mismatchAgentID, runtimeID, mismatchIssueID)
-	validTaskID := seedQueuedIssueTask(t, ctx, validAgentID, runtimeID, validIssueID)
+	mismatchAgentID, mismatchChatSessionID := createClaimReclaimAgentAndChat(t, ctx, runtimeID, "Batch delivery gate mismatch agent")
+	validAgentID, validChatSessionID := createClaimReclaimAgentAndChat(t, ctx, runtimeID, "Batch delivery gate valid agent")
+	mismatchTaskID := seedQueuedChatTask(t, ctx, mismatchAgentID, runtimeID, mismatchChatSessionID)
+	validTaskID := seedQueuedChatTask(t, ctx, validAgentID, runtimeID, validChatSessionID)
 
 	// The batch handler resolves runtime snapshots before claiming. Start with a
 	// public runtime so both agents are claimable, then flip its visibility and

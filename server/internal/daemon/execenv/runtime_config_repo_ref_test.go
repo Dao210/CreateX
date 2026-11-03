@@ -18,7 +18,7 @@ import (
 func TestRepositoriesSectionCarriesPinnedRefAndDeliveryTarget(t *testing.T) {
 	t.Parallel()
 	ctx := TaskContextForEnv{
-		IssueID: "i-1", AgentName: "Eve", AgentID: "eve-1",
+		ChatSessionID: "i-1", AgentName: "Eve", AgentID: "eve-1",
 		Repos: []RepoContextForEnv{
 			{URL: "https://github.com/auro-ai/auro", Ref: "release/2026-09"},
 		},
@@ -46,7 +46,7 @@ func TestRepositoriesSectionCarriesPinnedRefAndDeliveryTarget(t *testing.T) {
 func TestRepositoriesSectionOmitsDeliveryRuleWhenNothingIsPinned(t *testing.T) {
 	t.Parallel()
 	ctx := TaskContextForEnv{
-		IssueID: "i-1", AgentName: "Eve", AgentID: "eve-1",
+		ChatSessionID: "i-1", AgentName: "Eve", AgentID: "eve-1",
 		Repos: []RepoContextForEnv{
 			{URL: "https://github.com/auro-ai/auro", Description: "the platform"},
 		},
@@ -69,7 +69,7 @@ func TestRepositoriesSectionOmitsDeliveryRuleWhenNothingIsPinned(t *testing.T) {
 func TestDeliveryRuleDoesNotAssumeThePinIsABranch(t *testing.T) {
 	t.Parallel()
 	ctx := TaskContextForEnv{
-		IssueID: "i-1", AgentName: "Eve", AgentID: "eve-1",
+		ChatSessionID: "i-1", AgentName: "Eve", AgentID: "eve-1",
 		Repos: []RepoContextForEnv{{URL: "https://github.com/o/r", Ref: "v1.4.0"}},
 	}
 	out := buildMetaSkillContent("claude", ctx)
@@ -95,7 +95,7 @@ func TestDeliveryRuleDoesNotAssumeThePinIsABranch(t *testing.T) {
 func TestDeliveryRuleWarnsAboutAKeptCheckout(t *testing.T) {
 	t.Parallel()
 	ctx := TaskContextForEnv{
-		IssueID: "i-1", AgentName: "Eve", AgentID: "eve-1",
+		ChatSessionID: "i-1", AgentName: "Eve", AgentID: "eve-1",
 		Repos: []RepoContextForEnv{{URL: "https://github.com/o/r", Ref: "release/b"}},
 	}
 	out := buildMetaSkillContent("claude", ctx)
@@ -121,7 +121,7 @@ func TestDeliveryRuleWarnsAboutAKeptCheckout(t *testing.T) {
 func TestKeptCheckoutIsNotOfferedAsTheDeliveryTarget(t *testing.T) {
 	t.Parallel()
 	ctx := TaskContextForEnv{
-		IssueID: "i-1", AgentName: "Eve", AgentID: "eve-1",
+		ChatSessionID: "i-1", AgentName: "Eve", AgentID: "eve-1",
 		Repos: []RepoContextForEnv{{URL: "https://github.com/o/r", Ref: "release/b"}},
 	}
 	out := buildMetaSkillContent("claude", ctx)
@@ -148,7 +148,7 @@ func TestKeptCheckoutIsNotOfferedAsTheDeliveryTarget(t *testing.T) {
 func TestResumeWarningSurvivesTheStartingPointBeingCleared(t *testing.T) {
 	t.Parallel()
 	ctx := TaskContextForEnv{
-		IssueID: "i-1", AgentName: "Eve", AgentID: "eve-1",
+		ChatSessionID: "i-1", AgentName: "Eve", AgentID: "eve-1",
 		Repos: []RepoContextForEnv{{URL: "https://github.com/o/r"}}, // A -> cleared
 	}
 	out := buildMetaSkillContent("claude", ctx)
@@ -170,7 +170,7 @@ func TestResumeWarningSurvivesTheStartingPointBeingCleared(t *testing.T) {
 func TestResumeWarningAbsentWithoutRepos(t *testing.T) {
 	t.Parallel()
 	out := buildMetaSkillContent("claude", TaskContextForEnv{
-		IssueID: "i-1", AgentName: "Eve", AgentID: "eve-1",
+		ChatSessionID: "i-1", AgentName: "Eve", AgentID: "eve-1",
 	})
 	if strings.Contains(out, "KEPT an existing checkout") {
 		t.Errorf("no repositories, so no checkout guidance; got:\n%s", out)

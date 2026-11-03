@@ -107,7 +107,7 @@ describe("WSClient", () => {
     };
     const ws = new WSClient("ws://example.test/ws", { logger });
     const handler = vi.fn();
-    ws.on("issue:updated", handler);
+    ws.on("agent:status", handler);
     ws.connect();
 
     expect(() => {
@@ -116,7 +116,7 @@ describe("WSClient", () => {
 
     FakeWebSocket.lastInstance!.onmessage?.({
       data: JSON.stringify({
-        type: "issue:updated",
+        type: "agent:status",
         payload: { id: "issue-1" },
       }),
     });
@@ -150,7 +150,7 @@ describe("WSClient", () => {
     const anyHandler = vi.fn((msg: WSMessage) => msg.type.split(":")[0]);
     ws.onAny(anyHandler);
     const issueHandler = vi.fn();
-    ws.on("issue:updated", issueHandler);
+    ws.on("agent:status", issueHandler);
     ws.connect();
 
     const badFrames = [
@@ -171,7 +171,7 @@ describe("WSClient", () => {
 
     // A valid frame after the bad ones still dispatches normally.
     FakeWebSocket.lastInstance!.onmessage?.({
-      data: JSON.stringify({ type: "issue:updated", payload: { id: "i-1" } }),
+      data: JSON.stringify({ type: "agent:status", payload: { id: "i-1" } }),
     });
     expect(issueHandler).toHaveBeenCalledWith({ id: "i-1" }, undefined, undefined);
     expect(anyHandler).toHaveBeenCalledTimes(1);
@@ -189,12 +189,12 @@ describe("WSClient", () => {
     ws.connect();
 
     const handler = vi.fn();
-    ws.on("issue:created", handler);
+    ws.on("agent:created", handler);
 
     const fakeWs = (ws as any).ws as FakeWebSocket;
     fakeWs.onmessage?.({
       data: JSON.stringify({
-        type: "issue:created",
+        type: "agent:created",
         payload: { id: "issue-1" },
         actor_id: "user-123",
         actor_type: "user",

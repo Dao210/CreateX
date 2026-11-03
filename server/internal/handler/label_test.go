@@ -288,7 +288,7 @@ func TestLabelNameAllowsEmoji(t *testing.T) {
 
 func TestLabelResourceTypesHaveIndependentNamespaces(t *testing.T) {
 	name := "shared-scope-label-" + uuid.NewString()[:8]
-	for _, resourceType := range []string{"issue", "agent", "skill"} {
+	for _, resourceType := range []string{"agent", "skill"} {
 		w := httptest.NewRecorder()
 		req := newRequest("POST", "/api/labels", map[string]any{
 			"resource_type": resourceType,
@@ -438,10 +438,10 @@ func createOtherTestWorkspace(t *testing.T) string {
 	ctx := context.Background()
 	var wsID string
 	err := testPool.QueryRow(ctx, `
-		INSERT INTO workspace (name, slug, description, issue_prefix)
-		VALUES ($1, $2, $3, $4)
+		INSERT INTO workspace (name, slug, description)
+		VALUES ($1, $2, $3)
 		RETURNING id
-	`, "Other Handler Tests", handlerTestWorkspaceSlug+"-other", "temp second workspace", "OTH").Scan(&wsID)
+	`, "Other Handler Tests", handlerTestWorkspaceSlug+"-other", "temp second workspace").Scan(&wsID)
 	if err != nil {
 		t.Fatalf("create other workspace: %v", err)
 	}

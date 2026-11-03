@@ -62,7 +62,6 @@ export interface SurfaceBridgeOptions {
   /** Single-use proof returned with this exact hosted document URL. */
   bridgeToken: string;
   /** Mounted-on issue, forwarded to /context so the surface knows where it is. */
-  issueId?: string;
   onResize?: (height: number) => void;
 }
 
@@ -102,7 +101,7 @@ export function createSurfaceBridge(options: SurfaceBridgeOptions): SurfaceBridg
         method: request.method,
         path: request.path,
         body: request.body,
-        issueId: options.issueId,
+
       });
       port.postMessage({ id: request.id, ok: true, status: 200, data: result });
     } catch (error) {

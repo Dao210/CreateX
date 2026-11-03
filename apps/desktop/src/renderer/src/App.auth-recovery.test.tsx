@@ -216,18 +216,4 @@ describe("App main-window auth recovery", () => {
     expect(state.refetchWorkspaceList).toHaveBeenCalledOnce();
   });
 
-  it("keeps auth recovery ahead of a dedicated issue window", () => {
-    state.auth.status = "recovering";
-      issueId: "MUL-1",
-      kind: "issue",
-      path: "/acme/issues/MUL-1",
-      title: "MUL-1",
-      workspaceSlug: "acme",
-    };
-
-    render(<App />);
-
-    expect(screen.getByTestId("auth-recovery")).toBeInTheDocument();
-    expect(screen.queryByTestId("issue-window")).toBeNull();
-  });
 });

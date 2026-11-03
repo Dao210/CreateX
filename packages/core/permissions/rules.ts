@@ -1,11 +1,5 @@
-import type {
-  Agent,
-  Comment,
-  Member,
-  MemberRole,
-  RuntimeDevice,
-  Skill,
-} from "../types";
+
+import type { Agent, Member, MemberRole, RuntimeDevice, Skill } from "../types";
 import { ALLOW, deny, type Decision, type PermissionContext } from "./types";
 
 /**
@@ -120,48 +114,6 @@ export function canEditSkill(skill: Skill, ctx: PermissionContext): Decision {
 
 export function canDeleteSkill(skill: Skill, ctx: PermissionContext): Decision {
   return canEditSkill(skill, ctx);
-}
-
-// ---- Comments --------------------------------------------------------------
-
-export function canEditComment(
-  comment: Comment,
-  ctx: PermissionContext,
-): Decision {
-  if (ctx.userId === null) {
-    return deny("not_authenticated", "Sign in to edit comments.");
-  }
-  // Only member-authored comments can be edited; agent-authored comments are
-  // immutable from any human's perspective.
-  if (comment.author_type !== "member") {
-    return deny(
-      "not_resource_owner",
-      "Agent-authored comments cannot be edited.",
-    );
-  }
-  if (comment.author_id === ctx.userId) return ALLOW;
-  if (isAdminLike(ctx.role)) return ALLOW;
-  return deny(
-    "not_resource_owner",
-    "Only the author and workspace admins can edit this comment.",
-  );
-}
-
-export function canDeleteComment(
-  comment: Comment,
-  ctx: PermissionContext,
-): Decision {
-  if (ctx.userId === null) {
-    return deny("not_authenticated", "Sign in to delete comments.");
-  }
-  if (comment.author_type === "member" && comment.author_id === ctx.userId) {
-    return ALLOW;
-  }
-  if (isAdminLike(ctx.role)) return ALLOW;
-  return deny(
-    "not_resource_owner",
-    "Only the author and workspace admins can delete this comment.",
-  );
 }
 
 // ---- Runtimes --------------------------------------------------------------

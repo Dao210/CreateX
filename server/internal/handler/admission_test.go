@@ -3,6 +3,8 @@ package handler
 import (
 	"testing"
 
+	"github.com/auro-ai/auro/server/internal/dispatch"
+
 	db "github.com/auro-ai/auro/server/pkg/db/generated"
 	"github.com/jackc/pgx/v5/pgtype"
 )
@@ -37,7 +39,7 @@ func TestDispatchBlockedFallbackMessageIsNonEnumerating(t *testing.T) {
 	codes := []DispatchReasonCode{
 		ReasonInvocationNotAllowed, ReasonTargetUnavailable, ReasonRuntimeOffline,
 		ReasonRuntimeAccessDenied,
-		ReasonAttributionBlocked, ReasonAlreadyActive, ReasonInternalError,
+		ReasonAttributionBlocked, ReasonAlreadyActive, dispatch.ReasonInternalError,
 		DispatchReasonCode("some_future_code"),
 	}
 	for _, c := range codes {

@@ -27,8 +27,8 @@ func TestClaimTasksByRuntime_MaxTasksZeroClaimsNothing(t *testing.T) {
 	}
 	ctx := context.Background()
 	rt := createClaimReclaimRuntime(t, ctx, "Batch max0 rt")
-	a, i := createClaimReclaimAgentAndIssue(t, ctx, rt, "Batch max0 agent")
-	taskID := seedQueuedIssueTask(t, ctx, a, rt, i)
+	a, i := createClaimReclaimAgentAndChat(t, ctx, rt, "Batch max0 agent")
+	taskID := seedQueuedChatTask(t, ctx, a, rt, i)
 
 	w := postBatchClaim(t, testWorkspaceID, []string{rt}, 0)
 	if w.Code != http.StatusOK {
@@ -72,8 +72,8 @@ func TestClaimTasksByRuntime_SkipsInvalidRuntimeID(t *testing.T) {
 	}
 	ctx := context.Background()
 	rt := createClaimReclaimRuntime(t, ctx, "Batch badid rt")
-	a, i := createClaimReclaimAgentAndIssue(t, ctx, rt, "Batch badid agent")
-	seedQueuedIssueTask(t, ctx, a, rt, i)
+	a, i := createClaimReclaimAgentAndChat(t, ctx, rt, "Batch badid agent")
+	seedQueuedChatTask(t, ctx, a, rt, i)
 
 	w := postBatchClaim(t, testWorkspaceID, []string{"not-a-uuid", rt}, 5)
 	if w.Code != http.StatusOK {
@@ -122,8 +122,8 @@ func TestClaimTasksByRuntime_SkipsRuntimeOwnedByAnotherDaemon(t *testing.T) {
 	}
 	t.Cleanup(func() { testPool.Exec(ctx, `DELETE FROM agent_runtime WHERE id = $1`, rt) })
 
-	a, i := createClaimReclaimAgentAndIssue(t, ctx, rt, "Other daemon agent")
-	taskID := seedQueuedIssueTask(t, ctx, a, rt, i)
+	a, i := createClaimReclaimAgentAndChat(t, ctx, rt, "Other daemon agent")
+	taskID := seedQueuedChatTask(t, ctx, a, rt, i)
 
 	// postBatchClaim sends daemon_id = batchClaimTestDaemonID ("batch-claim-review"),
 	// which differs from the runtime's "other-daemon-machine".

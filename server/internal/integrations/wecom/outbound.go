@@ -805,6 +805,9 @@ func (o *Outbound) handleInboxNew(e events.Event) {
 // tryDeliverInbox is the delivery core. Returns true iff the bot pushed
 // the notification.
 func (o *Outbound) tryDeliverInbox(ctx context.Context, item map[string]any, recipientIDStr, workspaceIDStr string) bool {
+	if itemIDOf(item) == "" {
+		return false
+	}
 	recipientID, err := util.ParseUUID(recipientIDStr)
 	if err != nil || !recipientID.Valid {
 		return false

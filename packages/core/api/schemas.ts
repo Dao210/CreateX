@@ -310,7 +310,7 @@ export const EMPTY_LIST_GITHUB_REPOSITORIES_RESPONSE: ListGitHubRepositoriesResp
 export const LabelSchema = z.object({
   id: z.string(),
   workspace_id: z.string(),
-  resource_type: z.string().optional().default("issue"),
+  resource_type: z.string().optional().default("skill"),
   name: z.string(),
   description: z.string().optional().default(""),
   color: z.string(),
@@ -322,7 +322,7 @@ export const LabelSchema = z.object({
 export const EMPTY_LABEL: Label = {
   id: "",
   workspace_id: "",
-  resource_type: "issue",
+  resource_type: "skill",
   name: "",
   description: "",
   color: "#6b7280",
@@ -343,7 +343,6 @@ export const EMPTY_LIST_LABELS_RESPONSE: ListLabelsResponse = {
 
 export const ResourceLabelsResponseSchema = z.object({
   labels: z.array(LabelSchema).default([]),
-  issue_revision: z.number().int().positive().optional(),
 }).loose();
 
 export const EMPTY_RESOURCE_LABELS_RESPONSE: ResourceLabelsResponse = {
@@ -381,13 +380,6 @@ export interface AppConfigResponse {
   /** Whether agent create/update persists `conversation_starters`. Older servers
    * silently ignored the unknown field, so absent must be treated as false. */
   agent_conversation_starters_supported?: boolean;
-  /** Whether issue create atomically validates and persists `properties`.
-   * Older servers silently ignore the field, so absent means unsupported. */
-  issue_create_properties_supported?: boolean;
-  /** Whether deleting a comment keeps its replies and the server routes
-   * DELETE /api/comments/{id}/keep-replies. Older servers deleted the replies
-   * too, so absent must be treated as false (#8296). */
-  comment_delete_keep_replies_supported?: boolean;
   server_version?: string;
 }
 
@@ -466,7 +458,6 @@ export const AttachmentResponseSchema = z.object({
 export const EMPTY_ATTACHMENT: Attachment = {
   id: "",
   workspace_id: "",
-  issue_id: null,
   comment_id: null,
   chat_session_id: null,
   chat_message_id: null,
@@ -551,8 +542,6 @@ export const AppConfigSchema = z.object({
   feature_flags: FeatureFlagsSchema,
   local_worktree_supported: BooleanWithDefaultSchema(false),
   agent_conversation_starters_supported: BooleanWithDefaultSchema(false),
-  issue_create_properties_supported: BooleanWithDefaultSchema(false),
-  comment_delete_keep_replies_supported: BooleanWithDefaultSchema(false),
   server_version: OptionalStringSchema,
 }).loose();
 
@@ -570,10 +559,6 @@ export const EMPTY_APP_CONFIG: AppConfigResponse = {
   local_worktree_supported: false,
   // Fail closed: old servers returned success while dropping the field.
   agent_conversation_starters_supported: false,
-  // Fail closed: old servers returned success while dropping create properties.
-  issue_create_properties_supported: false,
-  // Fail closed: old servers delete a comment's replies with it.
-  comment_delete_keep_replies_supported: false,
   feature_flags: {},
 };
 
@@ -827,9 +812,7 @@ const TaskAttributionSchema = z.object({
   originator: AttributionUserSchema.optional(),
   evidence: TaskEvidenceSchema.optional(),
   rule_version_id: z.string().optional(),
-  delegated_from_task_id: z.string().optional(),
   retry_of_task_id: z.string().optional(),
-  rerun_of_task_id: z.string().optional(),
 }).loose();
 
 const TaskCancellationActorSchema = z.object({
@@ -838,13 +821,7 @@ const TaskCancellationActorSchema = z.object({
   name: z.string().optional(),
 }).loose();
 
-const OptionalStringArraySchema = z.preprocess(
-  (value) =>
-    Array.isArray(value) && value.every((item) => typeof item === "string")
-      ? value
-      : undefined,
-  z.array(z.string()).optional(),
-);
+
 
 // One (provider, model) slice of a run's token usage. Token counts default to
 // 0 rather than failing the row: a slice missing one counter is still worth
@@ -861,13 +838,10 @@ const TaskUsageSchema = z.object({
 }).loose();
 
 export const AgentTaskSchema = z.object({
-  wakeup_id: z.string().optional().catch(undefined),
-  cancelled_by_comment_change: z.boolean().optional().catch(undefined),
   cancelled_by: TaskCancellationActorSchema.optional().catch(undefined),
   id: z.string(),
   agent_id: z.string().default(""),
   runtime_id: z.string().default(""),
-  issue_id: z.string().default(""),
   status: z.string().default("cancelled"),
   priority: z.number().default(0),
   dispatched_at: z.string().nullable().default(null),
@@ -881,15 +855,6 @@ export const AgentTaskSchema = z.object({
   autopilot_run_id: z.string().optional(),
   parent_task_id: z.string().optional(),
   attempt: z.number().optional(),
-  trigger_comment_id: z.string().optional(),
-  // Coverage is additive display metadata. A mixed-version or partially
-  // upgraded server must not make one malformed optional field erase the
-  // entire execution log, so degrade that field to "absent" independently.
-  coalesced_comment_ids: OptionalStringArraySchema,
-  delivered_comment_ids: OptionalStringArraySchema,
-  supplement_capability: z.string().optional().catch(undefined),
-  supplement_comment_ids: OptionalStringArraySchema,
-  can_supplement: z.boolean().optional().catch(undefined),
   trigger_summary: z.string().optional(),
   kind: z.string().optional(),
   work_dir: z.string().optional().catch(undefined),
@@ -940,7 +905,6 @@ export const AgentTaskPageSchema = z.object({
 export const TaskMessagePayloadSchema = z.object({
   call_id: z.string().optional().catch(undefined),
   task_id: z.string().default(""),
-  issue_id: z.string().default(""),
   chat_session_id: z.string().optional(),
   seq: z.number().default(0),
   type: z.enum(["text", "thinking", "tool_use", "tool_result", "error"]).catch("text"),
@@ -1107,7 +1071,6 @@ export const EMPTY_CANCEL_TASK_RESPONSE: CancelTaskResponse = {
   id: "",
   agent_id: "",
   runtime_id: "",
-  issue_id: "",
   status: "cancelled",
   priority: 0,
   dispatched_at: null,
@@ -1311,7 +1274,6 @@ export const AutopilotRunSchema = z.object({
   trigger_id: z.string().nullable().default(null),
   source: z.string().default("manual"),
   status: z.string().default("failed"),
-  issue_id: z.string().nullable().default(null),
   task_id: z.string().nullable().default(null),
   triggered_at: z.string().default(""),
   completed_at: z.string().nullable().default(null),
@@ -1341,7 +1303,6 @@ export const FALLBACK_AUTOPILOT_RUN: AutopilotRun = {
   trigger_id: null,
   source: "manual",
   status: "failed",
-  issue_id: null,
   task_id: null,
   triggered_at: "",
   completed_at: null,
@@ -1475,11 +1436,8 @@ export const InboxItemListSchema = z.array(
       recipient_id: z.string(),
       type: z.string(),
       severity: z.string(),
-      issue_id: z.string().nullish(),
       title: z.string(),
       body: z.string().nullish(),
-      issue_status: z.string().nullish(),
-      issue_priority: z.string().nullish(),
       read: z.boolean(),
       archived: z.boolean(),
       created_at: z.string(),

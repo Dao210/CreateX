@@ -185,7 +185,7 @@ func TestPrepareThenCleanupSidecarsRoundTripEmptyWorkdir(t *testing.T) {
 			before := snapshot(t, workDir)
 
 			ctx := TaskContextForEnv{
-				IssueID: "11111111-2222-3333-4444-555555555555",
+				ChatSessionID: "11111111-2222-3333-4444-555555555555",
 				AgentSkills: []SkillContextForEnv{
 					{
 						Name:        "Issue Review",
@@ -200,8 +200,6 @@ func TestPrepareThenCleanupSidecarsRoundTripEmptyWorkdir(t *testing.T) {
 						Content: "Review PR diffs",
 					},
 				},
-				ProjectID:    "proj-1",
-				ProjectTitle: "Demo",
 			}
 
 			runPrepareLikeCycle(t, workDir, envRoot, provider, ctx)
@@ -266,7 +264,7 @@ func TestPrepareThenCleanupSidecarsPreservesUserSkillSibling(t *testing.T) {
 			before := snapshot(t, workDir)
 
 			ctx := TaskContextForEnv{
-				IssueID: "11111111-2222-3333-4444-555555555555",
+				ChatSessionID: "11111111-2222-3333-4444-555555555555",
 				AgentSkills: []SkillContextForEnv{
 					{Name: "Issue Review", Content: "ours"},
 				},
@@ -332,7 +330,7 @@ func TestPrepareThenCleanupSidecarsPreservesUnrelatedUserFiles(t *testing.T) {
 			before := snapshot(t, workDir)
 
 			ctx := TaskContextForEnv{
-				IssueID: "11111111-2222-3333-4444-555555555555",
+				ChatSessionID: "11111111-2222-3333-4444-555555555555",
 				AgentSkills: []SkillContextForEnv{
 					{Name: "Issue Review", Content: "ours"},
 				},
@@ -362,7 +360,7 @@ func TestPrepareThenCleanupSidecarsRepeatedCycles(t *testing.T) {
 			before := snapshot(t, workDir)
 
 			ctx := TaskContextForEnv{
-				IssueID: "11111111-2222-3333-4444-555555555555",
+				ChatSessionID: "11111111-2222-3333-4444-555555555555",
 				AgentSkills: []SkillContextForEnv{
 					{Name: "Issue Review", Content: "ours"},
 				},
@@ -653,7 +651,7 @@ func TestPrepareThenCleanupSidecarsSameSlugCollisionPerProvider(t *testing.T) {
 			before := snapshot(t, workDir)
 
 			ctx := TaskContextForEnv{
-				IssueID: "11111111-2222-3333-4444-555555555555",
+				ChatSessionID: "11111111-2222-3333-4444-555555555555",
 				AgentSkills: []SkillContextForEnv{
 					{
 						Name:        "Issue Review",
@@ -769,7 +767,7 @@ func TestPrepareThenCleanupSidecarsMultiSkillCollisionFreeAllocation(t *testing.
 	// path is untouched.
 	manifest := &sidecarManifest{}
 	if err := writeContextFiles(workDir, "claude", TaskContextForEnv{
-		IssueID: "11111111-2222-3333-4444-555555555555",
+		ChatSessionID: "11111111-2222-3333-4444-555555555555",
 		AgentSkills: []SkillContextForEnv{
 			{Name: "Issue Review", Content: "Auro's version\n"},
 		},

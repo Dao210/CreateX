@@ -1484,7 +1484,6 @@ export class ApiClient {
 
   // ---------------------------------------------------------------------------
   // Workspace dashboard — three independent rollups for `/{slug}/dashboard`.
-  // Each accepts an optional `project_id` to narrow the scope to one project.
   // Cost is computed client-side from the model pricing table (same contract
   // as the per-runtime endpoints above).
   // ---------------------------------------------------------------------------
@@ -2160,12 +2159,9 @@ export class ApiClient {
    */
   async callPluginAction(
     installationId: string,
-    request: { method: "GET" | "POST" | "PATCH" | "PUT" | "DELETE"; path: string; body?: unknown; issueId?: string },
+    request: { method: "GET" | "POST" | "PATCH" | "PUT" | "DELETE"; path: string; body?: unknown },
   ): Promise<unknown> {
-    const query = request.path === "/context" && request.issueId
-      ? `?issue_id=${encodeURIComponent(request.issueId)}`
-      : "";
-    return this.fetch<unknown>(`/api/plugin-bridge/v1${request.path}${query}`, {
+    return this.fetch<unknown>(`/api/plugin-bridge/v1${request.path}`, {
       method: request.method,
       headers: { "X-Auro-Plugin-Installation": installationId },
       body: request.body === undefined ? undefined : JSON.stringify(request.body),
@@ -2184,12 +2180,12 @@ export class ApiClient {
   async invokePluginHook(
     installationId: string,
     hookKey: string,
-    request: { trigger: "ui" | "manual"; issueId?: string; input?: unknown },
+    request: { trigger: "ui" | "manual"; input?: unknown },
   ): Promise<PluginHookResult> {
     const raw = await this.fetch<unknown>(`/api/plugin-bridge/v1/hooks/${encodeURIComponent(hookKey)}`, {
       method: "POST",
       headers: { "X-Auro-Plugin-Installation": installationId },
-      body: JSON.stringify({ trigger: request.trigger, issue_id: request.issueId, input: request.input }),
+      body: JSON.stringify({ trigger: request.trigger, input: request.input }),
     });
     return parseWithFallback(raw, PluginHookResultSchema, {
       status: "ok",
@@ -2515,7 +2511,7 @@ export class ApiClient {
   // File Upload & Attachments
   async uploadFile(
     file: File,
-    opts?: { issueId?: string; commentId?: string; chatSessionId?: string },
+    opts?: { chatSessionId?: string },
     // Optional abort signal so a module-level upload coordinator (MUL-5181)
     // can cancel an in-flight upload on logout. When aborted, `fetch` rejects
     // with an AbortError, which the coordinator distinguishes from a real
@@ -2524,8 +2520,6 @@ export class ApiClient {
   ): Promise<Attachment> {
     const formData = new FormData();
     formData.append("file", file);
-    if (opts?.issueId) formData.append("issue_id", opts.issueId);
-    if (opts?.commentId) formData.append("comment_id", opts.commentId);
     if (opts?.chatSessionId) formData.append("chat_session_id", opts.chatSessionId);
 
     const rid = createRequestId();
@@ -2616,7 +2610,7 @@ export class ApiClient {
 
   async updateChatSession(
     id: string,
-    data: { title: string } | { },
+    data: { title?: string },
   ): Promise<ChatSession> {
     return this.fetch(`/api/chat/sessions/${id}`, {
       method: "PATCH",
@@ -2906,7 +2900,7 @@ export class ApiClient {
   }
 
   // Labels
-  async listLabels(resourceType: LabelResourceType = "issue"): Promise<ListLabelsResponse> {
+  async listLabels(resourceType: LabelResourceType = "skill"): Promise<ListLabelsResponse> {
     const raw = await this.fetch<unknown>(`/api/labels?resource_type=${resourceType}`);
     return parseWithFallback(raw, ListLabelsResponseSchema, EMPTY_LIST_LABELS_RESPONSE, {
       endpoint: "GET /api/labels",

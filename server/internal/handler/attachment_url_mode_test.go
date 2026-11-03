@@ -211,3 +211,11 @@ func TestGetAttachmentByID_IgnoresStableCapability(t *testing.T) {
 		t.Errorf("single-attachment endpoint must always sign, even for stable-mode callers; got %q", resp.DownloadURL)
 	}
 }
+
+func requestWithCapabilities(caps string) *http.Request {
+	r := httptest.NewRequest(http.MethodGet, "/api/issues/x/comments", nil)
+	if caps != "" {
+		r.Header.Set("X-Client-Capabilities", caps)
+	}
+	return r
+}

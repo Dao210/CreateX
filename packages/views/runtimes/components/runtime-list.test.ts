@@ -34,7 +34,6 @@ function makeTask(overrides: Partial<AgentTask> = {}): AgentTask {
   return {
     id: "task-1",
     agent_id: "agent-1",
-    issue_id: "issue-1",
     status: "running",
     priority: 1,
     dispatched_at: null,

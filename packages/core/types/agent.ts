@@ -1,3 +1,4 @@
+
 import type { ChatSession } from "./chat";
 import type { Label } from "./label";
 
@@ -235,9 +236,6 @@ export interface WorkspaceWorkingAgent {
   name: string;
   avatar_url: string | null;
   running_task_count: number;
-  /** Distinct issues referenced by this agent's currently running tasks after
-   *  applying the endpoint's type/scope/relation filters. */
-  issue_ids: string[];
 }
 
 export type WorkspaceWorkingAgentType = "issue" | "autopilot" | "chat";
@@ -287,9 +285,7 @@ export interface TaskAttribution {
   /** The direct cause of the run, for a jump-to-evidence affordance. */
   evidence?: TaskEvidence;
   rule_version_id?: string;
-  delegated_from_task_id?: string;
   retry_of_task_id?: string;
-  rerun_of_task_id?: string;
 }
 
 /** Point-in-time identity of the actor that cancelled a run. */
@@ -301,14 +297,9 @@ export interface TaskCancellationActor {
 }
 
 export interface AgentTask {
-  wakeup_id?: string;
   id: string;
   agent_id: string;
   runtime_id: string;
-  // Empty string ("") when the task has no linked issue — either chat- or
-  // autopilot-spawned. Check chat_session_id / autopilot_run_id to tell
-  // which source produced it.
-  issue_id: string;
   // `waiting_local_directory` is the daemon-emitted hold state for the
   // local_directory flow: a task that has been dispatched but is parked
   // because another task currently owns the same on-disk path lock.
@@ -339,8 +330,6 @@ export interface AgentTask {
   // coarse values; `string & {}` admits the rest without collapsing the
   // hints.
   failure_reason?: TaskFailureReason | (string & {}) | "";
-  /** The input comment was edited or deleted, invalidating this run. */
-  cancelled_by_comment_change?: boolean;
   /** Present on cancellations recorded by a backend with actor provenance. */
   cancelled_by?: TaskCancellationActor;
   created_at: string;
@@ -352,29 +341,6 @@ export interface AgentTask {
   parent_task_id?: string;
   /** 1-based attempt counter; >1 means this is a retry. */
   attempt?: number;
-  /** Set when an issue comment triggered this task (@mention or assignee comment). */
-  trigger_comment_id?: string;
-  /**
-   * Earlier comment IDs folded into this run before it was claimed. This does
-   * not include `trigger_comment_id`, which remains the run's newest trigger.
-   * Their unique union is the queued coverage plan; claimed-task consumers
-   * should prefer `delivered_comment_ids` when that receipt is present. Omitted
-   * by older backends and for runs that were not merged.
-   */
-  coalesced_comment_ids?: string[];
-  /**
-   * Comment IDs actually embedded in the task's latest claim response. Once a
-   * task has left queued state this is the authoritative coverage receipt.
-   * Omitted by older backends, where consumers may fall back to the planned
-   * trigger/coalesced union; an explicitly empty array is still authoritative.
-   */
-  delivered_comment_ids?: string[];
-  /** Exact run-scoped live-input capability negotiated at this task's start. */
-  supplement_capability?: string;
-  /** Ordinary historical comments explicitly bound to this run, in send order. */
-  supplement_comment_ids?: string[];
-  /** Server-side invocation verdict for the current member and this agent. */
-  can_supplement?: boolean;
   /**
    * Canonical short description of what triggered this task — snapshot
    * taken at creation time. For comment-triggered tasks it's the
@@ -384,12 +350,7 @@ export interface AgentTask {
    * or deleted.
    */
   trigger_summary?: string;
-  /**
-   * Server-computed source discriminator used by task surfaces. Quick-create
-   * remains quick_create after its result issue is linked, so consumers can
-   * distinguish creation work from later direct runs on that issue.
-   */
-  kind?: "comment" | "autopilot" | "chat" | "quick_create" | "direct";
+  kind?: "autopilot" | "chat" | "execution";
   /**
    * Local working directory pinned for this task by the daemon. Empty until
    * the daemon reports a work_dir (typically once execution starts). This is
@@ -921,27 +882,6 @@ export interface UpdateSkillRequest {
 
 export interface SetAgentSkillsRequest {
   skill_ids: string[];
-}
-
-export interface IssueUsageSummary {
-  total_input_tokens: number;
-  total_output_tokens: number;
-  total_cache_read_tokens: number;
-  total_cache_write_tokens: number;
-  // Optional unlike the usage-row types: `getIssueUsage` returns this shape
-  // unvalidated (no zod schema), so nothing guarantees the field is present
-  // when the backend is older than the cost split.
-  cost_usd_ticks?: number;
-  uncosted_input_tokens?: number;
-  uncosted_output_tokens?: number;
-  uncosted_cache_read_tokens?: number;
-  uncosted_cache_write_tokens?: number;
-  // Coverage fields are optional for compatibility with older backends.
-  // task_count remains the legacy count of runs represented by usage rows.
-  terminal_task_count?: number;
-  metered_task_count?: number;
-  unreported_task_count?: number;
-  task_count: number;
 }
 
 // `cost_usd_ticks` + `uncosted_*`: the cost split every usage row carries.

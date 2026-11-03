@@ -139,9 +139,6 @@ beforeEach(() => {
   mockAgents.current = [makeAgent()];
 });
 
-describe("AgentProfileCard — Runtime row", () => {
-});
-
 describe("AgentProfileCard — Model row", () => {
   it("shows the pinned model id and the effort badge", () => {
     mockAgents.current = [makeAgent({ model: "claude-opus-4-8", thinking_level: "high" })];

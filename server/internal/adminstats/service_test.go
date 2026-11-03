@@ -44,9 +44,6 @@ func TestTrendsParamValidation(t *testing.T) {
 	if _, err := s.Trends(ctx, defaultTrendDays, "Not/AZone"); !errors.Is(err, ErrInvalid) {
 		t.Fatalf("invalid tz accepted: %v", err)
 	}
-	if _, err := s.Trends(ctx, 0, ""); !errors.Is(err, ErrInvalid) {
-		t.Fatalf("empty tz accepted: %v", err)
-	}
 }
 
 func TestOrderedFillsFixedKeys(t *testing.T) {

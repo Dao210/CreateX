@@ -1,6 +1,5 @@
 "use client";
-
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Plug } from "lucide-react";
 import { useFeatureEnabled } from "@auro/core/config";
@@ -8,13 +7,7 @@ import { PLUGINS_V1_FLAG } from "@auro/core/feature-flags";
 import { useCurrentWorkspace } from "@auro/core/paths";
 import { pluginInstallationsOptions } from "@auro/core/plugins";
 import type { PluginInstallation, PluginSurface } from "@auro/core/types";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@auro/ui/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@auro/ui/components/ui/dialog";
 import { PluginSurfaceFrame } from "./plugin-surface-frame";
 
 /**
@@ -71,11 +64,10 @@ export function usePluginModalSurfaces(): PluginModalTarget[] {
 
 interface PluginModalSurfaceProps {
   target: PluginModalTarget | null;
-  issueId?: string;
   onOpenChange: (open: boolean) => void;
 }
 
-export function PluginModalSurface({ target, issueId, onOpenChange }: PluginModalSurfaceProps) {
+export function PluginModalSurface({ target, onOpenChange }: PluginModalSurfaceProps) {
   // Same source as usePluginModalSurfaces above: a modal only ever opens from
   // the issue menu, which is inside the workspace route.
   const workspace = useCurrentWorkspace();
@@ -97,42 +89,12 @@ export function PluginModalSurface({ target, issueId, onOpenChange }: PluginModa
           // Keyed on the issue as well as the surface: the frame carries the
           // issue into its context call, and an unchanged document would not
           // reload for a different one.
-          key={`${pluginModalKey(target)}:${issueId ?? ""}`}
+          key={`${pluginModalKey(target)}`}
           wsId={workspace?.id ?? ""}
           installation={target.installation}
           surface={target.surface}
-          issueId={issueId}
         />
       </DialogContent>
     </Dialog>
-  );
-}
-
-/** Menu entries that open a modal, in the same shape the hook entries use. */
-export function PluginModalMenuItems({
-  issueId,
-  Item,
-}: {
-  issueId: string;
-  Item: React.ComponentType<{ onClick?: () => void; children?: React.ReactNode }>;
-}) {
-  const targets = usePluginModalSurfaces();
-  const [open, setOpen] = useState<PluginModalTarget | null>(null);
-
-  if (targets.length === 0) return null;
-
-  return (
-    <>
-      {targets.map((target) => (
-        <Item key={pluginModalKey(target)} onClick={() => setOpen(target)}>
-          <Plug className="h-3.5 w-3.5" />
-          <span className="truncate">{target.surface.name}</span>
-          <span className="ml-auto truncate pl-3 text-caption text-muted-foreground">
-            {target.installation.name}
-          </span>
-        </Item>
-      ))}
-      <PluginModalSurface target={open} issueId={issueId} onOpenChange={(next) => !next && setOpen(null)} />
-    </>
   );
 }

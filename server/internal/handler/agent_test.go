@@ -180,35 +180,6 @@ func TestListWorkspaceAgentTaskSnapshot(t *testing.T) {
 	}
 }
 
-func TestListWorkspaceWorkingAgentsRejectsInvalidFilters(t *testing.T) {
-	if testHandler == nil {
-		t.Skip("database not available")
-	}
-
-	for _, path := range []string{
-		"/api/working-agents?type=quick_create",
-		"/api/working-agents?scope=mine",
-		"/api/working-agents?type=chat&scope=mine",
-		"/api/working-agents?type=issue&scope=workspace",
-		"/api/working-agents?type=issue&relation=assigned",
-		"/api/working-agents?type=issue&scope=mine&relation=watching",
-		"/api/working-agents?type=issue&parent=not-a-uuid",
-		"/api/working-agents?type=chat&parent=00000000-0000-0000-0000-000000000000",
-		"/api/working-agents?type=issue&scope=mine&parent=00000000-0000-0000-0000-000000000000",
-	} {
-		t.Run(path, func(t *testing.T) {
-			w := httptest.NewRecorder()
-			testHandler.ListWorkspaceWorkingAgents(
-				w,
-				newRequest(http.MethodGet, path, nil),
-			)
-			if w.Code != http.StatusBadRequest {
-				t.Fatalf("expected 400, got %d: %s", w.Code, w.Body.String())
-			}
-		})
-	}
-}
-
 func TestCreateAgent_RejectsDuplicateName(t *testing.T) {
 	if testHandler == nil {
 		t.Skip("database not available")

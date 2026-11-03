@@ -13,7 +13,7 @@ const wsId = "ws-1";
 
 function makeItem(
   id: string,
-  issueId: string | null,
+  _retiredContext: string | null,
   overrides: Partial<InboxItem> = {},
 ): InboxItem {
   return {
@@ -25,10 +25,8 @@ function makeItem(
     actor_id: null,
     type: "mentioned",
     severity: "info",
-    issue_id: issueId,
     title: `item ${id}`,
     body: null,
-    issue_status: null,
     read: false,
     archived: false,
     created_at: "2025-01-01T00:00:00Z",

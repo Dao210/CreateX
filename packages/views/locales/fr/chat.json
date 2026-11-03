@@ -21,12 +21,7 @@
     "runtime_access_denied_toast": "Message non envoyé — cet agent ne peut pas s'exécuter sur son runtime privé. Passez le runtime en public, ou réassociez/copiez l'agent vers un runtime que son propriétaire peut utiliser.",
     "attachment_bind_failed_toast": "Message envoyé, mais les fichiers n'ont pas été joints. Veuillez réessayer dans un instant.",
     "add_tooltip": "Ajouter",
-    "upload_file": "Image ou fichiers",
-    "project_context": "Contexte de projet",
-    "change_project_context": "Changer le contexte de projet",
-    "remove_project_context": "Retirer le contexte de projet",
-    "no_projects": "Aucun projet pour l'instant",
-    "project_context_unsupported": "La description du projet ne s'appliquera pas — le daemon de cet agent doit être mis à jour"
+    "upload_file": "Image ou fichiers"
   },
   "queue": {
     "title_one": "{{count}} message en file d'attente",
@@ -130,9 +125,6 @@
   },
   "empty_state": {
     "first_time_title": "Discutez avec vos agents",
-    "first_time_intro": "✨ Ils connaissent votre monde —",
-    "first_time_pillars": "tâches, projets, skills",
-    "first_time_pillars_suffix": ".",
     "first_time_actions": "Demandez un résumé, planifiez votre journée, ou confiez une tâche rapide.",
     "returning_title_named": "Bonjour, je suis {{name}}",
     "returning_title_default": "Bienvenue sur Auro",
@@ -146,8 +138,8 @@
       "prompt": "Dans quels domaines pouvez-vous le mieux m'aider ? Donnez-moi un aperçu concis."
     },
     "first_task": {
-      "label": "Proposer une première tâche",
-      "prompt": "Proposez trois tâches utiles que je pourrais vous confier."
+      "label": "Proposer un premier pas",
+      "prompt": "Propose trois choses utiles que tu peux faire avec moi dans ce chat."
     },
     "recommend": {
       "label": "Recommander une action",
@@ -158,14 +150,9 @@
   "onboarding_cards": {
     "aria_label": "Façons de démarrer",
     "cta": "Démarrer",
-    "board": {
-      "title": "Montez un tableau en quelques minutes",
-      "desc": "Donnez-moi l'objectif — je crée le projet, découpe les tâches et fixe les priorités.",
-      "prompt": "Transforme nos objectifs actuels en tableau de projet"
-    },
     "delegate": {
       "title": "Confiez-moi une première chose",
-      "desc": "Une recherche rapide, par exemple — les résultats reviennent sous forme de tâche et de rapport.",
+      "desc": "Rechercher un sujet et partager les résultats dans le chat.",
       "prompt": "Enlève-moi une tâche des mains : mène une recherche rapide et renvoie les résultats sous forme de rapport"
     },
     "digest": {
@@ -173,7 +160,12 @@
       "desc": "Un résumé matinal de l'avancement du monde, directement dans votre boîte de réception.",
       "prompt": "Mets en place une automatisation quotidienne qui publie un résumé matinal de l'avancement du monde"
     },
-    "digest_badge": "Tous les jours à 9 h"
+    "digest_badge": "Tous les jours à 9 h",
+    "plan": {
+      "title": "Clarifier un objectif",
+      "desc": "Définir ensemble la prochaine étape",
+      "prompt": "Aide-moi à transformer mon objectif actuel en plan concret"
+    }
   },
   "no_agent_banner": "Vous avez besoin d'un agent pour commencer à discuter.",
   "archived_agent_banner": "{{name}} a été archivé — cette conversation est en lecture seule.",

@@ -248,8 +248,6 @@ func TestLarkOutcomeReplierCommandOutcomesSendGuidance(t *testing.T) {
 		want     string
 	}{
 		{"fresh pending", OutcomeFreshPending, false, "下一条聊天消息"},
-		{"plain issue usage", OutcomeIssueUsage, false, "请填写任务标题"},
-		{"issue usage with media", OutcomeIssueUsage, true, "请添加标题，并与图片或视频一起重新发送"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			log := slog.New(slog.NewTextHandler(io.Discard, nil))
@@ -258,7 +256,7 @@ func TestLarkOutcomeReplierCommandOutcomesSendGuidance(t *testing.T) {
 				APIClient: stub, BindingSvc: &BindingTokenService{}, Credentials: stubCredentialsResolver{secret: "s"},
 				Queries: stubReplierQueries{}, AppURL: "https://auro.test", Logger: log,
 			})
-			rep.Reply(context.Background(), Installation{}, InboundMessage{ChatID: "oc_chat"}, DispatchResult{Outcome: tc.outcome, IssueUsageHadMedia: tc.hadMedia})
+			rep.Reply(context.Background(), Installation{}, InboundMessage{ChatID: "oc_chat"}, DispatchResult{Outcome: tc.outcome})
 			if len(stub.interactiveOut) != 1 {
 				t.Fatalf("expected one guidance card, got %d", len(stub.interactiveOut))
 			}
@@ -317,49 +315,6 @@ func TestLarkOutcomeReplierOfflineSwallowsAPIError(t *testing.T) {
 // engine Router skips reply scheduling entirely when no OutboundReplier is
 // registered (boot registers one only when larkClient.IsConfigured()), and
 // NewLarkOutcomeReplier still falls back to its own noop when unconfigured.
-
-func TestLarkOutcomeReplierUsesAppURLForWebLinks(t *testing.T) {
-	t.Parallel()
-	log := slog.New(slog.NewTextHandler(io.Discard, nil))
-	stub := &stubAPIClientWithRecorder{configured: true}
-	rep := NewLarkOutcomeReplier(OutcomeReplierConfig{
-		APIClient:   stub,
-		BindingSvc:  fakeBindingMinter{raw: "token with space"},
-		Credentials: stubCredentialsResolver{secret: "s"},
-		Queries:     stubReplierQueries{},
-		AppURL:      "https://app.auro.test/",
-		Logger:      log,
-	})
-
-	inst := Installation{AppID: "cli_x"}
-	inst.ID = mustUUID("11111111-1111-1111-1111-111111111111")
-	inst.WorkspaceID = mustUUID("33333333-3333-3333-3333-333333333333")
-	rep.Reply(context.Background(), inst, InboundMessage{ChatID: "oc_chat", SenderOpenID: "ou_user"},
-		DispatchResult{Outcome: OutcomeNeedsBinding, SenderOpenID: "ou_user"})
-	rep.Reply(context.Background(), inst, InboundMessage{ChatID: "oc_chat", SenderOpenID: "ou_user"},
-		DispatchResult{
-			Outcome:            OutcomeIngested,
-			IssueID:            mustUUID("22222222-2222-2222-2222-222222222222"),
-			IssueNumber:        42,
-			IssueIdentifier:    "MUL-42",
-			IssueWorkspaceSlug: "demo-web",
-		})
-
-	stub.mu.Lock()
-	defer stub.mu.Unlock()
-	if len(stub.bindingCalls) != 1 {
-		t.Fatalf("expected one binding prompt, got %d", len(stub.bindingCalls))
-	}
-	if got := stub.bindingCalls[0].BindURL; got != "https://app.auro.test/lark/bind?token=token+with+space" {
-		t.Fatalf("binding URL should use AppURL; got %q", got)
-	}
-	if len(stub.textOut) != 1 {
-		t.Fatalf("expected one issue-created text, got %d", len(stub.textOut))
-	}
-	if !strings.Contains(stub.textOut[0].Text, "https://app.auro.test/demo-web/issues/MUL-42") {
-		t.Fatalf("issue-created text should use AppURL and workspace slug; got %q", stub.textOut[0].Text)
-	}
-}
 
 func TestLarkOutcomeReplierNeedsBindingFallsBackToGroupNoticeWhenPrivateUnavailable(t *testing.T) {
 	t.Parallel()
@@ -656,79 +611,3 @@ func mustUUID(s string) pgtype.UUID {
 // silence the unused import warnings for the dependencies we keep
 // reaching for via reflection in future test cases.
 var _ = pgx.ErrNoRows
-
-// TestLarkOutcomeReplierRepliesNativelyInOrdinaryGroup is the outcome
-// replier's half of #8234: the /issue confirmation now attaches to the
-// message that asked for it even outside a topic. reply_in_thread stays
-// false — there is no topic to stay inside — so the reply lands in the
-// group as a native quote-reply rather than a standalone message.
-func TestLarkOutcomeReplierRepliesNativelyInOrdinaryGroup(t *testing.T) {
-	t.Parallel()
-	log := slog.New(slog.NewTextHandler(io.Discard, nil))
-	stub := &stubAPIClientWithRecorder{configured: true}
-	rep := NewLarkOutcomeReplier(OutcomeReplierConfig{
-		APIClient:   stub,
-		BindingSvc:  &BindingTokenService{},
-		Credentials: stubCredentialsResolver{secret: "s"},
-		Queries:     stubReplierQueries{},
-		AppURL:      "https://auro.test",
-		Logger:      log,
-	})
-
-	rep.Reply(context.Background(), Installation{AppID: "cli_x"},
-		InboundMessage{ChatID: "oc_chat_42", ChatType: ChatTypeGroup, MessageID: "om_trigger", SenderOpenID: "ou_user"},
-		DispatchResult{
-			Outcome:         OutcomeIngested,
-			IssueID:         mustUUID("22222222-2222-2222-2222-222222222222"),
-			IssueNumber:     42,
-			IssueIdentifier: "MUL-42",
-		})
-
-	stub.mu.Lock()
-	defer stub.mu.Unlock()
-	if len(stub.textOut) != 1 {
-		t.Fatalf("expected one send; got %d", len(stub.textOut))
-	}
-	got := stub.textOut[0].ReplyTarget
-	if got.MessageID != "om_trigger" {
-		t.Errorf("ordinary group confirmation must reply to the trigger; got %+v", got)
-	}
-	if got.InThread {
-		t.Errorf("no thread id, so reply_in_thread must be false; got %+v", got)
-	}
-}
-
-// TestLarkOutcomeReplierSendsToChatWithoutTriggerMessage keeps the only
-// remaining chat-level case honest: with no inbound message id there is
-// nothing to reply to.
-func TestLarkOutcomeReplierSendsToChatWithoutTriggerMessage(t *testing.T) {
-	t.Parallel()
-	log := slog.New(slog.NewTextHandler(io.Discard, nil))
-	stub := &stubAPIClientWithRecorder{configured: true}
-	rep := NewLarkOutcomeReplier(OutcomeReplierConfig{
-		APIClient:   stub,
-		BindingSvc:  &BindingTokenService{},
-		Credentials: stubCredentialsResolver{secret: "s"},
-		Queries:     stubReplierQueries{},
-		AppURL:      "https://auro.test",
-		Logger:      log,
-	})
-
-	rep.Reply(context.Background(), Installation{AppID: "cli_x"},
-		InboundMessage{ChatID: "oc_chat_42", SenderOpenID: "ou_user"},
-		DispatchResult{
-			Outcome:         OutcomeIngested,
-			IssueID:         mustUUID("22222222-2222-2222-2222-222222222222"),
-			IssueNumber:     42,
-			IssueIdentifier: "MUL-42",
-		})
-
-	stub.mu.Lock()
-	defer stub.mu.Unlock()
-	if len(stub.textOut) != 1 {
-		t.Fatalf("expected one send; got %d", len(stub.textOut))
-	}
-	if stub.textOut[0].ReplyTarget.IsSet() {
-		t.Errorf("no trigger message id means chat-level send; got %+v", stub.textOut[0].ReplyTarget)
-	}
-}

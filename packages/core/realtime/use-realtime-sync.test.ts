@@ -653,10 +653,8 @@ describe("handleInboxNew", () => {
       actor_id: "member-2",
       type: "autopilot_paused",
       severity: "info",
-      issue_id: null,
       title: "Mentioned you",
       body: "in a comment",
-      issue_status: null,
       read: false,
       archived: false,
       created_at: "2026-05-18T00:00:00Z",
@@ -1195,7 +1193,7 @@ describe("retired inbox events", () => {
     const qc = createQueryClient();
     const invalidate = vi.spyOn(qc, "invalidateQueries");
     await handleInboxNew(qc, {
-      id: "retired-notification", workspace_id: "ws-a", issue_id: null, type,
+      id: "retired-notification", workspace_id: "ws-a", type,
     } as InboxItem);
     expect(invalidate).not.toHaveBeenCalled();
   });

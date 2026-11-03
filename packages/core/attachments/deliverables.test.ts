@@ -10,7 +10,6 @@ import {
 function attachment(over: Partial<Attachment> & { id: string }): Attachment {
   return {
     workspace_id: "ws",
-    issue_id: "issue",
     comment_id: "c1",
     chat_session_id: null,
     chat_message_id: null,

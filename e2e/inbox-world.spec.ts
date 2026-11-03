@@ -29,8 +29,6 @@ test.beforeAll(async () => {
 test.afterAll(async () => {
   if (workspace) { api.setWorkspaceId(workspace.id); api.setWorkspaceSlug(workspace.slug); await api.deleteWorkspace(); }
   if (otherWorld) { neighbor.setWorkspaceId(otherWorld.id); neighbor.setWorkspaceSlug(otherWorld.slug); await neighbor.deleteWorkspace(); }
-  await api?.cleanup();
-  await neighbor?.cleanup();
   await pool?.end();
 });
 

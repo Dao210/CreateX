@@ -28,8 +28,8 @@ func TestWorkspaceMcpServerCreate_CannotLandAfterWorkspaceTeardownCommits(t *tes
 
 	var victimID string
 	if err := testPool.QueryRow(ctx, `
-		INSERT INTO workspace (name, slug, description, issue_prefix)
-		VALUES ('MCP Race WS', 'ws-mcp-race-create', '', 'MRC')
+		INSERT INTO workspace (name, slug, description)
+		VALUES ('MCP Race WS', 'ws-mcp-race-create', '')
 		RETURNING id
 	`).Scan(&victimID); err != nil {
 		t.Fatalf("create victim workspace: %v", err)

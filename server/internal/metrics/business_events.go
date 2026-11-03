@@ -39,12 +39,9 @@ type businessEventMetrics struct {
 	onboardingSourceSubmit          *prometheus.CounterVec
 	onboardingCompleted             *prometheus.CounterVec
 	cloudWaitlistJoined             *prometheus.CounterVec
-	issueCreated                    *prometheus.CounterVec
 	chatMessageSent                 *prometheus.CounterVec
 	agentCreated                    *prometheus.CounterVec
-	squadCreated                    *prometheus.CounterVec
 	autopilotCreated                *prometheus.CounterVec
-	issueExecuted                   *prometheus.CounterVec
 	runtimeRegistered               *prometheus.CounterVec
 	runtimeReady                    *prometheus.CounterVec
 	runtimeReadySeconds             *prometheus.HistogramVec
@@ -105,10 +102,6 @@ func newBusinessEventMetrics() *businessEventMetrics {
 			Name: "auro_cloud_waitlist_joined_total",
 			Help: "Total users that joined the cloud waitlist.",
 		}, metricLabels("auro_cloud_waitlist_joined_total")),
-		issueCreated: prometheus.NewCounterVec(prometheus.CounterOpts{
-			Name: "auro_issue_created_total",
-			Help: "Total issues created (any source).",
-		}, metricLabels("auro_issue_created_total")),
 		chatMessageSent: prometheus.NewCounterVec(prometheus.CounterOpts{
 			Name: "auro_chat_message_sent_total",
 			Help: "Total user chat messages sent (excludes agent replies).",
@@ -117,18 +110,10 @@ func newBusinessEventMetrics() *businessEventMetrics {
 			Name: "auro_agent_created_total",
 			Help: "Total agents created.",
 		}, metricLabels("auro_agent_created_total")),
-		squadCreated: prometheus.NewCounterVec(prometheus.CounterOpts{
-			Name: "auro_squad_created_total",
-			Help: "Total squads created.",
-		}, metricLabels("auro_squad_created_total")),
 		autopilotCreated: prometheus.NewCounterVec(prometheus.CounterOpts{
 			Name: "auro_autopilot_created_total",
 			Help: "Total autopilots created.",
 		}, metricLabels("auro_autopilot_created_total")),
-		issueExecuted: prometheus.NewCounterVec(prometheus.CounterOpts{
-			Name: "auro_issue_executed_total",
-			Help: "First task completion per issue (per-issue exactly-once activation keystone).",
-		}, metricLabels("auro_issue_executed_total")),
 		runtimeRegistered: prometheus.NewCounterVec(prometheus.CounterOpts{
 			Name: "auro_runtime_registered_total",
 			Help: "Total first-time runtime registrations.",
@@ -229,12 +214,9 @@ func (e *businessEventMetrics) collectors() []prometheus.Collector {
 		e.onboardingSourceSubmit,
 		e.onboardingCompleted,
 		e.cloudWaitlistJoined,
-		e.issueCreated,
 		e.chatMessageSent,
 		e.agentCreated,
-		e.squadCreated,
 		e.autopilotCreated,
-		e.issueExecuted,
 		e.runtimeRegistered,
 		e.runtimeReady,
 		e.runtimeReadySeconds,
@@ -308,11 +290,6 @@ func (m *BusinessMetrics) IncForEvent(ev analytics.Event) {
 		m.events.onboardingCompleted.WithLabelValues(NormalizeOnboardingPath(stringProp(ev.Properties, "completion_path"))).Inc()
 	case analytics.EventCloudWaitlistJoined:
 		m.events.cloudWaitlistJoined.WithLabelValues().Inc()
-	case analytics.EventIssueCreated:
-		m.events.issueCreated.WithLabelValues(
-			NormalizeTaskSource(stringProp(ev.Properties, "source")),
-			NormalizePlatform(stringProp(ev.Properties, "platform")),
-		).Inc()
 	case analytics.EventChatMessageSent:
 		m.events.chatMessageSent.WithLabelValues(NormalizePlatform(stringProp(ev.Properties, "platform"))).Inc()
 	case analytics.EventAgentCreated:
@@ -320,12 +297,8 @@ func (m *BusinessMetrics) IncForEvent(ev analytics.Event) {
 			NormalizeRuntimeMode(stringProp(ev.Properties, "runtime_mode")),
 			NormalizeTaskSource(stringProp(ev.Properties, "source")),
 		).Inc()
-	case analytics.EventSquadCreated:
-		m.events.squadCreated.WithLabelValues().Inc()
 	case analytics.EventAutopilotCreated:
 		m.events.autopilotCreated.WithLabelValues(NormalizeAutopilotCadence(stringProp(ev.Properties, "cadence"))).Inc()
-	case analytics.EventIssueExecuted:
-		m.events.issueExecuted.WithLabelValues(NormalizeTaskSource(stringProp(ev.Properties, "source"))).Inc()
 	case analytics.EventRuntimeRegistered:
 		m.events.runtimeRegistered.WithLabelValues(
 			NormalizeRuntimeMode(stringProp(ev.Properties, "runtime_mode")),

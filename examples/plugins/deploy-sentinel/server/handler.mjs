@@ -2,7 +2,7 @@
 //
 // Everything a real hook backend has to get right is here and nowhere else:
 // verifying the signature, refusing a replay, applying the team's own rules, and
-// using the per-invocation callback token to write back to the issue.
+// returning structured results for the invoking agent.
 //
 //   node server/handler.mjs
 //
@@ -70,27 +70,6 @@ function verifySignature(rawBody, signature, timestamp) {
     return { ok: false, reason: "signature mismatch" };
   }
   return { ok: true };
-}
-
-// The callback token is scoped to THIS invocation and is revoked the moment the
-// hook returns, so anything the handler wants to write has to be written before
-// it replies. That constraint is the reason this is awaited, not fired off.
-async function commentOnIssue(callbackUrl, callbackToken, issueId, content) {
-  if (!callbackToken || !callbackUrl || !issueId) return;
-  try {
-    const response = await fetch(`${callbackUrl}/issues/${encodeURIComponent(issueId)}/comments`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${callbackToken}` },
-      body: JSON.stringify({ content }),
-    });
-    if (!response.ok) {
-      console.warn(`callback comment failed: ${response.status} ${await response.text()}`);
-    }
-  } catch (error) {
-    // A failed write-back must not fail the hook: the agent still gets its
-    // answer, and a missing comment is recoverable where a failed tool is not.
-    console.warn("callback comment error:", error.message);
-  }
 }
 
 function correlateDeploys(input, config) {
@@ -183,9 +162,6 @@ const server = createServer(tlsOptions(), async (req, res) => {
     trigger,
     input = {},
     config = {},
-    callback_url: callbackUrl,
-    callback_token: callbackToken,
-    issue_id: issueId,
   } = payload;
   console.log(`${hookKey} via ${trigger}`);
 
@@ -195,32 +171,13 @@ const server = createServer(tlsOptions(), async (req, res) => {
       // A ui/manual click is a person asking; leave the answer where they and
       // their colleagues will see it. An agent call already returns to the
       // agent, which will write its own account of what it found.
-      if (trigger === "ui" || trigger === "manual") {
-        await commentOnIssue(callbackUrl, callbackToken, issueId, `**Deploy Sentinel** — ${result.summary}`);
-      }
       return reply(200, result);
     }
 
     case "request_rollback": {
       const result = requestRollback(input, config);
-      if (result.status === "filed") {
-        await commentOnIssue(
-          callbackUrl,
-          callbackToken,
-          issueId,
-          `**Deploy Sentinel** filed rollback ${result.change_id} for deploy ${result.deploy_id}.\n\n> ${input.reason}\n\nAwaiting human approval — nothing has been rolled back.`,
-        );
-      }
-      return reply(200, result);
-    }
 
-    case "page_oncall": {
-      // An event hook's response is discarded, so there is nothing to return
-      // that anybody reads. Acknowledge fast and do the work; blocking here
-      // would hold a Auro worker for no benefit.
-      const issue = payload.event?.issue ?? {};
-      console.log(`paging on-call for ${payload.event?.type}: ${issue.title ?? issueId}`);
-      return reply(202, { acknowledged: true });
+      return reply(200, result);
     }
 
     default:

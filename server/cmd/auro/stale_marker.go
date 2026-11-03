@@ -48,10 +48,7 @@ func leftoverDaemonTaskMarkerPath() string {
 // agent subprocess that lost its environment and is reading the error — closes
 // the hole it exists to cover, so it gets the plain refusal instead.
 //
-// Identity means agent_id OR issue_id, not both: a chat task has no issue, and
-// requiring one would misfile its marker as the root marker and lose the hint
-// exactly where a leftover is possible. The root marker has neither field, so
-// either one present is enough to separate them.
+// A task marker carries agent_id; the permanent root guard has no identity.
 func markerIsTaskScoped(markerPath string) bool {
 	data, err := os.ReadFile(markerPath)
 	if err != nil {
@@ -59,12 +56,11 @@ func markerIsTaskScoped(markerPath string) bool {
 	}
 	var marker struct {
 		AgentID string `json:"agent_id"`
-		IssueID string `json:"issue_id"`
 	}
 	if json.Unmarshal(data, &marker) != nil {
 		return false
 	}
-	return strings.TrimSpace(marker.AgentID) != "" || strings.TrimSpace(marker.IssueID) != ""
+	return strings.TrimSpace(marker.AgentID) != ""
 }
 
 // leftoverMarkerSuffix renders the shared tail every refusal path appends when

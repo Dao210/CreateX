@@ -1,10 +1,4 @@
-/**
- * Issue labels — workspace-scoped, applied as many-to-many to issues.
- *
- * Labels are lightweight metadata (name + color) distinct from projects:
- * projects group related work, labels are cross-cutting tags (bug, feature,
- * performance, …). Colors are normalized to lowercase `#RRGGBB`.
- */
+/** World-scoped labels for agents and skills. */
 export type LabelResourceType = "agent" | "skill";
 
 export interface Label {
@@ -38,9 +32,6 @@ export interface ListLabelsResponse {
   total: number;
 }
 
-export interface IssueLabelsResponse {
+export interface ResourceLabelsResponse {
   labels: Label[];
-  issue_revision?: number;
 }
-
-export type ResourceLabelsResponse = IssueLabelsResponse;

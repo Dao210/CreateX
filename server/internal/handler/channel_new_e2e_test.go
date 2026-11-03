@@ -150,7 +150,7 @@ func TestChannelChatCommandE2ERotatesRouteAndFreezesTaskDelivery(t *testing.T) {
 		Direct: "Channel E2E conversation", Group: "Channel E2E group", Fallback: "Channel E2E conversation",
 	})
 	binder := &channelNewE2ESessionBinder{session: chatSession}
-	router := engine.NewRouter(nil, testHandler.TaskService, queries, engine.RouterConfig{})
+	router := engine.NewRouter(testHandler.TaskService, queries, engine.RouterConfig{})
 	// Hold ordinary runs in the debounce window until after /new retires the
 	// old route. Drain below then proves that the captured old generation still
 	// seals and receives the pending input instead of silently dropping it.
@@ -863,7 +863,6 @@ func (b *channelNewE2ESessionBinder) BindMedia(ctx context.Context, p engine.Bin
 		SessionID:   p.SessionID,
 		WorkspaceID: p.WorkspaceID,
 		Sender:      p.Sender,
-		IssueID:     p.IssueID,
 		MediaRefs:   p.MediaRefs,
 	})
 }
@@ -872,4 +871,203 @@ type channelNewE2EAuditor struct{}
 
 func (channelNewE2EAuditor) RecordDrop(context.Context, pgtype.UUID, channel.InboundMessage, engine.DropReason) error {
 	return nil
+}
+
+func runChannelClearCommandE2E(t *testing.T, channelType channel.Type, text, commandText string, adapterForceFresh bool, followUpText, wantStoredText string, wantForceFresh bool, wantPriorSession, wantPriorWorkDir string) {
+	t.Helper()
+
+	ctx := context.Background()
+	agentID, runtimeID, daemonID := createRuntimeGuardAgent(t, ctx)
+	queries := db.New(testPool)
+
+	var installationID string
+	if err := testPool.QueryRow(ctx, `
+		INSERT INTO channel_installation (
+			workspace_id, agent_id, channel_type, config, status, installer_user_id
+		)
+		VALUES ($1, $2, $3, '{}'::jsonb, 'active', $4)
+		RETURNING id
+	`, testWorkspaceID, agentID, string(channelType), testUserID).Scan(&installationID); err != nil {
+		t.Fatalf("create channel installation: %v", err)
+	}
+	t.Cleanup(func() {
+		testPool.Exec(context.Background(), `DELETE FROM channel_task_delivery WHERE installation_id = $1`, installationID)
+		testPool.Exec(context.Background(), `DELETE FROM channel_outbound_message WHERE installation_id = $1`, installationID)
+		testPool.Exec(context.Background(), `DELETE FROM channel_inbound_message_dedup WHERE installation_id = $1`, installationID)
+		testPool.Exec(context.Background(), `DELETE FROM channel_chat_session_binding WHERE installation_id = $1`, installationID)
+		testPool.Exec(context.Background(), `DELETE FROM channel_installation WHERE id = $1`, installationID)
+	})
+
+	installation := engine.ResolvedInstallation{
+		ID:              util.MustParseUUID(installationID),
+		WorkspaceID:     util.MustParseUUID(testWorkspaceID),
+		AgentID:         util.MustParseUUID(agentID),
+		InstallerUserID: util.MustParseUUID(testUserID),
+		Active:          true,
+	}
+	chatSession := engine.NewChatSession(queries, testPool, channelType, engine.SessionTitles{
+		Direct:   "Channel E2E conversation",
+		Group:    "Channel E2E group",
+		Fallback: "Channel E2E conversation",
+	})
+	binder := &channelNewE2ESessionBinder{session: chatSession}
+
+	// Seed the same channel conversation with a provider session/workdir. A
+	// normal message resumes both; /clear must leave them out of the daemon
+	// claim while retaining the durable chat transcript.
+	sessionID, err := binder.EnsureSession(ctx, engine.EnsureSessionParams{
+		Installation: installation,
+		Sender:       util.MustParseUUID(testUserID),
+		Message: channel.InboundMessage{Source: channel.Source{
+			ChannelType: channelType,
+			ChatID:      t.Name(),
+			ChatType:    channel.ChatTypeP2P,
+		}},
+	})
+	if err != nil {
+		t.Fatalf("seed channel chat session: %v", err)
+	}
+	t.Cleanup(func() {
+		testPool.Exec(context.Background(), `DELETE FROM issue WHERE origin_type = 'test_e2e_chat' AND origin_id = $1`, sessionID)
+	})
+	if _, err := testPool.Exec(ctx, `
+		UPDATE chat_session
+		SET session_id = 'old-provider-session',
+		    work_dir = '/tmp/old-provider-workdir',
+		    runtime_id = $2
+		WHERE id = $1
+	`, sessionID, runtimeID); err != nil {
+		t.Fatalf("seed prior provider context: %v", err)
+	}
+	if _, err := testPool.Exec(ctx, `
+		INSERT INTO agent_task_queue (
+			agent_id, runtime_id, chat_session_id, status, priority,
+			started_at, completed_at, session_id, work_dir,
+			channel_context_revision
+		)
+		VALUES ($1, $2, $3, 'completed', 0, now(), now(),
+		        'old-provider-session', '/tmp/old-provider-workdir', 1)
+	`, agentID, runtimeID, sessionID); err != nil {
+		t.Fatalf("seed prior provider task: %v", err)
+	}
+
+	router := engine.NewRouter(testHandler.TaskService, queries, engine.RouterConfig{})
+	router.Register(channelType, engine.ResolverSet{
+		Installation: channelNewE2EInstallationResolver{installation: installation},
+		Identity:     channelNewE2EIdentityResolver{userID: util.MustParseUUID(testUserID)},
+		Dedup:        channelNewE2EDeduper{queries: queries},
+		Session:      binder,
+		Audit:        channelNewE2EAuditor{},
+		OriginType:   "test_e2e_chat",
+	})
+
+	if err := router.Handle(ctx, channel.InboundMessage{
+		EventID:     "event-" + t.Name(),
+		MessageID:   "message-" + t.Name(),
+		Type:        channel.MsgTypeText,
+		Text:        text,
+		CommandText: commandText,
+		ForceFresh:  adapterForceFresh,
+		Source: channel.Source{
+			ChannelType: channelType,
+			ChatID:      t.Name(),
+			ChatType:    channel.ChatTypeP2P,
+			SenderID:    "platform-user-e2e",
+		},
+	}); err != nil {
+		t.Fatalf("route channel message: %v", err)
+	}
+	if followUpText != "" {
+		var taskCount, userMessageCount int
+		var pendingFresh bool
+		if err := testPool.QueryRow(ctx, `
+			SELECT count(*) FROM agent_task_queue
+			WHERE chat_session_id = $1 AND status NOT IN ('completed', 'failed', 'cancelled')
+		`, sessionID).Scan(&taskCount); err != nil {
+			t.Fatalf("count tasks after bare /clear: %v", err)
+		}
+		if err := testPool.QueryRow(ctx, `SELECT count(*) FROM chat_message WHERE chat_session_id = $1 AND role = 'user'`, sessionID).Scan(&userMessageCount); err != nil {
+			t.Fatalf("count messages after bare /clear: %v", err)
+		}
+		if err := testPool.QueryRow(ctx, `SELECT pending_fresh FROM channel_chat_session_binding WHERE chat_session_id = $1`, sessionID).Scan(&pendingFresh); err != nil {
+			t.Fatalf("load pending fresh after bare /clear: %v", err)
+		}
+		if taskCount != 0 || userMessageCount != 0 || !pendingFresh {
+			t.Fatalf("bare /clear state: tasks=%d messages=%d pending_fresh=%t, want 0/0/true", taskCount, userMessageCount, pendingFresh)
+		}
+
+		if err := router.Handle(ctx, channel.InboundMessage{
+			EventID:     "event-follow-up-" + t.Name(),
+			MessageID:   "message-follow-up-" + t.Name(),
+			Type:        channel.MsgTypeText,
+			Text:        followUpText,
+			CommandText: followUpText,
+			Source: channel.Source{
+				ChannelType: channelType,
+				ChatID:      t.Name(),
+				ChatType:    channel.ChatTypeP2P,
+				SenderID:    "platform-user-e2e",
+			},
+		}); err != nil {
+			t.Fatalf("route follow-up channel message: %v", err)
+		}
+	}
+
+	var taskID string
+	var forceFresh bool
+	var contextRevision int64
+	if err := testPool.QueryRow(ctx, `
+		SELECT id, force_fresh_session, channel_context_revision
+		FROM agent_task_queue
+		WHERE chat_session_id = $1
+		ORDER BY created_at DESC
+		LIMIT 1
+	`, sessionID).Scan(&taskID, &forceFresh, &contextRevision); err != nil {
+		t.Fatalf("load queued chat task: %v", err)
+	}
+	if forceFresh != wantForceFresh {
+		t.Fatalf("queued task %s: force_fresh_session = %t, want %t", taskID, forceFresh, wantForceFresh)
+	}
+	wantRevision := int64(1)
+	if wantForceFresh {
+		wantRevision = 2
+	}
+	if contextRevision != wantRevision {
+		t.Fatalf("queued task %s: channel_context_revision = %d, want %d", taskID, contextRevision, wantRevision)
+	}
+	var pendingFresh bool
+	if err := testPool.QueryRow(ctx, `SELECT pending_fresh FROM channel_chat_session_binding WHERE chat_session_id = $1`, sessionID).Scan(&pendingFresh); err != nil {
+		t.Fatalf("load pending fresh after task enqueue: %v", err)
+	}
+	if pendingFresh {
+		t.Fatal("successful task enqueue did not consume pending_fresh")
+	}
+
+	var storedText string
+	var storedRevision int64
+	if err := testPool.QueryRow(ctx, `
+		SELECT content, channel_context_revision FROM chat_message
+		WHERE chat_session_id = $1 AND role = 'user'
+		ORDER BY created_at DESC, id DESC
+		LIMIT 1
+	`, sessionID).Scan(&storedText, &storedRevision); err != nil {
+		t.Fatalf("load persisted chat message: %v", err)
+	}
+	if storedText != wantStoredText {
+		t.Fatalf("persisted message = %q, want %q", storedText, wantStoredText)
+	}
+	if storedRevision != wantRevision {
+		t.Fatalf("persisted message context revision = %d, want %d", storedRevision, wantRevision)
+	}
+
+	claimed := claimTaskForRuntimeGuard(t, runtimeID, daemonID)
+	if claimed.ChatMessage != wantStoredText {
+		t.Fatalf("claimed chat_message = %q, want %q", claimed.ChatMessage, wantStoredText)
+	}
+	if claimed.PriorSessionID != wantPriorSession {
+		t.Fatalf("claimed prior_session_id = %q, want %q", claimed.PriorSessionID, wantPriorSession)
+	}
+	if claimed.PriorWorkDir != wantPriorWorkDir {
+		t.Fatalf("claimed prior_work_dir = %q, want %q", claimed.PriorWorkDir, wantPriorWorkDir)
+	}
 }

@@ -160,7 +160,6 @@ function seedTimeline(client: QueryClient, text: string) {
   client.setQueryData(taskMessagesOptions(TASK_ID).queryKey, [
     {
       task_id: TASK_ID,
-      issue_id: null,
       seq: 1,
       type: "text",
       content: text,
@@ -401,38 +400,6 @@ describe("live → persisted row identity", () => {
 });
 
 describe("semantic parity beyond Mermaid", () => {
-  const FIXTURE = [
-    "A [link](https://example.com) and a mention [MUL-7](mention://issue/MUL-7).",
-    "",
-    "```html",
-    "<b>preview</b>",
-    "```",
-    "",
-    "```ts",
-    "const a = 1;",
-    "```",
-    "",
-    "<mark>highlighted</mark>",
-  ].join("\n");
-
-  function renderReadonly() {
-    return render(<ReadonlyContent content={FIXTURE} />).container;
-  }
-
-  function renderChatUser() {
-    const client = makeClient();
-    return render(
-      withClient(
-        <ChatMessageList
-          messages={[userMessage(FIXTURE)] as never}
-          pendingTask={null}
-          availability={undefined}
-        />,
-        client,
-      ),
-    ).container;
-  }
-
   it("does not dispatch htmlbars / mermaidx to rich blocks on either surface", async () => {
     const near = "```htmlbars\n<b>x</b>\n```\n\n```mermaidx\ngraph TD\n```";
     const readonly = render(<ReadonlyContent content={near} />).container;

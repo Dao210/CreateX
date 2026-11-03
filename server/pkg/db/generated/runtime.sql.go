@@ -17,7 +17,7 @@ SET status = 'cancelled', completed_at = now(),
     cancelled_by_type = 'system', cancelled_by_id = NULL, cancelled_by_name = NULL
 WHERE (runtime_id = ANY($1::uuid[]) OR agent_id = ANY($2::uuid[]))
   AND status IN ('queued', 'dispatched', 'running', 'waiting_local_directory', 'deferred')
-RETURNING id, agent_id, status, priority, dispatched_at, started_at, completed_at, result, error, created_at, context, runtime_id, session_id, work_dir, chat_session_id, autopilot_run_id, attempt, max_attempts, parent_task_id, failure_reason, trigger_summary, force_fresh_session, wait_reason, initiator_user_id, handoff_note, prepare_lease_expires_at, runtime_mcp_overlay, fire_at, originator_user_id, runtime_connected_apps, chat_input_task_id, chat_finalize_deferred_at, originator_source, delegated_from_task_id, retry_of_task_id, rerun_of_task_id, rule_version_id, trigger_evidence_kind, trigger_evidence_ref_id, accountable_user_id, session_rollout_missing, retired_session_id, quick_actions_disabled, regenerate_quick_actions_for, branch_name, durable_work_dir, channel_context_revision, cancelled_by_type, cancelled_by_id, cancelled_by_name
+RETURNING id, agent_id, status, priority, dispatched_at, started_at, completed_at, result, error, created_at, context, runtime_id, session_id, work_dir, chat_session_id, autopilot_run_id, attempt, max_attempts, parent_task_id, failure_reason, trigger_summary, force_fresh_session, wait_reason, initiator_user_id, handoff_note, prepare_lease_expires_at, runtime_mcp_overlay, fire_at, originator_user_id, runtime_connected_apps, chat_input_task_id, chat_finalize_deferred_at, originator_source, retry_of_task_id, rule_version_id, trigger_evidence_kind, trigger_evidence_ref_id, accountable_user_id, session_rollout_missing, retired_session_id, quick_actions_disabled, branch_name, durable_work_dir, channel_context_revision, cancelled_by_type, cancelled_by_id, cancelled_by_name
 `
 
 type CancelAgentTasksByRuntimeOrAgentParams struct {
@@ -68,9 +68,7 @@ func (q *Queries) CancelAgentTasksByRuntimeOrAgent(ctx context.Context, arg Canc
 			&i.ChatInputTaskID,
 			&i.ChatFinalizeDeferredAt,
 			&i.OriginatorSource,
-			&i.DelegatedFromTaskID,
 			&i.RetryOfTaskID,
-			&i.RerunOfTaskID,
 			&i.RuleVersionID,
 			&i.TriggerEvidenceKind,
 			&i.TriggerEvidenceRefID,
@@ -78,7 +76,6 @@ func (q *Queries) CancelAgentTasksByRuntimeOrAgent(ctx context.Context, arg Canc
 			&i.SessionRolloutMissing,
 			&i.RetiredSessionID,
 			&i.QuickActionsDisabled,
-			&i.RegenerateQuickActionsFor,
 			&i.BranchName,
 			&i.DurableWorkDir,
 			&i.ChannelContextRevision,
@@ -145,6 +142,30 @@ func (q *Queries) DeleteAgentRuntime(ctx context.Context, id pgtype.UUID) error 
 	return err
 }
 
+const deleteRuntimeSystemAgentChatData = `-- name: DeleteRuntimeSystemAgentChatData :exec
+WITH sessions AS MATERIALIZED (
+    SELECT cs.id FROM chat_session cs JOIN agent a ON a.id = cs.agent_id WHERE a.runtime_id = $1 AND a.kind = 'system'
+), removed_attachments AS (
+    DELETE FROM attachment WHERE chat_session_id IN (SELECT id FROM sessions)
+), removed_messages AS (
+    DELETE FROM chat_message WHERE chat_session_id IN (SELECT id FROM sessions)
+), removed_bindings AS (
+    DELETE FROM channel_chat_session_binding WHERE chat_session_id IN (SELECT id FROM sessions)
+), removed_lark_bindings AS (
+    DELETE FROM lark_chat_session_binding WHERE chat_session_id IN (SELECT id FROM sessions)
+), removed_context AS (
+    DELETE FROM channel_chat_context_generation WHERE chat_session_id IN (SELECT id FROM sessions)
+), detached_tasks AS (
+    UPDATE agent_task_queue SET chat_session_id = NULL WHERE chat_session_id IN (SELECT id FROM sessions)
+)
+DELETE FROM chat_session WHERE id IN (SELECT id FROM sessions)
+`
+
+func (q *Queries) DeleteRuntimeSystemAgentChatData(ctx context.Context, runtimeID pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, deleteRuntimeSystemAgentChatData, runtimeID)
+	return err
+}
+
 const deleteSystemAgentsByRuntime = `-- name: DeleteSystemAgentsByRuntime :exec
 DELETE FROM agent WHERE runtime_id = $1 AND kind = 'system'
 `
@@ -174,7 +195,7 @@ SET status = 'failed', completed_at = now(), error = 'runtime went offline',
 FROM victims
 WHERE task.id = victims.id
   AND task.status IN ('dispatched', 'running', 'waiting_local_directory')
-RETURNING task.id, task.agent_id, task.status, task.priority, task.dispatched_at, task.started_at, task.completed_at, task.result, task.error, task.created_at, task.context, task.runtime_id, task.session_id, task.work_dir, task.chat_session_id, task.autopilot_run_id, task.attempt, task.max_attempts, task.parent_task_id, task.failure_reason, task.trigger_summary, task.force_fresh_session, task.wait_reason, task.initiator_user_id, task.handoff_note, task.prepare_lease_expires_at, task.runtime_mcp_overlay, task.fire_at, task.originator_user_id, task.runtime_connected_apps, task.chat_input_task_id, task.chat_finalize_deferred_at, task.originator_source, task.delegated_from_task_id, task.retry_of_task_id, task.rerun_of_task_id, task.rule_version_id, task.trigger_evidence_kind, task.trigger_evidence_ref_id, task.accountable_user_id, task.session_rollout_missing, task.retired_session_id, task.quick_actions_disabled, task.regenerate_quick_actions_for, task.branch_name, task.durable_work_dir, task.channel_context_revision, task.cancelled_by_type, task.cancelled_by_id, task.cancelled_by_name
+RETURNING task.id, task.agent_id, task.status, task.priority, task.dispatched_at, task.started_at, task.completed_at, task.result, task.error, task.created_at, task.context, task.runtime_id, task.session_id, task.work_dir, task.chat_session_id, task.autopilot_run_id, task.attempt, task.max_attempts, task.parent_task_id, task.failure_reason, task.trigger_summary, task.force_fresh_session, task.wait_reason, task.initiator_user_id, task.handoff_note, task.prepare_lease_expires_at, task.runtime_mcp_overlay, task.fire_at, task.originator_user_id, task.runtime_connected_apps, task.chat_input_task_id, task.chat_finalize_deferred_at, task.originator_source, task.retry_of_task_id, task.rule_version_id, task.trigger_evidence_kind, task.trigger_evidence_ref_id, task.accountable_user_id, task.session_rollout_missing, task.retired_session_id, task.quick_actions_disabled, task.branch_name, task.durable_work_dir, task.channel_context_revision, task.cancelled_by_type, task.cancelled_by_id, task.cancelled_by_name
 `
 
 type FailTasksForOfflineRuntimesParams struct {
@@ -225,9 +246,7 @@ func (q *Queries) FailTasksForOfflineRuntimes(ctx context.Context, arg FailTasks
 			&i.ChatInputTaskID,
 			&i.ChatFinalizeDeferredAt,
 			&i.OriginatorSource,
-			&i.DelegatedFromTaskID,
 			&i.RetryOfTaskID,
-			&i.RerunOfTaskID,
 			&i.RuleVersionID,
 			&i.TriggerEvidenceKind,
 			&i.TriggerEvidenceRefID,
@@ -235,7 +254,6 @@ func (q *Queries) FailTasksForOfflineRuntimes(ctx context.Context, arg FailTasks
 			&i.SessionRolloutMissing,
 			&i.RetiredSessionID,
 			&i.QuickActionsDisabled,
-			&i.RegenerateQuickActionsFor,
 			&i.BranchName,
 			&i.DurableWorkDir,
 			&i.ChannelContextRevision,
@@ -956,7 +974,7 @@ func (q *Queries) ReassignAgentsToRuntime(ctx context.Context, arg ReassignAgent
 
 const reassignTasksToRuntime = `-- name: ReassignTasksToRuntime :one
 WITH fence AS MATERIALIZED (
-    SELECT lock_task_owner_rows(NULL, $1) AS ok
+    SELECT lock_task_owner_rows(NULL, $1, NULL) AS ok
 ),
 reassigned AS (
     UPDATE agent_task_queue
@@ -1111,6 +1129,15 @@ func (q *Queries) TouchAgentRuntimesLastSeenBatch(ctx context.Context, ids []pgt
 		return nil, err
 	}
 	return items, nil
+}
+
+const unbindChatSessionsFromRuntime = `-- name: UnbindChatSessionsFromRuntime :exec
+UPDATE chat_session SET runtime_id = NULL WHERE runtime_id = $1
+`
+
+func (q *Queries) UnbindChatSessionsFromRuntime(ctx context.Context, runtimeID pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, unbindChatSessionsFromRuntime, runtimeID)
+	return err
 }
 
 const unbindTasksFromRuntime = `-- name: UnbindTasksFromRuntime :execrows

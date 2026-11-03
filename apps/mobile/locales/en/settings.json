@@ -32,12 +32,8 @@
   },
   "notifications": {
     "title": "Notifications",
-    "issues": "Issues",
     "inbox": "Inbox",
     "chat": "Chat",
-    "mentions": "Mentions",
-    "assignments": "Assignments",
-    "status_changes": "Status changes",
     "saved": "Notification settings saved"
   },
   "workspace": {
@@ -66,15 +62,6 @@
   },
   "email_fixed": "Email is set at sign-up and can't be changed here.",
   "groups": {
-    "assignments": "Assignments",
-    "assignments_description": "Assigned or unassigned.",
-    "status_changes": "Status changes",
-    "comments": "Comments",
-    "comments_description": "New comments on issues you're subscribed to.",
-    "mentions": "Mentions",
-    "mentions_description": "When someone @mentions you, including @all and @squad.",
-    "updates": "Issue updates",
-    "updates_description": "Edits to title, description, labels, priority, or due date.",
     "agent_activity": "Agent activity",
     "agent_activity_description": "When an agent run fails.",
     "inbox_notifications": "Inbox notifications",

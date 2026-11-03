@@ -19,7 +19,7 @@ const testManifestJSON = `{
   "name": "Hello Panel",
   "version": "1.0.0",
   "author": { "name": "example" },
-  "scopes": ["issues:read", "comments:write", "storage:user"],
+  "scopes": ["tasks:read", "storage:workspace", "storage:user"],
   "config": {
     "repo": { "type": "string", "label": "Repo", "required": true },
     "count": { "type": "number", "label": "Count" },
@@ -28,7 +28,7 @@ const testManifestJSON = `{
     "token": { "type": "secret", "label": "Token" }
   },
   "contributes": {
-    "surfaces": [{ "key": "hello", "type": "issue_panel", "name": "Hello", "entry": "ui/main.js" }]
+    "surfaces": [{ "key": "hello", "type": "modal", "name": "Hello", "entry": "ui/main.js" }]
   }
 }`
 
@@ -53,19 +53,19 @@ func pluginErrKind(t *testing.T, err error) PluginErrorKind {
 func TestRequireExactScopes(t *testing.T) {
 	manifest := testManifest(t)
 
-	if err := requireExactScopes(manifest.Scopes, []string{"comments:write", "storage:user", "issues:read"}); err != nil {
+	if err := requireExactScopes(manifest.Scopes, []string{"storage:workspace", "storage:user", "tasks:read"}); err != nil {
 		t.Fatalf("exact scopes in a different order should be accepted: %v", err)
 	}
 	// Partial consent would install a plugin that silently fails on the scope
 	// the administrator withheld, so it is a conflict rather than a warning.
-	if err := requireExactScopes(manifest.Scopes, []string{"issues:read"}); err == nil {
+	if err := requireExactScopes(manifest.Scopes, []string{"tasks:read"}); err == nil {
 		t.Fatal("partial consent was accepted")
 	} else if kind := pluginErrKind(t, err); kind != PluginErrorConflict {
 		t.Fatalf("partial consent kind = %q, want %q", kind, PluginErrorConflict)
 	}
 	// Granting more than the manifest asks for would hand out access the
 	// consent screen never justified.
-	if err := requireExactScopes(manifest.Scopes, []string{"issues:read", "comments:write", "issues:write"}); err == nil {
+	if err := requireExactScopes(manifest.Scopes, []string{"tasks:read", "storage:workspace", "tasks:write"}); err == nil {
 		t.Fatal("consent to an unrequested scope was accepted")
 	}
 }
@@ -135,11 +135,11 @@ func TestPruneConfigDropsFieldsTheNewManifestRemoved(t *testing.T) {
 }
 
 func TestAddedScopesReportsOnlyNewGrants(t *testing.T) {
-	added := addedScopes([]string{"issues:read"}, []string{"issues:read", "comments:write"})
-	if len(added) != 1 || added[0] != "comments:write" {
+	added := addedScopes([]string{"tasks:read"}, []string{"tasks:read", "storage:workspace"})
+	if len(added) != 1 || added[0] != "storage:workspace" {
 		t.Fatalf("addedScopes = %v", added)
 	}
-	if added := addedScopes([]string{"issues:read", "comments:write"}, []string{"issues:read"}); len(added) != 0 {
+	if added := addedScopes([]string{"tasks:read", "storage:workspace"}, []string{"tasks:read"}); len(added) != 0 {
 		t.Fatalf("a narrowed scope set must not report additions, got %v", added)
 	}
 }
@@ -306,7 +306,7 @@ func TestCapabilityMessageNamesTheMissingCapabilities(t *testing.T) {
 		t.Fatal("an empty host set must reject every contribution")
 	}
 	message := capabilityMessage(err)
-	if !strings.Contains(message, "surface issue_panel") {
+	if !strings.Contains(message, "surface modal") {
 		t.Fatalf("capabilityMessage = %q, want it to name the missing capability", message)
 	}
 }

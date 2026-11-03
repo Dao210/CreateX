@@ -48,7 +48,7 @@ import { useLocale, useT } from "../i18n";
  * the backend still models agent labels, but the product no longer exposes
  * any way to create, apply, or view them, so they are not manageable here.
  */
-export type LabelScope = Extract<LabelResourceType, "issue" | "skill">;
+export type LabelScope = Extract<LabelResourceType, "skill">;
 
 interface LabelDraft {
   name: string;
@@ -62,11 +62,7 @@ const EMPTY_DRAFT: LabelDraft = {
   color: COLOR_PICKER_PRESETS[6],
 };
 
-/**
- * Search, create, edit and delete the labels of one catalog. Issue labels are
- * managed in Settings; skill labels on the Skills page, next to the skills
- * they tag — the two catalogs never mix.
- */
+/** Manage the skill-label catalog for the current world. */
 export function LabelManager({ scope }: { scope: LabelScope }) {
   const { t } = useT("settings");
   const locale = useLocale();
@@ -383,7 +379,7 @@ function DeleteLabelDialog({
             onClick={() => {
               if (!label) return;
               remove.mutate(
-                { id: label.id, resource_type: label.resource_type ?? "issue" },
+                { id: label.id, resource_type: label.resource_type ?? "agent" },
                 {
                   onSuccess: onClose,
                   onError: (error) =>

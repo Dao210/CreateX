@@ -109,7 +109,7 @@ func resolveScopeFixture(t *testing.T, ctx context.Context, name string, skillNa
 	t.Helper()
 
 	runtimeID = createClaimReclaimRuntime(t, ctx, name+" runtime")
-	agentID, issueID := createClaimReclaimAgentAndIssue(t, ctx, runtimeID, name+" agent")
+	agentID, issueID := createClaimReclaimAgentAndChat(t, ctx, runtimeID, name+" agent")
 
 	for _, skillName := range skillNames {
 		skillID := dbfx.Insert(t, "skill", testutil.Cols{
@@ -133,10 +133,10 @@ func resolveScopeFixture(t *testing.T, ctx context.Context, name string, skillNa
 	}
 
 	taskID = dbfx.Task(t, agentID, testutil.Cols{
-		"runtime_id":    runtimeID,
-		"issue_id":      issueID,
-		"status":        "dispatched",
-		"dispatched_at": testutil.Raw("now()"),
+		"runtime_id":      runtimeID,
+		"chat_session_id": issueID,
+		"status":          "dispatched",
+		"dispatched_at":   testutil.Raw("now()"),
 	})
 	return runtimeID, taskID, skillIDs
 }
@@ -320,10 +320,9 @@ func TestResolveTaskSkillBundles_RefusesSkillsTheAgentCannotSee(t *testing.T) {
 
 	// A skill owned by a different workspace.
 	foreignWorkspace := dbfx.Insert(t, "workspace", testutil.Cols{
-		"name":         "Resolve deny foreign",
-		"slug":         "resolve-deny-foreign",
-		"description":  "",
-		"issue_prefix": "RDF",
+		"name":        "Resolve deny foreign",
+		"slug":        "resolve-deny-foreign",
+		"description": "",
 	})
 	foreign := dbfx.Insert(t, "skill", testutil.Cols{
 		"workspace_id": foreignWorkspace,
