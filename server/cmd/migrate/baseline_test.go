@@ -45,6 +45,9 @@ func TestBaselineInitializesAndRollsBack(t *testing.T) {
 	if retired != 0 || foreignKeys != 0 || invalid != 0 {
 		t.Fatalf("retired=%d foreignKeys=%d invalidIndexes=%d", retired, foreignKeys, invalid)
 	}
+	if duplicates := duplicateIndexDefinitions(t, pool, f.schema); len(duplicates) != 0 {
+		t.Fatalf("baseline creates redundant indexes: %v", duplicates)
+	}
 	// Repeated startup does not reapply tables or constraints.
 	if err := runMigrations(ctx, pool, opts); err != nil {
 		t.Fatal(err)
@@ -76,6 +79,65 @@ func TestBaselineInitializesAndRollsBack(t *testing.T) {
 	}
 	if err := runMigrations(ctx, pool, opts); err == nil || !strings.Contains(err.Error(), "retired migration") {
 		t.Fatalf("legacy ledger: %v", err)
+	}
+}
+
+func duplicateIndexDefinitions(t *testing.T, pool *pgxpool.Pool, schema string) []string {
+	t.Helper()
+	rows, err := pool.Query(context.Background(), `
+		SELECT c.relname || ': ' || string_agg(i.relname, ', ' ORDER BY i.relname)
+		FROM pg_index x
+		JOIN pg_class i ON i.oid=x.indexrelid
+		JOIN pg_class c ON c.oid=x.indrelid
+		JOIN pg_namespace n ON n.oid=c.relnamespace
+		WHERE n.nspname=$1
+		GROUP BY c.oid, c.relname, i.relam, x.indnkeyatts, x.indnatts,
+			x.indkey, x.indclass, x.indcollation, x.indoption,
+			pg_get_expr(x.indexprs,x.indrelid), pg_get_expr(x.indpred,x.indrelid)
+		HAVING count(*) > 1
+		ORDER BY c.relname
+	`, schema)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+	var duplicates []string
+	for rows.Next() {
+		var definition string
+		if err := rows.Scan(&definition); err != nil {
+			t.Fatal(err)
+		}
+		duplicates = append(duplicates, definition)
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatal(err)
+	}
+	return duplicates
+}
+
+func TestDuplicateIndexDefinitions(t *testing.T) {
+	f := newFixture(t)
+	ctx := context.Background()
+	table := pgx.Identifier{f.schema, "indexed_records"}.Sanitize()
+	for _, sql := range []string{
+		"CREATE TABLE " + table + " (id int, category text)",
+		"CREATE UNIQUE INDEX records_unique ON " + table + " (id)",
+		"CREATE INDEX records_category ON " + table + " (id, category)",
+		"CREATE INDEX records_partial ON " + table + " (id) WHERE category IS NOT NULL",
+	} {
+		if _, err := f.pool.Exec(ctx, sql); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if duplicates := duplicateIndexDefinitions(t, f.pool, f.schema); len(duplicates) != 0 {
+		t.Fatalf("distinct keys and predicates were treated as duplicates: %v", duplicates)
+	}
+	if _, err := f.pool.Exec(ctx, "CREATE INDEX records_redundant ON "+table+" (id)"); err != nil {
+		t.Fatal(err)
+	}
+	duplicates := duplicateIndexDefinitions(t, f.pool, f.schema)
+	if len(duplicates) != 1 || duplicates[0] != "indexed_records: records_redundant, records_unique" {
+		t.Fatalf("redundant non-unique index alongside a unique index was not detected: %v", duplicates)
 	}
 }
 

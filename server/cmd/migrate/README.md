@@ -5,6 +5,13 @@ its own migration file and executes outside an explicit transaction. The runner
 serializes work with a PostgreSQL advisory lock and records every applied or
 conditionally skipped migration in `schema_migrations`.
 
+The baseline separates tables/functions/triggers, concurrent index builds, and
+primary/unique constraint attachment. `PRIMARY KEY USING INDEX` and
+`UNIQUE USING INDEX` reuse the existing index; they do not rebuild it. Each
+`.down.sql` file reverses its matching upgrade and is not an upgrade-time drop.
+Baseline tests reject duplicate index definitions, including a redundant
+non-unique index covered by an identical unique index.
+
 ```bash
 cd server
 DATABASE_URL=... go run ./cmd/migrate up

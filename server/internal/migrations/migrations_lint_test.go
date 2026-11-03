@@ -13,10 +13,7 @@ import (
 func TestMigrationNumericPrefixesAreUnique(t *testing.T) {
 	files := migrationFilesForLint(t, "*.up.sql")
 
-	// Migrations through 128 contain historical duplicate numeric prefixes.
-	// From 129 onward, keep the numeric sequence unique so release tooling and
-	// operators can identify one schema change unambiguously by its number.
-	const firstUniqueMigrationNumber = 129
+	// Every migration in the current baseline has a unique numeric prefix.
 	stemByNumber := make(map[int]string)
 	for _, file := range files {
 		stem, _, ok := splitMigrationFilename(filepath.Base(file))
@@ -28,7 +25,7 @@ func TestMigrationNumericPrefixesAreUnique(t *testing.T) {
 			continue
 		}
 		number, err := strconv.Atoi(prefix)
-		if err != nil || number < firstUniqueMigrationNumber {
+		if err != nil {
 			continue
 		}
 		if previous, exists := stemByNumber[number]; exists {
