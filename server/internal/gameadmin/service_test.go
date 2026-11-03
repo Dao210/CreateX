@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/auro-ai/auro/server/internal/adminauth"
+	"github.com/auro-ai/auro/server/internal/life"
 	"github.com/auro-ai/auro/server/internal/middleware"
 	"github.com/auro-ai/auro/server/internal/testutil"
 	"github.com/auro-ai/auro/server/internal/util"
@@ -50,7 +51,7 @@ func testDB(t *testing.T) *pgxpool.Pool {
 		t.Fatal(err)
 	}
 	t.Cleanup(pool.Close)
-	for _, table := range []string{"user", "workspace", "member", "life_world", "game_policy", "game_world_override", "game_policy_audit"} {
+	for _, table := range []string{"user", "workspace", "member", "life_world", "life_agent", "life_resource", "life_action", "life_event", "game_policy", "game_world_override", "game_policy_audit"} {
 		name := pgx.Identifier{table}.Sanitize()
 		if _, err = pool.Exec(ctx, "CREATE TABLE "+name+" (LIKE public."+name+" INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES)"); err != nil {
 			t.Fatal(err)
@@ -228,39 +229,106 @@ func TestDBConcurrentPolicySaveAndAuditRollback(t *testing.T) {
 	}
 }
 
-func TestDBLifeBindingCannotBeOverridden(t *testing.T) {
+func TestDBLifeWorldSelectionKeepsSimulationDataIsolated(t *testing.T) {
 	pool := testDB(t)
 	ctx := context.Background()
 	fx := testutil.New(pool, "", "")
 	actor := fx.User(t, "Admin", "admin@example.invalid")
-	w1 := fx.Workspace(t, "Home", "home")
-	w2 := fx.Workspace(t, "Other", "other")
+	home := fx.Workspace(t, "Simulation home", "home")
+	chosen := fx.Workspace(t, "Chosen world", "chosen")
 	gate, _ := adminauth.New(pool, "admin@example.invalid")
 	s := &Service{Pool: pool, Auth: gate}
-	if out, err := s.Effective(ctx, w1, "life"); err != nil || out.Available || out.Reason != "unbound" {
-		t.Fatalf("uninitialized=%+v %v", out, err)
+	fx.Insert(t, "life_world", testutil.Cols{"id": uuid.NewString(), "workspace_id": home, "tick_ms": 2000})
+	visible := true
+	in := PolicyInput{Scope: "selected", DefaultVisible: &visible, Overrides: []Override{{chosen, "allow", "show"}}}
+	preview, err := s.Preview(ctx, "life", in)
+	if err != nil || preview.Available != 1 || preview.Visible != 1 {
+		t.Fatalf("preview=%+v err=%v", preview, err)
 	}
-	fx.Insert(t, "life_world", testutil.Cols{"id": uuid.NewString(), "workspace_id": w1, "tick_ms": 2000})
+	policy, err := s.Update(ctx, actor, "life", in)
+	if err != nil {
+		t.Fatal(err)
+	}
 	for _, tc := range []struct {
 		world     string
 		available bool
-	}{{w1, true}, {w2, false}} {
+	}{{home, false}, {chosen, true}} {
 		out, err := s.Effective(ctx, tc.world, "life")
-		if err != nil || out.Available != tc.available {
-			t.Fatalf("binding=%+v %v", out, err)
+		if err != nil || out.Available != tc.available || out.Visible != tc.available {
+			t.Fatalf("effective=%+v err=%v", out, err)
 		}
 	}
-	visible := true
-	in := PolicyInput{Scope: "bound", DefaultVisible: &visible, Overrides: []Override{{w2, "allow", "show"}}}
-	if _, err := s.Update(ctx, actor, "life", in); !errors.Is(err, ErrInvalid) {
-		t.Fatalf("cross-world override=%v", err)
+	uid, _ := util.ParseUUID(actor)
+	handler := s.Guard("life", life.Handler(db.New(pool)))
+	req := httptest.NewRequest("GET", "/api/life", nil)
+	req = req.WithContext(middleware.SetMemberContext(req.Context(), chosen, db.Member{UserID: uid}))
+	var snapshot struct {
+		World  *json.RawMessage  `json:"world"`
+		Agents []json.RawMessage `json:"agents"`
 	}
-	in.Scope = "disabled"
+	testutil.Call(t, handler.ServeHTTP, req).Want(200).JSON(&snapshot)
+	if snapshot.World != nil || len(snapshot.Agents) != 0 {
+		t.Fatalf("selected world received another world's simulation: %+v", snapshot)
+	}
+	in.ExpectedRevision = policy.Revision
+	in.Scope = "all"
 	in.Overrides = []Override{}
-	if _, err := s.Update(ctx, actor, "life", in); err != nil {
+	policy, err = s.Update(ctx, actor, "life", in)
+	if err != nil {
 		t.Fatal(err)
 	}
-	if n := fx.Count(t, "SELECT count(*) FROM life_world WHERE workspace_id=$1", w1); n != 1 {
-		t.Fatal("closing removed simulation")
+	if out, err := s.Effective(ctx, home, "life"); err != nil || !out.Available {
+		t.Fatalf("all=%+v err=%v", out, err)
+	}
+	in.ExpectedRevision = policy.Revision
+	in.Scope = "disabled"
+	if _, err = s.Update(ctx, actor, "life", in); err != nil {
+		t.Fatal(err)
+	}
+	if n := fx.Count(t, "SELECT count(*) FROM life_world WHERE workspace_id=$1", home); n != 1 {
+		t.Fatal("policy change removed simulation")
+	}
+}
+
+func TestDBLifeScopeMigrationPreservesAudience(t *testing.T) {
+	for _, mode := range []string{"default", "inherit", "deny", "uninitialized"} {
+		t.Run(mode, func(t *testing.T) {
+			pool := testDB(t)
+			fx := testutil.New(pool, "", "")
+			actor := fx.User(t, "Admin", "admin@example.invalid")
+			home := fx.Workspace(t, "Home", "home")
+			other := fx.Workspace(t, "Other", "other")
+			fx.Exec(t, "ALTER TABLE game_policy DROP CONSTRAINT game_policy_scope_check; ALTER TABLE game_policy ADD CONSTRAINT game_policy_scope_check CHECK (scope IN ('all','selected','bound','disabled'))")
+			defaultVisible := mode == "default"
+			fx.Exec(t, "INSERT INTO game_policy(game_id,scope,default_visible,revision,updated_by) VALUES('life','bound',$1,3,$2)", defaultVisible, actor)
+			access := mode
+			if mode == "uninitialized" {
+				access = "inherit"
+			} else {
+				fx.Insert(t, "life_world", testutil.Cols{"id": uuid.NewString(), "workspace_id": home})
+			}
+			if mode != "default" {
+				fx.Exec(t, "INSERT INTO game_world_override(game_id,workspace_id,access,visibility) VALUES('life',$1,$2,'show'),('life',$3,'allow','show')", home, access, other)
+			}
+			raw, err := os.ReadFile("../../migrations/327_life_game_world_selection.up.sql")
+			if err != nil {
+				t.Fatal(err)
+			}
+			fx.Exec(t, string(raw))
+			s := &Service{Pool: pool}
+			policy, _, err := loadPolicy(context.Background(), db.New(pool), "life")
+			if err != nil || policy.Scope != "selected" || policy.Revision != 3 || policy.DefaultVisible != defaultVisible {
+				t.Fatalf("migrated policy=%+v err=%v", policy, err)
+			}
+			for _, tc := range []struct {
+				id        string
+				available bool
+			}{{home, mode == "inherit" || mode == "default"}, {other, false}} {
+				out, err := s.Effective(context.Background(), tc.id, "life")
+				if err != nil || out.Available != tc.available || out.Visible != tc.available {
+					t.Fatalf("audience=%+v err=%v", out, err)
+				}
+			}
+		})
 	}
 }

@@ -166,7 +166,7 @@ func (s *Service) Process(ctx context.Context, now time.Time) error {
 		if err != nil {
 			return false, err
 		}
-		value := gameadmin.Resolve(game, policy.Scope, policy.DefaultVisible, policy.Access, policy.Visibility, policy.LifeBound).Available
+		value := gameadmin.Resolve(game, policy.Scope, policy.DefaultVisible, policy.Access, policy.Visibility).Available
 		access[key] = value
 		return value, nil
 	}

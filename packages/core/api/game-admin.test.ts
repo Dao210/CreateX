@@ -44,3 +44,14 @@ it("rejects a save response for a different game and preserves the submitted rev
   await expect(new ApiClient("").updateGamePolicy("siege", input)).rejects.toThrow("invalid_game_policy_response");
   expect(JSON.parse(fetcher.mock.calls[0]![1].body)).toEqual(input);
 });
+it("accepts resident life world selections without a simulation binding", async () => {
+  const overrides = [{ workspaceId: wsId, access: "allow" as const, visibility: "show" as const }];
+  respond({ ...policy, gameId: "life", scope: "selected", overrides });
+  const parsed = await new ApiClient("").updateGamePolicy("life", { expectedRevision: 0, scope: "selected", defaultVisible: false, overrides });
+  expect(parsed.scope).toBe("selected");expect(parsed.overrides).toEqual(overrides);
+});
+it("preserves bound-only scopes in historical audit records", async () => {
+  respond({ items: [{ revision: 1, actorId: wsId, actorName: "Admin", actorEmail: "admin@example.invalid", previous: { ...policy, gameId: "life", scope: "bound" }, current: { ...policy, gameId: "life", scope: "selected" }, occurredAt: "2026-11-03T00:00:00Z" }] });
+  const parsed = await new ApiClient("").getGamePolicyActivity("life");
+  expect(parsed.items[0]?.previous.scope).toBe("bound");expect(parsed.items[0]?.current.scope).toBe("selected");
+});

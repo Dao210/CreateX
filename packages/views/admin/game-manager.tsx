@@ -41,20 +41,20 @@ function GamePolicyEditor({ game, userId, name }: { game: AdminGame; userId: str
   const update = useUpdateGamePolicy(userId);
   const value: UpdateGamePolicyInput = draft ?? { expectedRevision: game.policy.revision, scope: game.policy.scope, defaultVisible: game.policy.defaultVisible, overrides: game.policy.overrides };
   const conflict = Boolean(draft && draft.expectedRevision !== game.policy.revision && !update.isPending) || update.error instanceof ApiError && update.error.status === 409;
-  const worlds = useQuery({ ...gameWorldsOptions(userId, search, worldCursors.at(-1)), enabled: game.policy.gameId !== "life" });
+  const worlds = useQuery(gameWorldsOptions(userId, search, worldCursors.at(-1)));
   const preview = useQuery(gamePreviewOptions(userId, game.policy.gameId, value, Boolean(draft)));
   const impact = draft ? preview.data : game.impact;
   const knownWorlds = [...game.worlds, ...addedWorlds, ...(worlds.data?.items ?? []), ...(game.binding ? [game.binding.world] : [])];
   const change = (input: Partial<UpdateGamePolicyInput>) => { setDraft({ ...value, ...input }); update.reset(); };
   const save = async () => { try { await update.mutateAsync({ gameId: game.policy.gameId, input: value }); setDraft(null); } catch { /* Keep the reviewed policy and original revision for retry. */ } };
-  const selectedPreview = previewWorld && previewGameForWorld(game.policy.gameId, value, previewWorld.id, game.binding?.world.id);
-  const results = game.policy.gameId === "life" ? game.binding ? [game.binding.world] : [] : worlds.data?.items ?? [];
+  const selectedPreview = previewWorld && previewGameForWorld(value, previewWorld.id);
+  const results = worlds.data?.items ?? [];
 
   return <section className="admin-panel" aria-labelledby="game-policy-title">
     <div className="admin-panel-heading"><div><span className="admin-eyebrow">{t($ => $.game_policy)}</span><h2 id="game-policy-title">{name}</h2></div><span className="admin-tag">{t($ => $.game_exception_count, { count: value.overrides.length })}</span></div>
     <fieldset className="admin-game-fields" disabled={update.isPending}>
-      <label className="admin-game-field"><span>{t($ => $.game_scope)}</span><select value={value.scope} onChange={event => change({ scope: event.target.value === "all" ? "all" : event.target.value === "selected" ? "selected" : event.target.value === "bound" ? "bound" : "disabled" })}>
-        {(game.policy.gameId === "life" ? ["bound", "disabled"] as const : ["all", "selected", "disabled"] as const).map(scope => <option key={scope} value={scope}>{t($ => $.game_scopes[scope])}</option>)}
+      <label className="admin-game-field"><span>{t($ => $.game_scope)}</span><select value={value.scope} onChange={event => change({ scope: event.target.value === "all" ? "all" : event.target.value === "selected" ? "selected" : "disabled" })}>
+        {(["all", "selected", "disabled"] as const).map(scope => <option key={scope} value={scope}>{t($ => $.game_scopes[scope])}</option>)}
       </select></label>
       <label className="admin-game-field admin-game-toggle"><span>{t($ => $.game_default_visible)}</span><Switch checked={value.defaultVisible} disabled={update.isPending} onCheckedChange={defaultVisible => change({ defaultVisible })} /></label>
     </fieldset>
@@ -70,13 +70,13 @@ function GamePolicyEditor({ game, userId, name }: { game: AdminGame; userId: str
           <td><Button size="icon-sm" variant="ghost" disabled={update.isPending} aria-label={`${t($ => $.game_restore_inherit)} · ${world?.name ?? override.workspaceId}`} onClick={() => change({ overrides: value.overrides.filter(item => item.workspaceId !== override.workspaceId) })}><Trash2 /></Button></td>
         </tr>; })}
       </tbody></table></div> : <p className="admin-game-note">{t($ => $.game_no_exceptions)}</p>}
-      {game.policy.gameId !== "life" && <label className="admin-game-search"><span>{t($ => $.game_find_world)}</span><input type="search" value={search} maxLength={100} placeholder={t($ => $.game_search_placeholder)} onChange={event => { setSearch(event.target.value); setWorldCursors([]); }} /></label>}
-      {game.policy.gameId !== "life" && worlds.isError && <p role="alert">{t($ => $.load_error)} <Button variant="link" size="xs" onClick={() => void worlds.refetch()}>{t($ => $.refresh)}</Button></p>}
+      <label className="admin-game-search"><span>{t($ => $.game_find_world)}</span><input type="search" value={search} maxLength={100} placeholder={t($ => $.game_search_placeholder)} onChange={event => { setSearch(event.target.value); setWorldCursors([]); }} /></label>
+      {worlds.isError && <p role="alert">{t($ => $.load_error)} <Button variant="link" size="xs" onClick={() => void worlds.refetch()}>{t($ => $.refresh)}</Button></p>}
       <div className="admin-world-results">{results.map(world => <div key={world.id}>
         <Button size="sm" variant="ghost" onClick={() => setPreviewWorld(world)}><Globe2 /><span className="admin-world-name">{world.name}<small>{world.slug}</small></span></Button>
         <Button size="icon-sm" variant="outline" aria-label={t($ => $.game_add_exception, { name: world.name })} disabled={update.isPending || value.overrides.some(item => item.workspaceId === world.id) || value.overrides.length >= 500} onClick={() => { setAddedWorlds(previous => [...previous, world]); change({ overrides: [...value.overrides, { workspaceId: world.id, access: "allow", visibility: "inherit" }] }); }}><Plus /></Button>
       </div>)}</div>
-      {game.policy.gameId !== "life" && <div className="admin-actions admin-world-pagination"><Button size="icon-sm" variant="outline" aria-label={t($ => $.previous)} disabled={!worldCursors.length || worlds.isFetching} onClick={() => setWorldCursors(worldCursors.slice(0, -1))}><ChevronLeft /></Button><Button size="icon-sm" variant="outline" aria-label={t($ => $.next)} disabled={!worlds.data?.nextCursor || worlds.isFetching} onClick={() => { const next = worlds.data?.nextCursor; if (next) setWorldCursors([...worldCursors, next]); }}><ChevronRight /></Button></div>}
+      <div className="admin-actions admin-world-pagination"><Button size="icon-sm" variant="outline" aria-label={t($ => $.previous)} disabled={!worldCursors.length || worlds.isFetching} onClick={() => setWorldCursors(worldCursors.slice(0, -1))}><ChevronLeft /></Button><Button size="icon-sm" variant="outline" aria-label={t($ => $.next)} disabled={!worlds.data?.nextCursor || worlds.isFetching} onClick={() => { const next = worlds.data?.nextCursor; if (next) setWorldCursors([...worldCursors, next]); }}><ChevronRight /></Button></div>
       {previewWorld && selectedPreview && <div className="admin-game-world-preview" role="status"><strong>{previewWorld.name}</strong><span>{t($ => selectedPreview.available ? $.game_available : $.game_unavailable)}</span><span>{t($ => selectedPreview.visible ? $.game_shown : $.game_hidden)}</span><span>{t($ => $.game_reasons[selectedPreview.reason])}</span></div>}
     </div>
     <div className="admin-policy-footer"><div>

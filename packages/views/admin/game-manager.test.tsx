@@ -33,9 +33,16 @@ it("adds a world exception and previews its effective result", async () => {
   expect(screen.getByText("Unavailable")).toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "Restore inheritance · Alpha" }));expect(screen.queryByRole("combobox", { name: "Alpha · Game access" })).not.toBeInTheDocument();
 });
-it("limits resident life scope to its existing binding", async () => {
-  mocks.list.mockResolvedValue([{ policy: { ...policy, gameId: "life", scope: "bound" }, worlds: [], impact: { total: 2, available: 0, visible: 0 }, binding: null }]);
+it("lets resident life select any world before a simulation is initialized", async () => {
+  mocks.list.mockResolvedValue([{ policy: { ...policy, gameId: "life" }, worlds: [], impact: { total: 2, available: 2, visible: 2 }, binding: null }]);
+  mocks.save.mockResolvedValue({ ...policy, gameId: "life", scope: "selected", revision: 4 });
   render();expect(await screen.findByText("Not initialized")).toBeInTheDocument();
-  expect(screen.queryByRole("option", { name: "All worlds" })).not.toBeInTheDocument();
-  expect(screen.queryByRole("searchbox")).not.toBeInTheDocument();expect(mocks.worlds).not.toHaveBeenCalled();
+  expect(screen.getByRole("option", { name: "All worlds" })).toBeInTheDocument();
+  expect(screen.getByRole("searchbox", { name: "Find a world" })).toBeInTheDocument();
+  fireEvent.change(screen.getByRole("combobox", { name: "Availability" }), { target: { value: "selected" } });
+  fireEvent.click(await screen.findByRole("button", { name: "Add exception for Alpha" }));
+  fireEvent.click(screen.getByRole("button", { name: "Alpha" }));
+  expect(screen.getByText("Available", { exact: true })).toBeInTheDocument();
+  const save = screen.getByRole("button", { name: "Save policy" });await waitFor(() => expect(save).toBeEnabled());fireEvent.click(save);
+  await waitFor(() => expect(mocks.save).toHaveBeenCalledWith("life", { expectedRevision: 3, scope: "selected", defaultVisible: true, overrides: [{ workspaceId: world.id, access: "allow", visibility: "inherit" }] }));
 });

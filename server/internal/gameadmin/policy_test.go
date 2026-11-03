@@ -10,22 +10,23 @@ import (
 
 func TestResolve(t *testing.T) {
 	for _, tc := range []struct {
-		name, id, scope, access, visibility       string
-		defaultVisible, bound, available, visible bool
+		name, id, scope, access, visibility string
+		defaultVisible, available, visible  bool
 	}{
-		{"default", "siege", "all", "inherit", "inherit", true, false, true, true},
-		{"hidden remains accessible", "tanks", "all", "inherit", "hide", true, false, true, false},
-		{"show exception", "siege", "all", "inherit", "show", false, false, true, true},
-		{"deny overrides show", "siege", "all", "deny", "show", true, false, false, false},
-		{"selected requires allow", "siege", "selected", "inherit", "show", true, false, false, false},
-		{"selected allow", "siege", "selected", "allow", "inherit", true, false, true, true},
-		{"disabled wins", "tanks", "disabled", "allow", "show", true, false, false, false},
-		{"life bound", "life", "bound", "inherit", "inherit", true, true, true, true},
-		{"life cannot escape binding", "life", "bound", "allow", "show", true, false, false, false},
-		{"unknown scope closed", "siege", "future", "allow", "show", true, false, false, false},
+		{"default", "siege", "all", "inherit", "inherit", true, true, true},
+		{"hidden remains accessible", "tanks", "all", "inherit", "hide", true, true, false},
+		{"show exception", "siege", "all", "inherit", "show", false, true, true},
+		{"deny overrides show", "siege", "all", "deny", "show", true, false, false},
+		{"selected requires allow", "siege", "selected", "inherit", "show", true, false, false},
+		{"selected allow", "siege", "selected", "allow", "inherit", true, true, true},
+		{"disabled wins", "tanks", "disabled", "allow", "show", true, false, false},
+		{"life all without simulation", "life", "all", "inherit", "inherit", true, true, true},
+		{"life selected world", "life", "selected", "allow", "show", true, true, true},
+		{"life other world", "life", "selected", "inherit", "show", true, false, false},
+		{"unknown scope closed", "siege", "future", "allow", "show", true, false, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			out := Resolve(tc.id, tc.scope, tc.defaultVisible, tc.access, tc.visibility, tc.bound)
+			out := Resolve(tc.id, tc.scope, tc.defaultVisible, tc.access, tc.visibility)
 			if out.Available != tc.available || out.Visible != tc.visible {
 				t.Fatalf("got %+v, want available=%v visible=%v", out, tc.available, tc.visible)
 			}
@@ -46,8 +47,12 @@ func TestNormalizeRejectsAmbiguousPolicies(t *testing.T) {
 			t.Fatalf("accepted %+v", in)
 		}
 	}
-	if _, err := normalize("life", PolicyInput{Scope: "all", DefaultVisible: &visible, Overrides: []Override{}}); err == nil {
-		t.Fatal("life accepted all-world scope")
+	for _, id := range GameIDs {
+		for _, scope := range []string{"all", "selected", "disabled"} {
+			if _, err := normalize(id, PolicyInput{Scope: scope, DefaultVisible: &visible, Overrides: []Override{}}); err != nil {
+				t.Fatalf("%s scope %s: %v", id, scope, err)
+			}
+		}
 	}
 }
 

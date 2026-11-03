@@ -71,9 +71,8 @@ WITH proposed AS (
 ), resolved AS (
     SELECT
       @scope::text <> 'disabled'
-      AND (NOT @bound_only::boolean OR w.id = sqlc.narg('bound_workspace_id')::uuid)
       AND COALESCE(o.access, 'inherit') <> 'deny'
-      AND (@scope::text IN ('all', 'bound') OR o.access = 'allow') AS available,
+      AND (@scope::text = 'all' OR o.access = 'allow') AS available,
       CASE COALESCE(o.visibility, 'inherit') WHEN 'show' THEN true WHEN 'hide' THEN false ELSE @default_visible::boolean END AS visible
     FROM workspace w LEFT JOIN proposed o ON o.workspace_id = w.id
 )
@@ -106,11 +105,10 @@ ORDER BY a.revision DESC LIMIT 26;
 
 -- name: GetEffectiveGamePolicy :one
 SELECT
-    COALESCE(p.scope, CASE WHEN @game_id::text = 'life' THEN 'bound' ELSE 'all' END)::text AS scope,
+    COALESCE(p.scope, 'all')::text AS scope,
     COALESCE(p.default_visible, true)::boolean AS default_visible,
     COALESCE(o.access, 'inherit')::text AS access,
-    COALESCE(o.visibility, 'inherit')::text AS visibility,
-    EXISTS (SELECT 1 FROM life_world l WHERE l.workspace_id = @workspace_id::uuid) AS life_bound
+    COALESCE(o.visibility, 'inherit')::text AS visibility
 FROM (SELECT 1) seed
 LEFT JOIN game_policy p ON p.game_id = @game_id
 LEFT JOIN game_world_override o ON o.game_id = @game_id AND o.workspace_id = @workspace_id;

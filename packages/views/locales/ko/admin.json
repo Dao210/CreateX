@@ -78,7 +78,7 @@
   "game_exception_count": "세계 예외 {{count}}개",
   "game_uninitialized": "초기화되지 않음",
   "game_last_update": "최근 데이터 업데이트: {{time}}",
-  "game_binding_help": "기존 시뮬레이션에 연결된 세계만 이용할 수 있습니다. 이 설정은 시뮬레이션을 시작하거나 중지하거나 초기화하지 않습니다.",
+  "game_binding_help": "시뮬레이션 데이터는 세계별로 분리됩니다. 초기화되지 않은 세계에는 초기화 전 상태가 표시됩니다. 이 설정은 시뮬레이션을 시작하거나 중지하거나 초기화하지 않습니다.",
   "game_exceptions": "세계 예외",
   "game_world": "세계",
   "game_world_access": "게임 접근",
@@ -116,7 +116,6 @@
   "game_not_open": "현재 세계에는 이 게임이 공개되지 않았습니다.",
   "game_reasons": {
     "disabled": "전체 비공개",
-    "unbound": "이 세계에는 연결된 시뮬레이션이 없습니다",
     "world_denied": "세계 예외로 접근 거부",
     "scope": "지정 세계에 포함되지 않음",
     "world_override": "세계 예외 적용",

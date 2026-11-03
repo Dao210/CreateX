@@ -10,7 +10,7 @@ export const GameOverrideSchema = z.object({
   visibility: z.enum(["inherit", "show", "hide"]).catch("hide"),
 });
 export const GamePolicySchema = z.object({
-  gameId: z.string().min(1), scope: z.enum(["all", "selected", "bound", "disabled"]).catch("disabled"),
+  gameId: z.string().min(1), scope: z.enum(["all", "selected", "disabled"]).catch("disabled"),
   defaultVisible: z.boolean(), overrides: z.array(GameOverrideSchema), revision: z.number().int().nonnegative(),
   updatedBy: z.string().optional(), updatedAt: z.string().datetime({ offset: true }).nullish(),
 });
@@ -20,9 +20,10 @@ export const AdminGamesSchema = z.object({ games: z.array(z.object({
   binding: z.object({ world: GameWorldSchema, updatedAt: z.string().datetime({ offset: true }) }).nullable(),
 })) });
 export const GameWorldPageSchema = z.object({ items: z.array(GameWorldSchema), nextCursor: z.string().optional() });
+const HistoricalGamePolicySchema = GamePolicySchema.extend({ scope: z.enum(["all", "selected", "bound", "disabled"]).catch("disabled") });
 export const GameAuditPageSchema = z.object({ items: z.array(z.object({
   revision: z.number().int().positive(), actorId: z.string().uuid(), actorName: z.string(), actorEmail: z.string(),
-  previous: GamePolicySchema, current: GamePolicySchema, occurredAt: z.string().datetime({ offset: true }),
+  previous: HistoricalGamePolicySchema, current: HistoricalGamePolicySchema, occurredAt: z.string().datetime({ offset: true }),
 })), nextCursor: z.string().optional() });
 export const WorldGamesSchema = z.object({ workspaceId: z.string().uuid(), games: z.array(z.object({
   gameId: z.string(), available: z.boolean(), visible: z.boolean(), reason: z.string().default("scope"),
@@ -40,16 +41,14 @@ export type WorldGames = z.infer<typeof WorldGamesSchema>;
 export interface UpdateGamePolicyInput { expectedRevision: number; scope: GamePolicy["scope"]; defaultVisible: boolean; overrides: GameOverride[] }
 
 /** Preview a single world's draft without granting authority on the client. */
-export function previewGameForWorld(gameId: string, policy: UpdateGamePolicyInput, worldId: string, boundWorldId?: string): {
+export function previewGameForWorld(policy: UpdateGamePolicyInput, worldId: string): {
   available: boolean; visible: boolean;
-  reason: "disabled" | "unbound" | "world_denied" | "scope" | "world_override" | "inherited";
+  reason: "disabled" | "world_denied" | "scope" | "world_override" | "inherited";
 } {
   const override = policy.overrides.find(item => item.workspaceId === worldId);
-  const available = policy.scope !== "disabled" && (gameId !== "life" || worldId === boundWorldId)
-    && override?.access !== "deny" && (["all", "bound"].includes(policy.scope) || policy.scope === "selected" && override?.access === "allow");
+  const available = policy.scope !== "disabled" && override?.access !== "deny" && (policy.scope === "all" || policy.scope === "selected" && override?.access === "allow");
   const visible = available && (override?.visibility === "show" || override?.visibility !== "hide" && policy.defaultVisible);
-  const reason = policy.scope === "disabled" ? "disabled" : gameId === "life" && worldId !== boundWorldId ? "unbound"
-    : override?.access === "deny" ? "world_denied" : !available ? "scope"
+  const reason = policy.scope === "disabled" ? "disabled" : override?.access === "deny" ? "world_denied" : !available ? "scope"
       : override && (override.access !== "inherit" || override.visibility !== "inherit") ? "world_override" : "inherited";
   return { available, visible, reason };
 }

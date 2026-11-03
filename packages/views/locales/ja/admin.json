@@ -78,7 +78,7 @@
   "game_exception_count": "ワールドの例外 {{count}} 件",
   "game_uninitialized": "未初期化",
   "game_last_update": "データ最終更新：{{time}}",
-  "game_binding_help": "既存のシミュレーションに紐付いたワールドのみ利用できます。この設定で起動、停止、リセットは行いません。",
+  "game_binding_help": "シミュレーションデータはワールドごとに分離されます。未初期化のワールドには未初期化状態を表示します。この設定で起動、停止、リセットは行いません。",
   "game_exceptions": "ワールドの例外",
   "game_world": "ワールド",
   "game_world_access": "ゲーム利用",
@@ -116,7 +116,6 @@
   "game_not_open": "このワールドではこのゲームを利用できません。",
   "game_reasons": {
     "disabled": "全体で非公開",
-    "unbound": "このワールドにはシミュレーションが紐付いていません",
     "world_denied": "ワールドの例外で拒否",
     "scope": "指定ワールドの対象外",
     "world_override": "ワールドの例外を適用",

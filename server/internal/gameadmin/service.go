@@ -56,11 +56,7 @@ func binding(ctx context.Context, q *db.Queries) (*Binding, error) {
 	return &Binding{World: World{util.UUIDToString(row.ID), row.Name, row.Slug}, UpdatedAt: row.UpdatedAt.Time}, nil
 }
 
-func impact(ctx context.Context, q *db.Queries, p Policy, b *Binding) (Impact, error) {
-	var bound pgtype.UUID
-	if b != nil {
-		bound, _ = util.ParseUUID(b.World.ID)
-	}
+func impact(ctx context.Context, q *db.Queries, p Policy) (Impact, error) {
 	ids := []pgtype.UUID{}
 	accesses, visibilities := []string{}, []string{}
 	for _, o := range p.Overrides {
@@ -69,7 +65,7 @@ func impact(ctx context.Context, q *db.Queries, p Policy, b *Binding) (Impact, e
 		accesses = append(accesses, o.Access)
 		visibilities = append(visibilities, o.Visibility)
 	}
-	row, err := q.CountGamePolicyImpact(ctx, db.CountGamePolicyImpactParams{OverrideIds: ids, OverrideAccess: accesses, OverrideVisibility: visibilities, Scope: p.Scope, DefaultVisible: p.DefaultVisible, BoundOnly: p.GameID == "life", BoundWorkspaceID: bound})
+	row, err := q.CountGamePolicyImpact(ctx, db.CountGamePolicyImpactParams{OverrideIds: ids, OverrideAccess: accesses, OverrideVisibility: visibilities, Scope: p.Scope, DefaultVisible: p.DefaultVisible})
 	return Impact{row.Total, row.Available, row.Visible}, err
 }
 
@@ -95,7 +91,7 @@ func (s *Service) Overview(ctx context.Context) ([]Overview, error) {
 		if id == "life" {
 			current = b
 		}
-		counts, err := impact(ctx, q, p, current)
+		counts, err := impact(ctx, q, p)
 		if err != nil {
 			return nil, err
 		}
@@ -104,18 +100,13 @@ func (s *Service) Overview(ctx context.Context) ([]Overview, error) {
 	return out, tx.Commit(ctx)
 }
 
-func validateWorlds(ctx context.Context, q *db.Queries, p Policy, b *Binding, lock bool) error {
+func validateWorlds(ctx context.Context, q *db.Queries, p Policy) error {
 	for _, o := range p.Overrides {
-		if p.GameID == "life" && (b == nil || b.World.ID != o.WorkspaceID) {
+		id, _ := util.ParseUUID(o.WorkspaceID)
+		if _, err := q.LockWorkspaceForChatSessionCreate(ctx, id); errors.Is(err, pgx.ErrNoRows) {
 			return ErrInvalid
-		}
-		if lock {
-			id, _ := util.ParseUUID(o.WorkspaceID)
-			if _, err := q.LockWorkspaceForChatSessionCreate(ctx, id); errors.Is(err, pgx.ErrNoRows) {
-				return ErrInvalid
-			} else if err != nil {
-				return err
-			}
+		} else if err != nil {
+			return err
 		}
 	}
 	return nil
@@ -127,14 +118,7 @@ func (s *Service) Preview(ctx context.Context, id string, in PolicyInput) (Impac
 		return Impact{}, err
 	}
 	q := db.New(s.Pool)
-	b, err := binding(ctx, q)
-	if err != nil {
-		return Impact{}, err
-	}
-	if err = validateWorlds(ctx, q, p, b, false); err != nil {
-		return Impact{}, err
-	}
-	return impact(ctx, q, p, b)
+	return impact(ctx, q, p)
 }
 
 func (s *Service) Update(ctx context.Context, actorID, id string, in PolicyInput) (Policy, error) {
@@ -151,11 +135,7 @@ func (s *Service) Update(ctx context.Context, actorID, id string, in PolicyInput
 	if err = s.Auth.LockActor(ctx, q, actorID); err != nil {
 		return Policy{}, err
 	}
-	b, err := binding(ctx, q)
-	if err != nil {
-		return Policy{}, err
-	}
-	if err = validateWorlds(ctx, q, p, b, true); err != nil {
+	if err = validateWorlds(ctx, q, p); err != nil {
 		return Policy{}, err
 	}
 	previous, _, err := loadPolicy(ctx, q, id)
@@ -200,7 +180,7 @@ func (s *Service) Effective(ctx context.Context, workspaceID, gameID string) (Ef
 	if err != nil {
 		return Effective{}, err
 	}
-	return Resolve(gameID, r.Scope, r.DefaultVisible, r.Access, r.Visibility, r.LifeBound), nil
+	return Resolve(gameID, r.Scope, r.DefaultVisible, r.Access, r.Visibility), nil
 }
 
 type WorldPage struct {

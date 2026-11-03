@@ -78,7 +78,7 @@
   "game_exception_count": "{{count}} 个世界例外",
   "game_uninitialized": "未初始化",
   "game_last_update": "数据最近更新于 {{time}}",
-  "game_binding_help": "仅现有模拟绑定的世界可用。这些设置不会启动、停止或重置模拟。",
+  "game_binding_help": "模拟数据按世界隔离；尚未启动模拟的世界进入后显示未初始化。这些设置不会启动、停止或重置模拟。",
   "game_exceptions": "世界例外",
   "game_world": "世界",
   "game_world_access": "游戏访问",
@@ -116,7 +116,6 @@
   "game_not_open": "当前世界未开放此游戏。",
   "game_reasons": {
     "disabled": "游戏已全站关闭",
-    "unbound": "此世界未绑定模拟",
     "world_denied": "世界例外禁止访问",
     "scope": "不在指定开放世界中",
     "world_override": "使用世界例外",

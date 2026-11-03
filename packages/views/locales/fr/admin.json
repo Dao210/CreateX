@@ -78,7 +78,7 @@
   "game_exception_count": "Exceptions par monde : {{count}}",
   "game_uninitialized": "Non initialisé",
   "game_last_update": "Dernière mise à jour : {{time}}",
-  "game_binding_help": "Seul le monde lié à la simulation existante peut utiliser ce jeu. Ces réglages ne démarrent, n’arrêtent et ne réinitialisent pas la simulation.",
+  "game_binding_help": "Les données de simulation restent propres à chaque monde. Un monde sans simulation affiche un état non initialisé. Ces réglages ne démarrent, n’arrêtent et ne réinitialisent pas la simulation.",
   "game_exceptions": "Exceptions par monde",
   "game_world": "Monde",
   "game_world_access": "Accès au jeu",
@@ -116,7 +116,6 @@
   "game_not_open": "Ce jeu n’est pas ouvert dans le monde actuel.",
   "game_reasons": {
     "disabled": "Jeu fermé globalement",
-    "unbound": "Aucune simulation liée à ce monde",
     "world_denied": "Accès refusé par une exception",
     "scope": "Hors des mondes sélectionnés",
     "world_override": "Exception du monde appliquée",

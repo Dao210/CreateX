@@ -66,28 +66,20 @@ type Overview struct {
 }
 
 func defaultPolicy(id string) Policy {
-	scope := "all"
-	if id == "life" {
-		scope = "bound"
-	}
-	return Policy{GameID: id, Scope: scope, DefaultVisible: true, Overrides: []Override{}}
+	return Policy{GameID: id, Scope: "all", DefaultVisible: true, Overrides: []Override{}}
 }
 
-func Resolve(id, scope string, defaultVisible bool, access, visibility string, bound bool) Effective {
+func Resolve(id, scope string, defaultVisible bool, access, visibility string) Effective {
 	out := Effective{GameID: id, Reason: "scope"}
 	if scope == "disabled" {
 		out.Reason = "disabled"
-		return out
-	}
-	if id == "life" && !bound {
-		out.Reason = "unbound"
 		return out
 	}
 	if access == "deny" {
 		out.Reason = "world_denied"
 		return out
 	}
-	out.Available = scope == "all" || scope == "bound" || scope == "selected" && access == "allow"
+	out.Available = scope == "all" || scope == "selected" && access == "allow"
 	if !out.Available {
 		return out
 	}
@@ -103,11 +95,7 @@ func normalize(id string, in PolicyInput) (Policy, error) {
 	if in.DefaultVisible == nil || in.Overrides == nil || len(in.Overrides) > 500 || in.ExpectedRevision < 0 || in.ExpectedRevision >= math.MaxInt32 {
 		return Policy{}, ErrInvalid
 	}
-	if id == "life" {
-		if in.Scope != "bound" && in.Scope != "disabled" {
-			return Policy{}, ErrInvalid
-		}
-	} else if in.Scope != "all" && in.Scope != "selected" && in.Scope != "disabled" {
+	if in.Scope != "all" && in.Scope != "selected" && in.Scope != "disabled" {
 		return Policy{}, ErrInvalid
 	}
 	out := defaultPolicy(id)

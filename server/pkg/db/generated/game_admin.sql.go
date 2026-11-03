@@ -19,10 +19,9 @@ WITH proposed AS (
 ), resolved AS (
     SELECT
       $4::text <> 'disabled'
-      AND (NOT $5::boolean OR w.id = $6::uuid)
       AND COALESCE(o.access, 'inherit') <> 'deny'
-      AND ($4::text IN ('all', 'bound') OR o.access = 'allow') AS available,
-      CASE COALESCE(o.visibility, 'inherit') WHEN 'show' THEN true WHEN 'hide' THEN false ELSE $7::boolean END AS visible
+      AND ($4::text = 'all' OR o.access = 'allow') AS available,
+      CASE COALESCE(o.visibility, 'inherit') WHEN 'show' THEN true WHEN 'hide' THEN false ELSE $5::boolean END AS visible
     FROM workspace w LEFT JOIN proposed o ON o.workspace_id = w.id
 )
 SELECT count(*)::bigint AS total,
@@ -36,8 +35,6 @@ type CountGamePolicyImpactParams struct {
 	OverrideAccess     []string      `json:"override_access"`
 	OverrideVisibility []string      `json:"override_visibility"`
 	Scope              string        `json:"scope"`
-	BoundOnly          bool          `json:"bound_only"`
-	BoundWorkspaceID   pgtype.UUID   `json:"bound_workspace_id"`
 	DefaultVisible     bool          `json:"default_visible"`
 }
 
@@ -53,8 +50,6 @@ func (q *Queries) CountGamePolicyImpact(ctx context.Context, arg CountGamePolicy
 		arg.OverrideAccess,
 		arg.OverrideVisibility,
 		arg.Scope,
-		arg.BoundOnly,
-		arg.BoundWorkspaceID,
 		arg.DefaultVisible,
 	)
 	var i CountGamePolicyImpactRow
@@ -73,11 +68,10 @@ func (q *Queries) DeleteGameWorldOverrides(ctx context.Context, gameID string) e
 
 const getEffectiveGamePolicy = `-- name: GetEffectiveGamePolicy :one
 SELECT
-    COALESCE(p.scope, CASE WHEN $1::text = 'life' THEN 'bound' ELSE 'all' END)::text AS scope,
+    COALESCE(p.scope, 'all')::text AS scope,
     COALESCE(p.default_visible, true)::boolean AS default_visible,
     COALESCE(o.access, 'inherit')::text AS access,
-    COALESCE(o.visibility, 'inherit')::text AS visibility,
-    EXISTS (SELECT 1 FROM life_world l WHERE l.workspace_id = $2::uuid) AS life_bound
+    COALESCE(o.visibility, 'inherit')::text AS visibility
 FROM (SELECT 1) seed
 LEFT JOIN game_policy p ON p.game_id = $1
 LEFT JOIN game_world_override o ON o.game_id = $1 AND o.workspace_id = $2
@@ -93,7 +87,6 @@ type GetEffectiveGamePolicyRow struct {
 	DefaultVisible bool   `json:"default_visible"`
 	Access         string `json:"access"`
 	Visibility     string `json:"visibility"`
-	LifeBound      bool   `json:"life_bound"`
 }
 
 func (q *Queries) GetEffectiveGamePolicy(ctx context.Context, arg GetEffectiveGamePolicyParams) (GetEffectiveGamePolicyRow, error) {
@@ -104,7 +97,6 @@ func (q *Queries) GetEffectiveGamePolicy(ctx context.Context, arg GetEffectiveGa
 		&i.DefaultVisible,
 		&i.Access,
 		&i.Visibility,
-		&i.LifeBound,
 	)
 	return i, err
 }

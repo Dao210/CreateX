@@ -78,7 +78,7 @@
   "game_exception_count": "World exceptions: {{count}}",
   "game_uninitialized": "Not initialized",
   "game_last_update": "Last data update: {{time}}",
-  "game_binding_help": "Only the world bound to the existing simulation can use this game. These settings do not start, stop or reset the simulation.",
+  "game_binding_help": "Simulation data stays within its world. Worlds without an initialized simulation show an empty state. These settings do not start, stop or reset the simulation.",
   "game_exceptions": "World exceptions",
   "game_world": "World",
   "game_world_access": "Game access",
@@ -116,7 +116,6 @@
   "game_not_open": "This game is not open in the current world.",
   "game_reasons": {
     "disabled": "Game closed globally",
-    "unbound": "No simulation is bound to this world",
     "world_denied": "Denied by world exception",
     "scope": "Outside the selected worlds",
     "world_override": "World exception applies",

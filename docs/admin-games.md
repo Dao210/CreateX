@@ -11,7 +11,6 @@ Web 的 `/admin` 默认进入游戏管理；`/admin/games` 和 `/admin/mcp` 分�
 | 全部世界 | 已有和新建世界默认可用，可以禁止指定世界 |
 | 指定世界 | 仅访问例外为“允许”的世界可用，新世界不自动加入 |
 | 关闭 | 所有世界不可用；保留例外配置，但例外不能绕过关闭 |
-| 仅绑定世界 | 居民生活专用，仅数据库中实际绑定的世界可用 |
 
 入口显示独立配置。默认显示可以通过世界例外覆盖；不可用的游戏始终隐藏。
 
@@ -21,13 +20,13 @@ Web 的 `/admin` 默认进入游戏管理；`/admin/games` 和 `/admin/mcp` 分�
 - 游戏进度聚合接口过滤不可用游戏的数据，写入接口按具体游戏检查权限。
 - 坦克 MCP 同时受游戏开放策略及 MCP 服务／工具策略约束；关闭 MCP 不影响正常开放的游戏 HTTP 接口。
 
-初始策略是涂鸦攻城、坦克守城向所有世界开放并显示入口；居民生活只向实际绑定的世界开放并显示。管理员第一次保存后，以持久化策略为准，重启和新建世界不重置配置。
+三个游戏使用相同的开放与显示规则，未保存策略时默认向所有世界开放并显示入口。已有居民生活“仅绑定世界”策略通过迁移转为“指定世界”，保留原有开放范围和显示例外。管理员第一次保存后，以持久化策略为准，重启和新建世界不重置配置。
 
 服务端在下一次请求执行最新策略。Web/Desktop 在进入或切换世界、窗口重新聚焦以及活跃时每 30 秒刷新有效策略。旧版 Desktop 可能继续显示入口，但不能绕过服务端权限。关闭游戏不提供远程强制终止已在客户端运行的本地战斗的保证。
 
 ## 居民生活
 
-本功能保持现有单份模拟架构，以 `life_world.workspace_id` 为实际绑定依据。尚未初始化时，后台显示未初始化，普通世界不出现入口。Worker 暂停时保留绑定，游戏中的现有暂停状态继续有效。
+居民生活和其他两款游戏一样，可以设置全部世界、指定世界或关闭，并使用世界访问和入口显示例外。模拟仍是单份、按 `life_world.workspace_id` 隔离的数据；入口开放不要求该世界已有模拟。允许访问但尚未启动模拟的世界进入后显示未初始化，不返回其他世界的数据。Worker 暂停时保留绑定，已初始化世界继续显示现有暂停状态。
 
 管理界面不提供启动、停止、重置、重新绑定或为每个世界创建独立模拟的操作。关闭访问不会停止 Worker。最近数据更新时间不代表进程健康检查。
 
@@ -46,7 +45,7 @@ Web 的 `/admin` 默认进入游戏管理；`/admin/games` 和 `/admin/mcp` 分�
 
 策略输入包含 `scope`、`defaultVisible`、`expectedRevision` 和 `overrides`。每个例外包含 `workspaceId`、`access`（`inherit/allow/deny`）、`visibility`（`inherit/show/hide`），最多 500 个。返回 409 表示其他管理员已更新版本，应放弃当前更改并查看最新策略，不能覆盖保存。
 
-迁移 589–593 创建 `game_policy`、`game_world_override`、`game_policy_audit` 及独立并发索引，不添加外键。保存策略、替换例外和写审计在同一事务中完成，审计失败会回滚策略。世界删除会在应用事务中清理对应例外，保留历史审计快照。
+`game_policy`、`game_world_override`、`game_policy_audit` 使用独立并发索引，不添加外键。迁移 `327_life_game_world_selection` 将已保存的仅绑定策略转成显式世界选择，不修改模拟或历史审计内容。保存策略、替换例外和写审计在同一事务中完成，审计失败会回滚策略。世界删除会在应用事务中清理对应例外，保留历史审计快照。
 
 配置读取失败返回服务暂不可用，不把失败伪装成游戏关闭。前端保留失败的编辑草稿，并区分权限读取错误与未开放状态。
 
@@ -61,7 +60,7 @@ pnpm --filter @auro/core exec vitest run api/admin.test.ts api/game-admin.test.t
 pnpm --filter @auro/views exec vitest run admin me/me-page.test.tsx search/search-command.test.tsx siege/siege-page.test.tsx tank-defense/tank-defense-page.test.tsx
 ```
 
-`make game-admin-test-db` 使用当前 checkout 的托管 `DATABASE_URL`，每个测试创建独立 schema 和影子表，测试完成后删除，不修改现有世界的全站游戏策略。覆盖默认继承、指定世界、新世界、关闭、并发保存、审计回滚、管理员与成员权限、MCP/HTTP 守卫及居民绑定限制。
+`make game-admin-test-db` 使用当前 checkout 的托管 `DATABASE_URL`，每个测试创建独立 schema 和影子表，测试完成后删除，不修改现有世界的全站游戏策略。覆盖默认继承、指定世界、新世界、关闭、并发保存、审计回滚、管理员与成员权限、MCP/HTTP 守卫及居民生活的世界选择和数据隔离。
 
 交付还需要 Web/Desktop 的 typecheck、lint、构建和浏览器验收。不要把模块测试通过视为完整应用验收或生产部署。
 

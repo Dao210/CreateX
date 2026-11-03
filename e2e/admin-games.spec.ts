@@ -81,8 +81,18 @@ test("global policies, module routes, world inheritance, hidden access and serve
   await page.screenshot({ path: testInfo.outputPath("admin-games-mobile.png"), fullPage: true });
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.getByRole("button", { name: /Agent Life/ }).click();await expect(page.getByText("Not initialized", { exact: true })).toBeVisible();
-  await expect(page.getByRole("option", { name: "All worlds" })).toHaveCount(0);
-  expect((await call("/api/life", { world: alpha })).status).toBe(403);
+  await expect(page.getByRole("option", { name: "All worlds" })).toHaveCount(1);
+  await page.getByRole("combobox", { name: "Availability", exact: true }).selectOption("selected");
+  await page.getByRole("searchbox", { name: "Find a world" }).fill(alpha.slug);
+  await page.getByRole("button", { name: `Add exception for ${alpha.name}` }).click();
+  await expect(page.getByRole("button", { name: "Save policy" })).toBeEnabled();await page.getByRole("button", { name: "Save policy" }).click();
+  await expect.poll(async () => (await effective(alpha)).find((game: { gameId: string }) => game.gameId === "life")).toMatchObject({ available: true, visible: true });
+  expect((await effective(beta)).find((game: { gameId: string }) => game.gameId === "life").available).toBe(false);
+  const emptyLife = await call("/api/life", { world: alpha });expect(emptyLife.status).toBe(200);expect((await emptyLife.json()).world).toBeNull();
+  expect((await call("/api/life", { world: beta })).status).toBe(403);
+  await page.screenshot({ path: testInfo.outputPath("resident-life-world-selection.png"), fullPage: true });
+  await page.goto(`/${alpha.slug}/life`);await expect(page.getByRole("link", { name: "Agent Life", exact: true })).toBeVisible();
+  await expect(page.getByText("This world has no life simulation yet.")).toBeVisible();
 
   await page.goto(`/${beta.slug}/siege`);await expect(page.getByText("This game is not open in the current world.")).toBeVisible();
   expect((await call("/api/siege/library", { world: beta })).status).toBe(403);
