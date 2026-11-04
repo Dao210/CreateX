@@ -9,7 +9,6 @@ export function useFishActions(wsId: string) {
   const refresh = () => client.invalidateQueries({ queryKey: fishKeys.root(wsId) });
   return {
     save: useMutation({ mutationFn: (input: SaveFishInput) => api.saveFish(wsId, input), onSuccess: refresh }),
-    createOcean: useMutation({ mutationFn: (requestId: string) => api.createFishOcean(wsId, requestId), onSuccess: refresh }),
     release: useMutation({ mutationFn: (input: ReleaseFishInput) => api.releaseFish(wsId, input), onSuccess: refresh }),
     apply: useMutation({ mutationFn: (input: ChangeFishResidentInput) => api.applyFishRevision(wsId, input), onSuccess: refresh }),
     recall: useMutation({ mutationFn: (input: RecallFishInput) => api.recallFish(wsId, input), onSuccess: refresh }),

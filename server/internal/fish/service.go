@@ -85,12 +85,28 @@ type SaveInput struct {
 	Origin           string `json:"-"`
 }
 type ReleaseInput struct {
-	RequestID   string `json:"requestId"`
-	OceanID     string `json:"oceanId"`
-	FishID      string `json:"fishId"`
-	Revision    int    `json:"revision"`
-	ContentHash string `json:"contentHash"`
+	RequestID   string          `json:"requestId"`
+	OceanID     optionalOceanID `json:"oceanId,omitempty"`
+	FishID      string          `json:"fishId"`
+	Revision    int             `json:"revision"`
+	ContentHash string          `json:"contentHash"`
 }
+
+// An omitted target is allowed for release. An explicitly empty or null target is invalid.
+type optionalOceanID string
+
+func (id *optionalOceanID) UnmarshalJSON(raw []byte) error {
+	var value string
+	if err := json.Unmarshal(raw, &value); err != nil {
+		return err
+	}
+	if value == "" {
+		return problem("invalid_request", 400)
+	}
+	*id = optionalOceanID(value)
+	return nil
+}
+
 type ApplyInput struct {
 	ReleaseInput
 	ResidentID               string `json:"residentId"`
@@ -350,20 +366,26 @@ func (s *Service) Ocean(ctx context.Context, a Actor, id string) (Ocean, error) 
 	}
 	return readOcean(ctx, q, w, row)
 }
+func ensureMyOcean(ctx context.Context, q *db.Queries, w, u pgtype.UUID) (db.FishOcean, error) {
+	params := db.GetMyFishOceanParams{WorkspaceID: w, UserID: u}
+	row, err := q.GetMyFishOcean(ctx, params)
+	if !errors.Is(err, pgx.ErrNoRows) {
+		return row, err
+	}
+	id := pgtype.UUID{Bytes: uuid.New(), Valid: true}
+	if err := q.EnsureFishOcean(ctx, db.EnsureFishOceanParams{ID: id, WorkspaceID: w, UserID: u}); err != nil {
+		return db.FishOcean{}, err
+	}
+	return q.GetMyFishOcean(ctx, params)
+}
+
 func (s *Service) EnsureOcean(ctx context.Context, a Actor, rid string) (Ocean, error) {
 	var out Ocean
 	in := struct {
 		RequestID string `json:"requestId"`
 	}{rid}
 	raw, e := s.write(ctx, a, "create_ocean", rid, in, func(q *db.Queries, w, u pgtype.UUID) (any, error) {
-		id, err := inputUUID(uuid.NewString())
-		if err != nil {
-			return nil, err
-		}
-		if e := q.EnsureFishOcean(ctx, db.EnsureFishOceanParams{ID: id, WorkspaceID: w, UserID: u}); e != nil {
-			return nil, e
-		}
-		row, e := q.GetMyFishOcean(ctx, db.GetMyFishOceanParams{WorkspaceID: w, UserID: u})
+		row, e := ensureMyOcean(ctx, q, w, u)
 		if e != nil {
 			return nil, e
 		}
@@ -379,23 +401,35 @@ func (s *Service) release(ctx context.Context, a Actor, in ReleaseInput, residen
 	if in.Revision < 1 || in.Revision > Rules.MaxRevisions {
 		return out, problem("invalid_request", 400)
 	}
-	oid, e := inputUUID(in.OceanID)
-	if e != nil {
-		return out, e
+	var target pgtype.UUID
+	if in.OceanID != "" || residentID != "" {
+		var err error
+		target, err = inputUUID(string(in.OceanID))
+		if err != nil {
+			return out, err
+		}
 	}
 	op := "release"
 	if residentID != "" {
 		op = "apply"
 	}
+	// Hash the requested target so existing explicit receipts still replay.
 	intent := struct {
 		ReleaseInput
 		ResidentID string `json:"residentId"`
 		Expected   int    `json:"expectedResidentRevision"`
 	}{in, residentID, expected}
 	raw, e := s.write(ctx, a, op, in.RequestID, intent, func(q *db.Queries, w, u pgtype.UUID) (any, error) {
-		o, e := q.GetFishOcean(ctx, db.GetFishOceanParams{WorkspaceID: w, ID: oid})
-		if e != nil || o.UserID != u {
-			return nil, problem("not_found", 404)
+		var ocean db.FishOcean
+		if target.Valid {
+			var err error
+			ocean, err = q.GetFishOcean(ctx, db.GetFishOceanParams{WorkspaceID: w, ID: target})
+			if err != nil {
+				return nil, storedError(err)
+			}
+			if ocean.UserID != u {
+				return nil, problem("not_found", 404)
+			}
 		}
 		current, e := readCharacter(ctx, q, w, u, in.FishID, 0)
 		if e != nil {
@@ -414,6 +448,14 @@ func (s *Service) release(ctx context.Context, a Actor, in ReleaseInput, residen
 		if c.ContentHash != in.ContentHash {
 			return nil, problem("fish_hash_mismatch", 409)
 		}
+		if !target.Valid {
+			ocean, e = ensureMyOcean(ctx, q, w, u)
+			if e != nil {
+				return nil, e
+			}
+		}
+		oid := ocean.ID
+		oceanID := util.UUIDToString(oid)
 		fid, err := inputUUID(c.ID)
 		if err != nil {
 			return nil, err
@@ -456,7 +498,7 @@ func (s *Service) release(ctx context.Context, a Actor, in ReleaseInput, residen
 		if revision > 10000 {
 			return nil, problem("revision_limit", 409)
 		}
-		resident := Resident{ID: id, OceanID: in.OceanID, Revision: revision, Seed: seed, Fish: c}
+		resident := Resident{ID: id, OceanID: oceanID, Revision: revision, Seed: seed, Fish: c}
 		payload, _ := json.Marshal(resident)
 		rID, err := inputUUID(id)
 		if err != nil {
@@ -465,14 +507,14 @@ func (s *Service) release(ctx context.Context, a Actor, in ReleaseInput, residen
 		if e = q.PutFishResident(ctx, db.PutFishResidentParams{ID: rID, WorkspaceID: w, UserID: u, OceanID: oid, FishID: fid, Revision: int32(revision), Payload: payload}); e != nil {
 			return nil, e
 		}
-		if e = q.UpdateFishOcean(ctx, db.UpdateFishOceanParams{WorkspaceID: w, ID: oid, Visibility: o.Visibility}); e != nil {
+		if e = q.UpdateFishOcean(ctx, db.UpdateFishOceanParams{WorkspaceID: w, ID: oid, Visibility: ocean.Visibility}); e != nil {
 			return nil, e
 		}
 		ws, e := q.GetWorkspace(ctx, w)
 		if e != nil {
 			return nil, e
 		}
-		path := "/" + url.PathEscape(ws.Slug) + "/fish?ocean=" + url.QueryEscape(in.OceanID) + "&resident=" + url.QueryEscape(id)
+		path := "/" + url.PathEscape(ws.Slug) + "/fish?ocean=" + url.QueryEscape(oceanID) + "&resident=" + url.QueryEscape(id)
 		return ReleaseResult{Resident: resident, OceanURL: strings.TrimRight(s.AppURL, "/") + path}, nil
 	})
 	if e == nil {

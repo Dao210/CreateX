@@ -116,7 +116,7 @@ func (h *HTTP) mcp(w http.ResponseWriter, r *http.Request) {
 		if in.ProtocolVersion == "2025-06-18" || in.ProtocolVersion == "2025-03-26" {
 			version = in.ProtocolVersion
 		}
-		rpcResult(w, req.ID, map[string]any{"protocolVersion": version, "capabilities": map[string]any{"tools": map[string]any{}}, "serverInfo": map[string]any{"name": "auro-fish", "version": "1.0.0"}, "instructions": "Read fish@1 catalog, create a distinctive draft, validate, save, ensure an ocean, release the exact revision and hash, and open oceanUrl. Fish are persistent; swimming is ambient client presentation."})
+		rpcResult(w, req.ID, map[string]any{"protocolVersion": version, "capabilities": map[string]any{"tools": map[string]any{}}, "serverInfo": map[string]any{"name": "auro-fish", "version": "1.0.0"}, "instructions": "Read the fish@1 catalog, create a distinctive draft, validate, and save it. Release the exact revision and hash without oceanId to use your personal ocean, creating it if needed. Open the returned oceanUrl."})
 	case "ping":
 		rpcResult(w, req.ID, map[string]any{})
 	case "tools/list":

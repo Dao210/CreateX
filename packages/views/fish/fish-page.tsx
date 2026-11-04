@@ -30,7 +30,7 @@ function OceanContent({ storage, workspace, userId }: { storage: StorageAdapter;
  const actions = useFishActions(workspace.id), root = useRef<HTMLDivElement>(null), retry = useRef<(() => Promise<void>) | null>(null);
  const [busy, setBusy] = useState(false), [error, setError] = useState(false), [selectedId, setSelectedId] = useState(focused), [follow, setFollow] = useState(false), [paused, setPaused] = useState(false), [reset, setReset] = useState(0), [fullscreen, setFullscreen] = useState(false), [showArchived, setShowArchived] = useState(false), [sharing, setSharing] = useState(false), [copied, setCopied] = useState(false);
  const preferenceKey = `fish:${workspace.id}:${userId}:quality`, [lowQuality, setLowQuality] = useState(() => storage.getItem(preferenceKey) === "low");
- const ocean = oceanQuery.data, ownOcean = !ocean || ocean.ownerId === userId, creations = fishQuery.data ?? [];
+ const ocean = oceanQuery.data, ownOcean = ocean ? ocean.ownerId === userId : !oceanId, creations = fishQuery.data ?? [];
  const residents = ocean?.residents ?? EMPTY_RESIDENTS;
  const demos = useMemo(() => FISH_EXAMPLES.map((spec, i) => ({ ...previewResident(spec), id: `demo-${i}`, seed: i * 793 + 1 })), []);
  const showingDemo = !residents.length && ownOcean && !oceanQuery.isError;
@@ -54,10 +54,14 @@ function OceanContent({ storage, workspace, userId }: { storage: StorageAdapter;
   const requestId = crypto.randomUUID();
   return run(async () => { const result = await actions.save.mutateAsync({ requestId, draft, ...(character ? { fishId: character.id, expectedRevision: character.revision } : {}) }); const params = new URLSearchParams(navigation.searchParams); params.set("fish", result.id); params.delete("resident"); navigation.replace(`${paths.fish()}?${params}`); setSelectedId(""); });
  };
- const ensure = async (requestId: string) => ocean && ownOcean ? ocean : actions.createOcean.mutateAsync(requestId);
  const release = (fish: FishCharacter) => {
-  const oceanRequestId = crypto.randomUUID(), requestId = crypto.randomUUID();
-  void run(async () => { const target = await ensure(oceanRequestId); const result = await actions.release.mutateAsync({ requestId, oceanId: target.id, fishId: fish.id, revision: fish.revision, contentHash: fish.contentHash }); navigation.replace(`${paths.fish()}?ocean=${encodeURIComponent(target.id)}&resident=${encodeURIComponent(result.resident.id)}`); setSelectedId(result.resident.id); });
+  const requestId = crypto.randomUUID();
+  void run(async () => {
+   const { resident } = await actions.release.mutateAsync({ requestId, fishId: fish.id, revision: fish.revision, contentHash: fish.contentHash });
+   const params = new URLSearchParams({ ocean: resident.oceanId, resident: resident.id });
+   navigation.replace(`${paths.fish()}?${params}`);
+   setSelectedId(resident.id);
+  });
  };
  const recall = (resident: FishResident) => { const requestId = crypto.randomUUID(); void run(async () => { await actions.recall.mutateAsync({ requestId, residentId: resident.id, expectedResidentRevision: resident.revision }); setSelectedId(""); const params = new URLSearchParams(navigation.searchParams); params.delete("resident"); navigation.replace(`${paths.fish()}${params.size ? `?${params}` : ""}`); }); };
  const changeVisibility = (visibility: "private" | "world") => { if (!ocean) return; const requestId = crypto.randomUUID(); void run(async () => { await actions.settings.mutateAsync({ requestId, oceanId: ocean.id, expectedRevision: ocean.revision, visibility }); }); };

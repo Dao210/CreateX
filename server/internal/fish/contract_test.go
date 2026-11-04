@@ -46,6 +46,15 @@ func TestFishCatalogAndStrictDrafts(t *testing.T) {
 		t.Fatal("concave fin accepted")
 	}
 }
+func TestFishReleaseTargetDecoding(t *testing.T) {
+	for _, body := range []string{`{"oceanId":null}`, `{"oceanId":""}`, `{"oceanId":42}`} {
+		var input ReleaseInput
+		if err := StrictDecode([]byte(body), &input); err == nil {
+			t.Fatalf("accepted invalid explicit target: %s", body)
+		}
+	}
+}
+
 func TestFishHTTPTrustBoundary(t *testing.T) {
 	h := (&HTTP{}).Handler()
 	r := testutil.JSONRequest("GET", "/api/fish/v1/catalog", nil)

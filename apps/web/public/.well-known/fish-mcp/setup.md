@@ -139,10 +139,11 @@ Read `fish_get_catalog`, generate a distinctive `fish@1` draft, validate with
 `fish_validate`, and save with `fish_save`. Reuse each write's requestId on retry.
 A save-only request returns a `/{workspace_slug}/fish?fish=<id>` preview link.
 
-When the user asks to release the fish, read `fish_get_ocean`. If ocean is null,
-use `fish_create_ocean`. Call `fish_release` with the ocean ID and the saved fish's
-exact id, revision and contentHash, then open the returned oceanUrl. Verify the
-returned resident refers to that exact fish. Do not substitute gameUrl for this
-resident-specific link. Later revisions require explicit `fish_apply_revision`;
+When the user asks to release the fish, call `fish_release` with the saved fish's
+exact id, revision and contentHash. Omit `oceanId` to use the member's personal
+ocean in this world. The server creates it as part of the first release. If a retry
+is needed, keep the arguments and `requestId` unchanged. Open the returned
+`oceanUrl`. Verify the returned resident refers to that exact fish. Do not
+substitute `gameUrl` for this resident-specific link. Later revisions require explicit `fish_apply_revision`;
 `fish_recall` preserves the creation. Swimming is ambient presentation, not a
 server-authoritative ecology simulation.

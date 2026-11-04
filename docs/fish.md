@@ -45,19 +45,23 @@ HTTP 资源：
 - `GET ocean?id=<uuid>`：返回 `{ocean:...}`；不传 ID 时读取自己的海洋，尚未创建返回 `{ocean:null}`，GET 不创建海洋。
 - `POST ocean`：`{requestId}`，幂等确保当前成员只有一片海洋。
 - `POST ocean/settings`：`{requestId,oceanId,expectedRevision,visibility}`。
-- `POST residents`：`{requestId,oceanId,fishId,revision,contentHash}`。
-- `POST residents/apply`：上述引用加 `residentId,expectedResidentRevision`。
+- `POST residents` 接收 `{requestId,fishId,revision,contentHash,oceanId?}`。省略 `oceanId` 时投放到当前世界中自己的海洋，首次投放会在同一事务内创建私有海洋。显式 ID 必须指向自己在当前世界的海洋。
+- `POST residents/apply` 要求 `oceanId`、`residentId` 和 `expectedResidentRevision`，并提交要应用的鱼作品版本与哈希。
 - `POST residents/recall`：`{requestId,residentId,expectedResidentRevision}`。
 
 MCP 提供 `fish_get_catalog`、`fish_validate`、`fish_save`、`fish_list`、`fish_get`、`fish_get_ocean`、`fish_create_ocean`、`fish_release`、`fish_apply_revision` 和 `fish_recall`。工具 Schema 由 `tools/list` 返回。
 
 首次接入只完成认证与只读目录验收，不创建鱼。Node 连接器复用现有浏览器登录/PAT API，凭据按 API、世界及账号保存在 `~/.createx/fish-mcp/`，不写入指令、URL 或 MCP 配置。浏览器返回海洋页面不代表当前 Agent 聊天工具已重载，必须在实际客户端成功调用 `fish_get_catalog`。
 
-用户明确要求「创造并放进海洋」时，Agent 可连续校验、保存、创建海洋、投放。投放返回 `resident` 和 `oceanUrl`，后者定位到具体居民；只要求创造时提供 `?fish=<id>&revision=<n>` 的动态预览。不要把安装器的世界入口 `gameUrl` 当成某条鱼的投放证明。
+用户明确要求「创造并放进海洋」时，Agent 校验并保存后直接调用 `fish_release`。投放返回实际的 `resident.oceanId` 和定位到该居民的 `oceanUrl`。只要求创造时提供 `?fish=<id>&revision=<n>` 的动态预览。
+
+启用 `fish_release` 即允许它在首次投放时创建个人海洋。关闭 `fish_create_ocean` 只关闭独立建海工具。
 
 ## 事务、权限与同步
 
 写操作先共享锁定世界，复核成员关系，再按世界/成员获取事务级 advisory lock，顺序与世界删除一致。作品、版本、居民以及幂等回执在同一事务写入。相同请求 ID 与相同内容返回原结果，改换内容返回 409；回执保留七天。每位成员最多保存 128 个作品，每个作品最多 50 个版本，每片海洋最多 50 位活跃居民。容量与投放在同一锁内检查。
+
+投放重试应复用原参数和 `requestId`。从省略 `oceanId` 改成显式指定也算变更，即使指向同一片海洋。HTTP 返回 409，MCP 返回 `isError`，错误码均为 `idempotency_key_reused`。
 
 私有草稿不进入世界消息。当前变更通过已有实时基础向作者发送无作品正文的缓存失效事件；海洋与作品还定时刷新，重连/聚焦后读取权威数据。公开参观页面至多等待下一次五秒刷新看到居民变化；改变为私有后下一次读取拒绝访问。当前没有投放事件摘要和 OS 通知。
 

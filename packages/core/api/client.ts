@@ -406,7 +406,8 @@ export class ApiClient {
   private async writeFishResident(wsId: string, path: string, input: ReleaseFishInput) {
     const result = await this.fishRequest(wsId, path, z.object({ resident: FishResidentSchema, oceanUrl: z.string().url() }), input);
     const r = result.resident;
-    if (r.oceanId !== input.oceanId || r.fish.workspaceId !== wsId || r.fish.id !== input.fishId || r.fish.revision !== input.revision || r.fish.contentHash !== input.contentHash) throw new Error("invalid_fish_response");
+    const wrongOcean = input.oceanId !== undefined && r.oceanId.toLowerCase() !== input.oceanId.toLowerCase();
+    if (wrongOcean || r.fish.workspaceId !== wsId || r.fish.id !== input.fishId || r.fish.revision !== input.revision || r.fish.contentHash !== input.contentHash) throw new Error("invalid_fish_response");
     return result;
   }
   async recallFish(wsId: string, input: RecallFishInput) {

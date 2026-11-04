@@ -50,6 +50,16 @@ export const FishOceanSchema = z.object({ id: z.string().uuid(), workspaceId: z.
 });
 export type FishOcean = z.infer<typeof FishOceanSchema>;
 export interface SaveFishInput { requestId: string; draft: FishSpec; fishId?: string; expectedRevision?: number }
-export interface ReleaseFishInput { requestId: string; oceanId: string; fishId: string; revision: number; contentHash: string }
-export interface ChangeFishResidentInput extends ReleaseFishInput { residentId: string; expectedResidentRevision: number }
+export interface ReleaseFishInput {
+  requestId: string;
+  oceanId?: string;
+  fishId: string;
+  revision: number;
+  contentHash: string;
+}
+export interface ChangeFishResidentInput extends ReleaseFishInput {
+  oceanId: string;
+  residentId: string;
+  expectedResidentRevision: number;
+}
 export interface RecallFishInput { requestId: string; residentId: string; expectedResidentRevision: number }

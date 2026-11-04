@@ -12,3 +12,18 @@ it("reads scoped creations and allows a missing ocean without inventing resident
 it.each([{}, {fish:[{}]}, {fish:[{...fish,workspaceId:id}]}, {fish:[{...fish,compilerVersion:2}]}, {fish:[{...fish,draft:{...fish.draft,script:"run()"}}]}])("rejects malformed fish libraries and unsupported compilers",async raw=>{response(raw);await expect(new ApiClient("https://api.example.invalid").listFish(ws)).rejects.toThrow("invalid_fish_response");});
 it.each([{...ocean,id}, {...ocean,residents:[{...resident,oceanId:id}]}, {...ocean,residents:[resident,resident]}, {...ocean,residents:[{...resident,fish:{...fish,workspaceId:id}}]}])("rejects mismatched ocean and resident scope",async value=>{response({ocean:value});await expect(new ApiClient("https://api.example.invalid").getFishOcean(ws,oceanId)).rejects.toThrow("invalid_fish_response");});
 it("rejects substituted releases and revision applications",async()=>{response({resident,oceanUrl:"https://app.example.invalid/w/fish"});const api=new ApiClient("https://api.example.invalid");const input={requestId:id,oceanId,fishId:id,revision:2,contentHash:fish.contentHash};await expect(api.releaseFish(ws,input)).rejects.toThrow("invalid_fish_response");response({resident:{...resident,fish:{...fish,revision:2}},oceanUrl:"https://app.example.invalid/w/fish"});await expect(api.applyFishRevision(ws,{...input,residentId:id,expectedResidentRevision:1})).rejects.toThrow("invalid_fish_response");});
+
+it("accepts a resolved ocean for an implicit release and checks explicit destinations", async () => {
+  const api = new ApiClient("https://api.example.invalid");
+  const input = { requestId: id, fishId: id, revision: 1, contentHash: fish.contentHash };
+  const oceanUrl = "https://app.example.invalid/w/fish";
+
+  response({ resident, oceanUrl });
+  await expect(api.releaseFish(ws, input)).resolves.toMatchObject({ resident: { oceanId } });
+
+  response({ resident: { ...resident, oceanId: "" }, oceanUrl });
+  await expect(api.releaseFish(ws, input)).rejects.toThrow("invalid_fish_response");
+
+  response({ resident, oceanUrl });
+  await expect(api.releaseFish(ws, { ...input, oceanId: id })).rejects.toThrow("invalid_fish_response");
+});

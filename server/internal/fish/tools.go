@@ -9,11 +9,11 @@ func Tools() []Tool {
 	residentRevision := map[string]any{"type": "integer", "minimum": 1, "maximum": 10000}
 	ref := func(apply bool) map[string]any {
 		p := map[string]any{"requestId": id, "oceanId": id, "fishId": id, "revision": revision, "contentHash": hash}
-		required := []string{"requestId", "oceanId", "fishId", "revision", "contentHash"}
+		required := []string{"requestId", "fishId", "revision", "contentHash"}
 		if apply {
 			p["residentId"] = id
 			p["expectedResidentRevision"] = residentRevision
-			required = append(required, "residentId", "expectedResidentRevision")
+			required = append(required, "oceanId", "residentId", "expectedResidentRevision")
 		}
 		return object(p, required...)
 	}
@@ -29,7 +29,7 @@ func Tools() []Tool {
 		{"fish_get", "Read an owned fish, latest or an immutable revision.", object(map[string]any{"fishId": id, "revision": revision}, "fishId"), true},
 		{"fish_get_ocean", "Read your ocean, or an explicitly world-visible ocean. Returns ocean:null if your ocean has not been created.", object(map[string]any{"oceanId": id}), true},
 		{"fish_create_ocean", "Ensure this member has a private ocean in the current world. Reuse requestId on retry; repeated calls never create another ocean.", object(map[string]any{"requestId": id}, "requestId"), false},
-		{"fish_release", "Release an exact owned fish revision/hash into your ocean. One active resident per fish. Returns resident and oceanUrl; open oceanUrl to see that fish. Reuse requestId on retry.", ref(false), false},
+		{"fish_release", "Release an exact owned fish revision/hash. Omit oceanId to use your personal ocean in this world and create it if needed. Returns resident and oceanUrl. Reuse the same requestId and arguments on retry.", ref(false), false},
 		{"fish_apply_revision", "Explicitly apply a saved revision to an existing resident, preserving its identity. Requires expectedResidentRevision and exact hash.", ref(true), false},
 		{"fish_recall", "Recall your resident while preserving the fish creation. Reuse requestId on retry; expectedResidentRevision prevents overwriting concurrent changes.", object(map[string]any{"requestId": id, "residentId": id, "expectedResidentRevision": residentRevision}, "requestId", "residentId", "expectedResidentRevision"), false},
 	}
