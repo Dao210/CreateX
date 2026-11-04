@@ -161,6 +161,19 @@ wait_origin weavea.world ''
 curl() { return 60; }
 reject wait_origin weavea.world ''
 
+# Pruning after several web-only updates must retain the running backend's
+# original release so an internal compute child can restart from its bundle.
+(
+  BASE="$TEMP/prune-life"
+  for n in 1 2 3 4 5 6; do mkdir -p "$BASE/releases/20261103T12000${n}Z-00000000000${n}"; done
+  ln -s "$BASE/releases/20261103T120006Z-000000000006" "$BASE/current"
+  ln -s "$BASE/releases/20261103T120005Z-000000000005" "$BASE/previous"
+  active_api_release() { printf '%s' "$BASE/releases/20261103T120001Z-000000000001"; }
+  prune
+  [[ -d "$BASE/releases/20261103T120001Z-000000000001" ]]
+  [[ ! -d "$BASE/releases/20261103T120002Z-000000000002" ]]
+)
+
 # The normal no-argument invocation is a local plan and works without SSH.
 bash "$ROOT/scripts/deploy-createx.sh" > "$TEMP/plan"
 grep -Fq 'Target: auro;' "$TEMP/plan"

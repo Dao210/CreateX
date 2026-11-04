@@ -37,6 +37,8 @@ type shutdownSequence struct {
 	// CancelWorkers cancels the sweeper context every background loop is
 	// bound to, including the channel supervisor.
 	CancelWorkers func()
+	// JoinLife waits for the in-flight Tick transaction and its compute child.
+	JoinLife func()
 
 	// StopHeartbeats flushes the final batch of queued heartbeat bumps.
 	StopHeartbeats func()
@@ -64,6 +66,7 @@ func (s shutdownSequence) run() {
 		s.DrainHTTP,
 		s.StopOutboundRelay,
 		s.CancelWorkers,
+		s.JoinLife,
 		s.StopHeartbeats,
 		s.JoinWebhookWorker,
 		s.JoinTelegram,

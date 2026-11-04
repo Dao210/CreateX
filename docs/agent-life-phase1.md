@@ -1,74 +1,67 @@
-# Weavea Agent Life — Phase 1 implementation plan
+# Weavea Agent Life — integrated Phase 1
 
 ## Requirement baseline
 
-The request's Phase 1 task brief is the available requirement source. The user identified the full PRD in the ChatGPT conversation [设计自主Agent世界](https://chatgpt.com/g/g-p-6ae4458d02cc819184fa9e93a8e0eb71-weaveaworld/c/6ae44601-ba64-83e8-b075-750039172240). **The reader returned reply references without their text, and the browser remained on a waiting page; the full PRD has not been reviewed.** This document is an implementation plan, not a replacement PRD. Map layout, tuning, access policy and clock semantics below are explicit provisional choices to reconcile with that document.
+The Phase 1 task brief is the available requirement source. The linked [完整 PRD 聊天](https://chatgpt.com/g/g-p-6ae4458d02cc819184fa9e93a8e0eb71-weaveaworld/c/6ae44601-ba64-83e8-b075-750039172240) did not expose its reply text through the reader or browser. Map dimensions, clock ratio and yields remain provisional until that text is available.
 
-Deliver the rules-only loop first: one simulation bound to one existing world/workspace, 20 preset residents, six actions, durable server authority and a live read-only viewer. LLM calls, resident creation, public profiles and diaries follow only after validating the simulation; they are not part of this initial implementation. No reproduction, combat, market, cross-world behavior or arbitrary execution.
+The rules-only scope remains one simulation bound to one existing world, 20 preset residents and six actions. The pure engine supports tests at 60 residents. LLM planning, resident creation, diaries, combat, reproduction, markets and cross-world behavior are deferred.
 
-## Technical differences and decisions
+## Ownership
 
-| Existing repository | Required addition / reuse |
+| Location | Responsibility |
 | --- | --- |
-| Go/Chi backend, PostgreSQL, sqlc, workspace membership | Keep Go authentication and reads; add `/api/life` inside the existing membership gate. No independent identity or public simulation write API. |
-| Shared TypeScript core, React views, Next.js/Electron hosts | Put pure rules and strict planner contract in `packages/core/agent-life`; one shared viewer mounted at `/{slug}/life` on both hosts. |
-| Existing Go task schedulers execute product tasks | Add a small Node TypeScript Worker in `apps/agent-life-worker`. Do not turn simulated residents into task-executing product agents. |
-| Existing managed local environment | Add the opt-in `life` component and use the checkout's DATABASE_URL. Production requires a supervised worker alongside the API. |
-| Existing WebSocket pipeline targets product entities | Phase 1 uses TanStack Query polling every 2 seconds with a consistent database snapshot. No simulated client clock or synthetic resident movement. SSE/WS is unnecessary at 20/60 residents. |
+| `packages/core/agent-life/engine.ts`, `rules.ts`, `brain.ts` | TypeScript world rules and independent Brain; no persistence or framework APIs |
+| `packages/core/agent-life/runtime-contract.ts` | Strict, bounded versioned compute request/result schema |
+| `server/internal/life/runtime/bridge.ts` | Persistent stdin/stdout JSON compute host; bundled with its dependencies |
+| `server/internal/life/runtime.go` | Go child lifecycle, credential-free environment, frame limit, timeout, strict response identity and restart |
+| `server/internal/life/repository.go` | Shared pgx pool, sqlc, initialization and atomic Tick/event/inbox persistence |
+| `server/internal/life/service.go` | Background scheduling, stale-result rejection, commit notifications and shutdown |
+| `packages/views/agent-life` | Shared Web/Desktop viewer, route-driven world and selection |
 
-Brain receives a read-only observation and proposes a bounded action. The engine validates location, targets, available resources and current action, and owns every effect. Future LLM proposals must pass a strict schema (exported as JSON Schema) and the same engine validation. No model or network call occurs in a world transaction.
+There is no independent Life application, database client, HTTP listener, service unit or launch component. Main API startup owns the compute process. Resident Life keeps existing membership and game-access guards. Game availability affects access and message projection; it does not stop the simulation.
 
-## Clock, actions and consistency
+## Tick and transaction boundary
 
-- One persisted Tick every 2 wall-clock seconds, representing one simulation minute. A long outage pauses simulation: restart advances from the last committed Tick, with no unbounded catch-up or invented offline results.
-- Actions are durable `running` rows with start/due Ticks. MOVE travels one grid cell, REST restores energy, EAT consumes personal food, GATHER_WOOD transfers forest wood, WORK transfers farm food and earns a simple coin record, TALK restores both colocated residents' social need. No complex economic system.
-- Each Tick begins a PostgreSQL transaction and locks the singleton world row with `FOR UPDATE`. Recheck database wall-clock eligibility **after** acquiring the lock. Competing workers serialize and cannot accelerate the clock.
-- Complete due actions in a stable order, decay needs, score feasible next actions, save all resident/resource/action changes and append events, then advance the world clock in the same transaction. Any error rolls back the whole Tick.
-- Action UUID plus unique terminal-event/action constraint prevents double settlement. A partial unique index allows at most one running action per resident. Resource CHECK constraints prohibit negative inventory; resident need bounds and time constraints defend persistence.
-- Renewable forest/farm replenishment is bounded and recorded as its own environment event. Action events contain resource/need/position effects and decision reason. Completed actions have exactly one event, committed atomically.
-- Twenty seeded residents have stable identities, personality weights and one modest resource goal. Capacity is capped at 60; do not build 60-agent product functionality yet.
-- WORK is feasible only below eight personal food units. This prevents residents farming coins from stockpiling the communal food supply while hungry neighbors need it. The exact ration/yield is provisional tuning.
+1. Read the persisted binding and database due time. Load a single MVCC snapshot of residents, resources and running actions.
+2. Compute the next Tick in TypeScript outside the database transaction. The host has no DATABASE_URL, account or model credentials. It exposes only seed and tick operations; no arbitrary code or task execution.
+3. Begin the write transaction. Lock the workspace, then its life world, matching the workspace-delete fence. Check the input Tick still matches and recheck database wall-clock eligibility after locking.
+4. Validate resident/inventory identity, bounded needs/resources, action projections and one terminal event per settled action. Store completed/new actions, residents, resources, events and source inbox facts through sqlc.
+5. Advance the clock and commit together. Only then publish `life:updated` through the existing event bus/realtime broadcaster. A stale result is discarded; failed computation or SQL advances nothing.
 
-## Migration plan
+Actions retain their UUIDs, start/due Ticks and status. Existing resident goal milestone IDs retain the previous deterministic hash, so writer cutover preserves notification identity. SQL uniqueness and nonnegative-balance constraints remain authoritative.
 
-All tables use the `life_` prefix, no foreign keys. Index builds are separate single-statement concurrent migrations, including identity indexes.
+The interval is 2 wall-clock seconds per simulation minute. Downtime pauses progress; restart continues committed state without unbounded catch-up. MOVE travels one grid cell; REST recovers energy; EAT consumes inventory; GATHER_WOOD transfers forest stock; WORK transfers farm food and earns a simple coin; TALK affects colocated residents. Food-stock limits prevent goal-driven hoarding. Rules are implemented once in TypeScript.
 
-1. **574**: `life_world` (singleton, workspace, clock, next due time), `life_agent` (identity, traits, needs, location, goal), `life_resource` (world/owner/resource balance), `life_action` (durable command, reason, timing, status), `life_event` (Tick, action/actor, effects, timestamp).
-2. **575–582**: unique world identity, singleton, resident identity, resource balance identity, action identity, resident/start-Tick command identity, running-action exclusivity, event/action identity.
-3. **583–584**: chronological event and action lookup indexes.
-4. Regenerate sqlc and validate migrations with the existing Go runner. Seed explicitly on Worker startup only when `AGENT_LIFE_WORKSPACE_ID` identifies an existing workspace; refuse accidental rebinding. Do not insert into existing worlds during migration.
-5. Rollback: stop the worker first, reverse index migrations, then drop only life tables. This removes simulation data. Back up before any production rollout; production deployment is separate from local implementation.
+## Startup, shutdown and cutover
 
-## Tasks in dependency order
+- Build with `make life-build` or `pnpm build:life`. Output is `server/bin/runtime/life/engine.mjs`, including Zod; production requires Node >=22 and no node_modules for this compute bundle.
+- `make up` starts the API with its internal runtime. `make start`, `make dev` and `make server` use the same API target and build the runtime automatically. Existing worlds resume from `life_world`.
+- To initialize the first simulation, explicitly identify an existing world: `make up AGENT_LIFE_WORKSPACE_ID=<uuid>`. Initialization requires a main-service restart if the API is already running. Startup rejects a different persisted binding and never chooses a user's world implicitly. There is no new admin start/reset/rebind interface.
+- `AGENT_LIFE_ENGINE_PATH` is an operational override. The default resolves `runtime/life/engine.mjs` beside the actual server executable; resolving the release path prevents a web-only switch from changing the running backend's runtime version.
+- Before upgrading an old checkout, stop its standalone Life component with that checkout's old management command. Main-service startup rejects an existing PostgreSQL session bearing the old writer's application name. Never run the old writer alongside the new owner.
+- `make down` cancels scheduling, joins the in-flight Tick and compute child before closing the database pool, and preserves committed data. A dead compute process is reaped and recreated on the next attempt; failed attempts do not commit.
+- `/health` includes the Life component state; `/readyz` distinguishes uninitialized/running from starting/error/stopped. Persisted updated_at and Tick lag remain world observations, not proof of process health.
 
-| Order | Task | Verification |
-| --- | --- | --- |
-| 1 | Shared observation/action/snapshot schemas and migration | Strict malformed planner/API payload tests; migrations and sqlc |
-| 2 | Deterministic map, resident seed, rules Brain, six action executor | Need priorities, invalid targets/locations, depleted resources, long-run 20/60-resident invariants |
-| 3 | Transactional store, Tick scheduler, graceful shutdown | Real PostgreSQL concurrent workers, replay, injected rollback, reconnect/restart and one event per completion |
-| 4 | Authenticated Go read API, workspace isolation | Authentication/membership gates, missing world, cross-workspace reads, consistent response |
-| 5 | Shared live map, residents/current action and event feed | Loading/error/stale states; real database-backed browser checks; Web/Desktop typechecks/builds |
-| 6 | Managed startup, operational notes and acceptance evidence | Headless Worker runs without viewers, stop/restart without lost commits; report exact tests and limits |
+## Frontend and existing product services
 
-## Deferred experiments
+The existing `/{slug}/life` page and `/api/life` read contract stay in place. Realtime commit notifications invalidate the world-scoped TanStack Query cache. A 30-second reconciliation interval and reconnect/focus refresh recover missed notifications. The client never runs the clock or settles actions.
 
-After rules acceptance, compare a bounded LLM planner with the baseline under the same seed/Tick budget. Measure survival, action/goal diversity, completion, latency and model cost. Persistent memory, growth mechanics and diary synthesis require the full PRD. Do not claim improved autonomy or long-term growth from merely adding an LLM call.
+Goal facts enter `world_inbox_event` in the Tick transaction and use the existing inbox projector. Closing a game does not delete state or stop the simulation. Workspace deletion takes the same lock order and cleans up the Life tables in its application transaction. Product-agent schedulers, CLIs and runtime credentials are not used for simulated residents.
 
-## Local operation
+## Build and delivery
 
-1. Use an existing workspace UUID (not its slug), and start `make up C=api,web,life MODE=development AGENT_LIFE_WORKSPACE_ID=<uuid>`. Alternatively put that UUID in this checkout's managed env file. Startup applies migrations and atomically seeds the single simulation once. It refuses a different workspace while a world exists.
-2. Open `/{slug}/life` as a member of that workspace. Game availability and sidebar entries follow the same global and per-world policies as the other games. Permitted worlds without a simulation receive an empty snapshot and show the uninitialized state; they cannot read the bound world’s residents. Closed or disallowed worlds receive `game_unavailable` (403), and non-members cannot read the simulation. See [game administration](admin-games.md).
-3. `make status` includes the `life` process; logs live with the checkout's other component logs. `make down ARGS="--components life"` stops just the Worker. `make down` stops the environment without deleting data. Restart uses committed state and durable due actions. A deleted workspace is swept transactionally and causes its Worker to stop.
-4. Pure engine checks: `pnpm --filter @auro/core exec vitest run agent-life/engine.test.ts api/client-life.test.ts`. PostgreSQL checks: `make life-test-db` creates and drops random isolated schemas inside this checkout's configured database. No model or agent CLI is executed.
-5. Build: `pnpm --filter @auro/agent-life-worker build`; run the resulting `dist/main.mjs` with Node and the Worker's declared production dependencies (`pg`, `zod`). The build bundles the shared TypeScript rules, so production never executes TypeScript source or browser code.
-6. Explicit end-to-end acceptance, with API/Web started and no existing simulation: `pnpm --filter @auro/agent-life-worker build`, then `LIFE_E2E=1 pnpm exec playwright test e2e/agent-life.spec.ts`. The test uses TestApiClient fixtures and owns a temporary singleton, starts a real Worker without any viewer, checks real reads, kills/restarts the Worker, and deletes only its own fixture worlds. It refuses an existing simulation.
+- `make build` builds the runtime with server/CLI/migrate binaries. Root build/typecheck include the internal TypeScript entry point.
+- Native Createx full releases package `bin/runtime/life/engine.mjs` with the matching backend. Web-only releases preserve the whole backend bin directory, including its runtime. Release pruning also retains the running API's actual release, so repeated web-only updates cannot delete the bundle needed for compute-process recovery. The host rejects incomplete artifacts. No additional systemd unit is installed.
+- Docker builds the same self-contained compute bundle and includes Node in the backend runtime image.
+- Backend CI builds the engine before Go tests and runs the isolated PostgreSQL Life tests. Shared Life rules, build script and dependency lock changes select backend verification.
+- Database tables and the current migration baseline are preserved. No retired migrations are added or replayed. Future simulation write paths must join the Tick version/locking protocol before being enabled.
 
-Production is not deployed by this change. A release must package the Worker bundle and production dependencies, configure the same Createx DATABASE_URL plus workspace UUID in a supervised service (`Restart=on-failure`, graceful SIGTERM), and start only after migrations. The current production deploy scripts do not install that additional service yet. Monitor world updated_at/Tick lag, worker errors and disk growth. Events are append-only; retention/partitioning requires a separate product/operational decision before extended production operation.
+## Verification
 
-## Acceptance evidence and limits
+- `pnpm --filter @auro/core exec vitest run agent-life api/client-life.test.ts`: rules, malformed data and bounded runtime contract. The 1,440-Tick runs are accelerated simulation, not a 24-hour wall-clock soak.
+- `make life-test-db`: builds the real compute host, then runs Go race tests using disposable schemas. Covers concurrent initialization/commit, stale results, event/inbox rollback, process crash/recovery, workspace isolation and deletion.
+- Main-service tests cover protocol, timeouts, environment isolation, shutdown and health. Database cases require the explicit fixture environment.
+- With API/Web started in a disposable managed checkout: `LIFE_E2E=1 pnpm exec playwright test e2e/agent-life.spec.ts`. It refuses an existing simulation, creates TestApiClient fixtures, restarts the API, kills its compute child, checks websocket-driven Ticks and removes fixture worlds.
+- Run Web/Desktop checks/builds, lifecycle/deploy/CI-scope scripts and inbox/game-admin regressions for shared integration changes.
 
-- Pure rules: 20 and 60 residents each completed 1,440 Ticks (one simulated day), exercised all six actions, stayed within need bounds without reaching zero fullness, kept inventories nonnegative and produced one terminal event per settled action. This is accelerated simulation, not a 24-hour wall-clock soak.
-- PostgreSQL: isolated-schema tests cover concurrent initialization and eight competing Tick callers (only one advances), an injected event-insert failure rolling back needs/resources/actions/clock together, pool reconnection with persisted pending actions, 72 Ticks of audit checks, duplicate event rejection, negative balance rejection and consistent workspace-filtered snapshot parsing.
-- Browser: an actual compiled Worker advances before any viewer opens. The authenticated page reads 20 residents, its visible Tick advances, resident selection is URL-backed, other-workspace reads are denied, a SIGKILL/restart preserves committed Ticks, and desktop/narrow-screen map/detail/event access is verified. The same test hands the persisted world to `make up C=life`, verifies more Ticks, and stops the managed component. TestApiClient removes fixture worlds afterward.
-- Verification commands also cover Go API/migrations and real-database workspace deletion, shared route and five-locale parity tests, relevant ESLint/typechecks, Worker build, Web production build and Electron main/preload/renderer build. Existing CSS `::highlight` optimizer warnings remain. Electron packaging/CLI bundling, full repository tests, mobile, real model calls and production deployment were not run for this change.
-- Screenshots: `test-results/agent-life/world-desktop.png` and `test-results/agent-life/world-mobile.png` (local test outputs). The singleton is removed with the E2E fixtures; running the page in a real world requires the explicit workspace-bound startup above.
+Do not run the restart E2E against a shared daily or production environment. Production deployment and a long wall-clock soak are separate acceptance steps.

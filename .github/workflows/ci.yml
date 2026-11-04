@@ -349,9 +349,27 @@ jobs:
       # directly so they run alongside the Postgres-backed suite.
       REDIS_TEST_URL: redis://localhost:6379/1
       GOFLAGS: -count=1
+      LIFE_TEST_DATABASE_URL: postgres://auro:auro@localhost:5432/auro?sslmode=disable
+      AGENT_LIFE_ENGINE_PATH: ${{ github.workspace }}/server/bin/runtime/life/engine.mjs
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+
+      - name: Setup pnpm for the internal simulation engine
+        uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024 # v3.0.0
+        with:
+          node-version-file: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Build internal simulation engine
+        run: |
+          pnpm install --frozen-lockfile --ignore-scripts --filter auro --filter @auro/core...
+          pnpm build:life
 
       - name: Setup Go
         id: go
@@ -896,6 +914,12 @@ jobs:
 
       - name: Test development environment registry
         run: bash scripts/dev-env.test.sh
+
+      - name: Test Web development and production lifecycle
+        run: bash scripts/dev-env-web-mode.test.sh
+
+      - name: Test native deployment boundaries
+        run: bash scripts/deploy-createx.test.sh
 
       - name: Test UI performance comparison runner
         run: bash scripts/perf-compare.test.sh

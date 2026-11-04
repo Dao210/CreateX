@@ -267,6 +267,7 @@ type RouterOptions struct {
 	Tanks        *tanks.Service
 	MCPAdmin     *mcpadmin.Service
 	GameAdmin    *gameadmin.Service
+	Life         *life.Service
 	DaemonHub    *daemonws.Hub
 	DaemonWakeup service.TaskWakeupNotifier
 	FeatureFlags *featureflag.Service
@@ -1430,6 +1431,9 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 	// tasks.claim) through the same handlers as the HTTP endpoints.
 	daemonHub.SetRPCHandler(h.DaemonRPCHandler)
 	health := newServerHealth(pool)
+	if opts.Life != nil {
+		health.lifeStatus = func() string { return opts.Life.Status().State }
+	}
 
 	r := chi.NewRouter()
 

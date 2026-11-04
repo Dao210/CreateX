@@ -34,13 +34,15 @@
 
 本地交叉编译 Go 并构建 Next standalone，产物、Go/npm 缓存放在 `.cache/createx-deploy`，前端构建目录为 `apps/web/.next-createx`。按照项目安装的 sharp 声明下载精确版本的 Linux ARM64 原生依赖，并在目标主机实际生成一张 PNG 验证；不在服务器安装前端依赖或编译应用。
 
+完整发布同时构建并携带 `bin/runtime/life/engine.mjs`。居民生活由主 API 管理内部 Node 计算进程，共用主服务数据库和生命周期，不安装独立 Worker unit。目标主机的原生检查会运行一次不访问数据库的 seed 协议，验证计算 bundle 与 Node 可用。旧版独立 Life Worker 须在切换前停止，已有世界状态会继续使用；详见 [Agent Life 集成说明](agent-life-phase1.md)。
+
 ## 性能与发布
 
 - 不配置 CPU 配额、内存上限或较低的 CPU/I/O 权重；项目按系统默认策略自由竞争资源，slice 仅用于分组和统计。Go 与 Node 使用各自默认运行时策略。账号、目录、数据库和端口隔离继续保留。
 - API 使用项目默认数据库连接池与搜索内存配置，不额外设置数据库或角色连接数量上限。没有修改共享 PostgreSQL 的全局参数。
 - Nginx 直接提供带内容哈希的 Next 静态资源，设置一年缓存和压缩。旧版资源继续保留，避免打开中的旧页面在发布后丢失 chunk；需要按实际访问生命周期单独清理 `/var/lib/createx/static`。动态页面、API、附件不启用代理缓存；WebSocket 传递 Upgrade，API 关闭缓冲以支持流式响应。
 - 本地构建锁与服务器 `flock` 防止并发发布；上传校验 SHA-256。完整部署在本地构建前只读检查线上迁移基线；旧账本需要先按下节重建。上传后的精确账本检查通过后，先备份 Createx 数据库，再执行项目迁移器，最后安装 unit、切换版本并重启本项目两个服务。会有短暂重启窗口，不是零停机发布。
-- 激活失败恢复上一版程序；数据库迁移保持向前，不自动执行 down 或恢复备份。成功后保留最新三版以及当前/上一版。备份不会自动删除，应配置外部备份与保留周期，避免磁盘耗尽。
+- 激活失败恢复上一版程序；数据库迁移保持向前，不自动执行 down 或恢复备份。成功后保留最新三版、当前/上一版，以及运行中 API 的实际版本目录，确保内部计算进程仍可从配套 bundle 恢复。备份不会自动删除，应配置外部备份与保留周期，避免磁盘耗尽。
 
 ```bash
 ./scripts/deploy-createx.sh rollback    # 上一版程序；数据库结构不回退
@@ -65,7 +67,7 @@ ssh auro 'sudo journalctl -u createx-api -u createx-web -n 100 --no-pager'
 
 ### Web 单端发布
 
-`./scripts/deploy-createx.sh web` 只本地构建 Next standalone（含 Linux ARM64 sharp 原生依赖），上传后在服务器把当前版本的 API 二进制与迁移原样复制进新 release，切换 `current` 并只重启 `createx-web`。不执行数据库备份与迁移，不重启 API，不改动 systemd unit 与 Nginx。首次部署必须先执行完整 `deploy`；`webcheck` 可在构建前只读确认当前版本存在。
+`./scripts/deploy-createx.sh web` 只本地构建 Next standalone（含 Linux ARM64 sharp 原生依赖），上传后在服务器把当前版本的整个 API `bin` 目录（含 Life 计算 bundle）与迁移原样复制进新 release，切换 `current` 并只重启 `createx-web`。不执行数据库备份与迁移，不重启 API，不改动 systemd unit 与 Nginx。首次部署及旧版缺少计算 bundle 的版本必须先执行完整 `deploy`；`webcheck` 可在构建前只读确认当前版本存在。
 
 Web 单端 release ID 以 `-web` 结尾，manifest 额外记录 `web_commit=`，`commit=` 仍为运行中 API 的提交，`verify` 的 `/health` 校验因此不变；对 web-only 版本，API 进程目录放宽为任意历史 release。API 崩溃自愈或后续完整部署时仍从 `current` 加载同一二进制。静态资源按内容哈希增量写入 `/var/lib/createx/static`，旧页面引用的 chunk 保留。激活失败只回退 Web；`rollback` 仍整体回退并重启两个服务。后端代码或迁移有变更时不要使用该命令。
 

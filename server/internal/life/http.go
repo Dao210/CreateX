@@ -1,4 +1,4 @@
-// Package life exposes read-only snapshots of the TypeScript-owned simulation.
+// Package life owns the lifecycle and atomic persistence of the TypeScript world engine.
 package life
 
 import (

@@ -4,6 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "build:life": "pnpm typecheck:life && node scripts/build-life-runtime.mjs",
+    "typecheck:life": "tsc -p server/internal/life/runtime/tsconfig.json",
     "dev:web": "pnpm --filter @auro/web dev",
     "dev:desktop": "turbo dev --filter=@auro/desktop",
     "dev:desktop:staging": "turbo dev:staging --filter=@auro/desktop",
@@ -18,8 +20,8 @@
     "ios:mobile:device:staging:release": "pnpm -C apps/mobile ios:device:staging:release",
     "ios:mobile:device:prod": "pnpm -C apps/mobile ios:device:prod",
     "ios:mobile:device:prod:release": "pnpm -C apps/mobile ios:device:prod:release",
-    "build": "turbo build --filter=!@auro/mobile",
-    "typecheck": "turbo typecheck --filter=!@auro/mobile",
+    "build": "pnpm build:life && turbo build --filter=!@auro/mobile",
+    "typecheck": "pnpm typecheck:life && turbo typecheck --filter=!@auro/mobile",
     "test": "turbo test --filter=!@auro/mobile",
     "lint": "turbo lint --filter=!@auro/mobile",
     "knip": "knip",
@@ -35,6 +37,7 @@
   },
   "packageManager": "pnpm@12.9.1",
   "devDependencies": {
+    "esbuild": "catalog:",
     "@playwright/test": "catalog:",
     "@types/node": "catalog:",
     "@types/pg": "^8.20.0",

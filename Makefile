@@ -175,12 +175,13 @@ gc: ## Collect environments whose directory is gone or whose TTL expired
 env-exec: ## Run a command with this environment's variables (ARGS="-- pnpm dev:desktop")
 	@bash scripts/dev-env.sh exec $(ARGS)
 
-.PHONY: life-dev life-test-db game-admin-test-db inbox-test-db
-life-dev: ## Run the TypeScript world Worker with this checkout's environment
-	@pnpm --filter @auro/agent-life-worker dev
+.PHONY: life-build life-test-db game-admin-test-db inbox-test-db
+life-build: ## Build the main server's bundled TypeScript simulation engine
+	@pnpm build:life
 
 life-test-db: ## Verify world transactions in disposable schemas of this checkout's database
-	@LIFE_TEST_DATABASE_URL="$(DATABASE_URL)" pnpm --filter @auro/agent-life-worker test
+	@$(MAKE) life-build
+	@cd server && LIFE_TEST_DATABASE_URL="$(DATABASE_URL)" AGENT_LIFE_ENGINE_PATH="$(CURDIR)/server/bin/runtime/life/engine.mjs" go test -race ./internal/life -count=1
 
 inbox-test-db: ## Verify world inbox delivery in disposable schemas
 	@cd server && WORLD_INBOX_TEST_DATABASE_URL="$(DATABASE_URL)" go test ./internal/worldinbox -count=1
@@ -193,8 +194,8 @@ game-admin-test-db: ## Verify game policies in disposable schemas of this checko
 # check here would make each component slower to restart on its own.
 # The commit ldflag is what makes /health's identity useful: without it every
 # environment reports "unknown" and cannot prove which revision it is serving.
-api-dev: ## Run only the Go backend for the current env file
-	cd server && go run -ldflags "-X main.commit=$(COMMIT)" ./cmd/server
+api-dev: life-build ## Run the Go backend with its internal simulation runtime
+	cd server && AGENT_LIFE_ENGINE_PATH="$${AGENT_LIFE_ENGINE_PATH:-$(CURDIR)/server/bin/runtime/life/engine.mjs}" go run -ldflags "-X main.commit=$(COMMIT)" ./cmd/server
 
 web-dev: ## Run only the Next.js dev server for the current env file
 	pnpm dev:web
@@ -232,7 +233,7 @@ start: ## Start backend and frontend for the current checkout and run migrations
 	cd server && go run ./cmd/migrate up
 	@echo "Starting backend and frontend..."
 	@trap 'kill 0' EXIT; \
-		(cd server && go run ./cmd/server) & \
+		make api-dev ENV_FILE="$(ENV_FILE)" & \
 		pnpm dev:web & \
 		wait
 
@@ -329,7 +330,7 @@ dev: ## Bootstrap this checkout end-to-end: create env if needed, ensure DB, mig
 server: ## Run only the Go server for the current checkout
 	$(REQUIRE_ENV)
 	@bash scripts/ensure-postgres.sh "$(ENV_FILE)"
-	cd server && go run ./cmd/server
+	@$(MAKE) api-dev ENV_FILE="$(ENV_FILE)"
 
 daemon: ## Restart the local agent daemon using the CLI's stored auth/session
 	@$(MAKE) auro AURO_ARGS="daemon restart --profile local"
@@ -355,7 +356,7 @@ DATE    ?= $(shell date -u '+%Y-%m-%dT%H:%M:%SZ')
 # recursive one — which prints `go: Command not found` on frontend-only
 # checkouts with no Go toolchain installed.
 build: EXE = $(if $(filter windows,$(or $(GOOS),$(shell go env GOOS))),.exe,)
-build: ## Build the server, CLI, and migrate binaries into server/bin
+build: life-build ## Build the server, simulation runtime, CLI, and migrate binaries into server/bin
 	cd server && go build -ldflags "-X main.version=$(VERSION) -X main.commit=$(COMMIT)" -o bin/server$(EXE) ./cmd/server
 	cd server && go build -ldflags "-X main.version=$(VERSION) -X main.commit=$(COMMIT) -X main.date=$(DATE)" -o bin/auro$(EXE) ./cmd/auro
 	cd server && go build -o bin/migrate$(EXE) ./cmd/migrate

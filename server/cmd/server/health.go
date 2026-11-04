@@ -43,8 +43,9 @@ type serverHealth struct {
 	// still passes, so a caller can configure or test the wrong build without
 	// any visible error. Local tooling compares started_at against its own
 	// launch time to prove the answer came from the process it just started.
-	startedAt time.Time
-	pid       int
+	startedAt  time.Time
+	pid        int
+	lifeStatus func() string
 }
 
 type cachedReadiness struct {
@@ -58,6 +59,7 @@ type liveResponse struct {
 	PID       int    `json:"pid,omitempty"`
 	Commit    string `json:"commit,omitempty"`
 	StartedAt string `json:"started_at,omitempty"`
+	Life      string `json:"life,omitempty"`
 }
 
 type readinessResponse struct {
@@ -68,6 +70,7 @@ type readinessResponse struct {
 type readinessChecks struct {
 	DB         string `json:"db"`
 	Migrations string `json:"migrations"`
+	Life       string `json:"life,omitempty"`
 }
 
 func newServerHealth(pool *pgxpool.Pool) *serverHealth {
@@ -84,6 +87,9 @@ func newServerHealth(pool *pgxpool.Pool) *serverHealth {
 
 func (h *serverHealth) liveHandler(w http.ResponseWriter, _ *http.Request) {
 	resp := liveResponse{Status: "ok", PID: h.pid, Commit: commit}
+	if h.lifeStatus != nil {
+		resp.Life = h.lifeStatus()
+	}
 	if !h.startedAt.IsZero() {
 		resp.StartedAt = h.startedAt.Format(time.RFC3339)
 	}
@@ -92,6 +98,13 @@ func (h *serverHealth) liveHandler(w http.ResponseWriter, _ *http.Request) {
 
 func (h *serverHealth) readyHandler(w http.ResponseWriter, r *http.Request) {
 	resp, status := h.readiness(r.Context())
+	if h.lifeStatus != nil {
+		resp.Checks.Life = h.lifeStatus()
+		if resp.Checks.Life != "running" && resp.Checks.Life != "uninitialized" {
+			resp.Status = "not_ready"
+			status = http.StatusServiceUnavailable
+		}
+	}
 	writeJSON(w, status, resp)
 }
 

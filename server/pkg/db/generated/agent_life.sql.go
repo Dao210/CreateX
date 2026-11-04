@@ -11,6 +11,141 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const appendLifeEvent = `-- name: AppendLifeEvent :exec
+INSERT INTO life_event(world_id,id,tick,action_id,agent_id,kind,payload) VALUES($1,$2,$3,$4,$5,$6,$7)
+`
+
+type AppendLifeEventParams struct {
+	WorldID  pgtype.UUID `json:"world_id"`
+	ID       pgtype.UUID `json:"id"`
+	Tick     int64       `json:"tick"`
+	ActionID pgtype.UUID `json:"action_id"`
+	AgentID  pgtype.UUID `json:"agent_id"`
+	Kind     string      `json:"kind"`
+	Payload  []byte      `json:"payload"`
+}
+
+func (q *Queries) AppendLifeEvent(ctx context.Context, arg AppendLifeEventParams) error {
+	_, err := q.db.Exec(ctx, appendLifeEvent,
+		arg.WorldID,
+		arg.ID,
+		arg.Tick,
+		arg.ActionID,
+		arg.AgentID,
+		arg.Kind,
+		arg.Payload,
+	)
+	return err
+}
+
+const commitLifeTick = `-- name: CommitLifeTick :exec
+UPDATE life_world SET tick=$2,updated_at=clock_timestamp(),next_tick_at=clock_timestamp()+tick_ms*interval '1 millisecond' WHERE id=$1
+`
+
+type CommitLifeTickParams struct {
+	ID   pgtype.UUID `json:"id"`
+	Tick int64       `json:"tick"`
+}
+
+func (q *Queries) CommitLifeTick(ctx context.Context, arg CommitLifeTickParams) error {
+	_, err := q.db.Exec(ctx, commitLifeTick, arg.ID, arg.Tick)
+	return err
+}
+
+const completeLifeAction = `-- name: CompleteLifeAction :execrows
+UPDATE life_action SET status=$3,completed_tick=$4 WHERE world_id=$1 AND id=$2 AND status='running'
+`
+
+type CompleteLifeActionParams struct {
+	WorldID       pgtype.UUID `json:"world_id"`
+	ID            pgtype.UUID `json:"id"`
+	Status        string      `json:"status"`
+	CompletedTick pgtype.Int8 `json:"completed_tick"`
+}
+
+func (q *Queries) CompleteLifeAction(ctx context.Context, arg CompleteLifeActionParams) (int64, error) {
+	result, err := q.db.Exec(ctx, completeLifeAction,
+		arg.WorldID,
+		arg.ID,
+		arg.Status,
+		arg.CompletedTick,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const createLifeResident = `-- name: CreateLifeResident :exec
+INSERT INTO life_agent(world_id,id,name,x,y,energy,fullness,social,personality,goal)
+VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+`
+
+type CreateLifeResidentParams struct {
+	WorldID     pgtype.UUID `json:"world_id"`
+	ID          pgtype.UUID `json:"id"`
+	Name        string      `json:"name"`
+	X           int32       `json:"x"`
+	Y           int32       `json:"y"`
+	Energy      int32       `json:"energy"`
+	Fullness    int32       `json:"fullness"`
+	Social      int32       `json:"social"`
+	Personality []byte      `json:"personality"`
+	Goal        []byte      `json:"goal"`
+}
+
+func (q *Queries) CreateLifeResident(ctx context.Context, arg CreateLifeResidentParams) error {
+	_, err := q.db.Exec(ctx, createLifeResident,
+		arg.WorldID,
+		arg.ID,
+		arg.Name,
+		arg.X,
+		arg.Y,
+		arg.Energy,
+		arg.Fullness,
+		arg.Social,
+		arg.Personality,
+		arg.Goal,
+	)
+	return err
+}
+
+const createLifeResource = `-- name: CreateLifeResource :exec
+INSERT INTO life_resource(world_id,owner,kind,amount) VALUES($1,$2,$3,$4)
+`
+
+type CreateLifeResourceParams struct {
+	WorldID pgtype.UUID `json:"world_id"`
+	Owner   string      `json:"owner"`
+	Kind    string      `json:"kind"`
+	Amount  int32       `json:"amount"`
+}
+
+func (q *Queries) CreateLifeResource(ctx context.Context, arg CreateLifeResourceParams) error {
+	_, err := q.db.Exec(ctx, createLifeResource,
+		arg.WorldID,
+		arg.Owner,
+		arg.Kind,
+		arg.Amount,
+	)
+	return err
+}
+
+const createLifeWorld = `-- name: CreateLifeWorld :exec
+INSERT INTO life_world(id,workspace_id,tick_ms) VALUES($1,$2,$3)
+`
+
+type CreateLifeWorldParams struct {
+	ID          pgtype.UUID `json:"id"`
+	WorkspaceID pgtype.UUID `json:"workspace_id"`
+	TickMs      int32       `json:"tick_ms"`
+}
+
+func (q *Queries) CreateLifeWorld(ctx context.Context, arg CreateLifeWorldParams) error {
+	_, err := q.db.Exec(ctx, createLifeWorld, arg.ID, arg.WorkspaceID, arg.TickMs)
+	return err
+}
+
 const deleteLifeWorldState = `-- name: DeleteLifeWorldState :exec
 WITH deleted_events AS (
  DELETE FROM life_event WHERE world_id IN (SELECT life_world.id FROM life_world WHERE life_world.workspace_id=$1)
@@ -27,6 +162,25 @@ DELETE FROM life_world WHERE life_world.workspace_id=$1
 func (q *Queries) DeleteLifeWorldState(ctx context.Context, workspaceID pgtype.UUID) error {
 	_, err := q.db.Exec(ctx, deleteLifeWorldState, workspaceID)
 	return err
+}
+
+const getLifeBinding = `-- name: GetLifeBinding :one
+SELECT id, singleton, workspace_id, tick, tick_ms, next_tick_at, updated_at FROM life_world
+`
+
+func (q *Queries) GetLifeBinding(ctx context.Context) (LifeWorld, error) {
+	row := q.db.QueryRow(ctx, getLifeBinding)
+	var i LifeWorld
+	err := row.Scan(
+		&i.ID,
+		&i.Singleton,
+		&i.WorkspaceID,
+		&i.Tick,
+		&i.TickMs,
+		&i.NextTickAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
 
 const getLifeSnapshot = `-- name: GetLifeSnapshot :one
@@ -55,11 +209,143 @@ func (q *Queries) GetLifeSnapshot(ctx context.Context, workspaceID pgtype.UUID) 
 	return snapshot, err
 }
 
+const isLifeTickDue = `-- name: IsLifeTickDue :one
+SELECT next_tick_at <= clock_timestamp() AS due FROM life_world WHERE id=$1
+`
+
+func (q *Queries) IsLifeTickDue(ctx context.Context, id pgtype.UUID) (bool, error) {
+	row := q.db.QueryRow(ctx, isLifeTickDue, id)
+	var due bool
+	err := row.Scan(&due)
+	return due, err
+}
+
+const lockLifeInitialization = `-- name: LockLifeInitialization :exec
+SELECT pg_advisory_xact_lock(173121, 1)
+`
+
+func (q *Queries) LockLifeInitialization(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, lockLifeInitialization)
+	return err
+}
+
+const lockLifeWorkspace = `-- name: LockLifeWorkspace :one
+SELECT id FROM workspace WHERE id=$1 FOR KEY SHARE
+`
+
+func (q *Queries) LockLifeWorkspace(ctx context.Context, id pgtype.UUID) (pgtype.UUID, error) {
+	row := q.db.QueryRow(ctx, lockLifeWorkspace, id)
+	var id_2 pgtype.UUID
+	err := row.Scan(&id_2)
+	return id_2, err
+}
+
+const lockLifeWorld = `-- name: LockLifeWorld :one
+SELECT id, singleton, workspace_id, tick, tick_ms, next_tick_at, updated_at FROM life_world WHERE id=$1 FOR UPDATE
+`
+
+func (q *Queries) LockLifeWorld(ctx context.Context, id pgtype.UUID) (LifeWorld, error) {
+	row := q.db.QueryRow(ctx, lockLifeWorld, id)
+	var i LifeWorld
+	err := row.Scan(
+		&i.ID,
+		&i.Singleton,
+		&i.WorkspaceID,
+		&i.Tick,
+		&i.TickMs,
+		&i.NextTickAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const lockLifeWorldForDeletion = `-- name: LockLifeWorldForDeletion :exec
 SELECT 1 FROM life_world WHERE workspace_id=$1 FOR UPDATE
 `
 
 func (q *Queries) LockLifeWorldForDeletion(ctx context.Context, workspaceID pgtype.UUID) error {
 	_, err := q.db.Exec(ctx, lockLifeWorldForDeletion, workspaceID)
+	return err
+}
+
+const saveLifeResident = `-- name: SaveLifeResident :execrows
+UPDATE life_agent SET x=$3,y=$4,energy=$5,fullness=$6,social=$7 WHERE world_id=$1 AND id=$2
+`
+
+type SaveLifeResidentParams struct {
+	WorldID  pgtype.UUID `json:"world_id"`
+	ID       pgtype.UUID `json:"id"`
+	X        int32       `json:"x"`
+	Y        int32       `json:"y"`
+	Energy   int32       `json:"energy"`
+	Fullness int32       `json:"fullness"`
+	Social   int32       `json:"social"`
+}
+
+func (q *Queries) SaveLifeResident(ctx context.Context, arg SaveLifeResidentParams) (int64, error) {
+	result, err := q.db.Exec(ctx, saveLifeResident,
+		arg.WorldID,
+		arg.ID,
+		arg.X,
+		arg.Y,
+		arg.Energy,
+		arg.Fullness,
+		arg.Social,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const saveLifeResource = `-- name: SaveLifeResource :execrows
+UPDATE life_resource SET amount=$4 WHERE world_id=$1 AND owner=$2 AND kind=$3
+`
+
+type SaveLifeResourceParams struct {
+	WorldID pgtype.UUID `json:"world_id"`
+	Owner   string      `json:"owner"`
+	Kind    string      `json:"kind"`
+	Amount  int32       `json:"amount"`
+}
+
+func (q *Queries) SaveLifeResource(ctx context.Context, arg SaveLifeResourceParams) (int64, error) {
+	result, err := q.db.Exec(ctx, saveLifeResource,
+		arg.WorldID,
+		arg.Owner,
+		arg.Kind,
+		arg.Amount,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const startLifeAction = `-- name: StartLifeAction :exec
+INSERT INTO life_action(world_id,id,agent_id,intent,reason,started_tick,due_tick,status)
+VALUES($1,$2,$3,$4,$5,$6,$7,'running')
+`
+
+type StartLifeActionParams struct {
+	WorldID     pgtype.UUID `json:"world_id"`
+	ID          pgtype.UUID `json:"id"`
+	AgentID     pgtype.UUID `json:"agent_id"`
+	Intent      []byte      `json:"intent"`
+	Reason      string      `json:"reason"`
+	StartedTick int64       `json:"started_tick"`
+	DueTick     int64       `json:"due_tick"`
+}
+
+func (q *Queries) StartLifeAction(ctx context.Context, arg StartLifeActionParams) error {
+	_, err := q.db.Exec(ctx, startLifeAction,
+		arg.WorldID,
+		arg.ID,
+		arg.AgentID,
+		arg.Intent,
+		arg.Reason,
+		arg.StartedTick,
+		arg.DueTick,
+	)
 	return err
 }

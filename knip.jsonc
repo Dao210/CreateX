@@ -19,8 +19,8 @@
 
   "workspaces": {
     ".": {
-      "entry": ["scripts/*.mjs"],
-      "project": ["scripts/*.mjs"]
+      "entry": ["scripts/*.mjs", "server/internal/life/runtime/bridge.ts"],
+      "project": ["scripts/*.mjs", "server/internal/life/runtime/*.ts"]
     },
 
     "apps/web": {

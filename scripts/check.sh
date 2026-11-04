@@ -111,7 +111,8 @@ if curl -sf "http://localhost:${PORT}/health" > /dev/null 2>&1; then
   echo "    Backend already running on :$PORT"
 else
   echo "    Starting backend..."
-  (cd server && go run ./cmd/server) > /tmp/auro-check-backend.log 2>&1 &
+  pnpm build:life || { EXIT_CODE=1; exit 1; }
+  (cd server && AGENT_LIFE_ENGINE_PATH="${AGENT_LIFE_ENGINE_PATH:-$PWD/bin/runtime/life/engine.mjs}" go run ./cmd/server) > /tmp/auro-check-backend.log 2>&1 &
   BACKEND_PID=$!
   STARTED_BACKEND=true
   wait_for_port "$PORT" "Backend" 90 "/health"

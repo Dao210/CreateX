@@ -17,6 +17,11 @@
     "scripts/ci-scope.test.mjs"
   ],
   "backend": [
+    "packages/core/agent-life/**",
+    "scripts/build-life-runtime.mjs",
+    "package.json",
+    "pnpm-lock.yaml",
+    "pnpm-workspace.yaml",
     "server/**",
     "packages/core/runtimes/cli-version.ts",
     "scripts/agent-cli-command-names.txt",
@@ -81,6 +86,10 @@
     "scripts/worktree-db.test.sh",
     "scripts/dev-env.sh",
     "scripts/dev-env.test.sh",
+    "scripts/dev-env-web-mode.test.sh",
+    "scripts/deploy-createx.sh",
+    "scripts/deploy-createx.test.sh",
+    "scripts/deploy/**",
     "scripts/perf-compare.mjs",
     "scripts/perf-compare.test.sh",
     "scripts/selfhost-wait.sh",

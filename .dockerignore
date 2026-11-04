@@ -44,3 +44,6 @@ coverage
 /.github/
 /deploy/
 /scripts/
+!/scripts/
+/scripts/*
+!/scripts/build-life-runtime.mjs

@@ -1,3 +1,14 @@
+# --- Internal TypeScript engine ---
+FROM node:22-alpine AS life-builder
+WORKDIR /src
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
+RUN npm install --global --no-audit --no-fund "$(node -p 'require("./package.json").packageManager')"
+COPY packages/ ./packages/
+RUN pnpm install --frozen-lockfile --ignore-scripts --filter auro --filter @auro/core...
+COPY server/internal/life/runtime/ ./server/internal/life/runtime/
+COPY scripts/build-life-runtime.mjs ./scripts/build-life-runtime.mjs
+RUN pnpm build:life
+
 # --- Build stage ---
 FROM golang:1.26-alpine AS builder
 
@@ -23,13 +34,14 @@ RUN cd server && CGO_ENABLED=0 go build -ldflags "-s -w" -o bin/backfill_task_us
 RUN cd server && CGO_ENABLED=0 go build -ldflags "-s -w" -o bin/backfill_codex_usage_cache ./cmd/backfill_codex_usage_cache
 
 # --- Runtime stage ---
-FROM alpine:3.21
+FROM node:22-alpine
 
 RUN apk add --no-cache ca-certificates tzdata
 
 WORKDIR /app
 
 COPY --from=builder /src/server/bin/server .
+COPY --from=life-builder /src/server/bin/runtime/ ./runtime/
 COPY --from=builder /src/server/bin/auro .
 COPY --from=builder /src/server/bin/migrate .
 COPY --from=builder /src/server/bin/backfill_task_usage_hourly .

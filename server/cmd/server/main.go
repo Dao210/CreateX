@@ -688,7 +688,13 @@ func main() {
 		slog.Error("invalid MCP administration configuration", "error", err)
 		os.Exit(1)
 	}
+	lifeService, err := newLifeService(pool, bus)
+	if err != nil {
+		slog.Error("initialize resident life", "error", err)
+		os.Exit(1)
+	}
 	r, h := NewRouterWithOptions(pool, hub, bus, analyticsClient, storeRedis, RouterOptions{
+		Life:                lifeService,
 		HTTPMetrics:         httpMetrics,
 		BusinessMetrics:     businessMetrics,
 		ChannelLeaseMetrics: channelLeaseMetrics,
@@ -770,6 +776,7 @@ func main() {
 	go heartbeatScheduler.Run(sweepCtx)
 	go runAutopilotFailureMonitor(autopilotCtx, queries, bus, envFailureMonitorConfig())
 	go (&worldinbox.Service{Pool: pool, Bus: bus}).Run(sweepCtx)
+	go lifeService.Run(sweepCtx)
 	if autopilotSvc.QuotaEnabled() {
 		go runAutopilotQuotaReconciler(autopilotCtx, autopilotSvc)
 	}
@@ -898,7 +905,14 @@ func main() {
 		},
 		StopOutboundRelay: stopRelay,
 		CancelWorkers:     sweepCancel,
-		StopHeartbeats:    heartbeatScheduler.Stop,
+		JoinLife: func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			if err := lifeService.Wait(ctx); err != nil {
+				slog.Warn("resident life did not stop within shutdown timeout", "error", err)
+			}
+		},
+		StopHeartbeats: heartbeatScheduler.Stop,
 		JoinWebhookWorker: func() {
 			if h.WebhookDeliveryWorker != nil && !h.WebhookDeliveryWorker.WaitWithTimeout(5*time.Second) {
 				slog.Warn("webhook delivery worker did not exit within shutdown timeout")

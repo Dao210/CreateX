@@ -110,6 +110,9 @@ build() {
   if [[ -n "$(git -C "$ROOT" status --porcelain)" ]]; then release="$release-dirty"; fi
   stage="$OUT/$release"
   mkdir -p "$stage/bin"
+  pnpm -C "$ROOT" build:life
+  mkdir -p "$stage/bin/runtime/life"
+  cp "$ROOT/server/bin/runtime/life/engine.mjs" "$stage/bin/runtime/life/engine.mjs"
   echo "Building $release for linux/arm64"
   (
     cd "$ROOT/server"

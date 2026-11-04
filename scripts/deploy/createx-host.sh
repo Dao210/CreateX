@@ -447,6 +447,14 @@ activate() {
 
 smoke_native() {
   local target="$1"
+  runuser -u createx -- node --input-type=module -e '
+    import { spawnSync } from "node:child_process";
+    const requestId="11111111-1111-4111-8111-111111111111";
+    const result=spawnSync(process.execPath,[process.argv[1]],{input:JSON.stringify({version:1,requestId,operation:"seed"})+"\n",encoding:"utf8",timeout:5000,env:{PATH:process.env.PATH}});
+    if(result.error || result.status!==0) process.exit(1);
+    const response=JSON.parse(result.stdout);
+    if(response.version!==1 || response.requestId!==requestId || response.result?.agents?.length!==20 || response.result?.resources?.length!==62) process.exit(1);
+  ' "$target/bin/runtime/life/engine.mjs"
   (cd "$target/web/apps/web" && runuser -u createx -- node -e 'const {createRequire}=require("module"); const r=createRequire(require.resolve("next/package.json")); r("sharp")({create:{width:1,height:1,channels:3,background:"red"}}).png().toBuffer().then(b=>{if(!b.length)process.exit(1)}).catch(e=>{console.error(e);process.exit(1)})')
 }
 
@@ -533,7 +541,7 @@ deploy() {
   bootstrap
   install -d -m 0755 "$target"
   tar -xzf "$upload/$release.tar.gz" -C "$target" --no-same-owner
-  [[ -x "$target/bin/server" && -x "$target/bin/migrate" && -f "$target/web/apps/web/server.js" ]] || die 'Incomplete artifact'
+  [[ -x "$target/bin/server" && -x "$target/bin/migrate" && -f "$target/bin/runtime/life/engine.mjs" && -f "$target/web/apps/web/server.js" ]] || die 'Incomplete artifact'
   grep -Fxq "release=$release" "$target/manifest" || die 'Release manifest mismatch'
   # Persist the writable image cache; compiled application files stay read-only.
   rm -rf "$target/web/apps/web/.next-createx/cache"
@@ -582,7 +590,7 @@ deploy_web() {
   # API binaries and migrations carry over unchanged so a later API restart
   # loads the same commit from the new release pointer.
   cp -a "$source/bin" "$source/migrations" "$source/LICENSE" "$source/NOTICE" "$target/"
-  [[ -x "$target/bin/server" && -x "$target/bin/migrate" ]] || die 'Incomplete API copy'
+  [[ -x "$target/bin/server" && -x "$target/bin/migrate" && -f "$target/bin/runtime/life/engine.mjs" ]] || die 'Incomplete API/runtime copy; deploy a full release first'
   printf 'release=%s\ncommit=%s\nweb_commit=%s\narch=linux-arm64\ndist=%s\n' \
     "$release" "$source_commit" "$web_commit" '.next-createx' > "$target/manifest"
   # Persist the writable image cache; compiled application files stay read-only.
@@ -689,14 +697,29 @@ EOF
   publish "$domain" "/etc/letsencrypt/live/createx-$domain/fullchain.pem" "/etc/letsencrypt/live/createx-$domain/privkey.pem"
 }
 
+active_api_release() {
+  local pid executable release
+  pid="$(systemctl show createx-api.service -p MainPID --value)"
+  [[ "$pid" =~ ^[0-9]+$ ]] || die 'Cannot identify the running API before pruning'
+  [[ "$pid" != 0 ]] || return 0
+  executable="$(readlink -f "/proc/$pid/exe")" || die 'Cannot resolve the running API before pruning'
+  release="${executable%/bin/server}"
+  [[ "$release" = "$BASE/releases/${release##*/}" && "$executable" = "$release/bin/server" ]] || die 'Running API is outside the managed release tree'
+  valid_release "${release##*/}" || die 'Running API has an invalid release identity'
+  printf '%s' "$release"
+}
+
 prune() {
-  local current previous path index=0
+  local current previous active path index=0
   current="$(readlink -f "$BASE/current")"
   previous="$(readlink -f "$BASE/previous" 2>/dev/null || true)"
+  # Repeated web-only releases leave the API running from an older release.
+  # Its compute child must still be restartable from that exact runtime bundle.
+  active="$(active_api_release)"
   while IFS= read -r path; do
     valid_release "${path##*/}" || continue
     index=$((index + 1))
-    if [[ "$index" -gt 3 && "$path" != "$current" && "$path" != "$previous" ]]; then rm -rf -- "$path"; fi
+    if [[ "$index" -gt 3 && "$path" != "$current" && "$path" != "$previous" && "$path" != "$active" ]]; then rm -rf -- "$path"; fi
   done < <(find "$BASE/releases" -mindepth 1 -maxdepth 1 -type d | sort -r)
 }
 

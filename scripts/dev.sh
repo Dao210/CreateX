@@ -70,6 +70,6 @@ echo "  Frontend: http://localhost:${FRONTEND_PORT:-3000}"
 echo ""
 
 trap 'kill 0' EXIT
-(cd server && go run ./cmd/server) &
+make api-dev ENV_FILE="$ENV_FILE" &
 pnpm dev:web &
 wait

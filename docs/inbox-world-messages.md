@@ -76,7 +76,7 @@ Mobile opens the corresponding authenticated Web destination, whose game access
 boundary remains authoritative. New delivery checks the canonical effective game
 policy: hidden games still contribute; closed games do not send new messages or
 backfill the suppressed facts on reopening. Closing a game does not remove
-already-published historical messages or stop the simulation Worker.
+already-published historical messages or stop the simulation service.
 
 The existing `/api/inbox` and archive/write routes retain their JSON shape with
 an additive optional `content` field. Both clients validate its bounded schema;

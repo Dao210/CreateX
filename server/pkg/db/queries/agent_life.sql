@@ -38,3 +38,47 @@ WITH deleted_events AS (
  DELETE FROM life_agent WHERE world_id IN (SELECT life_world.id FROM life_world WHERE life_world.workspace_id=$1)
 )
 DELETE FROM life_world WHERE life_world.workspace_id=$1;
+
+-- name: GetLifeBinding :one
+SELECT * FROM life_world;
+
+-- name: LockLifeInitialization :exec
+SELECT pg_advisory_xact_lock(173121, 1);
+
+-- name: LockLifeWorkspace :one
+SELECT id FROM workspace WHERE id=$1 FOR KEY SHARE;
+
+-- name: LockLifeWorld :one
+SELECT * FROM life_world WHERE id=$1 FOR UPDATE;
+
+-- name: IsLifeTickDue :one
+SELECT next_tick_at <= clock_timestamp() AS due FROM life_world WHERE id=$1;
+
+-- name: CreateLifeWorld :exec
+INSERT INTO life_world(id,workspace_id,tick_ms) VALUES($1,$2,$3);
+
+-- name: CreateLifeResident :exec
+INSERT INTO life_agent(world_id,id,name,x,y,energy,fullness,social,personality,goal)
+VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10);
+
+-- name: CreateLifeResource :exec
+INSERT INTO life_resource(world_id,owner,kind,amount) VALUES($1,$2,$3,$4);
+
+-- name: SaveLifeResident :execrows
+UPDATE life_agent SET x=$3,y=$4,energy=$5,fullness=$6,social=$7 WHERE world_id=$1 AND id=$2;
+
+-- name: SaveLifeResource :execrows
+UPDATE life_resource SET amount=$4 WHERE world_id=$1 AND owner=$2 AND kind=$3;
+
+-- name: CompleteLifeAction :execrows
+UPDATE life_action SET status=$3,completed_tick=$4 WHERE world_id=$1 AND id=$2 AND status='running';
+
+-- name: StartLifeAction :exec
+INSERT INTO life_action(world_id,id,agent_id,intent,reason,started_tick,due_tick,status)
+VALUES($1,$2,$3,$4,$5,$6,$7,'running');
+
+-- name: AppendLifeEvent :exec
+INSERT INTO life_event(world_id,id,tick,action_id,agent_id,kind,payload) VALUES($1,$2,$3,$4,$5,$6,$7);
+
+-- name: CommitLifeTick :exec
+UPDATE life_world SET tick=$2,updated_at=clock_timestamp(),next_tick_at=clock_timestamp()+tick_ms*interval '1 millisecond' WHERE id=$1;

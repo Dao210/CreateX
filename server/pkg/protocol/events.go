@@ -2,6 +2,7 @@ package protocol
 
 // Event types for WebSocket communication between server, web clients, and daemon.
 const (
+	EventLifeUpdated = "life:updated"
 	// Agent events
 	EventAgentStatus   = "agent:status"
 	EventAgentCreated  = "agent:created"
