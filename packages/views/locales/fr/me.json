@@ -9,7 +9,8 @@
     "all": "Tout",
     "siege": "Siège",
     "tanks": "Défense de chars",
-    "mcp": "Créé via MCP"
+    "mcp": "Créé via MCP",
+    "fish": "Poissons"
   },
   "weapons": {
     "title": "Collection de créations",
@@ -59,5 +60,6 @@
   "tabs": {
     "label": "Créations et progression",
     "creations": "Créations"
-  }
+  },
+  "open_ocean": "Ouvrir l’océan"
 }

@@ -596,6 +596,53 @@ type Feedback struct {
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 }
 
+type FishCharacter struct {
+	ID          pgtype.UUID        `json:"id"`
+	WorkspaceID pgtype.UUID        `json:"workspace_id"`
+	UserID      pgtype.UUID        `json:"user_id"`
+	Revision    int32              `json:"revision"`
+	Archived    bool               `json:"archived"`
+	Payload     []byte             `json:"payload"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+}
+
+type FishOcean struct {
+	ID          pgtype.UUID `json:"id"`
+	WorkspaceID pgtype.UUID `json:"workspace_id"`
+	UserID      pgtype.UUID `json:"user_id"`
+	Visibility  string      `json:"visibility"`
+	Revision    int32       `json:"revision"`
+}
+
+type FishRequest struct {
+	WorkspaceID pgtype.UUID        `json:"workspace_id"`
+	UserID      pgtype.UUID        `json:"user_id"`
+	Operation   string             `json:"operation"`
+	RequestID   pgtype.UUID        `json:"request_id"`
+	BodyHash    string             `json:"body_hash"`
+	Response    []byte             `json:"response"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+}
+
+type FishResident struct {
+	ID          pgtype.UUID `json:"id"`
+	WorkspaceID pgtype.UUID `json:"workspace_id"`
+	UserID      pgtype.UUID `json:"user_id"`
+	OceanID     pgtype.UUID `json:"ocean_id"`
+	FishID      pgtype.UUID `json:"fish_id"`
+	Revision    int32       `json:"revision"`
+	Active      bool        `json:"active"`
+	Payload     []byte      `json:"payload"`
+}
+
+type FishRevision struct {
+	FishID      pgtype.UUID `json:"fish_id"`
+	Revision    int32       `json:"revision"`
+	WorkspaceID pgtype.UUID `json:"workspace_id"`
+	UserID      pgtype.UUID `json:"user_id"`
+	Payload     []byte      `json:"payload"`
+}
+
 type GamePolicy struct {
 	GameID         string             `json:"game_id"`
 	Scope          string             `json:"scope"`

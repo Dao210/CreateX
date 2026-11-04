@@ -145,6 +145,7 @@ vi.mock("@auro/core/paths", async (importOriginal) => ({
     tanks: () => "/acme/tanks",
     me: () => "/acme/me",
     life: () => "/acme/life",
+    fish: () => "/acme/fish",
     settings: () => "/acme/settings",
     issueDetail: (id: string) => `/acme/me/${id}`,
     projectDetail: (id: string) => `/acme/projects/${id}`,

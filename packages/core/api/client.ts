@@ -1,3 +1,5 @@
+import { FishCharacterSchema, FishOceanSchema, FishResidentSchema, type FishCharacter, type FishOcean, type SaveFishInput, type ReleaseFishInput, type ChangeFishResidentInput, type RecallFishInput } from "../fish/schema";
+import { z } from "zod";
 import { AdminGamesSchema, GamePolicySchema, GameImpactSchema, GameWorldPageSchema, GameAuditPageSchema, WorldGamesSchema, type AdminGame, type GamePolicy, type GameImpact, type GameWorldPage, type GameAuditPage, type WorldGames, type UpdateGamePolicyInput } from "../admin/game-schema";
 import { LifeSnapshotSchema, type LifeSnapshot } from "../agent-life/schema";
 import { AdminAccessSchema, MCPAdminServicesSchema, MCPPolicySchema, MCPActivityPageSchema, type AdminAccess, type MCPAdminService, type MCPPolicy, type MCPActivityPage, type MCPActivityFilter, type UpdateMCPPolicyInput } from "../admin/schema";
@@ -358,6 +360,69 @@ export class ApiClient {
 
   setToken(token: string | null) {
     this.token = token;
+  }
+
+  private async fishRequest<T>(wsId: string, path: string, schema: z.ZodType<T>, input?: unknown): Promise<T> {
+    const endpoint = `/api/fish/v1/${path}`;
+    const raw = await this.fetch<unknown>(endpoint, { ...(input === undefined ? {} : { method: "POST", body: JSON.stringify(input) }), headers: { "X-Workspace-ID": wsId, "X-Workspace-Slug": "" } });
+    const parsed = parseWithFallback<T | null>(raw, schema, null, { endpoint });
+    if (parsed === null) throw new Error("invalid_fish_response");
+    return parsed;
+  }
+  async listFish(wsId: string): Promise<FishCharacter[]> {
+    const result = await this.fishRequest(wsId, "fish", z.object({ fish: z.array(FishCharacterSchema).max(128) }));
+    if (result.fish.some(fish => fish.workspaceId !== wsId)) throw new Error("invalid_fish_response");
+    return result.fish;
+  }
+  async saveFish(wsId: string, input: SaveFishInput) {
+    const result = await this.fishRequest(wsId, "fish", FishCharacterSchema, input);
+    if (result.workspaceId !== wsId || (input.fishId && result.id !== input.fishId) || result.revision !== (input.expectedRevision ?? 0) + 1) throw new Error("invalid_fish_response");
+    return result;
+  }
+  async getFish(wsId: string, id: string, revision = 0) {
+    if (!Number.isInteger(revision) || revision < 0 || revision > 50) throw new Error("invalid_fish_revision");
+    const result = await this.fishRequest(wsId, `fish/${encodeURIComponent(id)}${revision ? `?revision=${revision}` : ""}`, FishCharacterSchema);
+    if (result.workspaceId !== wsId || result.id !== id || (revision && result.revision !== revision)) throw new Error("invalid_fish_response");
+    return result;
+  }
+  async getFishOcean(wsId: string, id = ""): Promise<FishOcean | null> {
+    const result = await this.fishRequest(wsId, `ocean${id ? `?id=${encodeURIComponent(id)}` : ""}`, z.object({ ocean: FishOceanSchema.nullable() }));
+    if (result.ocean && (result.ocean.workspaceId !== wsId || (id && result.ocean.id !== id))) throw new Error("invalid_fish_response");
+    return result.ocean;
+  }
+  async createFishOcean(wsId: string, requestId: string) {
+    const result = await this.fishRequest(wsId, "ocean", FishOceanSchema, { requestId });
+    if (result.workspaceId !== wsId) throw new Error("invalid_fish_response");
+    return result;
+  }
+  async releaseFish(wsId: string, input: ReleaseFishInput) {
+    return this.writeFishResident(wsId, "residents", input);
+  }
+  async applyFishRevision(wsId: string, input: ChangeFishResidentInput) {
+    const result = await this.writeFishResident(wsId, "residents/apply", input);
+    if (result.resident.id !== input.residentId || result.resident.revision !== input.expectedResidentRevision + 1) throw new Error("invalid_fish_response");
+    return result;
+  }
+  private async writeFishResident(wsId: string, path: string, input: ReleaseFishInput) {
+    const result = await this.fishRequest(wsId, path, z.object({ resident: FishResidentSchema, oceanUrl: z.string().url() }), input);
+    const r = result.resident;
+    if (r.oceanId !== input.oceanId || r.fish.workspaceId !== wsId || r.fish.id !== input.fishId || r.fish.revision !== input.revision || r.fish.contentHash !== input.contentHash) throw new Error("invalid_fish_response");
+    return result;
+  }
+  async recallFish(wsId: string, input: RecallFishInput) {
+    const result = await this.fishRequest(wsId, "residents/recall", z.object({ recalled: z.literal(true), residentId: z.string().uuid() }), input);
+    if (result.residentId !== input.residentId) throw new Error("invalid_fish_response");
+    return result;
+  }
+  async archiveFish(wsId: string, input: { requestId: string; fishId: string; archived: boolean }) {
+    const result = await this.fishRequest(wsId, `fish/${encodeURIComponent(input.fishId)}/archive`, FishCharacterSchema, { requestId: input.requestId, archived: input.archived });
+    if (result.workspaceId !== wsId || result.id !== input.fishId || result.archived !== input.archived) throw new Error("invalid_fish_response");
+    return result;
+  }
+  async setFishOceanSettings(wsId: string, input: { requestId: string; oceanId: string; expectedRevision: number; visibility: "private" | "world" }) {
+    const result = await this.fishRequest(wsId, "ocean/settings", FishOceanSchema, input);
+    if (result.workspaceId !== wsId || result.id !== input.oceanId || result.visibility !== input.visibility) throw new Error("invalid_fish_response");
+    return result;
   }
 
   async listTankCharacters(wsId: string, mine = false): Promise<TankCharacter[]> {

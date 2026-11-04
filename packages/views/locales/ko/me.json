@@ -9,7 +9,8 @@
     "all": "전체",
     "siege": "시즈",
     "tanks": "탱크 방어전",
-    "mcp": "MCP로 생성"
+    "mcp": "MCP로 생성",
+    "fish": "물고기"
   },
   "weapons": {
     "title": "작품 컬렉션",
@@ -59,5 +60,6 @@
   "tabs": {
     "label": "작품과 게임 진행",
     "creations": "작품"
-  }
+  },
+  "open_ocean": "바다 열기"
 }

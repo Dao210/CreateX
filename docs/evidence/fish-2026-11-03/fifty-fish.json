@@ -1,0 +1,9 @@
+{
+  "durationMs": 60035.79999999888,
+  "frames": 2046,
+  "p50Ms": 33.299999999995634,
+  "p95Ms": 34.69999999999709,
+  "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36",
+  "drawCalls": "55",
+  "geometries": "55"
+}

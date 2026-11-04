@@ -1,0 +1,13 @@
+[
+  {"name":"empty fins are allowed","valid":true,"changes":[{"path":["fins"],"value":[]}]},
+  {"name":"unordered body","valid":false,"changes":[{"path":["body","sections",1,"u"],"value":0}]},
+  {"name":"missing tail boundary","valid":false,"changes":[{"path":["body","sections",4,"u"],"value":990}]},
+  {"name":"body size budget","valid":false,"changes":[{"path":["body","lengthMm"],"value":2001}]},
+  {"name":"unknown script","valid":false,"changes":[{"path":["script"],"value":"run()"}]},
+  {"name":"unknown motion","valid":false,"changes":[{"path":["motion","style"],"value":"teleport"}]},
+  {"name":"null integer","valid":false,"changes":[{"path":["behavior","schooling"],"value":null}]},
+  {"name":"detached fin","valid":false,"changes":[{"path":["fins",0,"outline"],"value":[{"x":0,"y":100},{"x":100,"y":200},{"x":200,"y":100}]}]},
+  {"name":"self intersecting star","valid":false,"changes":[{"path":["fins",0,"outline"],"value":[{"x":-118,"y":0},{"x":190,"y":224},{"x":-190,"y":224},{"x":118,"y":0},{"x":0,"y":362}]}]},
+  {"name":"unicode names count code points","valid":true,"changes":[{"path":["name"],"value":"🐟🐟🐟🐟🐟🐟🐟🐟🐟🐟🐟🐟🐟🐟🐟🐟🐟🐟🐟🐟🐟🐟🐟🐟🐟🐟🐟🐟🐟🐟🐟🐟🐟🐟🐟🐟🐟🐟🐟🐟"}]},
+  {"name":"control characters","valid":false,"changes":[{"path":["name"],"value":"fish\u0085"}]}
+]

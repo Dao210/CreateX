@@ -9,7 +9,8 @@
     "all": "All",
     "siege": "Siege",
     "tanks": "Tank Defense",
-    "mcp": "Created via MCP"
+    "mcp": "Created via MCP",
+    "fish": "Fish"
   },
   "weapons": {
     "title": "Creation collection",
@@ -59,5 +60,6 @@
   "tabs": {
     "label": "Creations and game progress",
     "creations": "Creations"
-  }
+  },
+  "open_ocean": "Open ocean"
 }

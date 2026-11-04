@@ -1,0 +1,1015 @@
+{
+  "profile": "fish@1",
+  "compilerVersion": 1,
+  "rulesVersion": 1,
+  "capacity": 50,
+  "maxCharacters": 128,
+  "maxRevisions": 50,
+  "draftSchema": {
+    "type": "object",
+    "properties": {
+      "profile": {
+        "const": "fish@1"
+      },
+      "name": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 40
+      },
+      "body": {
+        "type": "object",
+        "properties": {
+          "lengthMm": {
+            "type": "integer",
+            "minimum": 100,
+            "maximum": 2000
+          },
+          "sections": {
+            "type": "array",
+            "minItems": 4,
+            "maxItems": 16,
+            "items": {
+              "type": "object",
+              "properties": {
+                "u": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 1000
+                },
+                "height": {
+                  "type": "integer",
+                  "minimum": 5,
+                  "maximum": 600
+                },
+                "width": {
+                  "type": "integer",
+                  "minimum": 5,
+                  "maximum": 600
+                },
+                "offset": {
+                  "type": "integer",
+                  "minimum": -200,
+                  "maximum": 200
+                }
+              },
+              "required": [
+                "u",
+                "height",
+                "width",
+                "offset"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "lengthMm",
+          "sections"
+        ],
+        "additionalProperties": false
+      },
+      "fins": {
+        "type": "array",
+        "maxItems": 8,
+        "items": {
+          "type": "object",
+          "properties": {
+            "at": {
+              "type": "integer",
+              "minimum": 100,
+              "maximum": 900
+            },
+            "side": {
+              "enum": [
+                "dorsal",
+                "ventral",
+                "left",
+                "right"
+              ]
+            },
+            "outline": {
+              "type": "array",
+              "minItems": 3,
+              "maxItems": 12,
+              "items": {
+                "type": "object",
+                "properties": {
+                  "x": {
+                    "type": "integer",
+                    "minimum": -500,
+                    "maximum": 500
+                  },
+                  "y": {
+                    "type": "integer",
+                    "minimum": -700,
+                    "maximum": 700
+                  }
+                },
+                "required": [
+                  "x",
+                  "y"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": [
+            "at",
+            "side",
+            "outline"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "tail": {
+        "type": "object",
+        "properties": {
+          "length": {
+            "type": "integer",
+            "minimum": 50,
+            "maximum": 700
+          },
+          "spread": {
+            "type": "integer",
+            "minimum": 50,
+            "maximum": 600
+          },
+          "fork": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 800
+          }
+        },
+        "required": [
+          "length",
+          "spread",
+          "fork"
+        ],
+        "additionalProperties": false
+      },
+      "eyes": {
+        "type": "object",
+        "properties": {
+          "at": {
+            "type": "integer",
+            "minimum": 50,
+            "maximum": 300
+          },
+          "size": {
+            "type": "integer",
+            "minimum": 10,
+            "maximum": 70
+          }
+        },
+        "required": [
+          "at",
+          "size"
+        ],
+        "additionalProperties": false
+      },
+      "appearance": {
+        "type": "object",
+        "properties": {
+          "body": {
+            "type": "string",
+            "pattern": "^#[0-9a-fA-F]{6}$"
+          },
+          "belly": {
+            "type": "string",
+            "pattern": "^#[0-9a-fA-F]{6}$"
+          },
+          "accent": {
+            "type": "string",
+            "pattern": "^#[0-9a-fA-F]{6}$"
+          },
+          "pattern": {
+            "enum": [
+              "solid",
+              "stripes",
+              "spots"
+            ]
+          },
+          "glow": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 300
+          },
+          "opacity": {
+            "type": "integer",
+            "minimum": 650,
+            "maximum": 1000
+          }
+        },
+        "required": [
+          "body",
+          "belly",
+          "accent",
+          "pattern",
+          "glow",
+          "opacity"
+        ],
+        "additionalProperties": false
+      },
+      "motion": {
+        "type": "object",
+        "properties": {
+          "style": {
+            "enum": [
+              "tail-beat",
+              "body-wave",
+              "fin-glide"
+            ]
+          },
+          "speed": {
+            "type": "integer",
+            "minimum": 150,
+            "maximum": 1800
+          },
+          "frequency": {
+            "type": "integer",
+            "minimum": 500,
+            "maximum": 4000
+          },
+          "amplitude": {
+            "type": "integer",
+            "minimum": 20,
+            "maximum": 180
+          }
+        },
+        "required": [
+          "style",
+          "speed",
+          "frequency",
+          "amplitude"
+        ],
+        "additionalProperties": false
+      },
+      "behavior": {
+        "type": "object",
+        "properties": {
+          "schooling": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1000
+          },
+          "depth": {
+            "type": "integer",
+            "minimum": 100,
+            "maximum": 900
+          },
+          "personalSpace": {
+            "type": "integer",
+            "minimum": 300,
+            "maximum": 2000
+          }
+        },
+        "required": [
+          "schooling",
+          "depth",
+          "personalSpace"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "required": [
+      "profile",
+      "name",
+      "body",
+      "fins",
+      "tail",
+      "eyes",
+      "appearance",
+      "motion",
+      "behavior"
+    ],
+    "additionalProperties": false
+  },
+  "examples": [
+    {
+      "profile": "fish@1",
+      "name": "Azure sail",
+      "body": {
+        "lengthMm": 800,
+        "sections": [
+          {
+            "u": 0,
+            "height": 55,
+            "width": 40,
+            "offset": 0
+          },
+          {
+            "u": 180,
+            "height": 230,
+            "width": 120,
+            "offset": 0
+          },
+          {
+            "u": 450,
+            "height": 260,
+            "width": 135,
+            "offset": 0
+          },
+          {
+            "u": 750,
+            "height": 140,
+            "width": 65,
+            "offset": 0
+          },
+          {
+            "u": 1000,
+            "height": 35,
+            "width": 30,
+            "offset": 0
+          }
+        ]
+      },
+      "fins": [
+        {
+          "at": 450,
+          "side": "dorsal",
+          "outline": [
+            {
+              "x": -220,
+              "y": 0
+            },
+            {
+              "x": 70,
+              "y": 320
+            },
+            {
+              "x": 220,
+              "y": 0
+            }
+          ]
+        },
+        {
+          "at": 350,
+          "side": "left",
+          "outline": [
+            {
+              "x": -180,
+              "y": 0
+            },
+            {
+              "x": -100,
+              "y": 230
+            },
+            {
+              "x": 100,
+              "y": 0
+            }
+          ]
+        },
+        {
+          "at": 350,
+          "side": "right",
+          "outline": [
+            {
+              "x": -180,
+              "y": 0
+            },
+            {
+              "x": -100,
+              "y": 230
+            },
+            {
+              "x": 100,
+              "y": 0
+            }
+          ]
+        }
+      ],
+      "tail": {
+        "length": 350,
+        "spread": 300,
+        "fork": 450
+      },
+      "eyes": {
+        "at": 120,
+        "size": 35
+      },
+      "appearance": {
+        "body": "#39A5C7",
+        "belly": "#D9F3D5",
+        "accent": "#F3CE74",
+        "pattern": "stripes",
+        "glow": 40,
+        "opacity": 1000
+      },
+      "motion": {
+        "style": "tail-beat",
+        "speed": 650,
+        "frequency": 1800,
+        "amplitude": 90
+      },
+      "behavior": {
+        "schooling": 700,
+        "depth": 500,
+        "personalSpace": 700
+      }
+    },
+    {
+      "profile": "fish@1",
+      "name": "Copper lantern",
+      "body": {
+        "lengthMm": 650,
+        "sections": [
+          {
+            "u": 0,
+            "height": 85,
+            "width": 70,
+            "offset": 0
+          },
+          {
+            "u": 180,
+            "height": 350,
+            "width": 220,
+            "offset": 0
+          },
+          {
+            "u": 450,
+            "height": 420,
+            "width": 260,
+            "offset": 0
+          },
+          {
+            "u": 750,
+            "height": 230,
+            "width": 140,
+            "offset": 0
+          },
+          {
+            "u": 1000,
+            "height": 35,
+            "width": 30,
+            "offset": 0
+          }
+        ]
+      },
+      "fins": [
+        {
+          "at": 450,
+          "side": "dorsal",
+          "outline": [
+            {
+              "x": -220,
+              "y": 0
+            },
+            {
+              "x": 70,
+              "y": 320
+            },
+            {
+              "x": 220,
+              "y": 0
+            }
+          ]
+        },
+        {
+          "at": 350,
+          "side": "left",
+          "outline": [
+            {
+              "x": -180,
+              "y": 0
+            },
+            {
+              "x": -100,
+              "y": 230
+            },
+            {
+              "x": 100,
+              "y": 0
+            }
+          ]
+        },
+        {
+          "at": 350,
+          "side": "right",
+          "outline": [
+            {
+              "x": -180,
+              "y": 0
+            },
+            {
+              "x": -100,
+              "y": 230
+            },
+            {
+              "x": 100,
+              "y": 0
+            }
+          ]
+        }
+      ],
+      "tail": {
+        "length": 350,
+        "spread": 300,
+        "fork": 450
+      },
+      "eyes": {
+        "at": 120,
+        "size": 35
+      },
+      "appearance": {
+        "body": "#E5A75A",
+        "belly": "#FFE9AA",
+        "accent": "#C65748",
+        "pattern": "spots",
+        "glow": 40,
+        "opacity": 1000
+      },
+      "motion": {
+        "style": "tail-beat",
+        "speed": 650,
+        "frequency": 1800,
+        "amplitude": 90
+      },
+      "behavior": {
+        "schooling": 700,
+        "depth": 500,
+        "personalSpace": 700
+      }
+    },
+    {
+      "profile": "fish@1",
+      "name": "Violet ribbon",
+      "body": {
+        "lengthMm": 1400,
+        "sections": [
+          {
+            "u": 0,
+            "height": 25,
+            "width": 20,
+            "offset": 0
+          },
+          {
+            "u": 180,
+            "height": 70,
+            "width": 45,
+            "offset": 0
+          },
+          {
+            "u": 450,
+            "height": 65,
+            "width": 40,
+            "offset": 0
+          },
+          {
+            "u": 750,
+            "height": 45,
+            "width": 30,
+            "offset": 0
+          },
+          {
+            "u": 1000,
+            "height": 15,
+            "width": 10,
+            "offset": 0
+          }
+        ]
+      },
+      "fins": [
+        {
+          "at": 450,
+          "side": "dorsal",
+          "outline": [
+            {
+              "x": -220,
+              "y": 0
+            },
+            {
+              "x": 70,
+              "y": 320
+            },
+            {
+              "x": 220,
+              "y": 0
+            }
+          ]
+        },
+        {
+          "at": 350,
+          "side": "left",
+          "outline": [
+            {
+              "x": -180,
+              "y": 0
+            },
+            {
+              "x": -100,
+              "y": 230
+            },
+            {
+              "x": 100,
+              "y": 0
+            }
+          ]
+        },
+        {
+          "at": 350,
+          "side": "right",
+          "outline": [
+            {
+              "x": -180,
+              "y": 0
+            },
+            {
+              "x": -100,
+              "y": 230
+            },
+            {
+              "x": 100,
+              "y": 0
+            }
+          ]
+        }
+      ],
+      "tail": {
+        "length": 180,
+        "spread": 110,
+        "fork": 450
+      },
+      "eyes": {
+        "at": 120,
+        "size": 35
+      },
+      "appearance": {
+        "body": "#8B7EC9",
+        "belly": "#D6C8EF",
+        "accent": "#86E2D7",
+        "pattern": "solid",
+        "glow": 40,
+        "opacity": 1000
+      },
+      "motion": {
+        "style": "body-wave",
+        "speed": 650,
+        "frequency": 1300,
+        "amplitude": 130
+      },
+      "behavior": {
+        "schooling": 700,
+        "depth": 500,
+        "personalSpace": 700
+      }
+    },
+    {
+      "profile": "fish@1",
+      "name": "Pearl glider",
+      "body": {
+        "lengthMm": 1000,
+        "sections": [
+          {
+            "u": 0,
+            "height": 40,
+            "width": 50,
+            "offset": 0
+          },
+          {
+            "u": 180,
+            "height": 100,
+            "width": 350,
+            "offset": 0
+          },
+          {
+            "u": 450,
+            "height": 110,
+            "width": 420,
+            "offset": 0
+          },
+          {
+            "u": 750,
+            "height": 70,
+            "width": 180,
+            "offset": 0
+          },
+          {
+            "u": 1000,
+            "height": 20,
+            "width": 20,
+            "offset": 0
+          }
+        ]
+      },
+      "fins": [
+        {
+          "at": 450,
+          "side": "left",
+          "outline": [
+            {
+              "x": -350,
+              "y": 0
+            },
+            {
+              "x": -150,
+              "y": 600
+            },
+            {
+              "x": 300,
+              "y": 0
+            }
+          ]
+        },
+        {
+          "at": 450,
+          "side": "right",
+          "outline": [
+            {
+              "x": -350,
+              "y": 0
+            },
+            {
+              "x": -150,
+              "y": 600
+            },
+            {
+              "x": 300,
+              "y": 0
+            }
+          ]
+        }
+      ],
+      "tail": {
+        "length": 550,
+        "spread": 80,
+        "fork": 450
+      },
+      "eyes": {
+        "at": 120,
+        "size": 35
+      },
+      "appearance": {
+        "body": "#C3DAD1",
+        "belly": "#F5F0CF",
+        "accent": "#799DAD",
+        "pattern": "spots",
+        "glow": 40,
+        "opacity": 1000
+      },
+      "motion": {
+        "style": "fin-glide",
+        "speed": 650,
+        "frequency": 1800,
+        "amplitude": 90
+      },
+      "behavior": {
+        "schooling": 700,
+        "depth": 500,
+        "personalSpace": 700
+      }
+    },
+    {
+      "profile": "fish@1",
+      "name": "Rose fan",
+      "body": {
+        "lengthMm": 700,
+        "sections": [
+          {
+            "u": 0,
+            "height": 45,
+            "width": 35,
+            "offset": 0
+          },
+          {
+            "u": 180,
+            "height": 250,
+            "width": 75,
+            "offset": 0
+          },
+          {
+            "u": 450,
+            "height": 300,
+            "width": 85,
+            "offset": 0
+          },
+          {
+            "u": 750,
+            "height": 140,
+            "width": 50,
+            "offset": 0
+          },
+          {
+            "u": 1000,
+            "height": 25,
+            "width": 20,
+            "offset": 0
+          }
+        ]
+      },
+      "fins": [
+        {
+          "at": 450,
+          "side": "dorsal",
+          "outline": [
+            {
+              "x": -220,
+              "y": 0
+            },
+            {
+              "x": 70,
+              "y": 320
+            },
+            {
+              "x": 220,
+              "y": 0
+            }
+          ]
+        },
+        {
+          "at": 350,
+          "side": "left",
+          "outline": [
+            {
+              "x": -180,
+              "y": 0
+            },
+            {
+              "x": -100,
+              "y": 230
+            },
+            {
+              "x": 100,
+              "y": 0
+            }
+          ]
+        },
+        {
+          "at": 350,
+          "side": "right",
+          "outline": [
+            {
+              "x": -180,
+              "y": 0
+            },
+            {
+              "x": -100,
+              "y": 230
+            },
+            {
+              "x": 100,
+              "y": 0
+            }
+          ]
+        }
+      ],
+      "tail": {
+        "length": 650,
+        "spread": 550,
+        "fork": 100
+      },
+      "eyes": {
+        "at": 120,
+        "size": 35
+      },
+      "appearance": {
+        "body": "#D97A90",
+        "belly": "#F8D8C0",
+        "accent": "#859BCE",
+        "pattern": "stripes",
+        "glow": 40,
+        "opacity": 1000
+      },
+      "motion": {
+        "style": "tail-beat",
+        "speed": 650,
+        "frequency": 1800,
+        "amplitude": 90
+      },
+      "behavior": {
+        "schooling": 700,
+        "depth": 500,
+        "personalSpace": 700
+      }
+    },
+    {
+      "profile": "fish@1",
+      "name": "Lime dart",
+      "body": {
+        "lengthMm": 450,
+        "sections": [
+          {
+            "u": 0,
+            "height": 30,
+            "width": 25,
+            "offset": 0
+          },
+          {
+            "u": 180,
+            "height": 150,
+            "width": 80,
+            "offset": 0
+          },
+          {
+            "u": 450,
+            "height": 170,
+            "width": 90,
+            "offset": 0
+          },
+          {
+            "u": 750,
+            "height": 85,
+            "width": 45,
+            "offset": 0
+          },
+          {
+            "u": 1000,
+            "height": 18,
+            "width": 15,
+            "offset": 0
+          }
+        ]
+      },
+      "fins": [
+        {
+          "at": 450,
+          "side": "dorsal",
+          "outline": [
+            {
+              "x": -220,
+              "y": 0
+            },
+            {
+              "x": 70,
+              "y": 320
+            },
+            {
+              "x": 220,
+              "y": 0
+            }
+          ]
+        },
+        {
+          "at": 350,
+          "side": "left",
+          "outline": [
+            {
+              "x": -180,
+              "y": 0
+            },
+            {
+              "x": -100,
+              "y": 230
+            },
+            {
+              "x": 100,
+              "y": 0
+            }
+          ]
+        },
+        {
+          "at": 350,
+          "side": "right",
+          "outline": [
+            {
+              "x": -180,
+              "y": 0
+            },
+            {
+              "x": -100,
+              "y": 230
+            },
+            {
+              "x": 100,
+              "y": 0
+            }
+          ]
+        }
+      ],
+      "tail": {
+        "length": 350,
+        "spread": 300,
+        "fork": 450
+      },
+      "eyes": {
+        "at": 120,
+        "size": 35
+      },
+      "appearance": {
+        "body": "#A4C26A",
+        "belly": "#EAF1B0",
+        "accent": "#3D8C96",
+        "pattern": "solid",
+        "glow": 40,
+        "opacity": 1000
+      },
+      "motion": {
+        "style": "tail-beat",
+        "speed": 650,
+        "frequency": 1800,
+        "amplitude": 90
+      },
+      "behavior": {
+        "schooling": 700,
+        "depth": 500,
+        "personalSpace": 700
+      }
+    }
+  ],
+  "notes": [
+    "All proportions and angles are integers. Body section u=0 is head, u=1000 is tail. Dimensions are per mille of body length.",
+    "Sections must be ordered from 0 to 1000. Fin outlines must be convex non-degenerate polygons anchored by a point at (0,0) or a base on y=0, with y>=0.",
+    "Motion speed is millimeters/second, frequency is milli-Hz, amplitude is per mille of body length. Behavior depth 100 is near seabed, 900 is near surface.",
+    "Create a distinct silhouette, validate, save, release the exact revision/hash, and open oceanUrl. No scripts or external assets."
+  ]
+}

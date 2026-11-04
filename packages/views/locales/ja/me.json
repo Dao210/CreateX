@@ -9,7 +9,8 @@
     "all": "すべて",
     "siege": "シージ",
     "tanks": "戦車防衛",
-    "mcp": "MCP で作成"
+    "mcp": "MCP で作成",
+    "fish": "魚"
   },
   "weapons": {
     "title": "作品コレクション",
@@ -59,5 +60,6 @@
   "tabs": {
     "label": "作品とゲームの進行状況",
     "creations": "作品"
-  }
+  },
+  "open_ocean": "海を開く"
 }

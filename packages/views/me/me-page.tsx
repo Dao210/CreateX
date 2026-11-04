@@ -1,4 +1,6 @@
 "use client";
+import { myFishOptions } from "@auro/core/fish";
+import { FishThumbnail } from "../fish/fish-thumbnail";
 
 import { useMemo, useRef, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -43,7 +45,7 @@ import { BlueprintPreview } from "./blueprint-preview";
 import { TankGrowth } from "../tank-defense/tank-growth";
 import { TankPreview } from "../tank-defense/tank-preview";
 
-type Filter = "all" | "siege" | "tanks" | "mcp";
+type Filter = "all" | "siege" | "tanks" | "mcp" | "fish";
 
 export function MePage({ storage }: { storage: StorageAdapter }) {
   const workspace = useCurrentWorkspace();
@@ -61,13 +63,14 @@ function MeContent({ storage, workspace, userId }: {
   const { t: adminT } = useT("admin");
   const games = useWorldGames(workspace.id);
   const siegeAvailable = games.data?.games.find(game => game.gameId === "siege")?.available === true;
+  const fishAvailable = games.data?.games.find(game => game.gameId === "fish")?.available === true;
   const tanksAvailable = games.data?.games.find(game => game.gameId === "tanks")?.available === true;
   const locale = useLocale();
   const paths = useWorkspacePaths();
   const navigation = useNavigation();
   const tab = navigation.searchParams.get("tab") === "progress" ? "progress" : "creations";
   const requestedFilter = navigation.searchParams.get("filter");
-  const filter: Filter = requestedFilter === "siege" && siegeAvailable ? "siege" : (requestedFilter === "tanks" || requestedFilter === "mcp") && tanksAvailable ? requestedFilter : "all";
+  const filter: Filter = requestedFilter === "fish" && fishAvailable ? "fish" : requestedFilter === "siege" && siegeAvailable ? "siege" : requestedFilter === "tanks" && tanksAvailable ? "tanks" : requestedFilter === "mcp" && (tanksAvailable || fishAvailable) ? "mcp" : "all";
   const setView = (key: "tab" | "filter", value: string) => {
     const params = new URLSearchParams(navigation.searchParams);
     if (value === "creations" || value === "all") params.delete(key);
@@ -76,6 +79,10 @@ function MeContent({ storage, workspace, userId }: {
   };
   const scope = useMemo(() => ({ workspaceId: workspace.id, workspaceSlug: workspace.slug, userId }), [workspace.id, workspace.slug, userId]);
   const siegeClient = useMemo(() => createSiegeClient(scope), [scope]);
+  const fishQuery = useQuery({ ...myFishOptions(workspace.id, userId), enabled: fishAvailable });
+  const fish = fishAvailable ? (fishQuery.data ?? []).filter(f => !f.archived) : [];
+  const visibleFish = filter === "all" || filter === "fish" ? fish : filter === "mcp" ? fish.filter(f => f.origin === "mcp") : [];
+  const fishFailed = fishAvailable && (filter === "all" || filter === "fish" || filter === "mcp") && fishQuery.isError;
   const tanks = useQuery({ ...myTankCharactersOptions(workspace.id, userId), enabled: tanksAvailable });
   const library = useQuery({ ...siegeLibraryOptions(siegeClient, scope), enabled: siegeAvailable });
   const remote = useQuery({ ...gameProgressOptions(workspace.id), enabled: siegeAvailable || tanksAvailable });
@@ -92,9 +99,9 @@ function MeContent({ storage, workspace, userId }: {
   const visibleTanks = filter === "mcp" ? mcpCharacters : showTanks ? characters : [];
   const siegeFailed = showSiege && library.isError;
   const tanksFailed = showTanks && tanks.isError;
-  const loading = (showSiege && library.isPending) || (showTanks && tanks.isPending);
-  const bothFailed = siegeFailed && tanksFailed;
-  const nothing = !loading && !siegeFailed && !tanksFailed && visibleSiege.length === 0 && visibleTanks.length === 0;
+  const loading = (fishAvailable && (filter === "all" || filter === "fish" || filter === "mcp") && fishQuery.isPending) || (showSiege && library.isPending) || (showTanks && tanks.isPending);
+  const bothFailed = siegeFailed && tanksFailed && (!fishAvailable || fishFailed);
+  const nothing = !loading && !siegeFailed && !tanksFailed && !fishFailed && visibleSiege.length === 0 && visibleTanks.length === 0 && visibleFish.length === 0;
   const nextLevel = unlockedLevel(stars);
   const completed = totalStars === CAMPAIGN_LEVELS.length * 3;
   const syncState = remote.isError ? t(($) => $.progress.offline) : remote.data?.siege || remote.data?.tanks ? t(($) => $.progress.synced) : t(($) => $.progress.local);
@@ -113,7 +120,7 @@ function MeContent({ storage, workspace, userId }: {
           <span className="min-w-0 break-words">{t(($) => $.scope, { name: workspace.name })}</span>
         </p>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-          <Stat icon={<Shapes />} label={t(($) => $.summary.weapons)} value={blueprints.length + characters.length} />
+          <Stat icon={<Shapes />} label={t(($) => $.summary.weapons)} value={blueprints.length + characters.length + fish.length} />
           {siegeAvailable && <Stat icon={<Star />} label={t(($) => $.summary.stars)} value={`${totalStars} / ${CAMPAIGN_LEVELS.length * 3}`} />}
           {tanksAvailable && <Stat icon={<Trophy />} label={t(($) => $.summary.best)} value={String(achievements.best).padStart(6, "0")} />}
         </div>
@@ -128,10 +135,11 @@ function MeContent({ storage, workspace, userId }: {
           <section aria-labelledby="me-weapons-title">
             <div className="mb-3 flex flex-wrap items-center gap-2">
               <h2 id="me-weapons-title" className="mr-auto text-title-sm font-medium">{t(($) => $.weapons.title)}</h2>
-              {(["all", "siege", "tanks", "mcp"] as const).filter(value => value === "all" || value === "siege" && siegeAvailable || (value === "tanks" || value === "mcp") && tanksAvailable).map((value) => <Button key={value} size="xs" variant={filter === value ? "brand" : "outline"} aria-pressed={filter === value} onClick={() => setView("filter", value)}>{t(($) => $.filters[value])}</Button>)}
+              {(["all", "siege", "tanks", "fish", "mcp"] as const).filter(value => value === "all" || value === "siege" && siegeAvailable || value === "tanks" && tanksAvailable || value === "fish" && fishAvailable || value === "mcp" && (tanksAvailable || fishAvailable)).map((value) => <Button key={value} size="xs" variant={filter === value ? "brand" : "outline"} aria-pressed={filter === value} onClick={() => setView("filter", value)}>{t(($) => $.filters[value])}</Button>)}
             </div>
-            {bothFailed ? <ErrorCard message={t(($) => $.error)} retry={() => { void library.refetch(); void tanks.refetch(); }} retryLabel={t(($) => $.retry)} /> : <>
-              {(visibleSiege.length > 0 || visibleTanks.length > 0) && <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {bothFailed ? <ErrorCard message={t(($) => $.error)} retry={() => { void library.refetch(); void tanks.refetch(); void fishQuery.refetch(); }} retryLabel={t(($) => $.retry)} /> : <>
+              {(visibleSiege.length > 0 || visibleTanks.length > 0 || visibleFish.length > 0) && <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                {visibleFish.map(fish => <Card key={fish.id} size="sm" className="overflow-hidden" role="group" aria-label={fish.draft.name}><div className="flex aspect-[4/3] items-center justify-center bg-muted/25 p-4"><FishThumbnail spec={fish.draft} /></div><CardHeader><CardTitle className="truncate">{fish.draft.name}</CardTitle><CardDescription>{t($ => $.weapons.revision, { revision: fish.revision })}</CardDescription></CardHeader><CardContent><AppLink href={`${paths.fish()}?fish=${encodeURIComponent(fish.id)}`} className={buttonVariants({ size: "sm", variant: "outline" })}>{t($ => $.open_ocean)}<ArrowRight /></AppLink></CardContent></Card>)}
                 {visibleSiege.map((blueprint) => <SiegeCard key={blueprint.id} blueprint={blueprint} locale={locale} workshopHref={`${paths.siege()}?blueprint=${encodeURIComponent(blueprint.id)}`} />)}
                 {visibleTanks.map((character) => <TankCard key={character.id} character={character} locale={locale} workspaceId={workspace.id} power={TANK_DIFFICULTIES[local.tanks.difficulty].initialPower} garageHref={`${paths.tanks()}?character=${encodeURIComponent(character.id)}`} />)}
               </div>}
@@ -139,7 +147,9 @@ function MeContent({ storage, workspace, userId }: {
                 {siegeFailed && <p role="alert" className="text-caption text-destructive">{t(($) => $.weapons.siege_error)} <Button size="xs" variant="link" onClick={() => void library.refetch()}>{t(($) => $.retry)}</Button></p>}
                 {tanksFailed && <p role="alert" className="text-caption text-destructive">{t(($) => $.weapons.tanks_error)} <Button size="xs" variant="link" onClick={() => void tanks.refetch()}>{t(($) => $.retry)}</Button></p>}
               </div>}
-              {nothing && <EmptyCollection filter={filter} workshopHref={paths.siege()} garageHref={paths.tanks()} />}
+              {fishFailed && <ErrorCard message={t($ => $.error)} retry={() => void fishQuery.refetch()} retryLabel={t($ => $.retry)} />}
+              {nothing && filter === "fish" && <AppLink href={paths.fish()} className={buttonVariants({ variant: "outline" })}>{t($ => $.open_ocean)}</AppLink>}
+              {nothing && filter !== "fish" && <EmptyCollection filter={filter} workshopHref={paths.siege()} garageHref={paths.tanks()} />}
             </>}
             {loading && <p role="status" className="mt-3 text-caption text-muted-foreground">{t(($) => $.loading)}</p>}
           </section>

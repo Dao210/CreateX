@@ -26,6 +26,7 @@ import (
 	"github.com/auro-ai/auro/server/internal/entitlement"
 	"github.com/auro-ai/auro/server/internal/events"
 	"github.com/auro-ai/auro/server/internal/featureflags"
+	"github.com/auro-ai/auro/server/internal/fish"
 	"github.com/auro-ai/auro/server/internal/gameadmin"
 	"github.com/auro-ai/auro/server/internal/gameprogress"
 	"github.com/auro-ai/auro/server/internal/handler"
@@ -265,6 +266,7 @@ type RouterOptions struct {
 	// game opt-in rather than a hard startup dependency.
 	Siege        *siege.Service
 	Tanks        *tanks.Service
+	Fish         *fish.Service
 	MCPAdmin     *mcpadmin.Service
 	GameAdmin    *gameadmin.Service
 	Life         *life.Service
@@ -2030,6 +2032,9 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 			// member resolved by the middleware into the game's owner.
 			if opts.Siege != nil {
 				r.Handle("/api/siege/*", gameGuard("siege", siegeOwner((&siege.HTTP{Service: opts.Siege}).Handler())))
+			}
+			if opts.Fish != nil {
+				r.Handle("/api/fish/*", gameGuard("fish", fishActor((&fish.HTTP{Service: opts.Fish, Control: opts.MCPAdmin, AllowedOrigins: allowedOrigins()}).Handler())))
 			}
 			if opts.Tanks != nil {
 				r.Handle("/api/tanks/*", gameGuard("tanks", tankActor((&tanks.HTTP{Service: opts.Tanks, Control: opts.MCPAdmin, AllowedOrigins: allowedOrigins()}).Handler())))

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net"
@@ -21,6 +22,7 @@ import (
 	"github.com/auro-ai/auro/server/internal/dbreader"
 	"github.com/auro-ai/auro/server/internal/dbstartup"
 	"github.com/auro-ai/auro/server/internal/events"
+	"github.com/auro-ai/auro/server/internal/fish"
 	"github.com/auro-ai/auro/server/internal/gameadmin"
 	"github.com/auro-ai/auro/server/internal/handler"
 	"github.com/auro-ai/auro/server/internal/integrations/wecom"
@@ -709,9 +711,13 @@ func main() {
 		LLMMaxRetries:       llmMaxRetries,
 		LLMDisableThinking:  llmDisableThinking,
 		Siege:               newSiegeService(pool),
-		Tanks:               &tanks.Service{Pool: pool, AppURL: appURLFromEnv()},
-		MCPAdmin:            mcpAdmin,
-		GameAdmin:           &gameadmin.Service{Pool: pool, Auth: mcpAdmin.Gate},
+		Fish: &fish.Service{Pool: pool, AppURL: appURLFromEnv(), OnChange: func(workspaceID, userID string) {
+			raw, _ := json.Marshal(map[string]any{"type": "fish:changed", "payload": map[string]string{"workspaceId": workspaceID}})
+			broadcaster.SendToUser(userID, raw)
+		}},
+		Tanks:     &tanks.Service{Pool: pool, AppURL: appURLFromEnv()},
+		MCPAdmin:  mcpAdmin,
+		GameAdmin: &gameadmin.Service{Pool: pool, Auth: mcpAdmin.Gate},
 	})
 	var replicaQueries *db.Queries
 	if replicaPool != nil {

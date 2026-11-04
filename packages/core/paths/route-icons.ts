@@ -34,6 +34,7 @@ export type RouteIconName =
   | "Server"
   | "BookOpenText"
   | "Gamepad2"
+  | "Fish"
   | "Settings"
   | "File"
   | "FileText"
@@ -56,6 +57,7 @@ export type NavLabelKey =
   | "siege"
   | "tanks"
   | "life"
+  | "fish"
   | "me"
   | "settings";
 
@@ -71,6 +73,7 @@ export type WorkspacePageKey =
   | "siege"
   | "tanks"
   | "life"
+  | "fish"
   | "me"
   | "settings";
 
@@ -100,6 +103,7 @@ export const WORKSPACE_PAGES: Record<WorkspacePageKey, WorkspacePage> = {
   siege: { segment: "siege", icon: "Gamepad2", navKey: "siege" },
   tanks: { segment: "tanks", icon: "Gamepad2", navKey: "tanks" },
   life: { segment: "life", icon: "Users", navKey: "life" },
+  fish: { segment: "fish", icon: "Fish", navKey: "fish" },
   me: { segment: "me", icon: "Shapes", navKey: "me" },
   settings: { segment: "settings", icon: "Settings", navKey: "settings" },
 };

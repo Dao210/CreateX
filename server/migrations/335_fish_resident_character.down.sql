@@ -1,0 +1,1 @@
+DROP INDEX CONCURRENTLY IF EXISTS fish_resident_character;

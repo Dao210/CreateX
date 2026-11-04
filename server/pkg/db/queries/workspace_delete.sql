@@ -581,6 +581,21 @@ deleted_game_progress AS (
     DELETE FROM game_progress WHERE workspace_id = $1
 ),
 
+deleted_fish_request AS (
+    DELETE FROM fish_request WHERE workspace_id = $1
+),
+deleted_fish_resident AS (
+    DELETE FROM fish_resident WHERE workspace_id = $1
+),
+deleted_fish_ocean AS (
+    DELETE FROM fish_ocean WHERE workspace_id = $1
+),
+deleted_fish_revision AS (
+    DELETE FROM fish_revision WHERE workspace_id = $1
+),
+deleted_fish_character AS (
+    DELETE FROM fish_character WHERE workspace_id = $1
+),
 deleted_tank_training AS (
     DELETE FROM tank_training_run WHERE workspace_id = $1
 ),

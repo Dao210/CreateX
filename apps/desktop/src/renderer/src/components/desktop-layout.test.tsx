@@ -152,15 +152,17 @@ describe("DesktopShell sidebar trigger", () => {
     const mainTopBar = container.querySelector('[data-slot="main-top-bar"]');
     expect(mainTopBar).toHaveAttribute("data-sidebar-resize-consumer");
     expect(mainTopBar).toHaveClass("transition-[padding-left]");
-    expect(mainTopBar).toHaveStyle({
-      paddingLeft:
-        "max(0px, calc(200px - var(--sidebar-live-width, var(--sidebar-width))))",
-    });
+    // The shell now boots with the nav collapsed, so the toolbar keeps the
+    // full window clearance until the trigger expands the sidebar.
+    expect(mainTopBar).toHaveStyle({ paddingLeft: "200px" });
 
     fireEvent.click(
       container.querySelector('[data-slot="sidebar-trigger"]')!,
     );
-    expect(mainTopBar).toHaveStyle({ paddingLeft: "200px" });
+    expect(mainTopBar).toHaveStyle({
+      paddingLeft:
+        "max(0px, calc(200px - var(--sidebar-live-width, var(--sidebar-width))))",
+    });
     expect(queryByRole("status", { name: /loading workspace/i })).toBeNull();
   });
 
@@ -176,13 +178,6 @@ describe("DesktopShell sidebar trigger", () => {
     expect(getByTestId("page-content")).toHaveAttribute("data-compact", "true");
     expect(getByTestId("page-content")).toHaveAttribute(
       "data-sidebar-state",
-      "expanded",
-    );
-    expect(mainTopBar).toHaveStyle({ paddingLeft: "200px" });
-
-    fireEvent.click(getByRole("button", { name: "Collapse sidebar" }));
-    expect(getByTestId("page-content")).toHaveAttribute(
-      "data-sidebar-state",
       "collapsed",
     );
     expect(mainTopBar).toHaveStyle({ paddingLeft: "200px" });
@@ -191,6 +186,13 @@ describe("DesktopShell sidebar trigger", () => {
     expect(getByTestId("page-content")).toHaveAttribute(
       "data-sidebar-state",
       "expanded",
+    );
+    expect(mainTopBar).toHaveStyle({ paddingLeft: "200px" });
+
+    fireEvent.click(getByRole("button", { name: "Collapse sidebar" }));
+    expect(getByTestId("page-content")).toHaveAttribute(
+      "data-sidebar-state",
+      "collapsed",
     );
     expect(mainTopBar).toHaveStyle({ paddingLeft: "200px" });
   });

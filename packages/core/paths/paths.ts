@@ -64,6 +64,7 @@ function workspaceScoped(slug: string) {
     // nav entry and no method here.
     siege: () => `${ws}/siege`,
     tanks: () => `${ws}/tanks`,
+    fish: () => `${ws}/fish`,
     life: () => `${ws}/life`,
     me: () => `${ws}/me`,
     settings: () => `${ws}/settings`,

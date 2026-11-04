@@ -24,7 +24,7 @@ export function DashboardLayout({
     <DashboardGuard
       loadingFallback={<WorkspaceLoader />}
     >
-      <SidebarProvider className="h-svh bg-app-shell">
+      <SidebarProvider defaultOpen={false} className="h-svh bg-app-shell">
         <GlobalShortcuts />
         <WorkspacePresencePrefetch />
         <AppSidebar />

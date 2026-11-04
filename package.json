@@ -30,7 +30,8 @@
     "clean": "turbo clean && rm -rf node_modules",
     "ui:add": "cd packages/ui && npx shadcn@latest add",
     "generate:reserved-slugs": "node scripts/generate-reserved-slugs.mjs",
-    "generate:tank-contracts": "node scripts/generate-tank-contracts.mjs"
+    "generate:tank-contracts": "node scripts/generate-tank-contracts.mjs",
+    "generate:fish-contracts": "node scripts/generate-fish-contracts.mjs"
   },
   "engines": {
     "node": ">=22"

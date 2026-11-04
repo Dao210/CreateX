@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const GAME_IDS = ["siege", "life", "tanks"] as const;
+export const GAME_IDS = ["siege", "life", "tanks", "fish"] as const;
 export type GameId = typeof GAME_IDS[number];
 export function isGameId(id: string): id is GameId { return GAME_IDS.some(game => game === id); }
 export const GameWorldSchema = z.object({ id: z.string().uuid(), name: z.string(), slug: z.string() });

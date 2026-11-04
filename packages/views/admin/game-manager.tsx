@@ -18,7 +18,7 @@ export function GameManager({ userId }: { userId: string }) {
   if (query.isError && !query.data) return <div className="admin-state" role="alert"><p>{t($ => $.load_error)}</p><Button variant="outline" onClick={() => void query.refetch()}>{t($ => $.refresh)}</Button></div>;
   const games = query.data ?? [];
   const selected = games.find(game => game.policy.gameId === selectedId) ?? games[0];
-  const gameName = (id: string) => id === "siege" ? layout($ => $.nav.siege) : id === "tanks" ? layout($ => $.nav.tanks) : id === "life" ? layout($ => $.nav.life) : id;
+  const gameName = (id: string) => id === "siege" ? layout($ => $.nav.siege) : id === "tanks" ? layout($ => $.nav.tanks) : id === "life" ? layout($ => $.nav.life) : id === "fish" ? layout($ => $.nav.fish) : id;
   return <div className="admin-content">
     {query.isError && <p role="alert" className="admin-game-note">{t($ => $.load_error)}</p>}
     <div className="admin-section-heading"><p>{t($ => $.games_scope_help)}</p><Button size="sm" variant="outline" disabled={query.isFetching} onClick={() => void query.refetch()}><RefreshCw />{t($ => $.refresh)}</Button></div>

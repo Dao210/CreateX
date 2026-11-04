@@ -260,6 +260,7 @@ export function DesktopShell() {
               50px under this one (MUL-6218). */}
           <SidebarProvider
             hasExternalTrigger
+            defaultOpen={false}
             className="flex-1 bg-app-shell [--sidebar-wrapper-fill:var(--app-shell)]"
           >
             {slug && <GlobalShortcuts />}

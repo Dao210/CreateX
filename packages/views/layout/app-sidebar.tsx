@@ -54,7 +54,7 @@ function isNavActive(pathname: string, href: string): boolean {
 }
 
 const AGENT_PREVIEW_LIMIT = 5;
-const EXPLORE_ENTRIES = ["tanks", "life", "siege"] as const;
+const EXPLORE_ENTRIES = ["tanks", "fish", "life", "siege"] as const;
 
 const NAV_ITEM_CLASS_NAME =
   "text-muted-foreground hover:not-data-active:bg-sidebar-accent/70 data-active:bg-sidebar-accent data-active:text-sidebar-accent-foreground";

@@ -129,7 +129,8 @@
     "./tank-defense": "./tank-defense/index.ts",
     "./game-progress": "./game-progress/index.ts",
     "./inbox/system-notifications": "./inbox/system-notifications.ts",
-    "./siege/queries": "./siege/queries.ts"
+    "./siege/queries": "./siege/queries.ts",
+    "./fish": "./fish/index.ts"
   },
   "dependencies": {
     "@formatjs/intl-localematcher": "catalog:",

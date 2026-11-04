@@ -654,6 +654,10 @@ export function useRealtimeSync(
         // item is restored from the archive.
         void onInboxSummaryInvalidate(qc);
       },
+      fish: () => {
+        const wsId = getCurrentWsId();
+        if (wsId) void qc.invalidateQueries({ queryKey: ["fish", wsId] });
+      },
       life: () => {
         const wsId = getCurrentWsId();
         if (wsId) void qc.invalidateQueries({ queryKey: ["agent-life", wsId] });

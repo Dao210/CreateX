@@ -115,7 +115,7 @@ func TestDBPoliciesAuditIsolationAndGuards(t *testing.T) {
 		t.Fatalf("previous=%s", page.Items[0].Previous)
 	}
 	overview, err := s.Overview(ctx)
-	if err != nil || len(overview) != 3 || overview[0].Impact.Available != 1 {
+	if err != nil || len(overview) != len(GameIDs) || overview[0].Impact.Available != 1 {
 		t.Fatalf("overview=%+v err=%v", overview, err)
 	}
 	admin := s.AdminHandler()

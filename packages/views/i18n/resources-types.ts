@@ -1,3 +1,4 @@
+import type fish from "../locales/en/fish.json";
 import type life from "../locales/en/life.json";
 import "i18next";
 // Pulls in the `ui` namespace augmentation owned by packages/ui — see
@@ -67,6 +68,7 @@ declare global {
     usage: typeof usage;
     billing: typeof billing;
     tanks: typeof tanks;
+    fish: typeof fish;
     me: typeof me;
     life: typeof life;
     admin: typeof admin;

@@ -56,6 +56,7 @@ func init() {
 
 	chatCmd.GroupID = groupCore
 	tanksCmd.GroupID = groupCore
+	fishCmd.GroupID = groupCore
 
 	// Runtime commands
 	daemonCmd.GroupID = groupRuntime
@@ -81,6 +82,7 @@ func init() {
 
 	rootCmd.AddCommand(chatCmd)
 	rootCmd.AddCommand(tanksCmd)
+	rootCmd.AddCommand(fishCmd)
 	rootCmd.AddCommand(daemonCmd)
 	rootCmd.AddCommand(runtimeCmd)
 	rootCmd.AddCommand(authCmd)
