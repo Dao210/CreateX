@@ -6,7 +6,7 @@
     "sign_out_message": "你需要重新登录才能在此设备上使用 Auro。",
     "workspace": "世界",
     "workspaces": "世界",
-    "notifications_subtitle": "收件箱和系统提醒",
+    "notifications_subtitle": "世界消息和系统提醒",
     "load_failed": "世界加载失败"
   },
   "profile": {
@@ -32,7 +32,7 @@
   },
   "notifications": {
     "title": "通知",
-    "inbox": "收件箱",
+    "inbox": "世界消息",
     "chat": "聊天",
     "saved": "通知设置已保存"
   },
@@ -64,7 +64,7 @@
   "groups": {
     "agent_activity": "智能体动态",
     "agent_activity_description": "智能体运行失败时。",
-    "inbox_notifications": "收件箱通知",
+    "inbox_notifications": "世界消息",
     "system": "系统",
     "system_notifications": "系统通知",
     "system_description": "在桌面端和网页处于后台时显示通知横幅。",

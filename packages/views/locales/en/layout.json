@@ -1,6 +1,6 @@
 {
   "nav": {
-    "inbox": "Inbox",
+    "inbox": "World Messages",
     "chat": "Chat",
     "issues": "Issues",
     "projects": "Projects",
@@ -42,6 +42,12 @@
     "loading_named": "Loading {{name}}…"
   },
   "sidebar": {
+    "world_group": "World",
+    "explore_group": "Explore",
+    "personal_account": "Personal account",
+    "switch_world": "Switch world",
+    "current_world": "Current world",
+    "logout_description": "You'll need to sign in again to open your worlds.",
     "unpin_tooltip": "Unpin",
     "workspaces_label": "Worlds",
     "create_workspace": "Create a world",

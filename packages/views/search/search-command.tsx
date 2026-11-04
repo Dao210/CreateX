@@ -22,7 +22,7 @@ import { HighlightText } from "./highlight-text";
 import { useSearchStore } from "./search-store";
 
 const PAGE_KEYWORDS: Record<WorkspacePageKey, string[]> = {
-  inbox: ["inbox", "notifications", "收件箱", "通知"],
+  inbox: ["world messages", "world digests", "世界消息", "世界摘要", "inbox", "notifications", "收件箱", "通知"],
   chat: ["chat", "messages", "conversation", "聊天", "消息", "对话"],
   autopilots: ["autopilot", "automation", "schedule", "cron", "自动化", "定时"],
   agents: ["agents", "bots", "ai", "智能体"],

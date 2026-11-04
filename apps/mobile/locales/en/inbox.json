@@ -1,5 +1,5 @@
 {
-  "title": "Inbox",
+  "title": "World Messages",
   "empty": {
     "title": "You're all caught up",
     "body": "Creation updates and digests from your whole world appear here."
@@ -12,7 +12,7 @@
     "archive_all": "Archive all",
     "archive_all_read": "Archive all read",
     "archive_completed": "Archive completed",
-    "inbox_actions": "Inbox actions"
+    "inbox_actions": "Message actions"
   },
   "filters": {
     "all": "All",
@@ -23,7 +23,7 @@
     "confirm_body": "This archives every message, including unread messages."
   },
   "errors": {
-    "load_failed": "Failed to load inbox: {{message}}"
+    "load_failed": "Failed to load world messages: {{message}}"
   },
   "detail": {
     "priority_none": "No priority",

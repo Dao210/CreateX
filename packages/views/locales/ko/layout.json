@@ -1,6 +1,6 @@
 {
   "nav": {
-    "inbox": "인박스",
+    "inbox": "세계 메시지",
     "chat": "채팅",
     "issues": "태스크",
     "projects": "프로젝트",
@@ -42,6 +42,12 @@
     "loading_named": "{{name}} 불러오는 중…"
   },
   "sidebar": {
+    "world_group": "세계",
+    "explore_group": "탐험",
+    "personal_account": "개인 계정",
+    "switch_world": "세계 전환",
+    "current_world": "현재 세계",
+    "logout_description": "세계에 들어가려면 다시 로그인해야 합니다.",
     "unpin_tooltip": "고정 해제",
     "workspaces_label": "세계",
     "create_workspace": "세계 만들기",

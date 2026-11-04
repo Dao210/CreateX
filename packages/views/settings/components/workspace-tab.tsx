@@ -46,6 +46,7 @@ import {
   SettingsTab,
 } from "./settings-layout";
 import { useAutoSave } from "./use-auto-save";
+import { WorldSwitcher } from "./world-switcher";
 
 interface WorkspaceDetailsDraft {
   name: string;
@@ -250,6 +251,7 @@ export function WorkspaceTab() {
   return (
     <SettingsTab title={t(($) => $.page.tabs.general)} scope="workspace">
       {readOnly ? <SettingsReadOnlyNotice wsId={workspace.id} /> : null}
+      <WorldSwitcher workspaceId={workspace.id} />
       <SettingsSection
         title={t(($) => $.workspace.section_general)}
         action={

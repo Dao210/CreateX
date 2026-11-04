@@ -1,6 +1,6 @@
 {
   "nav": {
-    "inbox": "收件箱",
+    "inbox": "世界消息",
     "chat": "聊天",
     "issues": "任务",
     "projects": "项目",
@@ -12,7 +12,7 @@
     "siege": "涂鸦攻城",
     "tanks": "坦克守城",
     "life": "居民生活",
-    "me": "我的作品",
+    "me": "我的创作",
     "settings": "设置"
   },
   "tab": {
@@ -42,6 +42,12 @@
     "loading_named": "正在加载「{{name}}」…"
   },
   "sidebar": {
+    "world_group": "世界",
+    "explore_group": "探索",
+    "personal_account": "个人账号",
+    "switch_world": "切换世界",
+    "current_world": "当前世界",
+    "logout_description": "退出后，需要重新登录才能进入世界。",
     "unpin_tooltip": "取消固定",
     "workspaces_label": "世界",
     "create_workspace": "新建世界",

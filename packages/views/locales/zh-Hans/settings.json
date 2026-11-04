@@ -86,7 +86,7 @@
       },
       "archiveInboxItem": {
         "label": "归档通知",
-        "description": "归档当前打开的收件箱通知；在归档列表中则取消归档。"
+        "description": "归档当前打开的消息；在归档列表中则取消归档。"
       },
       "send": {
         "label": "发送",
@@ -101,8 +101,8 @@
         "description": "像浏览器一样在历史记录中前进。"
       },
       "goInbox": {
-        "label": "前往收件箱",
-        "description": "打开世界收件箱。"
+        "label": "前往世界消息",
+        "description": "打开世界消息页面。"
       },
       "goChat": {
         "label": "前往聊天",
@@ -353,7 +353,7 @@
     "toast_profile_failed": "更新资料失败"
   },
   "notifications": {
-    "title": "收件箱通知",
+    "title": "世界消息通知",
     "description": "关闭通知后，仍可在任务中查看相关动态。",
     "toast_failed": "更新通知设置失败",
     "groups": {
@@ -389,14 +389,14 @@
     },
     "browser": {
       "label": "浏览器通知",
-      "hint": "允许当前浏览器为新的收件箱条目弹出通知横幅。",
+      "hint": "允许当前浏览器为新消息弹出通知横幅。",
       "enable": "启用",
       "granted": "当前浏览器可以弹出通知横幅。",
       "denied": "已被浏览器拦截。请在浏览器设置中为本站点开启通知权限。",
       "enabled_badge": "已启用"
     },
     "inbox": {
-      "title": "收件箱",
+      "title": "世界消息",
       "creations": "创作进展",
       "world": "世界摘要",
       "world_description": "包含当前世界所有成员的公开创作和居民里程碑。"
@@ -448,7 +448,7 @@
     "usage_help": "使用方法"
   },
   "workspace": {
-    "section_general": "世界信息",
+    "section_general": "世界资料",
     "logo_label": "世界图标",
     "change_logo_aria": "更换世界图标",
     "click_logo_hint": "点击图标上传新图片",

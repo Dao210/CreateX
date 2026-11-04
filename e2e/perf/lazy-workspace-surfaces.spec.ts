@@ -33,7 +33,7 @@ test("workspace loads search on demand without retired features", async ({ page,
   await expect(page.getByRole("dialog")).toBeHidden();
   await expect(page.locator(`a[href^="/${WORKSPACE_SLUG}/issues"], a[href^="/${WORKSPACE_SLUG}/projects"]`)).toHaveCount(0);
   await page.goto(`${origin}/${WORKSPACE_SLUG}/inbox`);
-  await expect(page.getByRole("heading", { name: "Inbox", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "World Messages", exact: true })).toBeVisible();
   for (const suffix of ["issues", "issues/PERF-1", "projects", "projects/p1", "my-issues"]) {
     const response = await page.goto(`${origin}/${WORKSPACE_SLUG}/${suffix}`);
     expect(response?.status(), suffix).toBe(404);
@@ -82,7 +82,7 @@ test("system inbox stays usable on desktop and narrow screens", async ({ page, c
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     await page.screenshot({ path: testInfo.outputPath(`inbox-${label}.png`) });
     if (label === "mobile") {
-      await page.getByRole("button", { name: "Inbox", exact: true }).click();
+      await page.getByRole("button", { name: "World Messages", exact: true }).click();
       await expect(page.getByRole("button", { name: /Autopilot paused/ })).toBeVisible();
     }
   }

@@ -61,15 +61,6 @@ export async function createTestApi(): Promise<TestApiClient> {
   return api;
 }
 
-export async function openWorkspaceMenu(page: Page) {
-  // Click the workspace switcher button (has ChevronDown icon)
-  const workspaceButton = page.getByRole("button", { name: /E2E Workspace/ }).first();
-  await expect(workspaceButton).toBeVisible({ timeout: 15000 });
-  await workspaceButton.click();
-  // Wait for dropdown to appear
-  await expect(page.locator('[class*="popover"]')).toBeVisible();
-}
-
 async function waitForCreationsPage(page: Page) {
   await expect(page.getByRole("heading", { name: "My Creations", exact: true })).toBeVisible({ timeout: 30000 });
 }

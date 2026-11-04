@@ -40,7 +40,7 @@ test("MCP creation arrives live, an immutable whole-world digest includes anothe
   await page.addInitScript(value => localStorage.setItem("auro_token", value), token);
   const headers = { Authorization: `Bearer ${token}`, "X-Workspace-ID": workspace.id, Accept: "application/json, text/event-stream", "MCP-Protocol-Version": "2025-11-25" };
   await page.goto(`/${workspace.slug}/inbox`, { waitUntil: "domcontentloaded" });
-  await expect(page.getByRole("heading", { name: "收件箱", exact: true })).toBeVisible({ timeout: 45000 });
+  await expect(page.getByRole("heading", { name: "世界消息", exact: true })).toBeVisible({ timeout: 45000 });
   const saved = await request.post("/api/tanks/mcp", { headers, data: { jsonrpc: "2.0", id: randomUUID(), method: "tools/call", params: { name: "tank_save_character", arguments: { requestId: randomUUID(), draft } } } });
   expect(saved.status()).toBe(200);
   const rpc = await saved.json();
@@ -61,7 +61,7 @@ test("MCP creation arrives live, an immutable whole-world digest includes anothe
   await page.getByRole("button", { name: "已归档", exact: true }).click();
   await page.getByRole("button").filter({ hasText: "「Inbox 赤狐」已准备好" }).click();
   await page.getByRole("button", { name: "取消归档", exact: true }).click();
-  await page.getByRole("button", { name: "收件箱", exact: true }).click();
+  await page.getByRole("button", { name: "世界消息", exact: true }).click();
 
   const neighborSaved = await request.post("/api/tanks/v1/characters", { headers: { Authorization: `Bearer ${neighbor.getToken()}`, "X-Workspace-ID": workspace.id }, data: { requestId: randomUUID(), draft: { ...draft, name: "邻居的侦察者" } } });
   expect(neighborSaved.status()).toBe(200);
@@ -99,7 +99,7 @@ test("MCP creation arrives live, an immutable whole-world digest includes anothe
     expect(await action.evaluate(element => getComputedStyle(element).color), `Dark ${name} text uses the foreground token`).toBe(foreground);
   }
   await page.screenshot({ path: "test-results/inbox/world-phone-dark.png", fullPage: true });
-  await page.getByRole("button", { name: "收件箱", exact: true }).last().click();
+  await page.getByRole("button", { name: "世界消息", exact: true }).last().click();
   await expect(page.getByRole("button").filter({ hasText: "新增创作 2 件" })).toBeVisible();
   const other = await request.get("/api/inbox", { headers: { Authorization: `Bearer ${neighbor.getToken()}`, "X-Workspace-ID": otherWorld.id } });
   expect(await other.json()).toEqual([]);

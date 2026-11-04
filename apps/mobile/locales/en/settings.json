@@ -6,7 +6,7 @@
     "sign_out_message": "You'll need to sign in again to use Auro on this device.",
     "workspace": "World",
     "workspaces": "Worlds",
-    "notifications_subtitle": "Inbox and system alerts",
+    "notifications_subtitle": "World messages and system alerts",
     "load_failed": "Failed to load worlds"
   },
   "profile": {
@@ -32,7 +32,7 @@
   },
   "notifications": {
     "title": "Notifications",
-    "inbox": "Inbox",
+    "inbox": "World Messages",
     "chat": "Chat",
     "saved": "Notification settings saved"
   },
@@ -64,7 +64,7 @@
   "groups": {
     "agent_activity": "Agent activity",
     "agent_activity_description": "When an agent run fails.",
-    "inbox_notifications": "Inbox notifications",
+    "inbox_notifications": "World Messages",
     "system": "System",
     "system_notifications": "System notifications",
     "system_description": "Show banners while the desktop or web app is in the background.",

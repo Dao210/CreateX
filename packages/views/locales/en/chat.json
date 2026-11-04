@@ -157,7 +157,7 @@
     },
     "digest": {
       "title": "Let the daily digest write itself",
-      "desc": "A morning summary of world progress, straight to your inbox.",
+      "desc": "A morning summary of world progress, delivered to World Messages.",
       "prompt": "Set up a daily automation that posts a morning summary of world progress"
     },
     "digest_badge": "Daily 9:00",

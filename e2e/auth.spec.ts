@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { createTestApi, loginAsDefault, openWorkspaceMenu, waitForPageText } from "./helpers";
+import { createTestApi, loginAsDefault, waitForPageText } from "./helpers";
 import { TestApiClient } from "./fixtures";
 
 test.describe("Authentication", () => {
@@ -61,15 +61,16 @@ test.describe("Authentication", () => {
   });
 
   test("logout redirects to /login", async ({ page }) => {
-    await loginAsDefault(page);
-
-    // Open the workspace dropdown menu
-    await openWorkspaceMenu(page);
-
-    await page.getByRole("menuitem", { name: "Log out" }).click();
-
-    await page.waitForURL("**/login", { timeout: 10000, waitUntil: "domcontentloaded" });
-    await waitForPageText(page, "Sign in to Auro");
-    await expect(page).toHaveURL(/\/login/);
+    const api = await createTestApi();
+    try {
+      await loginAsDefault(page);
+      await page.locator('[data-sidebar="footer"]').getByRole("button", { name: "Log out" }).click();
+      await page.getByRole("alertdialog", { name: "Log out" }).getByRole("button", { name: "Log out" }).click();
+      await expect(page).toHaveURL(/\/login/);
+      await expect(page.getByRole("textbox", { name: "Email" })).toBeVisible();
+      expect(await page.evaluate(() => localStorage.getItem("auro_token"))).toBeNull();
+    } finally {
+      await api.deleteWorkspace();
+    }
   });
 });

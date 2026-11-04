@@ -157,7 +157,7 @@
     },
     "digest": {
       "title": "Laissez le résumé quotidien s'écrire tout seul",
-      "desc": "Un résumé matinal de l'avancement du monde, directement dans votre boîte de réception.",
+      "desc": "Un résumé matinal de l'avancement du monde, envoyé dans les messages du monde.",
       "prompt": "Mets en place une automatisation quotidienne qui publie un résumé matinal de l'avancement du monde"
     },
     "digest_badge": "Tous les jours à 9 h",

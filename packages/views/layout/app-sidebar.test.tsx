@@ -1,9 +1,10 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithI18n } from "../test/i18n";
 import { AppSidebar } from "./app-sidebar";
+import { WorldSwitcher } from "../settings/components/world-switcher";
 
-const { agents, detail, invitationApi, navigation, pins, sidebarState, summary, workspaces, viewDetails } = vi.hoisted(() => ({
+const { agents, detail, invitationApi, logout, navigation, pins, sidebarState, summary, workspaces, viewDetails } = vi.hoisted(() => ({
   agents: {
     current: [] as {
       id: string;
@@ -15,7 +16,8 @@ const { agents, detail, invitationApi, navigation, pins, sidebarState, summary, 
   sidebarState: { setOpenMobile: vi.fn() },
   detail: { current: { isPending: false, isError: false, data: null as unknown, error: null as unknown } },
   deletePin: vi.fn(),
-  // Captures the sidebar's invitation accept/decline mutations so the
+  logout: vi.fn(),
+  // Captures the world switcher's invitation accept/decline mutations so the
   // self-heal wiring (error → invalidate the pending list) is observable.
   invitationApi: {
     accept: vi.fn(),
@@ -63,17 +65,19 @@ vi.mock("@auro/ui/components/ui/sidebar", () => ({
   SidebarFooter: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   SidebarGroup: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   SidebarGroupContent: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  SidebarGroupLabel: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  SidebarGroupLabel: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   SidebarHeader: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   SidebarMenu: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   SidebarMenuButton: ({
     children,
     isActive,
     render,
+    tooltip: _tooltip,
     ...props
   }: {
     children: React.ReactNode;
     isActive?: boolean;
+    tooltip?: string;
     render?: React.ReactElement<{ href?: string }>;
   } & React.ButtonHTMLAttributes<HTMLButtonElement>) => (
     <button {...props} type="button" data-active={isActive ? "true" : undefined} data-href={render?.props.href}>
@@ -82,6 +86,7 @@ vi.mock("@auro/ui/components/ui/sidebar", () => ({
   ),
   SidebarMenuItem: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   SidebarRail: () => null,
+  SidebarSeparator: () => <hr />,
   useSidebar: () => ({ setOpenMobile: sidebarState.setOpenMobile }),
 }));
 vi.mock("@auro/ui/components/ui/dropdown-menu", () => ({
@@ -96,15 +101,15 @@ vi.mock("@auro/ui/components/ui/dropdown-menu", () => ({
 vi.mock("@auro/ui/components/ui/collapsible", () => ({
   Collapsible: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   CollapsibleContent: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  CollapsibleTrigger: () => <button type="button" />,
+  CollapsibleTrigger: ({ children }: { children: React.ReactNode }) => <button type="button">{children}</button>,
 }));
 vi.mock("@auro/ui/components/ui/tooltip", () => ({
   Tooltip: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   TooltipContent: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   TooltipTrigger: ({ children }: { children: React.ReactNode }) => <button type="button">{children}</button>,
 }));
-vi.mock("./help-launcher", () => ({ HelpLauncher: () => null }));
-vi.mock("../auth", () => ({ useLogout: () => vi.fn() }));
+vi.mock("./help-launcher", () => ({ HelpLauncher: () => <button type="button">Help</button> }));
+vi.mock("../auth", () => ({ useLogout: () => logout }));
 vi.mock("../navigation", () => ({
   AppLink: ({ children, href }: { children: React.ReactNode; href: string }) => <a href={href}>{children}</a>,
   useNavigation: () => ({ pathname: navigation.current.pathname, searchParams: new URLSearchParams(navigation.current.search), push: vi.fn() }),
@@ -227,7 +232,7 @@ describe("mobile sheet dismissal", () => {
   });
 });
 
-describe("workspace-switcher unread dot", () => {
+describe("world header unread dot", () => {
   beforeEach(() => {
     summary.current = [];
     workspaces.current = [];
@@ -257,7 +262,7 @@ describe("workspace-switcher unread dot", () => {
   });
 });
 
-describe("workspace-switcher dropdown per-workspace dot", () => {
+describe("world switcher per-world unread dot", () => {
   beforeEach(() => {
     summary.current = [];
     // Active workspace is ws-1 (see useCurrentWorkspace mock); "Other" is ws-2.
@@ -269,11 +274,11 @@ describe("workspace-switcher dropdown per-workspace dot", () => {
 
   // Row dots are brand dots WITHOUT the aggregate avatar dot's `ring-sidebar`.
   const rowDots = (container: HTMLElement) =>
-    container.querySelectorAll("span.bg-brand:not(.ring-sidebar)");
+    container.querySelectorAll("a span.bg-brand");
 
   it("dots the specific other workspace that has unread", () => {
     summary.current = [{ workspace_id: "ws-2", count: 3 }];
-    const { container } = render(<AppSidebar />);
+    const { container } = renderWithI18n(<WorldSwitcher workspaceId="ws-1" />);
     // Exactly one row dot, sitting right after the "Other WS" name; the active
     // row shows the check, not a dot.
     expect(rowDots(container)).toHaveLength(1);
@@ -283,13 +288,13 @@ describe("workspace-switcher dropdown per-workspace dot", () => {
 
   it("does not dot a workspace whose unread count is zero", () => {
     summary.current = [{ workspace_id: "ws-2", count: 0 }];
-    const { container } = render(<AppSidebar />);
+    const { container } = renderWithI18n(<WorldSwitcher workspaceId="ws-1" />);
     expect(rowDots(container)).toHaveLength(0);
   });
 
   it("never dots the active workspace even when it has unread", () => {
     summary.current = [{ workspace_id: "ws-1", count: 5 }];
-    const { container } = render(<AppSidebar />);
+    const { container } = renderWithI18n(<WorldSwitcher workspaceId="ws-1" />);
     expect(rowDots(container)).toHaveLength(0);
   });
 });
@@ -314,7 +319,40 @@ describe("navigation item presentation", () => {
     expect(profile).toHaveTextContent("Ada Lovelace");
   });
 
-  it("keeps Settings styled like the other nav items and hides the usage entry", () => {
+  it("orders the world, Explore, creations, and account actions as separate groups", () => {
+    navigation.current = { pathname: "/acme/me", search: "" };
+    const { container } = renderWithI18n(<AppSidebar />);
+    const ordered = [
+      container.querySelector('[data-href="/acme/settings?tab=workspace"]'),
+      container.querySelector('[data-href="/acme/inbox"]'),
+      screen.getByText("Explore"),
+      container.querySelector('[data-href="/acme/tanks"]'),
+      container.querySelector('[data-href="/acme/me"]'),
+      container.querySelector('[data-href="/acme/settings?tab=profile"]'),
+      screen.getByRole("button", { name: "Help" }),
+      screen.getByRole("button", { name: "Log out" }),
+    ];
+    for (const [index, element] of ordered.entries()) {
+      expect(element).toBeInTheDocument();
+      if (index > 0) {
+        expect(ordered[index - 1]!.compareDocumentPosition(element!)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+      }
+    }
+    expect(screen.getAllByText("Ada Lovelace")).toHaveLength(1);
+    expect(screen.queryByText("Other WS")).not.toBeInTheDocument();
+  });
+
+  it("keeps logout behind its confirmation dialog", () => {
+    logout.mockClear();
+    renderWithI18n(<AppSidebar />);
+    fireEvent.click(screen.getByRole("button", { name: "Log out" }));
+    expect(logout).not.toHaveBeenCalled();
+    const dialog = screen.getByRole("alertdialog", { name: "Log out" });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Log out" }));
+    expect(logout).toHaveBeenCalledOnce();
+  });
+
+  it("keeps the world link styled like the other nav items and hides the usage entry", () => {
     const { container } = render(<AppSidebar />);
     const referenceClassName = container.querySelector(
       'button[data-href="/acme/inbox"]',
@@ -333,7 +371,7 @@ describe("navigation item presentation", () => {
     const { container, rerender } = renderWithI18n(<AppSidebar />);
     const worldSettings = () => container.querySelector('button[data-href="/acme/settings?tab=workspace"]');
     const accountSettings = () => container.querySelector('button[data-href="/acme/settings?tab=profile"]');
-    expect(worldSettings()).toHaveTextContent("World settings");
+    expect(worldSettings()).toHaveTextContent("Acme");
     expect(worldSettings()).toHaveAttribute("data-active", "true");
     expect(accountSettings()).not.toHaveAttribute("data-active", "true");
     navigation.current.search = "tab=preferences";
@@ -411,7 +449,7 @@ describe("Pending invitation self-heal", () => {
   // another surface. Both mutations must invalidate the pending list on
   // failure so the stale row drops instead of surviving until restart.
   it("invalidates the pending-invitations list when accept or decline fails", async () => {
-    render(<AppSidebar />);
+    renderWithI18n(<WorldSwitcher workspaceId="ws-1" />);
     expect(invitationApi.mutations).toHaveLength(2);
 
     for (const options of invitationApi.mutations as Array<{

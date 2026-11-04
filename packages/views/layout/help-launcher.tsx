@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowUpRight, CircleHelp, MessageCircle } from "lucide-react";
+import { SidebarMenuButton } from "@auro/ui/components/ui/sidebar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,17 +19,17 @@ import { useT } from "../i18n";
 export function HelpLauncher() {
   const { t } = useT("layout");
   const serverVersion = useConfigStore((state) => state.serverVersion);
+  const label = t($ => $.help.trigger);
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        aria-label={t(($) => $.help.trigger)}
-        title={t(($) => $.help.trigger)}
-        className="inline-flex size-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors cursor-pointer hover:bg-accent hover:text-foreground data-popup-open:bg-accent data-popup-open:text-foreground"
+        render={<SidebarMenuButton tooltip={label} className="text-muted-foreground data-popup-open:bg-sidebar-accent data-popup-open:text-sidebar-accent-foreground" />}
       >
-        <CircleHelp className="size-4" />
+        <CircleHelp aria-hidden="true" />
+        <span>{label}</span>
       </DropdownMenuTrigger>
       <DropdownMenuContent
-        align="end"
+        align="start"
         side="top"
         sideOffset={8}
         className="min-w-40 max-w-56"

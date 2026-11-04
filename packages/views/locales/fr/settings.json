@@ -101,8 +101,8 @@
         "description": "Avancer dans l'historique, comme dans un navigateur."
       },
       "goInbox": {
-        "label": "Aller à la boîte de réception",
-        "description": "Ouvrir la boîte de réception du monde."
+        "label": "Ouvrir les messages du monde",
+        "description": "Afficher les messages du monde."
       },
       "goChat": {
         "label": "Aller aux discussions",
@@ -355,7 +355,7 @@
     "toast_profile_failed": "Échec de la mise à jour du profil"
   },
   "notifications": {
-    "title": "Notifications de la boîte de réception",
+    "title": "Notifications des messages du monde",
     "description": "Les événements désactivés restent visibles dans la tâche.",
     "toast_failed": "Échec de la mise à jour des réglages de notification",
     "groups": {
@@ -391,14 +391,14 @@
     },
     "browser": {
       "label": "Notifications du navigateur",
-      "hint": "Autoriser ce navigateur à afficher des bannières de notification pour les nouveaux éléments de la boîte de réception.",
+      "hint": "Autoriser ce navigateur à afficher des bannières de notification pour les nouveaux messages du monde.",
       "enable": "Activer",
       "granted": "Ce navigateur peut afficher des bannières de notification.",
       "denied": "Bloqué par votre navigateur. Activez les notifications pour ce site dans ses réglages.",
       "enabled_badge": "Activé"
     },
     "inbox": {
-      "title": "Boîte de réception",
+      "title": "Messages du monde",
       "creations": "Nouvelles de mes créations",
       "world": "Résumés du monde",
       "world_description": "Créations publiques et étapes des habitants de tous les membres de ce monde."

@@ -86,7 +86,7 @@
       },
       "archiveInboxItem": {
         "label": "Archive notification",
-        "description": "Archive the open inbox notification, or restore it while reading the archive."
+        "description": "Archive the open message, or restore it while reading the archive."
       },
       "send": {
         "label": "Send",
@@ -101,8 +101,8 @@
         "description": "Navigate forward through history, like a browser."
       },
       "goInbox": {
-        "label": "Go to Inbox",
-        "description": "Open the world inbox."
+        "label": "Go to World Messages",
+        "description": "Open World Messages."
       },
       "goChat": {
         "label": "Go to Chat",
@@ -355,7 +355,7 @@
     "toast_profile_failed": "Failed to update profile"
   },
   "notifications": {
-    "title": "Inbox Notifications",
+    "title": "World Message Notifications",
     "description": "Muted events remain visible on the issue.",
     "toast_failed": "Failed to update notification settings",
     "groups": {
@@ -391,14 +391,14 @@
     },
     "browser": {
       "label": "Browser notifications",
-      "hint": "Allow this browser to show notification banners for new inbox items.",
+      "hint": "Allow this browser to show notification banners for new world messages.",
       "enable": "Enable",
       "granted": "This browser can show notification banners.",
       "denied": "Blocked by your browser. Enable notifications for this site in your browser settings.",
       "enabled_badge": "Enabled"
     },
     "inbox": {
-      "title": "Inbox",
+      "title": "World Messages",
       "creations": "Creation updates",
       "world": "World digests",
       "world_description": "Public creations and resident milestones from all members of this world."

@@ -1,5 +1,5 @@
 {
-  "title": "收件箱",
+  "title": "世界消息",
   "empty": {
     "title": "已处理全部通知",
     "body": "创作进展和整个世界的摘要会出现在这里。"
@@ -12,7 +12,7 @@
     "archive_all": "全部归档",
     "archive_all_read": "归档已读",
     "archive_completed": "归档已完成项",
-    "inbox_actions": "收件箱操作"
+    "inbox_actions": "消息操作"
   },
   "filters": {
     "all": "全部",
@@ -23,7 +23,7 @@
     "confirm_body": "将归档所有消息，包括未读消息。"
   },
   "errors": {
-    "load_failed": "收件箱加载失败：{{message}}"
+    "load_failed": "世界消息加载失败：{{message}}"
   },
   "detail": {
     "priority_none": "无优先级",

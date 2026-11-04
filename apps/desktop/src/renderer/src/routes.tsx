@@ -199,7 +199,7 @@ export const appRoutes: RouteObject[] = [
             element: <MemberDetailPage />,
             handle: { title: "Member" },
           },
-          { path: "inbox", element: <InboxPage />, handle: { title: "Inbox" } },
+          { path: "inbox", element: <InboxPage />, handle: { title: "World Messages" } },
           { path: "chat", element: <ChatPage />, handle: { title: "Chat" } },
           {
             path: "attachments/:id/preview",

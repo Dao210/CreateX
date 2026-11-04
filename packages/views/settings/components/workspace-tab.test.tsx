@@ -25,6 +25,8 @@ const membersRef = vi.hoisted(() => ({
   ] as { user_id: string; role: "owner" | "admin" | "member"; name?: string }[],
 }));
 
+vi.mock("./world-switcher", () => ({ WorldSwitcher: () => null }));
+
 vi.mock("@tanstack/react-query", () => ({
   useQuery: () => ({ data: membersRef.current, isFetched: true }),
   useQueryClient: () => ({

@@ -1,6 +1,6 @@
 {
   "nav": {
-    "inbox": "インボックス",
+    "inbox": "ワールドメッセージ",
     "chat": "チャット",
     "issues": "タスク",
     "projects": "プロジェクト",
@@ -42,6 +42,12 @@
     "loading_named": "「{{name}}」を読み込み中…"
   },
   "sidebar": {
+    "world_group": "ワールド",
+    "explore_group": "探索",
+    "personal_account": "個人アカウント",
+    "switch_world": "ワールドを切り替える",
+    "current_world": "現在のワールド",
+    "logout_description": "ワールドに入るには再ログインが必要です。",
     "unpin_tooltip": "ピン留めを解除",
     "workspaces_label": "ワールド",
     "create_workspace": "ワールドを作成",

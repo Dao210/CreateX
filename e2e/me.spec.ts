@@ -72,7 +72,7 @@ test("collects MCP characters, saved blueprints and merged progress", async ({ p
   expect(mine.characters[0].origin).toBe("mcp");
 
   await page.goto(`/${workspace.slug}/me`, { waitUntil: "domcontentloaded" });
-  await expect(page.getByRole("heading", { name: "我的作品", exact: true })).toBeVisible({ timeout: 45000 });
+  await expect(page.getByRole("heading", { name: "我的创作", exact: true })).toBeVisible({ timeout: 45000 });
   await expect(page.getByText(`当前世界：${workspace.name}`, { exact: true })).toBeVisible();
   await expect(page.getByRole("tab", { name: "作品", exact: true })).toHaveAttribute("aria-selected", "true");
   await expect(page.getByText("MCP 收藏坦克", { exact: true })).toBeVisible();

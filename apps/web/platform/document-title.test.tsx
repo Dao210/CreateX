@@ -126,9 +126,9 @@ describe("WorkspaceDocumentTitle", () => {
 
   it("re-asserts the title when a navigation keeps the same page name", () => {
     open("/acme/inbox");
-    presentation.title = "Inbox";
+    presentation.title = "World Messages";
     const view = render(<WorkspaceDocumentTitle />);
-    expect(document.title).toBe("Inbox | Weave a World");
+    expect(document.title).toBe("World Messages | Weave a World");
 
     // A route change re-renders the target's metadata, resetting the title to
     // the root default before our effect gets to run again.
@@ -136,6 +136,6 @@ describe("WorkspaceDocumentTitle", () => {
     open("/acme/inbox", "view=archived");
     view.rerender(<WorkspaceDocumentTitle />);
 
-    expect(document.title).toBe("Inbox | Weave a World");
+    expect(document.title).toBe("World Messages | Weave a World");
   });
 });

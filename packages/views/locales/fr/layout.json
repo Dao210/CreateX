@@ -1,6 +1,6 @@
 {
   "nav": {
-    "inbox": "Boîte de réception",
+    "inbox": "Messages du monde",
     "chat": "Discussion",
     "issues": "Tâches",
     "projects": "Projets",
@@ -42,6 +42,12 @@
     "loading_named": "Chargement de {{name}}…"
   },
   "sidebar": {
+    "world_group": "Monde",
+    "explore_group": "Explorer",
+    "personal_account": "Compte personnel",
+    "switch_world": "Changer de monde",
+    "current_world": "Monde actuel",
+    "logout_description": "Vous devrez vous reconnecter pour ouvrir vos mondes.",
     "unpin_tooltip": "Détacher",
     "workspaces_label": "Mondes",
     "create_workspace": "Créer un monde",
