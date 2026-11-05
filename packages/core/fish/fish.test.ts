@@ -14,9 +14,21 @@ describe("fish contract and ambient runtime", () => {
       expect(g.positions.every(Number.isFinite)).toBe(true);
       expect(Math.max(...g.indices)).toBeLessThan(g.positions.length / 3);
       expect(g.colors.length).toBe(g.positions.length);
+      expect(g.finFlex.length).toBe(g.positions.length / 3);
       expect(compileFishGeometry(spec)).toEqual(g);
     }
     expect(new Set(FISH_EXAMPLES.map(s => JSON.stringify(compileFishGeometry(s).positions))).size).toBe(6);
+  });
+  it("interpolates a glider's fin flex from its stationary roots to the tips", () => {
+    const spec = FISH_EXAMPLES.find(example => example.motion.style === "fin-glide")!;
+    const geometry = compileFishGeometry(spec);
+    const tip = Math.max(...geometry.finFlex);
+    expect(tip).toBeGreaterThan(0);
+    expect(geometry.finFlex.some(weight => weight > 0 && weight < tip)).toBe(true);
+    expect(geometry.finFlex[0]).toBe(0);
+    const distant = compileFishGeometry(spec, true);
+    expect(distant.positions.length).toBeLessThan(geometry.positions.length);
+    expect(Math.max(...distant.finFlex)).toBe(tip);
   });
   it("rejects invalid ordering, unknown scripts, detached and concave fins", () => {
     const spec = structuredClone(FISH_EXAMPLES[0]!);

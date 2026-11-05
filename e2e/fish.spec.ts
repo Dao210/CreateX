@@ -14,6 +14,9 @@ const headers=(worldId=workspace.id)=>({Authorization:`Bearer ${token}`,"X-Works
 async function tool(request:APIRequestContext,name:string,args:object={},worldId=workspace.id){const response=await request.post("/api/fish/mcp",{headers:headers(worldId),data:{jsonrpc:"2.0",id:randomUUID(),method:"tools/call",params:{name,arguments:args}}});expect(response.status()).toBe(200);const body=await response.json();expect(body.error).toBeUndefined();expect(body.result.isError,JSON.stringify(body.result)).toBe(false);return body.result.structuredContent;}
 test("MCP creates a persistent fish, applies an exact revision and recalls without deleting the creation",async({request,page})=>{
  const errors:string[]=[];page.on("pageerror",e=>errors.push(e.message));
+ page.on("console", message => {
+  if (message.type() === "error" && message.text().includes("THREE.WebGLProgram")) errors.push(message.text());
+ });
  const anonymous=await request.get("/api/fish/v1/catalog");expect(anonymous.status()).toBe(401);
  const contract=await tool(request,"fish_get_catalog");expect(contract.profile).toBe("fish@1");
  const invalid=await tool(request,"fish_validate",{draft:{...catalog.examples[0],body:{...catalog.examples[0]!.body,lengthMm:9999}}});expect(invalid.valid).toBe(false);
@@ -85,7 +88,7 @@ test("creates and releases through the UI, supports a narrow viewport, and prote
   await expect(page.getByRole("button", { name: "收回", exact: true })).toBeVisible();
   expect(writes).toEqual(["/api/fish/v1/residents"]);
   const ocean = (await tool(request, "fish_get_ocean", {}, world.id)).ocean;
-  expect(new URL(page.url()).searchParams.get("ocean")).toBe(ocean.id);
+  await expect.poll(() => new URL(page.url()).searchParams.get("ocean")).toBe(ocean.id);
 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.screenshot({ path: "test-results/fish/mobile.png", fullPage: true });
@@ -122,8 +125,10 @@ test("fifty distinct fish remain stable throughout the soak",async({page,request
   await new Promise<void>((resolve,reject)=>{const frame=(now:number)=>{if(!document.querySelector('[data-testid="fish-scene"] canvas')||document.querySelector(".fish-scene-error")){reject(new Error(`Ocean scene disappeared after ${Math.round((now-started)/1000)} seconds`));return;}if(now-started>2000)samples.push(now-previous);previous=now;if(now-started>=duration)resolve();else requestAnimationFrame(frame);};requestAnimationFrame(frame);});
   samples.sort((a,b)=>a-b);return {durationMs:performance.now()-started,frames:samples.length,p50Ms:samples[Math.floor(samples.length*0.5)],p95Ms:samples[Math.floor(samples.length*0.95)],userAgent:navigator.userAgent};
  },soakMs);
- expect(await canvas.getAttribute("data-geometries")).toBe(before);expect(errors).toEqual([]);
- const report=JSON.stringify({...measurements,drawCalls:await canvas.getAttribute("data-draw-calls"),geometries:before},null,2);
+ const after = await canvas.getAttribute("data-geometries");
+ // The first close pass may upload one additional mesh per resident.
+ expect(Number(after)).toBeLessThanOrEqual(Number(before) + 50);expect(errors).toEqual([]);
+ const report=JSON.stringify({...measurements,drawCalls:await canvas.getAttribute("data-draw-calls"),geometriesBefore:before,geometriesAfter:after},null,2);
  await writeFile("test-results/fish/soak.json",report);
  await testInfo.attach("fish-soak.json",{body:report,contentType:"application/json"});
  await page.screenshot({path:"test-results/fish/soak.png",fullPage:true});

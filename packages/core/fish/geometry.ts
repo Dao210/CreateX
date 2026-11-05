@@ -1,6 +1,6 @@
 import type { FishSpec } from "./schema";
 
-export interface FishGeometry { positions: number[]; colors: number[]; indices: number[] }
+export interface FishGeometry { positions: number[]; colors: number[]; indices: number[]; finFlex: number[] }
 export function bodySection(spec: FishSpec, u: number) {
   const sections = spec.body.sections;
   let i = 1;
@@ -11,9 +11,9 @@ export function bodySection(spec: FishSpec, u: number) {
 }
 function rgb(hex: string) { const n = Number.parseInt(hex.slice(1), 16); return [(n >> 16) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255]; }
 /** Plain arrays keep the compiler independent of the rendering library. Forward is +X. */
-export function compileFishGeometry(spec: FishSpec): FishGeometry {
-  const g: FishGeometry = { positions: [], colors: [], indices: [] };
-  const length = spec.body.lengthMm / 1000, rings = 32, sides = 16;
+export function compileFishGeometry(spec: FishSpec, distant = false): FishGeometry {
+  const g: FishGeometry = { positions: [], colors: [], indices: [], finFlex: [] };
+  const length = spec.body.lengthMm / 1000, rings = distant ? 18 : 32, sides = distant ? 12 : 16;
   const base = rgb(spec.appearance.body), belly = rgb(spec.appearance.belly), accent = rgb(spec.appearance.accent);
   for (let i = 0; i <= rings; i++) {
     const u = i / rings, s = bodySection(spec, u * 1000);
@@ -32,21 +32,49 @@ export function compileFishGeometry(spec: FishSpec): FishGeometry {
     for (let j = 0; j < sides; j++) { const a = ring * (sides + 1) + j; g.indices.push(center, ring === 0 ? a + 1 : a, ring === 0 ? a : a + 1); }
   }
   const polygon = (points: number[][]) => { const start = g.positions.length / 3; for (const p of points) { g.positions.push(...p); g.colors.push(...accent); } for (let i = 1; i < points.length - 1; i++) g.indices.push(start, start + i, start + i + 1); };
+  const flexFin = (points: number[][], flex: number[]) => {
+    const divisions = distant ? 2 : 4;
+    const rowStart = (row: number) => row * (row + 1) / 2;
+    for (let i = 1; i < points.length - 1; i++) {
+      const start = g.positions.length / 3;
+      const a = points[0]!, b = points[i]!, c = points[i + 1]!;
+      for (let row = 0; row <= divisions; row++) for (let col = 0; col <= row; col++) {
+        const wb = (row - col) / divisions, wc = col / divisions, wa = 1 - wb - wc;
+        g.positions.push(...a.map((value, axis) => value * wa + b[axis]! * wb + c[axis]! * wc));
+        g.colors.push(...accent);
+        g.finFlex.push(flex[0]! * wa + flex[i]! * wb + flex[i + 1]! * wc);
+        if (row < divisions) {
+          const upper = start + rowStart(row) + col, lower = start + rowStart(row + 1) + col;
+          g.indices.push(upper, lower, lower + 1);
+          if (col < row) g.indices.push(upper, lower + 1, upper + 1);
+        }
+      }
+    }
+  };
+  g.finFlex = Array(g.positions.length / 3).fill(0);
   for (const fin of spec.fins) {
     const s = bodySection(spec, fin.at), x = (0.5 - fin.at / 1000) * length;
-    polygon(fin.outline.map(p => {
+    const points = fin.outline.map(p => {
       const dx = p.x / 1000 * length, dy = p.y / 1000 * length;
       if (fin.side === "dorsal") return [x + dx, (s.offset + s.height) * length + dy, 0];
       if (fin.side === "ventral") return [x + dx, (s.offset - s.height) * length - dy, 0];
       return [x + dx, s.offset * length - dy * 0.18, (fin.side === "left" ? 1 : -1) * (s.width * length + dy)];
-    }));
+    });
+    const lateral = fin.side === "left" || fin.side === "right";
+    const flex = fin.outline.map(p => lateral ? Math.max(0, p.y) / 1000 : 0);
+    if (lateral && spec.motion.style === "fin-glide") {
+      flexFin(points, flex);
+    } else {
+      polygon(points);
+      g.finFlex.push(...flex);
+    }
   }
   const tip = bodySection(spec, 1000), tailX = -0.5 * length, tailY = tip.offset * length, tailLength = spec.tail.length / 1000 * length, spread = spec.tail.spread / 1000 * length;
   // Separate lobes allow a concave fork without fan-triangulating a concave polygon.
   for (const sign of [-1, 1]) polygon([[tailX, tailY, 0], [tailX - tailLength, tailY + sign * spread, 0], [tailX - tailLength * (1 - spec.tail.fork / 1000), tailY, 0]]);
   const eyeSection = bodySection(spec, spec.eyes.at), eyeSize = length * spec.eyes.size / 1000;
   const sphere = (cx: number, cy: number, cz: number, radius: number, color: number[]) => {
-    const start = g.positions.length / 3, rows = 6, columns = 8;
+    const start = g.positions.length / 3, rows = distant ? 4 : 6, columns = distant ? 6 : 8;
     for (let i = 0; i <= rows; i++) for (let j = 0; j <= columns; j++) {
       const latitude = i / rows * Math.PI, longitude = j / columns * Math.PI * 2;
       g.positions.push(cx + Math.sin(latitude) * Math.cos(longitude) * radius, cy + Math.cos(latitude) * radius, cz + Math.sin(latitude) * Math.sin(longitude) * radius); g.colors.push(...color);
@@ -57,5 +85,6 @@ export function compileFishGeometry(spec: FishSpec): FishGeometry {
     const x = (0.5 - spec.eyes.at / 1000) * length, y = (eyeSection.offset + eyeSection.height * 0.25) * length, z = sign * eyeSection.width * length * 0.92;
     sphere(x, y, z, eyeSize, rgb("#F8F1D8")); sphere(x + eyeSize * 0.25, y, z + sign * eyeSize * 0.8, eyeSize * 0.53, rgb("#112D35"));
   }
+  g.finFlex.push(...Array(g.positions.length / 3 - g.finFlex.length).fill(0));
   return g;
 }
