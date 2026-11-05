@@ -116,7 +116,7 @@ func (h *HTTP) mcp(w http.ResponseWriter, r *http.Request) {
 		if in.ProtocolVersion == "2025-06-18" || in.ProtocolVersion == "2025-03-26" {
 			version = in.ProtocolVersion
 		}
-		rpcResult(w, req.ID, map[string]any{"protocolVersion": version, "capabilities": map[string]any{"tools": map[string]any{}}, "serverInfo": map[string]any{"name": "auro-fish", "version": "1.0.0"}, "instructions": "Read the fish@1 catalog, create a distinctive draft, validate, and save it. Release the exact revision and hash without oceanId to use your personal ocean, creating it if needed. Open the returned oceanUrl."})
+		rpcResult(w, req.ID, map[string]any{"protocolVersion": version, "capabilities": map[string]any{"tools": map[string]any{}}, "serverInfo": map[string]any{"name": "auro-fish", "version": "1.0.0"}, "instructions": "Read the fish@1 catalog, create a distinctive draft, validate, and save it. When asked to release into the Great Trench, pass destination public with the exact revision and hash. This publishes that snapshot to all signed-in users. Open the returned oceanUrl."})
 	case "ping":
 		rpcResult(w, req.ID, map[string]any{})
 	case "tools/list":
@@ -233,6 +233,15 @@ func (h *HTTP) callTool(w http.ResponseWriter, r *http.Request, req rpcRequest) 
 		}
 		if decode(&p) {
 			result, err = h.Service.Get(ctx, a, p.FishID, p.Revision)
+		}
+	case "fish_get_public_ocean":
+		var p struct {
+			Cursor     string `json:"cursor,omitempty"`
+			ResidentID string `json:"residentId,omitempty"`
+			FishID     string `json:"fishId,omitempty"`
+		}
+		if decode(&p) {
+			result, err = h.Service.PublicOcean(ctx, a, p.Cursor, p.ResidentID, p.FishID)
 		}
 	case "fish_get_ocean":
 		var p struct {

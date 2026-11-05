@@ -1,16 +1,18 @@
-# Fish：世界中的海洋与鱼的创作
+# Fish 鱼的创作与大海沟
 
 Fish 是现有主应用中的世界功能：Web 与 Desktop 使用 `/{slug}/fish`，共享 `packages/core/fish`、`packages/views/fish` 和主 Go API 内的 `server/internal/fish`。没有独立 Fish 应用、账号、端口或部署单元。
 
 ## 产品范围
 
-当前版本采用每个世界成员一片海洋：海洋和作品以世界 UUID、账号 UUID 隔离。海洋默认私有，主人可以改为当前世界成员可参观；仅知道海洋 ID 不授予访问权限。世界外访客与匿名分享不受支持。
+大海沟是全平台共享的公海。用户从自己所在世界进入同一片公海，可以看到其他世界用户明确公开投放的鱼。作品和未发布改版仍由作者管理。旧私人海洋通过历史链接访问。
+
+公开链接使用 `/ocean?resident=<uuid>`。入口在登录后解析访问者自己的世界，首次使用时复用现有入门流程，并定位到同一条公开鱼。
 
 作品永久保存在 PostgreSQL。投放后，海洋居民冻结作品的 ID、revision、contentHash、编译器和行为规则版本。保存改版不改变已投放居民；显式应用新版本保持居民身份。收回保留作品，重新投放复用原居民身份。归档隐藏普通作品列表中的条目，不删除仍在海洋中的鱼。
 
 游动是客户端观赏运动：尾摆、全身波动、鳍驱动、群游、软避让和水层偏好。服务器权威保存作品和居民名单，不保存逐帧位置；关闭页面不会计算繁殖、饥饿或捕食，两位观察者的位置不要求完全一致。没有运行时 LLM 调用。
 
-空海洋展示带有明确标识的六条示范鱼，直到投放自己的鱼。示范不创建数据库记录。Web/Desktop 的「我的创作」增加鱼筛选与海洋入口，列表不激活 Three.js 画布。3D 场景只在进入海洋或打开预览时懒加载。
+大海沟中的原生鱼群与作品鱼同游。公开数量统计全平台的活跃发布，每批展示 40 条作品鱼，并支持定位不在当前批次中的鱼。Web/Desktop 在「我的创作」集中查看、编辑和归档作品。作品链接优先定位公海居民，尚未发布的作品可在同一海景中预览和投放。
 
 ## 创作协议
 
@@ -42,32 +44,32 @@ HTTP 资源：
 - `POST fish`：`{requestId,draft,fishId?,expectedRevision?}`。
 - `GET fish/{id}?revision=<n>`：精确版本或省略版本读取最新。
 - `POST fish/{id}/archive`：`{requestId,archived}`。
-- `GET ocean?id=<uuid>`：返回 `{ocean:...}`；不传 ID 时读取自己的海洋，尚未创建返回 `{ocean:null}`，GET 不创建海洋。
+- `GET public-ocean?cursor=<uuid>&resident=<uuid>` 读取大海沟，返回总数、公开快照、下一批游标和可选的定位结果。也可用 `fish=<uuid>` 定位已经发布的作品。旧 `GET ocean?id=<uuid>` 继续读取私人海洋。
 - `POST ocean`：`{requestId}`，幂等确保当前成员只有一片海洋。
 - `POST ocean/settings`：`{requestId,oceanId,expectedRevision,visibility}`。
-- `POST residents` 接收 `{requestId,fishId,revision,contentHash,oceanId?}`。省略 `oceanId` 时投放到当前世界中自己的海洋，首次投放会在同一事务内创建私有海洋。显式 ID 必须指向自己在当前世界的海洋。
+- `POST residents` 接收 `{requestId,fishId,revision,contentHash,destination?,oceanId?}`。显式传入 `destination: "public"` 会将所选版本发布到大海沟。省略 `destination` 保留个人投放语义，`destination` 和 `oceanId` 互斥。
 - `POST residents/apply` 要求 `oceanId`、`residentId` 和 `expectedResidentRevision`，并提交要应用的鱼作品版本与哈希。
-- `POST residents/recall`：`{requestId,residentId,expectedResidentRevision}`。
+- `POST residents/recall` 接收 `{requestId,residentId,expectedResidentRevision,destination?}`。收回公海作品时显式传入 `destination: "public"`。
 
-MCP 提供 `fish_get_catalog`、`fish_validate`、`fish_save`、`fish_list`、`fish_get`、`fish_get_ocean`、`fish_create_ocean`、`fish_release`、`fish_apply_revision` 和 `fish_recall`。工具 Schema 由 `tools/list` 返回。
+MCP 提供 `fish_get_catalog`、`fish_validate`、`fish_save`、`fish_list`、`fish_get`、`fish_get_ocean`、`fish_get_public_ocean`、`fish_create_ocean`、`fish_release`、`fish_apply_revision` 和 `fish_recall`。工具 Schema 由 `tools/list` 返回。
 
 首次接入只完成认证与只读目录验收，不创建鱼。Node 连接器复用现有浏览器登录/PAT API，凭据按 API、世界及账号保存在 `~/.createx/fish-mcp/`，不写入指令、URL 或 MCP 配置。浏览器返回海洋页面不代表当前 Agent 聊天工具已重载，必须在实际客户端成功调用 `fish_get_catalog`。
 
-用户明确要求「创造并放进海洋」时，Agent 校验并保存后直接调用 `fish_release`。投放返回实际的 `resident.oceanId` 和定位到该居民的 `oceanUrl`。只要求创造时提供 `?fish=<id>&revision=<n>` 的动态预览。
+用户要求投放到大海沟时，Agent 校验并保存后调用 `fish_release`，传入 `destination: "public"` 和精确版本。投放返回 `resident.oceanId` 和定位到该居民的 `oceanUrl`。仅创建作品时，提供 `?fish=<id>&revision=<n>` 的海景预览。
 
-启用 `fish_release` 即允许它在首次投放时创建个人海洋。关闭 `fish_create_ocean` 只关闭独立建海工具。
+公开发布与重试回执在同一事务保存。历史独立建海工具只管理个人海洋。
 
 ## 事务、权限与同步
 
-写操作先共享锁定世界，复核成员关系，再按世界/成员获取事务级 advisory lock，顺序与世界删除一致。作品、版本、居民以及幂等回执在同一事务写入。相同请求 ID 与相同内容返回原结果，改换内容返回 409；回执保留七天。每位成员最多保存 128 个作品，每个作品最多 50 个版本，每片海洋最多 50 位活跃居民。容量与投放在同一锁内检查。
+写操作先共享锁定世界，复核成员关系，再按世界/成员获取事务级 advisory lock，顺序与世界删除一致。作品、版本、居民以及幂等回执在同一事务写入。相同请求 ID 与相同内容返回原结果，改换内容返回 409；回执保留七天。每位成员最多保存 128 个作品，每个作品最多 50 个版本，私人海洋最多 50 位活跃居民，每位成员在当前世界可同时公开投放 50 条鱼。平台公海使用游标分批展示。
 
 投放重试应复用原参数和 `requestId`。从省略 `oceanId` 改成显式指定也算变更，即使指向同一片海洋。HTTP 返回 409，MCP 返回 `isError`，错误码均为 `idempotency_key_reused`。
 
 私有草稿不进入世界消息。当前变更通过已有实时基础向作者发送无作品正文的缓存失效事件；海洋与作品还定时刷新，重连/聚焦后读取权威数据。公开参观页面至多等待下一次五秒刷新看到居民变化；改变为私有后下一次读取拒绝访问。当前没有投放事件摘要和 OS 通知。
 
-成员退出失去访问；公开海洋还检查海洋主人是否仍是成员。世界删除事务清理五张 Fish 表，不使用外键与级联。画质偏好通过宿主注入的 StorageAdapter 按世界和账号隔离。
+大海沟对可进入 Fish 功能的登录用户开放，发布和改版校验来源世界的成员资格与作者身份。作者可从自己有权进入的任一世界收回公开鱼。公开响应省略来源世界、创建来源和私人归档状态，只包含已投放版本。来源世界删除时同步撤下其公开作品。世界删除事务清理六张 Fish 表，不使用外键与级联。旧个人公开海洋还检查主人是否仍是成员。画质偏好通过宿主注入的 StorageAdapter 按世界和账号隔离。
 
-最新本地验收见 [2026-11-03 记录](evidence/fish-2026-11-03.md)。
+首版验收见 [2026-11-03 记录](evidence/fish-2026-11-03.md)。
 
 ## 本地运行与验证
 

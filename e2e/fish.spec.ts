@@ -29,7 +29,7 @@ test("MCP creates a persistent fish, applies an exact revision and recalls witho
  expect(result.tools).toEqual(expect.arrayContaining([
   expect.objectContaining({ name: "fish_release", inputSchema: expect.objectContaining({
    required: ["requestId", "fishId", "revision", "contentHash"],
-   properties: expect.objectContaining({ oceanId: expect.objectContaining({ format: "uuid" }) }),
+   properties: expect.objectContaining({ oceanId: expect.objectContaining({ format: "uuid" }), destination: expect.objectContaining({ enum: ["public"] }) }),
   }) }),
   expect.objectContaining({ name: "fish_apply_revision", inputSchema: expect.objectContaining({
    required: expect.arrayContaining(["oceanId", "residentId", "expectedResidentRevision"]),
@@ -61,13 +61,27 @@ test("MCP creates a persistent fish, applies an exact revision and recalls witho
  const applied=await tool(request,"fish_apply_revision",{requestId:randomUUID(),oceanId,fishId:saved.id,revision:2,contentHash:second.contentHash,residentId:released.resident.id,expectedResidentRevision:1});expect(applied.resident.id).toBe(released.resident.id);
  await expect(page.getByText("MCP 长尾蓝帆鱼").first()).toBeVisible({timeout:15000});
  await page.goto(`/${workspace.slug}/me?filter=fish`);await expect(page.getByRole("group",{name:"MCP 长尾蓝帆鱼"})).toBeVisible();await page.getByRole("link",{name:"前往海洋",exact:true}).click();await expect(page.getByTestId("fish-scene").locator("canvas")).toBeVisible();
+ await expect(page.getByRole("heading", { name: "大海沟" })).toBeVisible();
+ await expect(page.getByText("已在原海洋投放")).toBeVisible();
+ expect((await tool(request, "fish_get_public_ocean")).total).toBe(0);
  await tool(request,"fish_recall",{requestId:randomUUID(),residentId:applied.resident.id,expectedResidentRevision:applied.resident.revision});expect((await tool(request,"fish_get_ocean",{oceanId})).ocean.residents).toHaveLength(0);expect((await tool(request,"fish_list")).fish.some((f:{id:string})=>f.id===saved.id)).toBe(true);
+ const publicRelease = await tool(request, "fish_release", { requestId: randomUUID(), destination: "public", fishId: second.id, revision: second.revision, contentHash: second.contentHash });
+ const publicOcean = await tool(request, "fish_get_public_ocean", { residentId: publicRelease.resident.id });
+ expect(publicOcean.focus).toMatchObject({ id: publicRelease.resident.id, canManage: true, fish: { revision: second.revision } });
+ expect(JSON.stringify(publicOcean)).not.toContain("workspaceId");
+ expect(new URL(publicRelease.oceanUrl).pathname).toBe("/ocean");
+ await page.goto(publicRelease.oceanUrl);
+ await expect(page.getByRole("button", { name: "收回", exact: true })).toBeVisible();
+ await tool(request, "fish_recall", { requestId: randomUUID(), destination: "public", residentId: publicRelease.resident.id, expectedResidentRevision: publicRelease.resident.revision });
  expect(errors).toEqual([]);
 });
-test("creates and releases through the UI, supports a narrow viewport, and protects private oceans",async({page,request})=>{
+test("previews and releases into the same open ocean, supports a narrow viewport, and protects world boundaries",async({page,request,browser,baseURL})=>{
  const world = await api.createWorkspace("Fish first release UI", `fish-ui-${run}`);
  try {
   await page.goto(`/${world.slug}/fish`);
+  const scene = page.getByTestId("fish-scene");
+  await expect(scene).toHaveAttribute("data-fish-count", "6");
+  const oceanCanvas = await scene.locator("canvas").elementHandle();
   await page.getByRole("button", { name: "创造一条鱼", exact: true }).click();
   const dialog = page.getByRole("dialog");
   await expect(dialog.locator("canvas")).toBeVisible({ timeout: 30000 });
@@ -75,35 +89,82 @@ test("creates and releases through the UI, supports a narrow viewport, and prote
   await dialog.getByRole("button", { name: "保存鱼", exact: true }).click();
   await expect(dialog).not.toBeVisible();
   expect((await tool(request, "fish_get_ocean", {}, world.id)).ocean).toBeNull();
+  await expect(page.getByText("预览 · 仅自己可见")).toBeVisible();
+  await expect(scene).toHaveAttribute("data-fish-count", "7");
+  expect(await oceanCanvas!.evaluate(node => node.isConnected)).toBe(true);
+  const workUrl = page.url();
 
   const writes: string[] = [];
   page.on("request", outgoing => {
    const path = new URL(outgoing.url()).pathname;
    if (outgoing.method() === "POST" && path.startsWith("/api/fish/v1/")) writes.push(path);
   });
-  const card = page.locator("article").filter({ has: page.getByRole("heading", { name: "UI 珍珠鱼", exact: true }) });
   const sent = page.waitForRequest(outgoing => outgoing.method() === "POST" && new URL(outgoing.url()).pathname === "/api/fish/v1/residents");
-  await card.getByRole("button", { name: "放入海洋", exact: true }).click();
-  expect((await sent).postDataJSON()).not.toHaveProperty("oceanId");
+  await page.getByRole("button", { name: "投放到公海", exact: true }).click();
+  const releaseInput = (await sent).postDataJSON();
+  expect(releaseInput).toMatchObject({ destination: "public" });
+  expect(releaseInput).not.toHaveProperty("oceanId");
   await expect(page.getByRole("button", { name: "收回", exact: true })).toBeVisible();
   expect(writes).toEqual(["/api/fish/v1/residents"]);
-  const ocean = (await tool(request, "fish_get_ocean", {}, world.id)).ocean;
-  await expect.poll(() => new URL(page.url()).searchParams.get("ocean")).toBe(ocean.id);
+  const ocean = await tool(request, "fish_get_public_ocean", {}, world.id);
+  expect(ocean).toMatchObject({ residents: [{ fish: { id: releaseInput.fishId } }] });
+  await expect.poll(() => new URL(page.url()).searchParams.get("resident")).toBe(ocean.residents[0].id);
+  expect(new URL(page.url()).searchParams.get("ocean")).toBeNull();
+  await page.goto(workUrl);
+  await expect(page.getByRole("button", { name: "收回", exact: true })).toBeVisible();
+  await expect(scene).toHaveAttribute("data-fish-count", "7");
+  await expect(page.getByRole("heading", { name: "我的鱼", exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "重置视角", exact: true }).click();
+  await page.screenshot({ path: "test-results/fish/public-ocean.png", fullPage: true });
 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.screenshot({ path: "test-results/fish/mobile.png", fullPage: true });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   const outsider = new TestApiClient();
   await outsider.login(`fish-visitor-${run}@auro.ai`, "Visitor");
-  const response = await request.get(`/api/fish/v1/ocean?id=${ocean.id}`, {
+  const response = await request.get(`/api/fish/v1/public-ocean`, {
    headers: { Authorization: `Bearer ${outsider.getToken()}`, "X-Workspace-ID": world.id },
   });
   expect([403, 404]).toContain(response.status());
+  const visitorWorld = await outsider.createWorkspace("Other ocean visitor", `fish-other-${run}`);
+  try {
+   await outsider.markUserOnboarded();
+   const visitorHeaders = { Authorization: `Bearer ${outsider.getToken()}`, "X-Workspace-ID": visitorWorld.id };
+   const shared = await request.get("/api/fish/v1/public-ocean", { headers: visitorHeaders });
+   expect(shared.ok()).toBe(true);
+   const publicData = await shared.json();
+   expect(publicData.residents.some((resident: { id: string }) => resident.id === ocean.residents[0].id)).toBe(true);
+   expect(JSON.stringify(publicData)).not.toContain("workspaceId");
+   const privateDesign = await request.get(`/api/fish/v1/fish/${releaseInput.fishId}`, { headers: visitorHeaders });
+   expect(privateDesign.status()).toBe(404);
+   const visitorContext = await browser.newContext();
+   try {
+    await visitorContext.addCookies([{ name: "auro-locale", value: "zh-Hans", url: baseURL! }]);
+    await visitorContext.addInitScript(value => localStorage.setItem("auro_token", value), outsider.getToken()!);
+    const visitorPage = await visitorContext.newPage();
+    await visitorPage.goto(`/ocean?resident=${ocean.residents[0].id}`);
+    await expect(visitorPage).toHaveURL(new RegExp(`/${visitorWorld.slug}/fish\\?resident=`));
+    await expect(visitorPage.getByRole("heading", { name: "UI 珍珠鱼", exact: true })).toBeVisible();
+    await expect(visitorPage.getByRole("button", { name: "收回", exact: true })).toHaveCount(0);
+   } finally { await visitorContext.close(); }
+  } finally { await outsider.deleteWorkspace(); }
   await page.getByRole("button", { name: "收回", exact: true }).click();
   await expect(page.getByRole("button", { name: "收回", exact: true })).not.toBeVisible();
+  await page.goto(`/${world.slug}/me?filter=fish`);
+  const creation = page.getByRole("group", { name: "UI 珍珠鱼", exact: true });
+  await expect(creation.getByRole("button", { name: "修改鱼", exact: true })).toBeVisible();
+  await creation.getByRole("button", { name: "归档", exact: true }).click();
+  await expect(creation).not.toBeVisible();
+  await page.getByRole("button", { name: "显示已归档", exact: true }).click();
+  await creation.getByRole("button", { name: "恢复", exact: true }).click();
+  await expect(creation.getByRole("button", { name: "修改鱼", exact: true })).toBeVisible();
+  await tool(request, "fish_release", { requestId: randomUUID(), destination: "public", fishId: releaseInput.fishId, revision: releaseInput.revision, contentHash: releaseInput.contentHash }, world.id);
  } finally {
   await api.deleteWorkspace();
  }
+ api.setWorkspaceId(workspace.id);
+ api.setWorkspaceSlug(workspace.slug);
+ expect((await tool(request, "fish_get_public_ocean")).total).toBe(0);
 });
 
 test("fifty distinct fish remain stable throughout the soak",async({page,request},testInfo)=>{

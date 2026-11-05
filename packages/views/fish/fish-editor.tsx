@@ -1,4 +1,5 @@
 "use client";
+import "./fish.css";
 import { lazy, Suspense, useMemo, useState } from "react";
 import { FishSpecSchema, FISH_EXAMPLES, type FishCharacter, type FishSpec, type FishResident } from "@auro/core/fish";
 import { Button } from "@auro/ui/components/ui/button";

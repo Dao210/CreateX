@@ -90,6 +90,7 @@ type ReleaseInput struct {
 	FishID      string          `json:"fishId"`
 	Revision    int             `json:"revision"`
 	ContentHash string          `json:"contentHash"`
+	Destination string          `json:"destination,omitempty"`
 }
 
 // An omitted target is allowed for release. An explicitly empty or null target is invalid.
@@ -116,6 +117,7 @@ type RecallInput struct {
 	RequestID                string `json:"requestId"`
 	ResidentID               string `json:"residentId"`
 	ExpectedResidentRevision int    `json:"expectedResidentRevision"`
+	Destination              string `json:"destination,omitempty"`
 }
 type ReleaseResult struct {
 	Resident Resident `json:"resident"`
@@ -398,6 +400,12 @@ func (s *Service) EnsureOcean(ctx context.Context, a Actor, rid string) (Ocean, 
 }
 func (s *Service) release(ctx context.Context, a Actor, in ReleaseInput, residentID string, expected int) (ReleaseResult, error) {
 	var out ReleaseResult
+	if in.Destination != "" {
+		if in.Destination != "public" || in.OceanID != "" || residentID != "" {
+			return out, problem("invalid_request", 400)
+		}
+		return s.publish(ctx, a, in, "", 0)
+	}
 	if in.Revision < 1 || in.Revision > Rules.MaxRevisions {
 		return out, problem("invalid_request", 400)
 	}
@@ -529,9 +537,21 @@ func (s *Service) Apply(ctx context.Context, a Actor, in ApplyInput) (ReleaseRes
 	if in.ResidentID == "" || in.ExpectedResidentRevision < 1 {
 		return ReleaseResult{}, problem("invalid_request", 400)
 	}
+	if string(in.OceanID) == PublicOceanID {
+		if in.Destination != "" {
+			return ReleaseResult{}, problem("invalid_request", 400)
+		}
+		return s.publish(ctx, a, in.ReleaseInput, in.ResidentID, in.ExpectedResidentRevision)
+	}
 	return s.release(ctx, a, in.ReleaseInput, in.ResidentID, in.ExpectedResidentRevision)
 }
 func (s *Service) Recall(ctx context.Context, a Actor, in RecallInput) (json.RawMessage, error) {
+	if in.Destination != "" {
+		if in.Destination != "public" {
+			return nil, problem("invalid_request", 400)
+		}
+		return s.recallPublic(ctx, a, in)
+	}
 	id, e := inputUUID(in.ResidentID)
 	if e != nil {
 		return nil, e

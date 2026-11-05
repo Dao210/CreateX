@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { compileFishGeometry, swimState, type FishResident, type FishSpec, type SwimState } from "@auro/core/fish";
+import { compileFishGeometry, swimState, type FishSceneResident, type FishSpec, type SwimState } from "@auro/core/fish";
 
 type TintFish = (shader: THREE.WebGLProgramParametersWithUniforms) => void;
 
@@ -34,7 +34,7 @@ function makeGeometry(spec: FishSpec, distant: boolean) {
   return geometry;
 }
 
-export function makeFish(resident: FishResident, tintFish: TintFish): FishObject {
+export function makeFish(resident: FishSceneResident, tintFish: TintFish): FishObject {
   const spec = resident.fish.draft, length = spec.body.lengthMm / 1000;
   const material = new THREE.MeshStandardMaterial({
     vertexColors: true,

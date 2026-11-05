@@ -1,4 +1,14 @@
 {
+  "trench": "Grande Fosse",
+  "shared_water": "Haute mer de la plateforme",
+  "member_fish": "{{count}} poissons publiés",
+  "creations": "Mes créations",
+  "preview_only": "Aperçu · visible uniquement par vous",
+  "previous_ocean": "Relâché dans l’océan d’origine",
+  "release_public": "Relâcher en haute mer",
+  "release_visibility": "Cette version sera visible par tous les utilisateurs connectés",
+  "selection_missing": "Ce poisson ne se trouve pas dans cet océan.",
+  "load_failed": "Impossible de charger l’océan.",
   "title": "Océan",
   "subtitle": "Un petit monde né de votre imagination.",
   "create": "Créer un poisson",
@@ -69,5 +79,10 @@
   "glider": "Planeur nacré",
   "rose": "Éventail rose",
   "dart": "Flèche citron",
-  "edit": "Modifier le poisson"
+  "edit": "Modifier le poisson",
+  "explore_ocean": "Explorer la Grande Fosse",
+  "first_school": "Retour au début",
+  "next_school": "Banc suivant",
+  "native_school": "Poissons indigènes",
+  "legacy_ocean": "Océan d’origine"
 }

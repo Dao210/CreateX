@@ -49,17 +49,37 @@ export const FishOceanSchema = z.object({ id: z.string().uuid(), workspaceId: z.
   if (o.residents.some(r => r.oceanId !== o.id || r.fish.workspaceId !== o.workspaceId || r.fish.ownerId !== o.ownerId) || new Set(o.residents.map(r => r.id)).size !== o.residents.length) ctx.addIssue({ code: "custom", message: "Invalid ocean resident scope." });
 });
 export type FishOcean = z.infer<typeof FishOceanSchema>;
+export const PUBLIC_FISH_OCEAN_ID = "a429ac92-8e79-4bee-b88d-5cc4f637e187";
+export const PublishedFishSchema = FishCharacterSchema.omit({ workspaceId: true, archived: true, origin: true, createdAt: true });
+export type PublishedFish = z.infer<typeof PublishedFishSchema>;
+export const PublicFishResidentSchema = FishResidentSchema.extend({
+  oceanId: z.literal(PUBLIC_FISH_OCEAN_ID), fish: PublishedFishSchema, canManage: z.boolean().default(false),
+});
+export type PublicFishResident = z.infer<typeof PublicFishResidentSchema>;
+export const PublicFishOceanSchema = z.object({
+  id: z.literal(PUBLIC_FISH_OCEAN_ID), total: z.number().int().min(0),
+  residents: z.array(PublicFishResidentSchema).max(40),
+  focus: PublicFishResidentSchema.optional(), nextCursor: z.string().uuid().optional(),
+}).superRefine((ocean, ctx) => {
+  if (new Set(ocean.residents.map(resident => resident.id)).size !== ocean.residents.length) ctx.addIssue({ code: "custom", message: "Duplicate public resident." });
+});
+export type PublicFishOcean = z.infer<typeof PublicFishOceanSchema>;
+export type FishSceneResident = Pick<FishResident, "id" | "revision" | "seed"> & {
+  fish: Pick<FishCharacter, "draft" | "contentHash">;
+};
+export interface PublicFishOceanSelection { cursor?: string; residentId?: string; fishId?: string }
 export interface SaveFishInput { requestId: string; draft: FishSpec; fishId?: string; expectedRevision?: number }
 export interface ReleaseFishInput {
   requestId: string;
   oceanId?: string;
+  destination?: "public";
   fishId: string;
   revision: number;
   contentHash: string;
 }
-export interface ChangeFishResidentInput extends ReleaseFishInput {
+export interface ChangeFishResidentInput extends Omit<ReleaseFishInput, "destination"> {
   oceanId: string;
   residentId: string;
   expectedResidentRevision: number;
 }
-export interface RecallFishInput { requestId: string; residentId: string; expectedResidentRevision: number }
+export interface RecallFishInput { destination?: "public"; requestId: string; residentId: string; expectedResidentRevision: number }

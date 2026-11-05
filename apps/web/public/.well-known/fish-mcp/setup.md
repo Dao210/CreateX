@@ -137,13 +137,13 @@ or oceans as an installation test.
 
 Read `fish_get_catalog`, generate a distinctive `fish@1` draft, validate with
 `fish_validate`, and save with `fish_save`. Reuse each write's requestId on retry.
-A save-only request returns a `/{workspace_slug}/fish?fish=<id>` preview link.
+A save-only request returns a `/{workspace_slug}/fish?fish=<id>&revision=<n>`
+preview link in the Great Trench scene.
 
-When the user asks to release the fish, call `fish_release` with the saved fish's
-exact id, revision and contentHash. Omit `oceanId` to use the member's personal
-ocean in this world. The server creates it as part of the first release. If a retry
-is needed, keep the arguments and `requestId` unchanged. Open the returned
-`oceanUrl`. Verify the returned resident refers to that exact fish. Do not
-substitute `gameUrl` for this resident-specific link. Later revisions require explicit `fish_apply_revision`;
-`fish_recall` preserves the creation. Swimming is ambient presentation, not a
-server-authoritative ecology simulation.
+When the user asks to release into the Great Trench, call `fish_release` with
+`destination: "public"` and the saved `fishId`, `revision`, and `contentHash`.
+This publishes the selected revision to the platform's signed-in users. A
+personal-ocean release omits `destination`. On retry keep the same arguments
+and `requestId`. Open the returned `oceanUrl` and verify its resident is the
+one just released. Use `fish_get_public_ocean` to read the Great Trench. Later revisions require explicit `fish_apply_revision`, and
+`fish_recall` with `destination: "public"` withdraws a public resident and preserves the creation.

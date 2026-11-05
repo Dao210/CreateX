@@ -1,4 +1,4 @@
-import { FishCharacterSchema, FishOceanSchema, FishResidentSchema, type FishCharacter, type FishOcean, type SaveFishInput, type ReleaseFishInput, type ChangeFishResidentInput, type RecallFishInput } from "../fish/schema";
+import { PublicFishOceanSchema, type PublicFishOceanSelection, FishCharacterSchema, FishOceanSchema, FishResidentSchema, type FishCharacter, type FishOcean, type SaveFishInput, type ReleaseFishInput, type ChangeFishResidentInput, type RecallFishInput } from "../fish/schema";
 import { z } from "zod";
 import { AdminGamesSchema, GamePolicySchema, GameImpactSchema, GameWorldPageSchema, GameAuditPageSchema, WorldGamesSchema, type AdminGame, type GamePolicy, type GameImpact, type GameWorldPage, type GameAuditPage, type WorldGames, type UpdateGamePolicyInput } from "../admin/game-schema";
 import { LifeSnapshotSchema, type LifeSnapshot } from "../agent-life/schema";
@@ -389,6 +389,15 @@ export class ApiClient {
     const result = await this.fishRequest(wsId, `ocean${id ? `?id=${encodeURIComponent(id)}` : ""}`, z.object({ ocean: FishOceanSchema.nullable() }));
     if (result.ocean && (result.ocean.workspaceId !== wsId || (id && result.ocean.id !== id))) throw new Error("invalid_fish_response");
     return result.ocean;
+  }
+  async getPublicFishOcean(wsId: string, selection: PublicFishOceanSelection = {}) {
+    const params = new URLSearchParams();
+    if (selection.cursor) params.set("cursor", selection.cursor);
+    if (selection.residentId) params.set("resident", selection.residentId);
+    if (selection.fishId) params.set("fish", selection.fishId);
+    const result = await this.fishRequest(wsId, `public-ocean${params.size ? `?${params}` : ""}`, PublicFishOceanSchema);
+    if (result.focus && ((selection.residentId && result.focus.id !== selection.residentId) || (selection.fishId && result.focus.fish.id !== selection.fishId))) throw new Error("invalid_fish_response");
+    return result;
   }
   async createFishOcean(wsId: string, requestId: string) {
     const result = await this.fishRequest(wsId, "ocean", FishOceanSchema, { requestId });

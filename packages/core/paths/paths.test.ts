@@ -54,10 +54,12 @@ describe("isGlobalPath", () => {
     expect(isGlobalPath("/workspaces/new")).toBe(true);
     expect(isGlobalPath("/invite/abc")).toBe(true);
     expect(isGlobalPath("/auth/callback")).toBe(true);
+    expect(isGlobalPath("/ocean?resident=fish")).toBe(true);
   });
 
   it("returns false for workspace-scoped paths", () => {
     expect(isGlobalPath("/acme/issues")).toBe(false);
+    expect(isGlobalPath("/oceanography/fish")).toBe(false);
     expect(isGlobalPath("/")).toBe(false);
   });
 });

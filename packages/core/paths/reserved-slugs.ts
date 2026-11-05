@@ -41,6 +41,7 @@ export const RESERVED_SLUGS: ReadonlySet<string> = new Set([
   "api",
   "deal",
   "siege",
+  "ocean",
   "admin",
   "auro",
   "www",

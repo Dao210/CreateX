@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { afterEach, expect, it, vi } from "vitest";
 import { ApiClient } from "./client";
-import { FISH_EXAMPLES } from "../fish/schema";
+import { FISH_EXAMPLES, PUBLIC_FISH_OCEAN_ID } from "../fish/schema";
 const ws="11111111-1111-4111-8111-111111111111", id="22222222-2222-4222-8222-222222222222", oceanId="33333333-3333-4333-8333-333333333333";
 const fish={id,workspaceId:ws,ownerId:id,revision:1,contentHash:`sha256:${"a".repeat(64)}`,compilerVersion:1,rulesVersion:1,draft:FISH_EXAMPLES[0],origin:"mcp",createdAt:"2026-11-03T00:00:00Z"};
 const resident={id,oceanId,revision:1,seed:17,fish};
@@ -26,4 +26,20 @@ it("accepts a resolved ocean for an implicit release and checks explicit destina
 
   response({ resident, oceanUrl });
   await expect(api.releaseFish(ws, { ...input, oceanId: id })).rejects.toThrow("invalid_fish_response");
+});
+
+it("reads global published snapshots and rejects private or mismatched public data", async () => {
+  const api = new ApiClient("https://api.example.invalid");
+  const { workspaceId: _workspace, archived: _archived, origin: _origin, createdAt: _createdAt, ...snapshot } = { ...fish, archived: false };
+  const published = { ...resident, oceanId: PUBLIC_FISH_OCEAN_ID, canManage: false, fish: snapshot };
+  const ocean = { id: PUBLIC_FISH_OCEAN_ID, total: 2, residents: [published, { ...published, id: oceanId, fish: { ...snapshot, ownerId: ws } }] };
+  const fetcher = response(ocean);
+  await expect(api.getPublicFishOcean(ws)).resolves.toMatchObject(ocean);
+  expect(String(fetcher.mock.calls[0]?.[0])).toContain("/public-ocean");
+  response({ ...ocean, residents: [published, published] });
+  await expect(api.getPublicFishOcean(ws)).rejects.toThrow("invalid_fish_response");
+  response({ ...ocean, residents: [{ ...published, oceanId }] });
+  await expect(api.getPublicFishOcean(ws)).rejects.toThrow("invalid_fish_response");
+  response({ ...ocean, focus: published });
+  await expect(api.getPublicFishOcean(ws, { residentId: oceanId })).rejects.toThrow("invalid_fish_response");
 });

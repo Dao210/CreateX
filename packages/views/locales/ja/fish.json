@@ -1,4 +1,14 @@
 {
+  "trench": "大海溝",
+  "shared_water": "全ユーザー共通の公海",
+  "member_fish": "公開された作品魚 {{count}} 匹",
+  "creations": "マイ作品",
+  "preview_only": "プレビュー · 自分のみ表示",
+  "previous_ocean": "元の海に放流済み",
+  "release_public": "公海に放流",
+  "release_visibility": "投放したバージョンは全ユーザーに公開されます",
+  "selection_missing": "この魚は現在この海域にいません。",
+  "load_failed": "海を読み込めませんでした。",
   "title": "海",
   "subtitle": "想像から生まれる、小さな世界。",
   "create": "魚を作る",
@@ -69,5 +79,10 @@
   "glider": "真珠の滑空魚",
   "rose": "バラの扇尾",
   "dart": "ライムの矢",
-  "edit": "魚を編集"
+  "edit": "魚を編集",
+  "explore_ocean": "大海溝を探索",
+  "first_school": "最初に戻る",
+  "next_school": "次の群れ",
+  "native_school": "自然の魚群",
+  "legacy_ocean": "元の海"
 }

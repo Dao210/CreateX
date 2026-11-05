@@ -1,4 +1,14 @@
 {
+  "trench": "Great Trench",
+  "shared_water": "Platform-wide open ocean",
+  "member_fish": "{{count}} published fish",
+  "creations": "My Creations",
+  "preview_only": "Preview · only you can see this",
+  "previous_ocean": "Released in the original ocean",
+  "release_public": "Release into the open ocean",
+  "release_visibility": "All signed-in users can see this released version",
+  "selection_missing": "This fish is currently outside this ocean.",
+  "load_failed": "The ocean could not load.",
   "title": "Ocean",
   "subtitle": "A small world of your own making.",
   "create": "Create a fish",
@@ -69,5 +79,10 @@
   "glider": "Pearl glider",
   "rose": "Rose fan",
   "dart": "Lime dart",
-  "edit": "Edit fish"
+  "edit": "Edit fish",
+  "explore_ocean": "Explore the Great Trench",
+  "first_school": "Back to the beginning",
+  "next_school": "Next school",
+  "native_school": "Native school",
+  "legacy_ocean": "Original ocean"
 }

@@ -27,6 +27,33 @@ func (q *Queries) CountFish(ctx context.Context, arg CountFishParams) (int64, er
 	return count, err
 }
 
+const countMyPublicFish = `-- name: CountMyPublicFish :one
+SELECT count(*) FROM fish_publication WHERE workspace_id=$1 AND user_id=$2 AND active
+`
+
+type CountMyPublicFishParams struct {
+	WorkspaceID pgtype.UUID `json:"workspace_id"`
+	UserID      pgtype.UUID `json:"user_id"`
+}
+
+func (q *Queries) CountMyPublicFish(ctx context.Context, arg CountMyPublicFishParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countMyPublicFish, arg.WorkspaceID, arg.UserID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const countPublicFish = `-- name: CountPublicFish :one
+SELECT count(*) FROM fish_publication WHERE active
+`
+
+func (q *Queries) CountPublicFish(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, countPublicFish)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const ensureFishOcean = `-- name: EnsureFishOcean :exec
 INSERT INTO fish_ocean (id,workspace_id,user_id) VALUES ($1,$2,$3) ON CONFLICT (workspace_id,user_id) DO NOTHING
 `
@@ -60,6 +87,31 @@ func (q *Queries) FindFishResident(ctx context.Context, arg FindFishResidentPara
 		&i.WorkspaceID,
 		&i.UserID,
 		&i.OceanID,
+		&i.FishID,
+		&i.Revision,
+		&i.Active,
+		&i.Payload,
+	)
+	return i, err
+}
+
+const findMyPublicFish = `-- name: FindMyPublicFish :one
+SELECT id, workspace_id, user_id, fish_id, revision, active, payload FROM fish_publication WHERE workspace_id=$1 AND user_id=$2 AND fish_id=$3
+`
+
+type FindMyPublicFishParams struct {
+	WorkspaceID pgtype.UUID `json:"workspace_id"`
+	UserID      pgtype.UUID `json:"user_id"`
+	FishID      pgtype.UUID `json:"fish_id"`
+}
+
+func (q *Queries) FindMyPublicFish(ctx context.Context, arg FindMyPublicFishParams) (FishPublication, error) {
+	row := q.db.QueryRow(ctx, findMyPublicFish, arg.WorkspaceID, arg.UserID, arg.FishID)
+	var i FishPublication
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.UserID,
 		&i.FishID,
 		&i.Revision,
 		&i.Active,
@@ -211,6 +263,44 @@ func (q *Queries) GetMyFishOcean(ctx context.Context, arg GetMyFishOceanParams) 
 	return i, err
 }
 
+const getPublicFish = `-- name: GetPublicFish :one
+SELECT id, workspace_id, user_id, fish_id, revision, active, payload FROM fish_publication WHERE id=$1 AND active
+`
+
+func (q *Queries) GetPublicFish(ctx context.Context, id pgtype.UUID) (FishPublication, error) {
+	row := q.db.QueryRow(ctx, getPublicFish, id)
+	var i FishPublication
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.UserID,
+		&i.FishID,
+		&i.Revision,
+		&i.Active,
+		&i.Payload,
+	)
+	return i, err
+}
+
+const getPublicFishBySource = `-- name: GetPublicFishBySource :one
+SELECT id, workspace_id, user_id, fish_id, revision, active, payload FROM fish_publication WHERE fish_id=$1 AND active
+`
+
+func (q *Queries) GetPublicFishBySource(ctx context.Context, fishID pgtype.UUID) (FishPublication, error) {
+	row := q.db.QueryRow(ctx, getPublicFishBySource, fishID)
+	var i FishPublication
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.UserID,
+		&i.FishID,
+		&i.Revision,
+		&i.Active,
+		&i.Payload,
+	)
+	return i, err
+}
+
 const insertFishRequest = `-- name: InsertFishRequest :exec
 INSERT INTO fish_request (workspace_id,user_id,operation,request_id,body_hash,response) VALUES ($1,$2,$3,$4,$5,$6)
 `
@@ -322,6 +412,38 @@ func (q *Queries) ListFishResidents(ctx context.Context, arg ListFishResidentsPa
 	return items, nil
 }
 
+const listPublicFish = `-- name: ListPublicFish :many
+SELECT id, workspace_id, user_id, fish_id, revision, active, payload FROM fish_publication WHERE active AND id > $1 ORDER BY id LIMIT 41
+`
+
+func (q *Queries) ListPublicFish(ctx context.Context, id pgtype.UUID) ([]FishPublication, error) {
+	rows, err := q.db.Query(ctx, listPublicFish, id)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []FishPublication{}
+	for rows.Next() {
+		var i FishPublication
+		if err := rows.Scan(
+			&i.ID,
+			&i.WorkspaceID,
+			&i.UserID,
+			&i.FishID,
+			&i.Revision,
+			&i.Active,
+			&i.Payload,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const pruneFishRequests = `-- name: PruneFishRequests :exec
 DELETE FROM fish_request WHERE workspace_id=$1 AND user_id=$2 AND created_at < now()-interval '7 days'
 `
@@ -388,6 +510,32 @@ func (q *Queries) PutFishResident(ctx context.Context, arg PutFishResidentParams
 	return err
 }
 
+const putPublicFish = `-- name: PutPublicFish :exec
+INSERT INTO fish_publication (id,workspace_id,user_id,fish_id,revision,payload) VALUES ($1,$2,$3,$4,$5,$6)
+ON CONFLICT (id) DO UPDATE SET revision=EXCLUDED.revision,payload=EXCLUDED.payload,active=true
+`
+
+type PutPublicFishParams struct {
+	ID          pgtype.UUID `json:"id"`
+	WorkspaceID pgtype.UUID `json:"workspace_id"`
+	UserID      pgtype.UUID `json:"user_id"`
+	FishID      pgtype.UUID `json:"fish_id"`
+	Revision    int32       `json:"revision"`
+	Payload     []byte      `json:"payload"`
+}
+
+func (q *Queries) PutPublicFish(ctx context.Context, arg PutPublicFishParams) error {
+	_, err := q.db.Exec(ctx, putPublicFish,
+		arg.ID,
+		arg.WorkspaceID,
+		arg.UserID,
+		arg.FishID,
+		arg.Revision,
+		arg.Payload,
+	)
+	return err
+}
+
 const recallFishResident = `-- name: RecallFishResident :exec
 UPDATE fish_resident SET active=false, revision=revision+1 WHERE workspace_id=$1 AND user_id=$2 AND id=$3
 `
@@ -401,6 +549,24 @@ type RecallFishResidentParams struct {
 func (q *Queries) RecallFishResident(ctx context.Context, arg RecallFishResidentParams) error {
 	_, err := q.db.Exec(ctx, recallFishResident, arg.WorkspaceID, arg.UserID, arg.ID)
 	return err
+}
+
+const recallPublicFish = `-- name: RecallPublicFish :execrows
+UPDATE fish_publication SET active=false, revision=revision+1 WHERE user_id=$1 AND id=$2 AND active AND revision=$3
+`
+
+type RecallPublicFishParams struct {
+	UserID   pgtype.UUID `json:"user_id"`
+	ID       pgtype.UUID `json:"id"`
+	Revision int32       `json:"revision"`
+}
+
+func (q *Queries) RecallPublicFish(ctx context.Context, arg RecallPublicFishParams) (int64, error) {
+	result, err := q.db.Exec(ctx, recallPublicFish, arg.UserID, arg.ID, arg.Revision)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const setFishArchived = `-- name: SetFishArchived :exec

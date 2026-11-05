@@ -54,6 +54,16 @@ func readInput(w http.ResponseWriter, r *http.Request, out any) error {
 }
 func (h *HTTP) Handler() http.Handler {
 	mux := http.NewServeMux()
+	mux.HandleFunc("GET /api/fish/v1/public-ocean", func(w http.ResponseWriter, r *http.Request) {
+		a, _ := actorFromContext(r.Context())
+		params := r.URL.Query()
+		out, err := h.Service.PublicOcean(r.Context(), a, params.Get("cursor"), params.Get("resident"), params.Get("fish"))
+		if err != nil {
+			failure(w, err)
+			return
+		}
+		send(w, 200, out)
+	})
 	mux.HandleFunc("GET /api/fish/v1/catalog", func(w http.ResponseWriter, r *http.Request) { send(w, 200, json.RawMessage(catalogJSON)) })
 	mux.HandleFunc("POST /api/fish/v1/validate", func(w http.ResponseWriter, r *http.Request) {
 		var in struct {

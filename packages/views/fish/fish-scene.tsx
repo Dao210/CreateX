@@ -2,14 +2,14 @@
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import { stepFish, type FishResident } from "@auro/core/fish";
+import { stepFish, type FishSceneResident } from "@auro/core/fish";
 import { Button } from "@auro/ui/components/ui/button";
 import { useT } from "../i18n";
 import { createReef, WATER_LEVEL } from "./reef";
 import { createSwimPose, makeFish, type FishObject } from "./fish-visual";
 
-interface Props { residents: FishResident[]; selectedId?: string; onSelect?: (id: string) => void; follow?: boolean; reset?: number; paused?: boolean; lowQuality?: boolean; preview?: boolean }
-interface SceneAPI { update: (residents: FishResident[]) => void; focus: (id: string, follow: boolean) => void; reset: () => void }
+interface Props { residents: FishSceneResident[]; selectedId?: string; onSelect?: (id: string) => void; follow?: boolean; reset?: number; paused?: boolean; lowQuality?: boolean; preview?: boolean }
+interface SceneAPI { update: (residents: FishSceneResident[]) => void; focus: (id: string, follow: boolean) => void; reset: () => void }
 
 function disposeObject(object: THREE.Object3D) {
   const geometries = new Set<THREE.BufferGeometry>(), materials = new Set<THREE.Material>();
@@ -206,5 +206,5 @@ export default function FishScene(props: Props) {
       renderer.domElement.remove();
     };
   }, [generation]);
-  return <div className="fish-scene" ref={host} data-testid="fish-scene">{failed && <div className="fish-scene-error" role="alert"><p>{t($ => $.graphics_error)}</p><Button variant="outline" onClick={() => { setFailed(false); setGeneration(v => v + 1); }}>{t($ => $.retry)}</Button></div>}</div>;
+  return <div className="fish-scene" ref={host} data-testid="fish-scene" data-fish-count={props.residents.length}>{failed && <div className="fish-scene-error" role="alert"><p>{t($ => $.graphics_error)}</p><Button variant="outline" onClick={() => { setFailed(false); setGeneration(v => v + 1); }}>{t($ => $.retry)}</Button></div>}</div>;
 }

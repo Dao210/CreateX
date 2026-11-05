@@ -1,4 +1,14 @@
 {
+  "trench": "대해구",
+  "shared_water": "모든 사용자가 공유하는 공해",
+  "member_fish": "공개된 물고기 {{count}}마리",
+  "creations": "내 창작물",
+  "preview_only": "미리보기 · 나만 볼 수 있음",
+  "previous_ocean": "기존 바다에 방류됨",
+  "release_public": "공해에 방류",
+  "release_visibility": "로그인한 모든 사용자에게 이 버전이 공개됩니다",
+  "selection_missing": "이 물고기는 현재 이 바다에 없습니다.",
+  "load_failed": "바다를 불러오지 못했습니다.",
   "title": "바다",
   "subtitle": "상상으로 만드는 작은 세계.",
   "create": "물고기 만들기",
@@ -69,5 +79,10 @@
   "glider": "진주 활공",
   "rose": "장미 부채",
   "dart": "라임 화살",
-  "edit": "물고기 수정"
+  "edit": "물고기 수정",
+  "explore_ocean": "대해구 탐색",
+  "first_school": "처음으로",
+  "next_school": "다음 물고기 무리",
+  "native_school": "자연 물고기 무리",
+  "legacy_ocean": "기존 바다"
 }

@@ -84,6 +84,7 @@ const GLOBAL_ROUTES: readonly RoutePattern[] = [
   ["invite", ":id"],
   ["invitations"],
   ["onboarding"],
+  ["ocean"],
   ["auth", "callback"],
 ];
 

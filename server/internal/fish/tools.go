@@ -6,6 +6,7 @@ func Tools() []Tool {
 	id := map[string]any{"type": "string", "format": "uuid"}
 	revision := map[string]any{"type": "integer", "minimum": 1, "maximum": 50}
 	hash := map[string]any{"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+	public := map[string]any{"type": "string", "enum": []string{"public"}}
 	residentRevision := map[string]any{"type": "integer", "minimum": 1, "maximum": 10000}
 	ref := func(apply bool) map[string]any {
 		p := map[string]any{"requestId": id, "oceanId": id, "fishId": id, "revision": revision, "contentHash": hash}
@@ -14,6 +15,8 @@ func Tools() []Tool {
 			p["residentId"] = id
 			p["expectedResidentRevision"] = residentRevision
 			required = append(required, "oceanId", "residentId", "expectedResidentRevision")
+		} else {
+			p["destination"] = public
 		}
 		return object(p, required...)
 	}
@@ -27,11 +30,12 @@ func Tools() []Tool {
 		{"fish_save", "Save a private owned fish or append an immutable revision using expectedRevision. Reuse requestId unchanged on retry. Saving does not replace an ocean resident.", object(map[string]any{"requestId": id, "draft": json.RawMessage(Rules.DraftSchema), "fishId": id, "expectedRevision": revision}, "requestId", "draft"), false},
 		{"fish_list", "List this member's private fish creations in this world, including archived flags and exact version references.", object(map[string]any{}), true},
 		{"fish_get", "Read an owned fish, latest or an immutable revision.", object(map[string]any{"fishId": id, "revision": revision}, "fishId"), true},
+		{"fish_get_public_ocean", "Read the platform-wide Great Trench. Only explicitly published snapshots are visible. Optional residentId or fishId focuses a released fish; cursor pages through the global population.", object(map[string]any{"cursor": id, "residentId": id, "fishId": id}), true},
 		{"fish_get_ocean", "Read your ocean, or an explicitly world-visible ocean. Returns ocean:null if your ocean has not been created.", object(map[string]any{"oceanId": id}), true},
 		{"fish_create_ocean", "Ensure this member has a private ocean in the current world. Reuse requestId on retry; repeated calls never create another ocean.", object(map[string]any{"requestId": id}, "requestId"), false},
-		{"fish_release", "Release an exact owned fish revision/hash. Omit oceanId to use your personal ocean in this world and create it if needed. Returns resident and oceanUrl. Reuse the same requestId and arguments on retry.", ref(false), false},
+		{"fish_release", "Release an exact owned fish revision/hash. Set destination to public to publish to the platform-wide Great Trench. This makes the selected revision visible to all signed-in users. Omitting destination retains personal-ocean behavior. destination and oceanId cannot be combined. Returns resident and oceanUrl. Reuse the same requestId and arguments on retry.", ref(false), false},
 		{"fish_apply_revision", "Explicitly apply a saved revision to an existing resident, preserving its identity. Requires expectedResidentRevision and exact hash.", ref(true), false},
-		{"fish_recall", "Recall your resident while preserving the fish creation. Reuse requestId on retry; expectedResidentRevision prevents overwriting concurrent changes.", object(map[string]any{"requestId": id, "residentId": id, "expectedResidentRevision": residentRevision}, "requestId", "residentId", "expectedResidentRevision"), false},
+		{"fish_recall", "Recall your resident while preserving the fish creation. Reuse requestId on retry; expectedResidentRevision prevents overwriting concurrent changes. For a Great Trench resident also pass destination public.", object(map[string]any{"requestId": id, "residentId": id, "expectedResidentRevision": residentRevision, "destination": public}, "requestId", "residentId", "expectedResidentRevision"), false},
 	}
 	out := make([]Tool, 0, len(defs))
 	for _, d := range defs {

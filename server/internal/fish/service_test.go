@@ -43,7 +43,7 @@ func fishDB(t *testing.T) (*Service, *testutil.Fixture, Actor) {
 		t.Fatal(e)
 	}
 	t.Cleanup(pool.Close)
-	for _, table := range []string{"user", "workspace", "member", "fish_character", "fish_revision", "fish_ocean", "fish_resident", "fish_request"} {
+	for _, table := range []string{"user", "workspace", "member", "fish_character", "fish_revision", "fish_ocean", "fish_resident", "fish_request", "fish_publication"} {
 		name := pgx.Identifier{table}.Sanitize()
 		if _, e = pool.Exec(ctx, "CREATE TABLE "+name+" (LIKE public."+name+" INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES)"); e != nil {
 			t.Fatal(e)
@@ -214,7 +214,7 @@ func TestFishDBConcurrentRetriesAndCapacity(t *testing.T) {
 		if e != nil {
 			t.Fatal(e)
 		}
-		if _, e = s.Release(ctx, a, ReleaseInput{uuid.NewString(), optionalOceanID(ocean.ID), c.ID, c.Revision, c.ContentHash}); e != nil {
+		if _, e = s.Release(ctx, a, ReleaseInput{RequestID: uuid.NewString(), OceanID: optionalOceanID(ocean.ID), FishID: c.ID, Revision: c.Revision, ContentHash: c.ContentHash}); e != nil {
 			t.Fatal(e)
 		}
 	}
@@ -222,7 +222,7 @@ func TestFishDBConcurrentRetriesAndCapacity(t *testing.T) {
 	if e != nil {
 		t.Fatal(e)
 	}
-	_, e = s.Release(ctx, a, ReleaseInput{uuid.NewString(), optionalOceanID(ocean.ID), c.ID, c.Revision, c.ContentHash})
+	_, e = s.Release(ctx, a, ReleaseInput{RequestID: uuid.NewString(), OceanID: optionalOceanID(ocean.ID), FishID: c.ID, Revision: c.Revision, ContentHash: c.ContentHash})
 	wantCode(t, e, "capacity_reached")
 	o, e := s.Ocean(ctx, a, ocean.ID)
 	if e != nil || len(o.Residents) != 50 {
@@ -231,14 +231,14 @@ func TestFishDBConcurrentRetriesAndCapacity(t *testing.T) {
 	if _, e = s.Pool.Exec(ctx, `UPDATE fish_revision SET payload=jsonb_set(payload,'{compilerVersion}','2') WHERE workspace_id=$1::uuid AND fish_id=$2::uuid`, a.WorkspaceID, id); e != nil {
 		t.Fatal(e)
 	}
-	_, e = s.Release(ctx, a, ReleaseInput{uuid.NewString(), optionalOceanID(ocean.ID), c.ID, c.Revision, c.ContentHash})
+	_, e = s.Release(ctx, a, ReleaseInput{RequestID: uuid.NewString(), OceanID: optionalOceanID(ocean.ID), FishID: c.ID, Revision: c.Revision, ContentHash: c.ContentHash})
 	wantCode(t, e, "fish_incompatible")
 	// A failed receipt write must roll back the resident mutation.
 	if _, e = s.Pool.Exec(ctx, `CREATE FUNCTION reject_fish_receipt() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'receipt failure'; END $$; CREATE TRIGGER reject_receipt BEFORE INSERT ON fish_request FOR EACH ROW EXECUTE FUNCTION reject_fish_receipt()`); e != nil {
 		t.Fatal(e)
 	}
 	r := o.Residents[0]
-	_, e = s.Recall(ctx, a, RecallInput{uuid.NewString(), r.ID, r.Revision})
+	_, e = s.Recall(ctx, a, RecallInput{RequestID: uuid.NewString(), ResidentID: r.ID, ExpectedResidentRevision: r.Revision})
 	if e == nil {
 		t.Fatal("receipt failure was swallowed")
 	}
@@ -315,5 +315,138 @@ func TestFishDBFirstReleaseRollsBackOcean(t *testing.T) {
 	}
 	if residents := fx.Count(t, "SELECT count(*) FROM fish_resident"); residents != 0 {
 		t.Fatalf("failed release left %d residents", residents)
+	}
+}
+
+func TestFishDBPlatformOceanPublishesOnlyExplicitSnapshots(t *testing.T) {
+	s, fx, a := fishDB(t)
+	ctx := context.Background()
+	b := Actor{WorkspaceID: fx.Workspace(t, "Another world", "another-fish-world"), UserID: fx.User(t, "Other creator", "other-fish-creator@example.invalid")}
+	fx.Member(t, b.WorkspaceID, b.UserID, "owner")
+	outsider := Actor{WorkspaceID: a.WorkspaceID, UserID: b.UserID}
+	first, err := s.Save(ctx, a, SaveInput{RequestID: uuid.NewString(), Draft: Rules.Examples[0]})
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, err := s.Save(ctx, b, SaveInput{RequestID: uuid.NewString(), Draft: Rules.Examples[1]})
+	if err != nil {
+		t.Fatal(err)
+	}
+	legacy, err := s.Release(ctx, a, ReleaseInput{RequestID: uuid.NewString(), FishID: first.ID, Revision: 1, ContentHash: first.ContentHash})
+	if err != nil {
+		t.Fatal(err)
+	}
+	before, err := s.PublicOcean(ctx, b, "", "", "")
+	if err != nil || before.Total != 0 {
+		t.Fatalf("private fish leaked into public scene: %+v, %v", before, err)
+	}
+	actors := []Actor{a, b}
+	designs := []Character{first, second}
+	intents := make([]ReleaseInput, 2)
+	results := make([]ReleaseResult, 2)
+	failures := make([]error, 2)
+	var group sync.WaitGroup
+	for i := range actors {
+		intents[i] = ReleaseInput{RequestID: uuid.NewString(), Destination: "public", FishID: designs[i].ID, Revision: 1, ContentHash: designs[i].ContentHash}
+		group.Add(1)
+		go func() { defer group.Done(); results[i], failures[i] = s.Release(ctx, actors[i], intents[i]) }()
+	}
+	group.Wait()
+	for _, failure := range failures {
+		if failure != nil {
+			t.Fatal(failure)
+		}
+	}
+	ocean, err := s.PublicOcean(ctx, b, "", results[0].Resident.ID, "")
+	if err != nil || ocean.Total != 2 || len(ocean.Residents) != 2 || ocean.Focus == nil {
+		t.Fatalf("shared ocean=%+v, %v", ocean, err)
+	}
+	if ocean.Focus.CanManage || ocean.Focus.Fish.ContentHash != first.ContentHash {
+		t.Fatalf("viewer permissions=%+v", ocean.Focus)
+	}
+	serialized, _ := json.Marshal(ocean)
+	for _, privateField := range []string{"workspaceId", "createdAt", "archived", "origin"} {
+		if strings.Contains(string(serialized), privateField) {
+			t.Fatalf("private metadata in publication response: %s", privateField)
+		}
+	}
+	_, err = s.PublicOcean(ctx, outsider, "", "", "")
+	wantCode(t, err, "workspace_forbidden")
+	replay, err := s.Release(ctx, a, intents[0])
+	if err != nil || replay.Resident.ID != results[0].Resident.ID {
+		t.Fatalf("public retry: %+v, %v", replay, err)
+	}
+	changed := intents[0]
+	changed.Destination = ""
+	_, err = s.Release(ctx, a, changed)
+	wantCode(t, err, "idempotency_key_reused")
+	_, err = s.Get(ctx, b, first.ID, 0)
+	wantCode(t, err, "not_found")
+	_, err = s.Recall(ctx, b, RecallInput{RequestID: uuid.NewString(), Destination: "public", ResidentID: results[0].Resident.ID, ExpectedResidentRevision: 1})
+	wantCode(t, err, "resident_revision_conflict")
+	edit := first.Draft
+	edit.Name = "Unpublished revision"
+	revised, err := s.Save(ctx, a, SaveInput{RequestID: uuid.NewString(), FishID: first.ID, ExpectedRevision: 1, Draft: edit})
+	if err != nil {
+		t.Fatal(err)
+	}
+	frozen, err := s.PublicOcean(ctx, b, "", "", first.ID)
+	if err != nil || frozen.Focus == nil || frozen.Focus.Fish.Revision != 1 {
+		t.Fatalf("unpublished revision leaked: %+v, %v", frozen, err)
+	}
+	applied, err := s.Apply(ctx, a, ApplyInput{ReleaseInput: ReleaseInput{RequestID: uuid.NewString(), OceanID: optionalOceanID(PublicOceanID), FishID: first.ID, Revision: 2, ContentHash: revised.ContentHash}, ResidentID: results[0].Resident.ID, ExpectedResidentRevision: 1})
+	if err != nil || applied.Resident.ID != results[0].Resident.ID {
+		t.Fatalf("public apply=%+v, %v", applied, err)
+	}
+	fx.Member(t, b.WorkspaceID, a.UserID, "member")
+	alternateWorld := Actor{WorkspaceID: b.WorkspaceID, UserID: a.UserID}
+	otherContext, err := s.PublicOcean(ctx, alternateWorld, "", applied.Resident.ID, "")
+	if err != nil || otherContext.Focus == nil || !otherContext.Focus.CanManage {
+		t.Fatalf("creator cannot manage their public fish from another world: %+v, %v", otherContext, err)
+	}
+	if _, err = s.Recall(ctx, alternateWorld, RecallInput{RequestID: uuid.NewString(), Destination: "public", ResidentID: applied.Resident.ID, ExpectedResidentRevision: applied.Resident.Revision}); err != nil {
+		t.Fatal(err)
+	}
+	personal, err := s.Ocean(ctx, a, legacy.Resident.OceanID)
+	if err != nil || len(personal.Residents) != 1 || personal.Residents[0].Fish.Revision != 1 {
+		t.Fatalf("personal ocean changed: %+v, %v", personal, err)
+	}
+}
+
+func TestFishDBPublicOceanPagesAndKeepsFocusedFish(t *testing.T) {
+	s, fx, a := fishDB(t)
+	ctx := context.Background()
+	var target string
+	for i := 0; i < 43; i++ {
+		design, err := s.Save(ctx, a, SaveInput{RequestID: uuid.NewString(), Draft: Rules.Examples[i%len(Rules.Examples)]})
+		if err != nil {
+			t.Fatal(err)
+		}
+		released, err := s.Release(ctx, a, ReleaseInput{RequestID: uuid.NewString(), Destination: "public", FishID: design.ID, Revision: 1, ContentHash: design.ContentHash})
+		if err != nil {
+			t.Fatal(err)
+		}
+		target = released.Resident.ID
+	}
+	first, err := s.PublicOcean(ctx, a, "", target, "")
+	if err != nil || len(first.Residents) != 40 || first.Total != 43 || first.NextCursor == "" || first.Focus == nil {
+		t.Fatalf("first page=%+v, %v", first, err)
+	}
+	next, err := s.PublicOcean(ctx, a, first.NextCursor, "", "")
+	if err != nil || len(next.Residents) != 3 || next.NextCursor != "" {
+		t.Fatalf("next page=%+v, %v", next, err)
+	}
+	ids := map[string]bool{}
+	for _, resident := range append(first.Residents, next.Residents...) {
+		if ids[resident.ID] {
+			t.Fatal("duplicate resident across pages")
+		}
+		ids[resident.ID] = true
+	}
+	if len(ids) != 43 {
+		t.Fatal("missing publication")
+	}
+	if count := fx.Count(t, "SELECT count(*) FROM fish_publication WHERE workspace_id=$1", a.WorkspaceID); count != 43 {
+		t.Fatalf("publications=%d", count)
 	}
 }

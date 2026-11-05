@@ -1,5 +1,6 @@
 "use client";
-import { myFishOptions } from "@auro/core/fish";
+import { myFishOptions, useFishActions } from "@auro/core/fish";
+import { FishEditor } from "../fish/fish-editor";
 import { FishThumbnail } from "../fish/fish-thumbnail";
 
 import { useMemo, useRef, type ReactNode } from "react";
@@ -61,6 +62,7 @@ function MeContent({ storage, workspace, userId }: {
 }) {
   const { t } = useT("me");
   const { t: adminT } = useT("admin");
+  const { t: fishT } = useT("fish");
   const games = useWorldGames(workspace.id);
   const siegeAvailable = games.data?.games.find(game => game.gameId === "siege")?.available === true;
   const fishAvailable = games.data?.games.find(game => game.gameId === "fish")?.available === true;
@@ -80,8 +82,17 @@ function MeContent({ storage, workspace, userId }: {
   const scope = useMemo(() => ({ workspaceId: workspace.id, workspaceSlug: workspace.slug, userId }), [workspace.id, workspace.slug, userId]);
   const siegeClient = useMemo(() => createSiegeClient(scope), [scope]);
   const fishQuery = useQuery({ ...myFishOptions(workspace.id, userId), enabled: fishAvailable });
-  const fish = fishAvailable ? (fishQuery.data ?? []).filter(f => !f.archived) : [];
-  const visibleFish = filter === "all" || filter === "fish" ? fish : filter === "mcp" ? fish.filter(f => f.origin === "mcp") : [];
+  const fishActions = useFishActions(workspace.id);
+  const allFish = fishAvailable ? fishQuery.data ?? [] : [];
+  const fish = allFish.filter(f => !f.archived);
+  const showArchivedFish = filter === "fish" && navigation.searchParams.get("archived") === "1";
+  const visibleFish = filter === "all" || filter === "fish" ? showArchivedFish ? allFish : fish : filter === "mcp" ? fish.filter(f => f.origin === "mcp") : [];
+  function toggleArchivedFish() {
+    const params = new URLSearchParams(navigation.searchParams);
+    if (showArchivedFish) params.delete("archived");
+    else params.set("archived", "1");
+    navigation.replace(`${navigation.pathname}?${params}${navigation.hash}`);
+  }
   const fishFailed = fishAvailable && (filter === "all" || filter === "fish" || filter === "mcp") && fishQuery.isError;
   const tanks = useQuery({ ...myTankCharactersOptions(workspace.id, userId), enabled: tanksAvailable });
   const library = useQuery({ ...siegeLibraryOptions(siegeClient, scope), enabled: siegeAvailable });
@@ -136,10 +147,27 @@ function MeContent({ storage, workspace, userId }: {
             <div className="mb-3 flex flex-wrap items-center gap-2">
               <h2 id="me-weapons-title" className="mr-auto text-title-sm font-medium">{t(($) => $.weapons.title)}</h2>
               {(["all", "siege", "tanks", "fish", "mcp"] as const).filter(value => value === "all" || value === "siege" && siegeAvailable || value === "tanks" && tanksAvailable || value === "fish" && fishAvailable || value === "mcp" && (tanksAvailable || fishAvailable)).map((value) => <Button key={value} size="xs" variant={filter === value ? "brand" : "outline"} aria-pressed={filter === value} onClick={() => setView("filter", value)}>{t(($) => $.filters[value])}</Button>)}
+              {filter === "fish" && allFish.some(f => f.archived) && <Button size="xs" variant="outline" aria-pressed={showArchivedFish} onClick={toggleArchivedFish}>{fishT($ => $.show_archived)}</Button>}
             </div>
+            {fishActions.archive.isError && <p role="alert" className="mb-3 text-caption text-destructive">{fishT($ => $.error)} <Button variant="link" size="xs" onClick={() => {
+              if (fishActions.archive.variables) fishActions.archive.mutate(fishActions.archive.variables);
+            }}>{fishT($ => $.retry)}</Button></p>}
             {bothFailed ? <ErrorCard message={t(($) => $.error)} retry={() => { void library.refetch(); void tanks.refetch(); void fishQuery.refetch(); }} retryLabel={t(($) => $.retry)} /> : <>
               {(visibleSiege.length > 0 || visibleTanks.length > 0 || visibleFish.length > 0) && <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                {visibleFish.map(fish => <Card key={fish.id} size="sm" className="overflow-hidden" role="group" aria-label={fish.draft.name}><div className="flex aspect-[4/3] items-center justify-center bg-muted/25 p-4"><FishThumbnail spec={fish.draft} /></div><CardHeader><CardTitle className="truncate">{fish.draft.name}</CardTitle><CardDescription>{t($ => $.weapons.revision, { revision: fish.revision })}</CardDescription></CardHeader><CardContent><AppLink href={`${paths.fish()}?fish=${encodeURIComponent(fish.id)}`} className={buttonVariants({ size: "sm", variant: "outline" })}>{t($ => $.open_ocean)}<ArrowRight /></AppLink></CardContent></Card>)}
+                {visibleFish.map(fish => <Card key={fish.id} size="sm" className="overflow-hidden" role="group" aria-label={fish.draft.name}>
+                  <div className="flex aspect-[4/3] items-center justify-center bg-muted/25 p-4"><FishThumbnail spec={fish.draft} /></div>
+                  <CardHeader><CardTitle className="truncate">{fish.draft.name}</CardTitle><CardDescription>{fish.archived ? fishT($ => $.archived) : t($ => $.weapons.revision, { revision: fish.revision })}</CardDescription></CardHeader>
+                  <CardContent className="flex flex-wrap gap-2">
+                    <AppLink href={`${paths.fish()}?fish=${encodeURIComponent(fish.id)}`} className={buttonVariants({ size: "sm", variant: "outline" })}>{t($ => $.open_ocean)}<ArrowRight /></AppLink>
+                    {!fish.archived && <FishEditor character={fish} pending={fishActions.save.isPending} onSave={async draft => {
+                      try {
+                        await fishActions.save.mutateAsync({ requestId: crypto.randomUUID(), draft, fishId: fish.id, expectedRevision: fish.revision });
+                        return true;
+                      } catch { return false; }
+                    }} />}
+                    <Button size="sm" variant="ghost" disabled={fishActions.archive.isPending} onClick={() => fishActions.archive.mutate({ requestId: crypto.randomUUID(), fishId: fish.id, archived: !fish.archived })}>{fishT($ => fish.archived ? $.restore : $.archive)}</Button>
+                  </CardContent>
+                </Card>)}
                 {visibleSiege.map((blueprint) => <SiegeCard key={blueprint.id} blueprint={blueprint} locale={locale} workshopHref={`${paths.siege()}?blueprint=${encodeURIComponent(blueprint.id)}`} />)}
                 {visibleTanks.map((character) => <TankCard key={character.id} character={character} locale={locale} workspaceId={workspace.id} power={TANK_DIFFICULTIES[local.tanks.difficulty].initialPower} garageHref={`${paths.tanks()}?character=${encodeURIComponent(character.id)}`} />)}
               </div>}

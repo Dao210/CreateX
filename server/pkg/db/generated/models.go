@@ -614,6 +614,16 @@ type FishOcean struct {
 	Revision    int32       `json:"revision"`
 }
 
+type FishPublication struct {
+	ID          pgtype.UUID `json:"id"`
+	WorkspaceID pgtype.UUID `json:"workspace_id"`
+	UserID      pgtype.UUID `json:"user_id"`
+	FishID      pgtype.UUID `json:"fish_id"`
+	Revision    int32       `json:"revision"`
+	Active      bool        `json:"active"`
+	Payload     []byte      `json:"payload"`
+}
+
 type FishRequest struct {
 	WorkspaceID pgtype.UUID        `json:"workspace_id"`
 	UserID      pgtype.UUID        `json:"user_id"`

@@ -1,4 +1,14 @@
 {
+  "trench": "大海沟",
+  "shared_water": "全平台公海",
+  "member_fish": "{{count}} 条作品鱼",
+  "creations": "我的创作",
+  "preview_only": "预览 · 仅自己可见",
+  "previous_ocean": "已在原海洋投放",
+  "release_public": "投放到公海",
+  "release_visibility": "平台用户均可看到投放的版本",
+  "selection_missing": "这条鱼当前不在此海域。",
+  "load_failed": "暂时无法载入海洋。",
   "title": "海洋",
   "subtitle": "把想象，放进海里。",
   "create": "创造一条鱼",
@@ -69,5 +79,10 @@
   "glider": "珍珠滑翔鱼",
   "rose": "玫瑰扇尾鱼",
   "dart": "青柠梭鱼",
-  "edit": "修改鱼"
+  "edit": "修改鱼",
+  "explore_ocean": "探索大海沟",
+  "first_school": "回到起点",
+  "next_school": "下一群鱼",
+  "native_school": "原生鱼群",
+  "legacy_ocean": "原海洋"
 }

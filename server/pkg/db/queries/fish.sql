@@ -56,3 +56,28 @@ INSERT INTO fish_request (workspace_id,user_id,operation,request_id,body_hash,re
 
 -- name: PruneFishRequests :exec
 DELETE FROM fish_request WHERE workspace_id=$1 AND user_id=$2 AND created_at < now()-interval '7 days';
+
+-- name: ListPublicFish :many
+SELECT * FROM fish_publication WHERE active AND id > $1 ORDER BY id LIMIT 41;
+
+-- name: CountPublicFish :one
+SELECT count(*) FROM fish_publication WHERE active;
+
+-- name: GetPublicFish :one
+SELECT * FROM fish_publication WHERE id=$1 AND active;
+
+-- name: GetPublicFishBySource :one
+SELECT * FROM fish_publication WHERE fish_id=$1 AND active;
+
+-- name: FindMyPublicFish :one
+SELECT * FROM fish_publication WHERE workspace_id=$1 AND user_id=$2 AND fish_id=$3;
+
+-- name: CountMyPublicFish :one
+SELECT count(*) FROM fish_publication WHERE workspace_id=$1 AND user_id=$2 AND active;
+
+-- name: PutPublicFish :exec
+INSERT INTO fish_publication (id,workspace_id,user_id,fish_id,revision,payload) VALUES ($1,$2,$3,$4,$5,$6)
+ON CONFLICT (id) DO UPDATE SET revision=EXCLUDED.revision,payload=EXCLUDED.payload,active=true;
+
+-- name: RecallPublicFish :execrows
+UPDATE fish_publication SET active=false, revision=revision+1 WHERE user_id=$1 AND id=$2 AND active AND revision=$3;
