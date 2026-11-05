@@ -135,7 +135,7 @@ describe("useTabPresentation — live from cache", () => {
   it("falls back to the persisted title while a selection is unresolved", () => {
     // Nothing cached for this key yet — an issue-less notification whose row
     // has not loaded. The persisted title is a better first frame than
-    // "World Messages"; without it the tab loses its identity until the page loads.
+    // "Messages"; without it the tab loses its identity until the page loads.
     const qc = makeClient();
     const wrapper = ({ children }: { children: ReactNode }) => (
       <QueryClientProvider client={qc}>{children}</QueryClientProvider>
@@ -151,9 +151,9 @@ describe("useTabPresentation — live from cache", () => {
 
   it("uses the container label when nothing is selected, persisted title or not", () => {
     // The fallback is for a PENDING identity only. An Inbox tab with no
-    // selection is fully resolved — it really is just "World Messages", and a stale
+    // selection is fully resolved — it really is just "Messages", and a stale
     // persisted title must not override it.
-    expect(presentationOf("/acme/inbox", "MUL-9: Crash").title).toBe("World Messages");
+    expect(presentationOf("/acme/inbox", "MUL-9: Crash").title).toBe("Messages");
   });
 
   it("archived inbox: a deep-link lookup supplies the title outside loaded pages", () => {

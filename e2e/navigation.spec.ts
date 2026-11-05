@@ -33,7 +33,7 @@ test("world navigation, switching, and personal actions use the sidebar groups",
       "退出登录",
     ]);
 
-    await header.getByRole("link", { name: "世界消息" }).click();
+    await header.getByRole("link", { name: "消息" }).click();
     await expect(page).toHaveURL(`/${first.slug}/inbox`);
     await expect(page.getByRole("heading", { name: "世界消息", exact: true })).toBeVisible({ timeout: 30_000 });
 
