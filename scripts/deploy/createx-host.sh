@@ -446,15 +446,18 @@ activate() {
 }
 
 smoke_native() {
-  local target="$1"
+  local target="$1" version
+  version="$(grep -oE 'LIFE_PROTOCOL_VERSION[[:space:]]*=[[:space:]]*[0-9]+' "$target/bin/runtime/life/engine.mjs" | head -1 | grep -oE '[0-9]+$')"
+  [[ "$version" =~ ^[0-9]+$ ]] || { echo "Cannot read the life protocol version from the release engine" >&2; return 1; }
   runuser -u createx -- node --input-type=module -e '
     import { spawnSync } from "node:child_process";
     const requestId="11111111-1111-4111-8111-111111111111";
-    const result=spawnSync(process.execPath,[process.argv[1]],{input:JSON.stringify({version:1,requestId,operation:"seed"})+"\n",encoding:"utf8",timeout:5000,env:{PATH:process.env.PATH}});
+    const version=Number(process.argv[2]);
+    const result=spawnSync(process.execPath,[process.argv[1]],{input:JSON.stringify({version,requestId,operation:"seed"})+"\n",encoding:"utf8",timeout:5000,env:{PATH:process.env.PATH}});
     if(result.error || result.status!==0) process.exit(1);
     const response=JSON.parse(result.stdout);
-    if(response.version!==1 || response.requestId!==requestId || response.result?.agents?.length!==20 || response.result?.resources?.length!==62) process.exit(1);
-  ' "$target/bin/runtime/life/engine.mjs"
+    if(response.version!==version || response.requestId!==requestId || response.result?.agents?.length!==20 || response.result?.resources?.length!==62) process.exit(1);
+  ' "$target/bin/runtime/life/engine.mjs" "$version" || { echo "Life engine smoke failed for protocol v$version" >&2; return 1; }
   (cd "$target/web/apps/web" && runuser -u createx -- node -e 'const {createRequire}=require("module"); const r=createRequire(require.resolve("next/package.json")); r("sharp")({create:{width:1,height:1,channels:3,background:"red"}}).png().toBuffer().then(b=>{if(!b.length)process.exit(1)}).catch(e=>{console.error(e);process.exit(1)})')
 }
 

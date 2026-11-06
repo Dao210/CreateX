@@ -2049,6 +2049,8 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 			r.Handle("/api/game-progress", progress)
 			r.Handle("/api/game-progress/*", progress)
 			r.Method("GET", "/api/life", gameGuard("life", life.Handler(queries)))
+ r.Method("GET", "/api/life/history", gameGuard("life", life.HistoryHandler(queries)))
+ if opts.Life != nil { r.Method("POST", "/api/life/commands", gameGuard("life", http.HandlerFunc(opts.Life.Commands))) }
 
 			// Task messages (user-facing, not daemon auth)
 			r.Get("/api/tasks/{taskId}/messages", h.ListTaskMessagesByUser)

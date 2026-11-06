@@ -129,7 +129,8 @@ var workspaceDeletionManifest = map[string]workspaceDeleteAction{
 	"life_agent":                      workspaceDelete,
 	"life_event":                      workspaceDelete,
 	"life_resource":                   workspaceDelete,
-	"life_world":                      workspaceDelete,
+	"life_request": workspaceDelete,
+ "life_world":                      workspaceDelete,
 }
 
 func TestWorkspaceDeletionManifestCoversPublicSchema(t *testing.T) {

@@ -115,7 +115,6 @@ _features/
 tasks/*
 !tasks/prd-siege-playability.md
 !tasks/prd-agent-life-town.md
-!tasks/prd-agent-life-civilization.md
 
 # Python (agent tooling)
 __pycache__/

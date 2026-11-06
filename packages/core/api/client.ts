@@ -1,7 +1,8 @@
 import { PublicFishOceanSchema, type PublicFishOceanSelection, FishCharacterSchema, FishOceanSchema, FishResidentSchema, type FishCharacter, type FishOcean, type SaveFishInput, type ReleaseFishInput, type ChangeFishResidentInput, type RecallFishInput } from "../fish/schema";
 import { z } from "zod";
 import { AdminGamesSchema, GamePolicySchema, GameImpactSchema, GameWorldPageSchema, GameAuditPageSchema, WorldGamesSchema, type AdminGame, type GamePolicy, type GameImpact, type GameWorldPage, type GameAuditPage, type WorldGames, type UpdateGamePolicyInput } from "../admin/game-schema";
-import { LifeSnapshotSchema, type LifeSnapshot } from "../agent-life/schema";
+import { LifeSnapshotSchema, LifeHistorySchema, type LifeHistory, type LifeSnapshot } from "../agent-life/schema";
+import { TownCommandResultSchema, type TownCommand, type TownCommandResult } from "../agent-life/town-schema";
 import { AdminAccessSchema, MCPAdminServicesSchema, MCPPolicySchema, MCPActivityPageSchema, type AdminAccess, type MCPAdminService, type MCPPolicy, type MCPActivityPage, type MCPActivityFilter, type UpdateMCPPolicyInput } from "../admin/schema";
 import { TankCharacterSchema, TankCharacterListSchema, TankPlaySessionSchema, type TankCharacter, type TankPlaySession, type SaveTankCharacterInput, type CreateTankSessionInput } from "../tank-defense/characters";
 import { TankTrainingRunSchema, TankTrainingResultSchema, type TankTrainingRun, type TankTrainingResult, type StartTankTrainingInput, type SettleTankTrainingInput } from "../tank-defense/progression";
@@ -496,6 +497,22 @@ export class ApiClient {
     const raw = await this.fetch<unknown>(endpoint, { headers: { "X-Workspace-ID": wsId, "X-Workspace-Slug": "" } });
     const parsed = parseWithFallback<LifeSnapshot | null>(raw, LifeSnapshotSchema, null, { endpoint });
     if (!parsed || (parsed.world && parsed.world.workspaceId !== wsId)) throw new Error("invalid_life_response");
+    return parsed;
+  }
+
+  async getLifeHistory(wsId: string, since: number): Promise<LifeHistory> {
+    const endpoint = `/api/life/history?since=${since}`;
+    const raw = await this.fetch<unknown>(endpoint, { headers: { "X-Workspace-ID": wsId, "X-Workspace-Slug": "" } });
+    const parsed = parseWithFallback<LifeHistory | null>(raw, LifeHistorySchema, null, { endpoint });
+    if (!parsed || parsed.workspaceId !== wsId || parsed.sinceSequence !== since) throw new Error("invalid_life_response");
+    return parsed;
+  }
+
+  async submitTownCommand(wsId: string, command: TownCommand) {
+    const endpoint = "/api/life/commands";
+    const raw = await this.fetch<unknown>(endpoint, { method: "POST", headers: { "X-Workspace-ID": wsId, "X-Workspace-Slug": "" }, body: JSON.stringify(command) });
+    const parsed = parseWithFallback<TownCommandResult | null>(raw, TownCommandResultSchema, null, { endpoint });
+    if (!parsed || parsed.kind !== command.kind) throw new Error("invalid_life_response");
     return parsed;
   }
 

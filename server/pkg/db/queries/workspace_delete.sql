@@ -551,6 +551,8 @@ SELECT 1;
 -- name: DeleteWorkspaceAdministration :exec
 WITH life_worlds AS MATERIALIZED (
     SELECT id FROM life_world WHERE workspace_id = $1
+), removed_life_requests AS (
+ DELETE FROM life_request WHERE world_id IN (SELECT id FROM life_worlds)
 ), removed_life_actions AS (
     DELETE FROM life_action WHERE world_id IN (SELECT id FROM life_worlds)
 ), removed_life_events AS (
