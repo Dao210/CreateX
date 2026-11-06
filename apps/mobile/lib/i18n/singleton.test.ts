@@ -12,12 +12,12 @@ describe("mobile i18n singleton", () => {
     await i18n.changeLanguage("en");
     expect(i18n.t("actions.cancel")).toBe("Cancel");
     expect(i18n.t("common:actions.cancel")).toBe("Cancel");
-    expect(i18n.t("navigation:tabs.inbox")).toBe("World Messages");
+    expect(i18n.t("navigation:tabs.inbox")).toBe("Messages");
 
     await i18n.changeLanguage("zh-Hans");
     expect(i18n.t("actions.cancel")).toBe("取消");
     expect(i18n.t("common:actions.cancel")).toBe("取消");
-    expect(i18n.t("navigation:tabs.inbox")).toBe("世界消息");
+    expect(i18n.t("navigation:tabs.inbox")).toBe("消息");
   });
 
   it("formats counts with interpolation", async () => {
