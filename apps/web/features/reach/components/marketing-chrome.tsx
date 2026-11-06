@@ -33,7 +33,7 @@ export function MarketingHeader({ locale, light = false }: { locale: SupportedLo
             <summary className="cursor-pointer rounded-lg px-2 py-2 text-label focus-visible:outline-2">{copy.menu}</summary>
             <nav aria-label={copy.navigation} className={`absolute right-0 top-full z-50 mt-3 flex w-64 flex-col rounded-xl border p-2 shadow-xl ${light ? "border-black/10 bg-white" : "border-white/15 bg-[#0C0E11]"}`}>{navLinks}</nav>
           </details>
-          <a href={localizedHref("/login", locale)} className={`rounded-(--landing-radius-button) px-4 py-2.5 text-label font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-4 ${light ? "bg-[#0a0d12] text-white hover:bg-[#0a0d12]/85" : "bg-[#E8E1D5] text-[#0A0B0E] hover:bg-white"}`}>{brand.play}</a>
+          <a href={localizedHref("/login", locale)} data-analytics-cta="header_play" className={`rounded-(--landing-radius-button) px-4 py-2.5 text-label font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-4 ${light ? "bg-[#0a0d12] text-white hover:bg-[#0a0d12]/85" : "bg-[#E8E1D5] text-[#0A0B0E] hover:bg-white"}`}>{brand.play}</a>
         </div>
       </div>
     </header>

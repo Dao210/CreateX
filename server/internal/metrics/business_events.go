@@ -245,11 +245,8 @@ func (e *businessEventMetrics) collectors() []prometheus.Collector {
 // cannot drift. Pass `client = nil` (no PostHog) or `m = nil` (no metrics)
 // safely; both sides are best-effort and never block the request path.
 //
-// As of MUL-4127 every server-side event is flagged by analytics.IsMetricsOnly
-// (all product events plus the runtime_* / autopilot_run_* lifecycle), so the
-// client.Capture below is skipped for all of them — server analytics is served
-// from the DB and Grafana, not PostHog. The Capture path is retained only so a
-// future non-metrics-only event name would still ship.
+// Signup and onboarding completion also ship to PostHog. Other existing
+// business and operational events remain metrics-only.
 //
 // This is the canonical way to record any funnel / community / commercial event
 // from server code. Direct analytics.Client.Capture(...) with an event

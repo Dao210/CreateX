@@ -1,4 +1,5 @@
 import { useCanvasResolution } from "../use-canvas-resolution";
+import { BattleTelemetry, captureEvent } from "@auro/core/analytics";
 import { useEffect, useLayoutEffect, useRef } from "react";
 import { WORLD_SCALE, type WeaponDefinition, type ArenaMode, type ArenaStats } from "@auro/core/siege";
 import type { ArenaEngine } from "../runtime/engine";
@@ -15,15 +16,18 @@ interface Props {
   definition: WeaponDefinition | null; run: number; mode: ArenaMode; paused: boolean;
   collisions: boolean; onPause: () => void; onStats: (stats: ArenaStats) => void; onError: (code: string) => void;
   assetUrl: (id: string) => string;
+  workspaceId?: string;
 }
-export function Arena({ definition, run, mode, paused, collisions, onStats, onError, onPause, assetUrl }: Props) {
+export function Arena({ definition, run, mode, paused, collisions, onStats, onError, onPause, assetUrl, workspaceId }: Props) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const simulation = useRef<ArenaEngine | null>(null);
+  const telemetry = useRef<BattleTelemetry | null>(null);
   const redraw = useRef<(() => void) | null>(null);
   useCanvasResolution(canvas, 1.75, redraw);
   const controls = useRef({ paused, collisions, onStats, onError, onPause });
   controls.current = { paused, collisions, onStats, onError, onPause };
   useLayoutEffect(() => {
+    if (simulation.current) telemetry.current?.observe(simulation.current.stats.phase === "finished" ? "completed" : "running", paused);
     redraw.current?.();
     if (paused && simulation.current) onStats(simulation.current.snapshot());
   }, [paused, collisions, onStats]);
@@ -90,6 +94,8 @@ export function Arena({ definition, run, mode, paused, collisions, onStats, onEr
       await initializePhysics();
       if (disposed) return;
       engine = new ArenaEngine(definition, mode); engine.start();
+      telemetry.current = new BattleTelemetry({ game: "siege", workspace_id: workspaceId ?? "", mode: `workshop_${mode}` }, captureEvent);
+      telemetry.current.observe("running", controls.current.paused);
       simulation.current = engine;
       const frame = (now: number) => {
         raf = 0;
@@ -103,21 +109,23 @@ export function Arena({ definition, run, mode, paused, collisions, onStats, onEr
           accumulator -= 1 / 60; steps++;
         }
         render();
+        telemetry.current?.observe(engine.stats.phase === "finished" ? "completed" : "running", controls.current.paused || document.visibilityState !== "visible", now);
         if (now - lastHUD > 120 || engine.stats.phase === "finished") { controls.current.onStats(engine.snapshot()); lastHUD = now; }
         if (!controls.current.paused && document.visibilityState === "visible" && engine.stats.phase === "running") raf = requestAnimationFrame(frame);
       };
       redraw.current = () => { if (!disposed && !raf) { last = 0; raf = requestAnimationFrame(frame); } };
       redraw.current();
     }).catch(() => { if (!disposed) controls.current.onError("physics_unavailable"); });
-    const suspend = () => controls.current.onPause();
+    const suspend = () => { telemetry.current?.observe("running", true); controls.current.onPause(); };
     const visibility = () => { if (document.visibilityState === "hidden") suspend(); };
     window.addEventListener("blur", suspend); document.addEventListener("visibilitychange", visibility);
     return () => {
       redraw.current = null; window.removeEventListener("blur", suspend); document.removeEventListener("visibilitychange", visibility);
       disposed = true; cancelAnimationFrame(raf);
       if (simulation.current === engine) simulation.current = null;
+      telemetry.current = null;
       engine?.dispose();
     };
-  }, [definition, run, mode, assetUrl]);
+  }, [definition, run, mode, assetUrl, workspaceId]);
   return <canvas ref={canvas} className="arena-canvas" width={1120} height={640} aria-label="武器测试场" role="img" />;
 }

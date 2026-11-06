@@ -1,11 +1,9 @@
 // Frontend analytics glue. Thin wrapper over posthog-js.
 //
-// The source-of-truth event catalog is `server/internal/analytics/events.go`. This module only
-// handles the two things the backend can't do itself: attribution capture on
-// first anonymous pageview, and person-identity merge on login. Every funnel
-// event (signup, workspace_created, runtime_registered, issue_executed,
-// invite_sent, invite_accepted) is emitted server-side — see
-// `server/internal/analytics`.
+// Web records explicit pageviews and marketing CTAs; shared game views record
+// gameplay. Go owns successful signup and onboarding events. This wrapper
+// shares anonymous attribution, login identity and privacy controls across
+// Web/Desktop. See docs/product-analytics.md for the event contract.
 //
 // Configuration comes from the backend's `/api/config` response (populated
 // from POSTHOG_API_KEY on the server), NOT from NEXT_PUBLIC_* envs. That
@@ -13,6 +11,9 @@
 // backend returns an empty key and this module stays inert.
 
 import posthog from "posthog-js";
+import { sanitizeAnalyticsProperties } from "./product";
+export { BattleTelemetry, type BattleContext, type GameName } from "./gameplay";
+export { analyticsPath } from "./product";
 import { redactExceptionProperties } from "./redact-exception";
 import { shouldDropException } from "./exception-dedupe";
 import { isBenignException } from "./benign-exceptions";
@@ -44,8 +45,8 @@ let analyticsEnvironment = "dev";
 // Frontend-emitted events (captureEvent) and person-property updates
 // (setPersonProperties) can also arrive before init — same config-race as
 // identify/pageview. We replay them in order once init succeeds. These
-// only ever carry user-triggered signals on identified users, so the
-// buffer stays small (~one step-transition worth).
+// also carry anonymous marketing events. Bound the queue for disabled/offline
+// deployments so gameplay cannot grow it indefinitely.
 type PendingOp =
   | {
       kind: "event";
@@ -56,6 +57,9 @@ type PendingOp =
   | { kind: "set"; props: Record<string, unknown> }
   | { kind: "exception"; error: unknown; props?: Record<string, unknown> };
 const pendingOps: PendingOp[] = [];
+function enqueue(op: PendingOp): void {
+  if (pendingOps.length < 100) pendingOps.push(op);
+}
 // Cached super-properties so resetAnalytics() can re-register them after
 // posthog.reset() wipes the persisted set. Without this, logout / account
 // switch silently drops client_type + app_version from every subsequent
@@ -112,9 +116,8 @@ export function initAnalytics(config: AnalyticsConfig | null | undefined): boole
 
   posthog.init(config.key, {
     api_host: config.host || "https://us.i.posthog.com",
-    // person_profiles=identified_only keeps anonymous drive-by traffic off
-    // the billed events until they actually identify, which aligns with how
-    // our funnel is set up: signup is the first real funnel step.
+    // Anonymous events remain available for acquisition funnels; person
+    // profiles are created only after login.
     person_profiles: "identified_only",
     // Turn off every on-by-default auto-capture surface. Our funnel is
     // narrow and explicit (the events in server/internal/analytics/events.go + a manual
@@ -123,6 +126,7 @@ export function initAnalytics(config: AnalyticsConfig | null | undefined): boole
     // budget, and risks capturing user-typed content in input values.
     // Turn things back on deliberately if we ever want them.
     capture_pageview: false,
+    capture_pageleave: false,
     autocapture: false,
     capture_heatmaps: false,
     capture_dead_clicks: false,
@@ -146,6 +150,7 @@ export function initAnalytics(config: AnalyticsConfig | null | undefined): boole
     // Order matters: redact first, then fingerprint the redacted shape.
     capture_exceptions: true,
     before_send: (event) => {
+      if (event) sanitizeAnalyticsProperties(event.properties);
       if (event && event.event === "$exception") {
         // Drop known-benign browser noise (e.g. ResizeObserver loop) entirely
         // — checked on the raw message before redaction. These dominate the
@@ -211,6 +216,8 @@ export function initAnalytics(config: AnalyticsConfig | null | undefined): boole
  * config and user in parallel, so identify can arrive first.
  */
 export function identify(userId: string, userProperties?: Record<string, unknown>): void {
+  userProperties = userProperties ? { ...userProperties } : undefined;
+  if (userProperties) sanitizeAnalyticsProperties(userProperties);
   currentUserId = userId;
   if (!initialized) {
     pendingIdentify = { userId, props: userProperties };
@@ -277,7 +284,7 @@ export function captureEvent(
   options?: CaptureEventOptions,
 ): void {
   if (!initialized) {
-    pendingOps.push({ kind: "event", name, props, options });
+    enqueue({ kind: "event", name, props, options });
     return;
   }
   captureNow(name, props, options);
@@ -315,7 +322,7 @@ export function captureException(
   props?: Record<string, unknown>,
 ): void {
   if (!initialized) {
-    pendingOps.push({ kind: "exception", error, props });
+    enqueue({ kind: "exception", error, props });
     return;
   }
   posthog.captureException(error, withClientEventProperties(props));
@@ -331,7 +338,7 @@ export function captureException(
  */
 export function setPersonProperties(props: Record<string, unknown>): void {
   if (!initialized) {
-    pendingOps.push({ kind: "set", props });
+    enqueue({ kind: "set", props });
     return;
   }
   capturePersonSet(props);

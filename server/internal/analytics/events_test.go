@@ -2,6 +2,13 @@ package analytics
 
 import "testing"
 
+func TestSignupDoesNotPublishEmail(t *testing.T) {
+	event := Signup("user-1", "private@example.com", "")
+	if _, exists := event.SetOnce["email"]; exists {
+		t.Fatal("signup must not publish email to PostHog")
+	}
+}
+
 func TestRuntimeReadyOmitsUnmeasuredDuration(t *testing.T) {
 	ev := RuntimeReady("user-1", "workspace-1", "runtime-1", "daemon-1", "codex", 0)
 	if _, ok := ev.Properties["ready_duration_ms"]; ok {

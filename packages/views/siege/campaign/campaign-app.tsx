@@ -13,6 +13,7 @@ import { paintBattle } from "./painter";
 import type { CampaignEngine, CampaignSnapshot } from "./engine";
 import { createCampaignStorage, defaultLoadout } from "./storage";
 import { GameSound } from "../../common/game-sound";
+import { useBattleTelemetry, useGameOpened } from "../../common/game-analytics";
 import { AppLink, useNavigation } from "../../navigation";
 
 const kinds = Object.keys(WEAPON_RECIPES) as WeaponKind[];
@@ -57,6 +58,9 @@ export function CampaignApp({ platform, scope, workshopHref }: CampaignAppProps)
   const library = useQuery({ ...siegeSessionOptions(api, scope, sessionId), enabled: settingsOpen && !!sessionId });
   const resume = useRef<CampaignCheckpoint | null>(initial.checkpoint);
   const engine = useRef<CampaignEngine | null>(null), canvas = useRef<HTMLCanvasElement>(null);
+  const resumedWorld = useRef<CampaignEngine | null>(null);
+  useGameOpened("siege", workspaceId, "campaign", ready);
+  useBattleTelemetry(engine.current, { game: "siege", workspace_id: workspaceId, mode: "campaign", level_id: levelId, resumed: engine.current !== null && resumedWorld.current === engine.current }, snapshot.phase, snapshot.paused);
   const controls = useRef({ speed, selectedSlot, selectedKind, loadout }); controls.current = { speed, selectedSlot, selectedKind, loadout };
   const sound = useRef<GameSound | null>(null);
   const redraw = useRef<(() => void) | null>(null);
@@ -116,6 +120,7 @@ export function CampaignApp({ platform, scope, workshopHref }: CampaignAppProps)
       if (disposed) return;
       const checkpoint = resume.current?.levelId === levelId ? resume.current : undefined;
       world = new runtime.CampaignEngine(CAMPAIGN_LEVELS[levelId - 1]!, checkpoint); resume.current = null;
+      resumedWorld.current = checkpoint ? world : null;
       engine.current = world; sound.current?.reset(); setSnapshot(world.snapshot()); setReady(true);
       let last = 0, accumulator = 0, lastHUD = 0, lastRevision = -1, lastCheckpoint = "", heardTick = -1, priorLeaks = world.leaks.length;
       const frame = (now: number) => {

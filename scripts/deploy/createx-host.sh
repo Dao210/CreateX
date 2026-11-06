@@ -169,12 +169,61 @@ locations() {
     gzip_vary on;
     gzip_min_length 1024;
     gzip_types text/css application/javascript application/json image/svg+xml;
+    resolver 127.0.0.53 valid=300s ipv6=off;
+    resolver_timeout 5s;
+    set $createx_posthog_api us.i.posthog.com;
+    set $createx_posthog_assets us-assets.i.posthog.com;
 
     # Only content-addressed Next assets are cached across application releases.
     location ^~ /_next/static/ {
         alias /var/lib/createx/static/;
         expires 1y;
         add_header Cache-Control "public, immutable";
+    }
+    # Fixed PostHog US upstreams. Never forward Auro cookies or authorization.
+    location ^~ /api/collect/static/ {
+        rewrite ^/api/collect/(.*)$ /$1 break;
+        proxy_pass https://$createx_posthog_assets;
+        proxy_ssl_server_name on;
+        proxy_ssl_name us-assets.i.posthog.com;
+        proxy_ssl_verify on;
+        proxy_ssl_verify_depth 3;
+        proxy_ssl_trusted_certificate /etc/ssl/certs/ca-certificates.crt;
+        proxy_pass_request_headers off;
+        proxy_set_header Host us-assets.i.posthog.com;
+        proxy_hide_header Set-Cookie;
+    }
+    location ^~ /api/collect/array/ {
+        rewrite ^/api/collect/(.*)$ /$1 break;
+        proxy_pass https://$createx_posthog_assets;
+        proxy_ssl_server_name on;
+        proxy_ssl_name us-assets.i.posthog.com;
+        proxy_ssl_verify on;
+        proxy_ssl_verify_depth 3;
+        proxy_ssl_trusted_certificate /etc/ssl/certs/ca-certificates.crt;
+        proxy_pass_request_headers off;
+        proxy_set_header Host us-assets.i.posthog.com;
+        proxy_hide_header Set-Cookie;
+    }
+    location ^~ /api/collect/ {
+        rewrite ^/api/collect/(.*)$ /$1 break;
+        proxy_pass https://$createx_posthog_api;
+        proxy_ssl_server_name on;
+        proxy_ssl_name us.i.posthog.com;
+        proxy_ssl_verify on;
+        proxy_ssl_verify_depth 3;
+        proxy_ssl_trusted_certificate /etc/ssl/certs/ca-certificates.crt;
+        proxy_pass_request_headers off;
+        proxy_set_header Host us.i.posthog.com;
+        proxy_set_header Content-Type $http_content_type;
+        proxy_set_header Content-Encoding $http_content_encoding;
+        proxy_set_header User-Agent $http_user_agent;
+        proxy_set_header Origin $http_origin;
+        proxy_set_header X-Forwarded-For $createx_posthog_client_ip;
+        proxy_hide_header Set-Cookie;
+        client_max_body_size 2m;
+        proxy_connect_timeout 5s;
+        proxy_read_timeout 15s;
     }
     location ~ ^/(debug|metrics|maintenance)(/|$) { return 404; }
     location ~ ^/(api|auth|v1|uploads)(/|$)|^/(ws|health|readyz)$|^/\.well-known/reach\.json$ {
@@ -210,6 +259,37 @@ render_nginx() {
 map $http_upgrade $createx_connection_upgrade {
     default upgrade;
     '' '';
+}
+# Trust CF-Connecting-IP only for connections from Cloudflare's published ranges.
+# This affects analytics forwarding only, not application authentication.
+geo $remote_addr $createx_posthog_cloudflare {
+    default 0;
+    173.245.48.0/20 1;
+    103.21.244.0/22 1;
+    103.22.200.0/22 1;
+    103.31.4.0/22 1;
+    141.101.64.0/18 1;
+    108.162.192.0/18 1;
+    190.93.240.0/20 1;
+    188.114.96.0/20 1;
+    197.234.240.0/22 1;
+    198.41.128.0/17 1;
+    162.158.0.0/15 1;
+    104.16.0.0/13 1;
+    104.24.0.0/14 1;
+    172.64.0.0/13 1;
+    131.0.72.0/22 1;
+    2400:cb00::/32 1;
+    2606:4700::/32 1;
+    2803:f800::/32 1;
+    2405:b500::/32 1;
+    2405:8100::/32 1;
+    2a06:98c0::/29 1;
+    2c0f:f248::/32 1;
+}
+map "$createx_posthog_cloudflare:$http_cf_connecting_ip" $createx_posthog_client_ip {
+    default $remote_addr;
+    ~^1:(?<createx_cf_client>.+)$ $createx_cf_client;
 }
 server {
     listen 127.0.0.1:23080;

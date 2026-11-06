@@ -110,6 +110,8 @@ ssh -N -L 23080:127.0.0.1:23080 auro
 
 登录邮件需在服务器 `/etc/createx/backend.env` 中配置 `RESEND_*` 或 `SMTP_*` 后重启 `createx-api`；未配置时服务器仅将验证码写入本项目日志。其他后端集成密钥在该项目自己的 backend env 维护，搜索引擎验证值放在 web env，不从其他应用复制。此部署不会启动代理 daemon；需要执行代理任务时再按产品流程连接运行时。
 
+PostHog US Cloud 使用同站点 `/api/collect` 采集入口，无需新增 DNS。后端配置 `POSTHOG_API_KEY`、`POSTHOG_HOST=https://us.i.posthog.com`、`POSTHOG_PUBLIC_HOST=https://weavea.world/api/collect` 和 `ANALYTICS_ENVIRONMENT=production`。公开地址使用绝对 URL，让已安装的 Desktop 客户端也能复用入口。已有 HTTPS 站点通过 `publish` 使用原证书路径刷新代理配置；普通 `deploy` 会保留已有 Nginx 站点。代理校验证书并剥离应用 Cookie/Authorization；详情见 [产品分析](product-analytics.md)。
+
 ### DNS 验证失败
 
 若 `https` 无法通过公网挑战文件检查，脚本恢复原站点，不向证书机构申请证书。先核对注册商的 NS 委派与实际编辑记录的平台一致，并确认根域名 `@` 的 A 记录已在权威 DNS 发布。递归解析器可能仍缓存旧地址，不要仅凭本机 `getent` 判断变更是否完成。

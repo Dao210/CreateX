@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
+import { SiteAnalytics } from "@/components/site-analytics";
 import { Inter, Geist_Mono, Source_Serif_4 } from "next/font/google";
 import { cn } from "@auro/ui/lib/utils";
 import { getRequestLocale } from "@/lib/request-locale";
@@ -170,6 +171,7 @@ gtag('config', '${GA_MEASUREMENT_ID}');`}
             </Script>
           </>
         )}
+        <SiteAnalytics />
       </body>
     </html>
   );

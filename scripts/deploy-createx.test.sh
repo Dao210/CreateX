@@ -79,6 +79,15 @@ grep -Fq 'return 308 https://weavea.world$request_uri;' "$TEMP/public"
 grep -Fq 'listen 443 ssl http2;' "$TEMP/public"
 grep -Fq 'proxy_set_header Upgrade $http_upgrade;' "$TEMP/public"
 grep -Fq 'proxy_buffering off;' "$TEMP/public"
+grep -Fq 'location ^~ /api/collect/static/' "$TEMP/public"
+grep -Fq 'proxy_pass https://$createx_posthog_assets;' "$TEMP/public"
+grep -Fq 'proxy_pass https://$createx_posthog_api;' "$TEMP/public"
+grep -Fq 'location ^~ /api/collect/array/' "$TEMP/public"
+grep -Fq 'default $remote_addr;' "$TEMP/public"
+grep -Fq 'X-Forwarded-For $createx_posthog_client_ip;' "$TEMP/public"
+grep -Fq 'proxy_pass_request_headers off;' "$TEMP/public"
+grep -Fq 'proxy_ssl_verify on;' "$TEMP/public"
+[[ "$(grep -Fc 'proxy_ssl_verify_depth 3;' "$TEMP/public")" = 6 ]]
 
 # Origin replacement must update all four fields without touching secrets.
 printf 'JWT_SECRET=keep\nFRONTEND_ORIGIN=http://localhost:23080\nCORS_ALLOWED_ORIGINS=http://localhost:23080\nAURO_APP_URL=http://localhost:23080\nAURO_PUBLIC_URL=http://localhost:23080\n' > "$TEMP/env"

@@ -170,6 +170,9 @@ func (c *PostHogClient) send(batch []Event) {
 		}
 		props["event_schema_version"] = EventSchemaVersion
 		props["environment"] = c.cfg.Environment
+		// Browser events own geography; do not overwrite it with the data center.
+		props["$geoip_disable"] = true
+		props["$is_server"] = true
 		if _, ok := props["is_demo"]; !ok {
 			props["is_demo"] = false
 		}

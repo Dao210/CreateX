@@ -16,8 +16,7 @@ func (c *captureSpy) Close()                    {}
 
 // TestRecordEventSkipsPostHogForMetricsOnly verifies that events flagged by
 // analytics.IsMetricsOnly increment a Prometheus counter but are NOT shipped to
-// PostHog. As of MUL-4127 every server-side event is metrics-only, so none of
-// them reach PostHog; only a name outside the set (a frontend event) would.
+// PostHog. Acquisition events are covered separately below.
 func TestRecordEventSkipsPostHogForMetricsOnly(t *testing.T) {
 	spy := &captureSpy{}
 	m := metrics.NewBusinessMetrics()
@@ -48,5 +47,19 @@ func TestRecordEventSkipsPostHogForMetricsOnly(t *testing.T) {
 	metrics.RecordEvent(spy, m, analytics.Event{Name: "frontend_only_probe", DistinctID: "user-1"})
 	if len(spy.names) != 1 || spy.names[0] != "frontend_only_probe" {
 		t.Fatalf("a non-metrics-only event should ship to PostHog exactly once: %v", spy.names)
+	}
+}
+
+func TestAcquisitionEventsReachPostHogAndPrometheus(t *testing.T) {
+	spy := &captureSpy{}
+	m := metrics.NewBusinessMetrics()
+	before := metrics.SumAllCounters(m)
+	metrics.RecordEvent(spy, m, analytics.Signup("user-1", "private@example.com", ""))
+	metrics.RecordEvent(spy, m, analytics.OnboardingCompleted("user-1", "ws-1", "workspace_ready", "", false))
+	if len(spy.names) != 2 || spy.names[0] != "signup" || spy.names[1] != "onboarding_completed" {
+		t.Fatalf("acquisition events not delivered: %v", spy.names)
+	}
+	if metrics.SumAllCounters(m) != before+2 {
+		t.Fatalf("acquisition events must also increment their counters")
 	}
 }

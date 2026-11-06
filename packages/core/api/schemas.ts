@@ -1,5 +1,6 @@
 import { InboxContentSchema } from "../inbox/messages";
 import { z } from "zod";
+import { AnalyticsPublicConfigSchema } from "../analytics/config";
 import type { AgentBuilderRuntimeSwitch, AgentBuilderSession, AgentBuilderSessionSummary, Attachment, AutopilotRun, BillingBalance, BillingBatchesPage, BillingCheckoutSessionStatus, BillingPriceTier, BillingTopupsPage, BillingTransactionsPage, CancelTaskResponse, ChatMessage, ChatDraftRestoresResponse, ChatPendingTask, ChatSession, PrioritizeQueuedChatTaskResponse, SendChatMessageResponse, StartMikaOnboardingResponse, CreateBillingCheckoutSessionResponse, CreateBillingPortalSessionResponse, WorkspaceSubscriptionEntitlements, WorkspaceSubscriptionSummary, WorkspaceSubscriptionPrice, WorkspaceSubscriptionPrices, CreateWorkspaceSubscriptionCheckoutResponse, WorkspaceSubscriptionSeatReconcileResult, WorkspaceSeatPurchasePreview, PurchaseWorkspaceSeatsResponse, CreateWorkspaceSubscriptionPortalResponse, CronPreviewResponse, DingTalkInstallation, ListDingTalkInstallationsResponse, ListDingTalkGroupsResponse, RedeemDingTalkBindingTokenResponse, WecomInstallation, ListWecomInstallationsResponse, RedeemWecomBindingTokenResponse, TelegramInstallation, ListTelegramInstallationsResponse, RedeemTelegramBindingTokenResponse, GitHubConnectResponse, InboxItem, InboxWorkspaceUnread, Label, MemberWithUser, ListGitHubInstallationsResponse, ListGitHubRepositoriesResponse, ListLabelsResponse, ListWebhookDeliveriesResponse, NotificationPreferenceResponse, PluginInstallation, PluginInstallationListResponse, PluginPackage, PluginPackageListResponse, PluginPreview, PluginSurfaceLaunch, ResourceLabelsResponse, RuntimeModelListRequest, ShareLink, ShareLinkInfo, Skill, SkillImportResult, SkillSummary, User, WebhookDelivery, WorkspaceMcpServer } from "../types";
 import type { CloudRuntimeNode } from "../runtimes/cloud-runtime";
 import type { CreateFeedbackResponse } from "../feedback/types";
@@ -532,9 +533,7 @@ export const AppConfigSchema = z.object({
   cdn_signed: BooleanWithDefaultSchema(false),
   allow_signup: BooleanWithDefaultSchema(true),
   google_client_id: OptionalStringSchema,
-  posthog_key: OptionalStringSchema,
-  posthog_host: OptionalStringSchema,
-  analytics_environment: OptionalStringSchema,
+  ...AnalyticsPublicConfigSchema.shape,
   daemon_server_url: OptionalStringSchema,
   daemon_app_url: OptionalStringSchema,
   workspace_creation_disabled: BooleanWithDefaultSchema(false).optional(),
