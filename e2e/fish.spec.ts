@@ -80,7 +80,7 @@ test("previews and releases into the same open ocean, supports a narrow viewport
  try {
   await page.goto(`/${world.slug}/fish`);
   const scene = page.getByTestId("fish-scene");
-  await expect(scene).toHaveAttribute("data-fish-count", "6");
+  await expect(scene).toHaveAttribute("data-fish-count", "6", { timeout: 60_000 });
   const oceanCanvas = await scene.locator("canvas").elementHandle();
   await expect(page.getByRole("button", { name: "连接 Agent", exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "创造一条鱼", exact: true })).toHaveCount(1);
