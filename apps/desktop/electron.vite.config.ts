@@ -6,6 +6,11 @@ import tailwindcss from "@tailwindcss/vite";
 export default defineConfig({
   main: {
     plugins: [externalizeDepsPlugin()],
+    build: {
+      rollupOptions: {
+        output: { interop: "auto" },
+      },
+    },
   },
   preload: {
     // `@electron-toolkit/preload` must be bundled INTO the preload script:
