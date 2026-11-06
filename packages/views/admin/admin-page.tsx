@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Activity, ArrowLeft, Check, ChevronLeft, ChevronRight, Code2, Copy, Loader2, RefreshCw, Server, ShieldCheck, Gamepad2, Globe2 } from "lucide-react";
 import { useAuthStore } from "@auro/core/auth";
@@ -12,16 +12,16 @@ import { Switch } from "@auro/ui/components/ui/switch";
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@auro/ui/components/ui/dialog";
 import { useNavigation } from "../navigation";
 import { useT } from "../i18n";
-import { DragStrip } from "../platform";
 import { AppLink } from "../navigation";
 import { GameManager } from "./game-manager";
 import { WorldOperations } from "./world-operations";
 
-export function AdminPage({ onClose, module = "games", worldId, worldQuery }: {
+export function AdminPage({ onClose, module = "games", worldId, worldQuery, topSlot }: {
   onClose?: () => void;
   module?: "games" | "mcp" | "worlds";
   worldId?: string;
   worldQuery?: string;
+  topSlot?: ReactNode;
 }) {
   const activeModule = module;
   const { t } = useT("admin");
@@ -39,7 +39,7 @@ export function AdminPage({ onClose, module = "games", worldId, worldQuery }: {
     mcp: { Icon: Server, label: t($ => $.mcp) },
     worlds: { Icon: Globe2, label: t($ => $.worlds.title) },
   };
-  return <div className="admin-root"><DragStrip />
+  return <div className="admin-root">{topSlot}
     <div className="admin-shell">
       <aside className="admin-sidebar"><div className="admin-brand"><ShieldCheck /><strong>{t($ => $.brand)}</strong><span>ADMIN</span></div>
         <div className="admin-sidebar-label">{t($ => $.title)}</div>

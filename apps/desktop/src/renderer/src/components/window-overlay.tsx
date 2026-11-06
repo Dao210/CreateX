@@ -3,6 +3,7 @@ import { InvitePage } from "@auro/views/invite";
 import { InvitationsPage } from "@auro/views/invitations";
 import { OnboardingFlow } from "@auro/views/onboarding";
 import { AdminPage } from "@auro/views/admin";
+import { DragStrip } from "@auro/views/platform";
 import "@auro/views/admin/admin.css";
 import { useNavigation } from "@auro/views/navigation";
 import { paths } from "@auro/core/paths";
@@ -60,7 +61,7 @@ function WindowOverlayInner() {
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col overflow-auto bg-background">
-      {overlay.type === "admin" && <AdminPage key={overlay.module ?? "games"} module={overlay.module} worldId={overlay.worldId} worldQuery={overlay.worldQuery} onClose={close} />}
+      {overlay.type === "admin" && <AdminPage key={overlay.module ?? "games"} module={overlay.module} worldId={overlay.worldId} worldQuery={overlay.worldQuery} onClose={close} topSlot={<DragStrip />} />}
       {/* Creating a workspace is the onboarding flow entered at the
           workspace step: a second workspace still needs its own runtime and
           its own Mika, so running one flow keeps the two from drifting. */}

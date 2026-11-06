@@ -48,6 +48,7 @@ test("records a world visit, drills into that world, and follows up through clos
 
   await page.goto("/admin/worlds");
   await expect(page.getByRole("heading", { name: "World operations" })).toBeVisible();
+  await expect.poll(() => page.locator(".admin-shell").evaluate(element => element.getBoundingClientRect().top)).toBe(0);
   await page.getByRole("button", { name: /Worlds with visits/ }).click();
   await expect(page).toHaveURL(/segment=visited/);
   await expect(page.getByRole("link", { name: alpha.name })).toBeVisible();
@@ -57,7 +58,10 @@ test("records a world visit, drills into that world, and follows up through clos
   await expect(page.getByRole("heading", { name: alpha.name })).toBeVisible();
   await page.getByRole("button", { name: "Start follow-up" }).click();
   let dialog = page.getByRole("dialog");
-  await dialog.getByLabel("Reason").fill("Check first creation");
+  const reason = dialog.getByLabel("Reason");
+  await reason.focus();
+  await reason.fill("Check first creation");
+  await expect(reason).toHaveValue("Check first creation");
   await dialog.getByRole("button", { name: "Save", exact: true }).click();
   await expect(dialog).toBeHidden();
   await expect(page.getByText("Check first creation")).toBeVisible();
