@@ -35,8 +35,7 @@
     "docs": "文档",
     "changelog": "更新日志",
     "discord": "Discord",
-    "feedback": "反馈",
-    "server_version": "服务器版本 {{version}}"
+    "feedback": "反馈"
   },
   "workspace_loader": {
     "loading_workspace": "正在加载世界…",

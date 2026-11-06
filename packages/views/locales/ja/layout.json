@@ -35,8 +35,7 @@
     "docs": "ドキュメント",
     "changelog": "変更ログ",
     "discord": "Discord",
-    "feedback": "フィードバック",
-    "server_version": "サーバーバージョン {{version}}"
+    "feedback": "フィードバック"
   },
   "workspace_loader": {
     "loading_workspace": "ワールドを読み込み中…",

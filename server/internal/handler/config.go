@@ -112,7 +112,7 @@ func (h *Handler) GetConfig(w http.ResponseWriter, r *http.Request) {
 	config.FeatureFlags = featureflags.EvaluateFrontendPublicFlags(r.Context(), h.FeatureFlags)
 	// Only surface the build version on self-hosted deployments. The managed
 	// cloud is continuously deployed and its users can't choose the build, so
-	// the Help popover's version row would just be noise there (MUL-4108).
+	// the field would just be noise there (MUL-4108).
 	if !isOfficialCloudDeployment() {
 		config.ServerVersion = h.cfg.ServerVersion
 	}
@@ -181,8 +181,8 @@ func isOfficialCloudDaemonConfig(appURL string) bool {
 
 // isOfficialCloudDeployment reports whether this server is the official Auro
 // Cloud, reusing the same frontend-host signal as the daemon setup (auro.ai).
-// Managed-cloud-only behavior — such as suppressing the Help popover's
-// server-version row, which only matters to self-hosted operators — is gated on
+// Managed-cloud-only behavior — such as suppressing /api/config's
+// server_version, which only matters to self-hosted operators — is gated on
 // this.
 func isOfficialCloudDeployment() bool {
 	return isOfficialCloudDaemonConfig(resolveFrontendAppURL())

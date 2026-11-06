@@ -35,8 +35,7 @@
     "docs": "Documentation",
     "changelog": "Journal des modifications",
     "discord": "Discord",
-    "feedback": "Faire un retour",
-    "server_version": "Version du serveur {{version}}"
+    "feedback": "Faire un retour"
   },
   "workspace_loader": {
     "loading_workspace": "Chargement du monde…",
