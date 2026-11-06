@@ -6,6 +6,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { WorkspaceSlugProvider, paths } from "@auro/core/paths";
 import { workspaceBySlugOptions } from "@auro/core/workspace";
 import { setCurrentWorkspace } from "@auro/core/platform";
+import { useWorldVisit } from "@auro/core/client-usage";
 import { useAuthStore } from "@auro/core/auth";
 import { NoAccessPage } from "@auro/views/workspace/no-access-page";
 import { WorkspaceLoader } from "@auro/views/layout/workspace-loader";
@@ -78,6 +79,11 @@ export default function WorkspaceLayout({
   if (workspace && workspaceSlug === workspaceSlugFromPathname(pathname)) {
     setCurrentWorkspace(workspaceSlug, workspace.id);
   }
+
+  useWorldVisit(
+    !isAuthLoading && user?.onboarded_at && workspaceSlug === workspaceSlugFromPathname(pathname) ? workspace?.id : undefined,
+    user?.id,
+  );
 
   // Cookie write (last_workspace_slug) — proxy reads it on next page load
   // to redirect unauthenticated-URL hits to the user's last workspace.

@@ -23,6 +23,10 @@ func fail(w http.ResponseWriter, err error) {
 	switch {
 	case errors.Is(err, adminauth.ErrForbidden):
 		status, code = 403, "admin_forbidden"
+	case errors.Is(err, errWorldNotFound):
+		status, code = 404, errWorldNotFound.Error()
+	case errors.Is(err, errWorldConflict):
+		status, code = 409, errWorldConflict.Error()
 	case errors.Is(err, ErrInvalid):
 		status, code = 400, ErrInvalid.Error()
 	default:
@@ -33,6 +37,12 @@ func fail(w http.ResponseWriter, err error) {
 
 func (s *Service) AdminHandler() http.Handler {
 	mux := http.NewServeMux()
+	mux.HandleFunc("GET /api/admin/worlds", s.worlds)
+	mux.HandleFunc("GET /api/admin/worlds/assignees", s.worldAssignees)
+	mux.HandleFunc("GET /api/admin/worlds/{world}", s.world)
+	mux.HandleFunc("GET /api/admin/worlds/{world}/followups", s.worldFollowups)
+	mux.HandleFunc("GET /api/admin/worlds/{world}/followups/{followup}", s.worldFollowupEntries)
+	mux.HandleFunc("PUT /api/admin/worlds/{world}/followups/{followup}", s.saveWorldFollowup)
 	mux.HandleFunc("GET /api/admin/stats/overview", func(w http.ResponseWriter, r *http.Request) {
 		overview, err := s.Overview(r.Context())
 		if err != nil {

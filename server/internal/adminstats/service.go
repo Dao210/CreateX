@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/auro-ai/auro/server/internal/adminauth"
+	"github.com/auro-ai/auro/server/internal/gameadmin"
 	db "github.com/auro-ai/auro/server/pkg/db/generated"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -102,8 +103,9 @@ var (
 )
 
 type Service struct {
-	Pool *pgxpool.Pool
-	Auth *adminauth.Gate
+	Pool  *pgxpool.Pool
+	Auth  *adminauth.Gate
+	Games *gameadmin.Service
 
 	overviewCache  ttlCache[Overview]
 	breakdownCache ttlCache[Breakdown]

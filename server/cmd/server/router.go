@@ -19,6 +19,7 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"github.com/auro-ai/auro/server/internal/adminauth"
+	"github.com/auro-ai/auro/server/internal/adminstats"
 	"github.com/auro-ai/auro/server/internal/analytics"
 	"github.com/auro-ai/auro/server/internal/auth"
 	"github.com/auro-ai/auro/server/internal/cloudruntime"
@@ -213,9 +214,9 @@ func siegeOwner(handler http.Handler) http.Handler {
 // `version` var, unchanged when the binary wasn't built with
 // -X main.version=<tag>) to an empty string. handler.Config.ServerVersion
 // feeds /api/config's server_version field with omitempty, so an empty
-// string hides the Help popover's version row instead of rendering
-// "Server version dev" for a local `go build`/`go run` or a self-hosted
-// `docker build` without --build-arg VERSION.
+// string omits the field instead of reporting "dev" for a local
+// `go build`/`go run` or a self-hosted `docker build` without
+// --build-arg VERSION.
 func normalizeServerVersion(v string) string {
 	if v == "dev" {
 		return ""
@@ -438,6 +439,7 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 		}
 		opts.GameAdmin = &gameadmin.Service{Pool: pool, Auth: gate}
 	}
+	worldOps := &adminstats.Service{Pool: pool, Auth: opts.GameAdmin.Auth, Games: opts.GameAdmin}
 	queries := db.New(pool)
 	emailSvc := service.NewEmailService()
 	daemonHub := opts.DaemonHub
@@ -1691,6 +1693,9 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 			r.Handle("/api/admin/games", opts.GameAdmin.AdminHandler())
 			r.Handle("/api/admin/games/*", opts.GameAdmin.AdminHandler())
 		}
+		worldOpsHandler := worldOps.AdminHandler()
+		r.Handle("/api/admin/worlds", worldOpsHandler)
+		r.Handle("/api/admin/worlds/*", worldOpsHandler)
 		r.Patch("/api/me", h.UpdateMe)
 		r.Patch("/api/me/onboarding", h.PatchOnboarding)
 		r.Post("/api/me/onboarding/complete", h.CompleteOnboarding)
@@ -2026,6 +2031,7 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 
 			gameGuard := opts.GameAdmin.Guard
 			r.Get("/api/games", opts.GameAdmin.MemberHandler)
+			r.With(handler.RequireHumanActor).Post("/api/world-visit", worldOps.RecordVisit)
 			// Doodle Siege (docs/siege-integration-plan.md). Mounted rather than
 			// re-routed: the handler already speaks /api/siege/*, the same paths
 			// standalone mode serves. siegeOwner is the only glue — it turns the
@@ -2049,8 +2055,10 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 			r.Handle("/api/game-progress", progress)
 			r.Handle("/api/game-progress/*", progress)
 			r.Method("GET", "/api/life", gameGuard("life", life.Handler(queries)))
- r.Method("GET", "/api/life/history", gameGuard("life", life.HistoryHandler(queries)))
- if opts.Life != nil { r.Method("POST", "/api/life/commands", gameGuard("life", http.HandlerFunc(opts.Life.Commands))) }
+			r.Method("GET", "/api/life/history", gameGuard("life", life.HistoryHandler(queries)))
+			if opts.Life != nil {
+				r.Method("POST", "/api/life/commands", gameGuard("life", http.HandlerFunc(opts.Life.Commands)))
+			}
 
 			// Task messages (user-facing, not daemon auth)
 			r.Get("/api/tasks/{taskId}/messages", h.ListTaskMessagesByUser)

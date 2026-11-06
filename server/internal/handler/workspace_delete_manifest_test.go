@@ -68,6 +68,11 @@ var workspaceDeletionManifest = map[string]workspaceDeleteAction{
 	"github_installation":             workspaceDelete,
 	"github_pending_installation":     workspaceDeleteKeep,
 	"world_inbox_event":               workspaceDelete,
+	"world_ops_action":                workspaceDelete,
+	"world_ops_coverage":              workspaceDeleteKeep,
+	"world_ops_followup":              workspaceDelete,
+	"world_ops_followup_entry":        workspaceDelete,
+	"world_ops_visit":                 workspaceDelete,
 	"inbox_item":                      workspaceDelete,
 	"instance_telemetry_state":        workspaceDeleteKeep,
 	"lark_binding_token":              workspaceDelete,
@@ -129,8 +134,8 @@ var workspaceDeletionManifest = map[string]workspaceDeleteAction{
 	"life_agent":                      workspaceDelete,
 	"life_event":                      workspaceDelete,
 	"life_resource":                   workspaceDelete,
-	"life_request": workspaceDelete,
- "life_world":                      workspaceDelete,
+	"life_request":                    workspaceDelete,
+	"life_world":                      workspaceDelete,
 }
 
 func TestWorkspaceDeletionManifestCoversPublicSchema(t *testing.T) {

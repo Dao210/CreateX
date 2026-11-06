@@ -78,7 +78,8 @@ export const paths = {
   // Global (pre-workspace) routes
   login: () => "/login",
   publicOcean: () => "/ocean",
-  admin: (module?: "games" | "mcp") => module ? `/admin/${module}` : "/admin",
+  adminWorld: (worldId: string) => `/admin/worlds/${encodeURIComponent(worldId)}`,
+  admin: (module?: "games" | "mcp" | "worlds") => module ? `/admin/${module}` : "/admin",
   newWorkspace: () => "/workspaces/new",
   invite: (id: string) => `/invite/${encode(id)}`,
   invitations: () => "/invitations",

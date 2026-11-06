@@ -5,7 +5,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"net/mail"
+	"slices"
 	"strings"
 
 	"github.com/auro-ai/auro/server/internal/util"
@@ -36,6 +38,8 @@ func New(pool *pgxpool.Pool, raw string) (*Gate, error) {
 	}
 	return g, nil
 }
+
+func (g *Gate) Emails() []string { return slices.Sorted(maps.Keys(g.emails)) }
 
 func (g *Gate) Configured() bool { return len(g.emails) > 0 }
 func (g *Gate) AllowsEmail(email string) bool {

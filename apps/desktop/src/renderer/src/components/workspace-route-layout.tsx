@@ -8,9 +8,11 @@ import {
 } from "@auro/core/workspace";
 import { getCurrentSlug, setCurrentWorkspace } from "@auro/core/platform";
 import { isWorkspaceDeletePending } from "@auro/core/workspace/pending-delete";
+import { useWorldVisit } from "@auro/core/client-usage";
 import { useAuthStore } from "@auro/core/auth";
 import { useWorkspaceSeen } from "@auro/views/workspace/use-workspace-seen";
 import { WorkspacePresencePrefetch } from "@auro/views/layout";
+import { useWindowOverlayStore } from "@/stores/window-overlay-store";
 import { useTabStore } from "@/stores/tab-store";
 
 /**
@@ -98,6 +100,12 @@ export function WorkspaceRouteLayout() {
   }
 
   const hasBeenSeen = useWorkspaceSeen(workspaceSlug, !!workspace);
+
+  const hasOverlay = useWindowOverlayStore((state) => state.overlay !== null);
+  useWorldVisit(
+    !isAuthLoading && !hasOverlay && workspace && !isWorkspaceDeletePending(workspace.id) ? workspace.id : undefined,
+    user?.id,
+  );
 
   // Stale-slug auto-heal: when this tab's slug fails to resolve, drop the
   // whole workspace group from the tab store. Per-workspace tab grouping

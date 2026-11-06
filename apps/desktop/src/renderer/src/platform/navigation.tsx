@@ -48,6 +48,12 @@ function extractWorkspaceSlug(path: string): string | null {
  */
 function tryRouteToOverlay(path: string): boolean {
   const overlay = useWindowOverlayStore.getState();
+  const [pathname, query] = path.split("?", 2);
+  if (pathname === paths.admin("worlds") || pathname?.startsWith(`${paths.admin("worlds")}/`)) {
+    const worldId = pathname.slice(paths.admin("worlds").length + 1) || undefined;
+    overlay.open({ type: "admin", module: "worlds", worldId, worldQuery: query ?? "" });
+    return true;
+  }
   if (path === paths.admin() || path === paths.admin("games") || path === paths.admin("mcp")) {
     overlay.open({ type: "admin", module: path === paths.admin("mcp") ? "mcp" : "games" });
     return true;

@@ -4,6 +4,10 @@ import { AdminGamesSchema, GamePolicySchema, GameImpactSchema, GameWorldPageSche
 import { LifeSnapshotSchema, LifeHistorySchema, type LifeHistory, type LifeSnapshot } from "../agent-life/schema";
 import { TownCommandResultSchema, type TownCommand, type TownCommandResult } from "../agent-life/town-schema";
 import { AdminAccessSchema, MCPAdminServicesSchema, MCPPolicySchema, MCPActivityPageSchema, type AdminAccess, type MCPAdminService, type MCPPolicy, type MCPActivityPage, type MCPActivityFilter, type UpdateMCPPolicyInput } from "../admin/schema";
+import {
+  WorldOpsPageSchema, WorldOpsDetailSchema, WorldOpsFollowupsSchema, WorldOpsEntriesSchema, WorldOpsAssigneesSchema,
+  type WorldOpsFollowupInput,
+} from "../admin/world-schema";
 import { TankCharacterSchema, TankCharacterListSchema, TankPlaySessionSchema, type TankCharacter, type TankPlaySession, type SaveTankCharacterInput, type CreateTankSessionInput } from "../tank-defense/characters";
 import { TankTrainingRunSchema, TankTrainingResultSchema, type TankTrainingRun, type TankTrainingResult, type StartTankTrainingInput, type SettleTankTrainingInput } from "../tank-defense/progression";
 import { GameProgressSchema, SiegeProgressResponseSchema, TankProgressResponseSchema, type GameProgress, type SiegeProgress, type TankProgress } from "../game-progress/schema";
@@ -275,6 +279,49 @@ export class ApiClient {
 
   getBaseUrl(): string {
     return this.baseUrl;
+  }
+
+  private async readWorldOps<T>(endpoint: string, schema: z.ZodType<T>): Promise<T> {
+    const raw = await this.fetch<unknown>(endpoint, { headers: { "X-Workspace-ID": "", "X-Workspace-Slug": "" } });
+    const parsed = parseWithFallback<T | null>(raw, schema, null, { endpoint });
+    if (parsed === null) throw new Error("invalid_world_operations_response");
+    return parsed;
+  }
+
+  listWorldOps(query: string) {
+    return this.readWorldOps(`/api/admin/worlds?${query}`, WorldOpsPageSchema);
+  }
+
+  async getWorldOps(world: string, query: string) {
+    const response = await this.readWorldOps(`/api/admin/worlds/${encodeURIComponent(world)}?${query}`, WorldOpsDetailSchema);
+    if (response.items.length !== 1 || response.items[0]?.id !== world) throw new Error("invalid_world_operations_response");
+    return response;
+  }
+
+  async listWorldOpsFollowups(world: string, page: number) {
+    const response = await this.readWorldOps(`/api/admin/worlds/${encodeURIComponent(world)}/followups?page=${page}`, WorldOpsFollowupsSchema);
+    if (response.items.some(item => item.workspace_id !== world)) throw new Error("invalid_world_operations_response");
+    return response;
+  }
+
+  listWorldOpsEntries(world: string, followup: string, page: number) {
+    return this.readWorldOps(`/api/admin/worlds/${encodeURIComponent(world)}/followups/${encodeURIComponent(followup)}?page=${page}`, WorldOpsEntriesSchema);
+  }
+
+  listWorldOpsAssignees() {
+    return this.readWorldOps("/api/admin/worlds/assignees", WorldOpsAssigneesSchema);
+  }
+
+  async saveWorldOpsFollowup(world: string, followup: string, input: WorldOpsFollowupInput): Promise<void> {
+    await this.fetch<unknown>(`/api/admin/worlds/${encodeURIComponent(world)}/followups/${encodeURIComponent(followup)}`, {
+      method: "PUT", body: JSON.stringify(input), headers: { "X-Workspace-ID": "", "X-Workspace-Slug": "" },
+    });
+  }
+
+  async recordWorldVisit(world: string): Promise<void> {
+    await this.fetch<unknown>("/api/world-visit", {
+      method: "POST", headers: { "X-Workspace-ID": world, "X-Workspace-Slug": "" },
+    });
   }
 
   async getAdminAccess(): Promise<AdminAccess> {

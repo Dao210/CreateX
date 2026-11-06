@@ -33,3 +33,23 @@ it("rejects activity from a different service",async () => {
   respond({items:[{id:"11111111-1111-4111-8111-111111111111",serviceId:"another",actorId:"11111111-1111-4111-8111-111111111111",kind:"call",outcome:"success",durationMs:1,occurredAt:"2026-10-24T00:00:00Z"}]});
   await expect(new ApiClient("https://api.example.invalid").getAdminMCPActivity("auro-tanks",{})).rejects.toThrow("invalid_admin_response");
 });
+
+it("rejects invalid world analysis dates and keeps global routing separate", async () => {
+  const fetcher = respond({ from: "not-a-date", items: [] });
+  const client = new ApiClient("https://api.example.invalid");
+  await expect(client.listWorldOps("segment=visited")).rejects.toThrow("invalid_world_operations_response");
+  expect(new Headers(fetcher.mock.calls[0]![1].headers).get("X-Workspace-ID")).toBe("");
+});
+
+it("rejects a follow-up from another world and an invalid audit history", async () => {
+  const world = "00000000-0000-4000-8000-000000000001";
+  const other = "00000000-0000-4000-8000-000000000002";
+  const client = new ApiClient("https://api.example.invalid");
+  respond({ items: [{
+    id: other, workspace_id: other, assignee_id: world, assignee: "Operator", reason: "Check creation",
+    due_on: null, version: 1, closed_at: null, created_at: "2026-11-05T04:00:00Z",
+  }], more: false });
+  await expect(client.listWorldOpsFollowups(world, 0)).rejects.toThrow("invalid_world_operations_response");
+  respond({ items: [{ version: "bad" }], more: false });
+  await expect(client.listWorldOpsEntries(world, other, 0)).rejects.toThrow("invalid_world_operations_response");
+});

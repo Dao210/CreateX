@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Activity, ArrowLeft, Check, ChevronLeft, ChevronRight, Code2, Copy, Loader2, RefreshCw, Server, ShieldCheck, Gamepad2 } from "lucide-react";
+import { Activity, ArrowLeft, Check, ChevronLeft, ChevronRight, Code2, Copy, Loader2, RefreshCw, Server, ShieldCheck, Gamepad2, Globe2 } from "lucide-react";
 import { useAuthStore } from "@auro/core/auth";
 import { adminAccessOptions, adminMCPServicesOptions, adminMCPActivityOptions, useUpdateMCPPolicy, type MCPAdminService, type MCPActivityFilter, type UpdateMCPPolicyInput } from "@auro/core/admin";
 import { api, ApiError } from "@auro/core/api";
@@ -15,35 +15,49 @@ import { useT } from "../i18n";
 import { DragStrip } from "../platform";
 import { AppLink } from "../navigation";
 import { GameManager } from "./game-manager";
+import { WorldOperations } from "./world-operations";
 
-export function AdminPage({ onClose, module = "games" }: { onClose?: () => void; module?: "games" | "mcp" }) {
-  const [overlayModule, setOverlayModule] = useState(module);
-  const activeModule = onClose ? overlayModule : module;
+export function AdminPage({ onClose, module = "games", worldId, worldQuery }: {
+  onClose?: () => void;
+  module?: "games" | "mcp" | "worlds";
+  worldId?: string;
+  worldQuery?: string;
+}) {
+  const activeModule = module;
   const { t } = useT("admin");
   const navigation = useNavigation();
   const user = useAuthStore(state => state.user);
   const authLoading = useAuthStore(state => state.isLoading);
   const access = useQuery(adminAccessOptions(user?.id ?? ""));
-  useEffect(() => { if (!authLoading && !user) navigation.replace(`${paths.login()}?next=${encodeURIComponent(paths.admin(activeModule))}`); }, [authLoading,user,navigation,activeModule]);
+  useEffect(() => {
+    const target = activeModule === "worlds" && worldId ? paths.adminWorld(worldId) : paths.admin(activeModule);
+    if (!authLoading && !user) navigation.replace(`${paths.login()}?next=${encodeURIComponent(target)}`);
+  }, [authLoading, user, navigation, activeModule, worldId]);
   const back = () => onClose ? onClose() : navigation.push(paths.root());
+  const modules = {
+    games: { Icon: Gamepad2, label: t($ => $.games_title) },
+    mcp: { Icon: Server, label: t($ => $.mcp) },
+    worlds: { Icon: Globe2, label: t($ => $.worlds.title) },
+  };
   return <div className="admin-root"><DragStrip />
     <div className="admin-shell">
       <aside className="admin-sidebar"><div className="admin-brand"><ShieldCheck /><strong>{t($ => $.brand)}</strong><span>ADMIN</span></div>
         <div className="admin-sidebar-label">{t($ => $.title)}</div>
-        <nav className="admin-module-nav" aria-label={t($ => $.title)}>{(["games", "mcp"] as const).map(item => {
-          const Icon = item === "games" ? Gamepad2 : Server;
-          const label = item === "games" ? t($ => $.games_title) : t($ => $.mcp);
-          return onClose ? <Button key={item} variant="ghost" className="admin-module-link" aria-current={activeModule === item ? "page" : undefined} onClick={() => setOverlayModule(item)}><Icon />{label}</Button>
+        <nav className="admin-module-nav" aria-label={t($ => $.title)}>{(["games", "mcp", "worlds"] as const).map(item => {
+          const { Icon, label } = modules[item];
+          return onClose ? <Button key={item} variant="ghost" className="admin-module-link" aria-current={activeModule === item ? "page" : undefined} onClick={() => navigation.push(paths.admin(item))}><Icon />{label}</Button>
             : <AppLink key={item} href={paths.admin(item)} className="admin-module-link" aria-current={activeModule === item ? "page" : undefined}><Icon />{label}</AppLink>;
         })}</nav>
         <div className="admin-sidebar-bottom"><span title={user?.email}>{user?.email}</span><Button variant="ghost" onClick={back}><ArrowLeft />{t($ => $.back)}</Button></div>
       </aside>
       <main className="admin-main">
-        <header className="admin-header"><div><span>{t($ => $.global_scope)}</span><h1>{activeModule === "games" ? t($ => $.games_title) : t($ => $.mcp)}</h1></div><span className="admin-admin-badge"><ShieldCheck />{t($ => $.admin_access)}</span></header>
+        <header className="admin-header"><div><span>{t($ => $.global_scope)}</span><h1>{modules[activeModule].label}</h1></div><span className="admin-admin-badge"><ShieldCheck />{t($ => $.admin_access)}</span></header>
         {authLoading || !user || access.isPending ? <div className="admin-state" role="status"><Loader2 className="animate-spin" />{t($ => $.checking)}</div>
           : access.isError ? <div className="admin-state" role="alert"><p>{t($ => $.load_error)}</p><Button variant="outline" onClick={() => void access.refetch()}>{t($ => $.refresh)}</Button></div>
             : !access.data.isAdmin ? <div className="admin-state" role="alert"><ShieldCheck /><h2>{t($ => $.forbidden)}</h2><p>{access.data.configured ? t($ => $.forbidden_help) : t($ => $.unconfigured_help)}</p></div>
-              : activeModule === "games" ? <GameManager key={user.id} userId={user.id} /> : <MCPManager key={user.id} userId={user.id} />}
+              : activeModule === "games" ? <GameManager key={user.id} userId={user.id} />
+                : activeModule === "mcp" ? <MCPManager key={user.id} userId={user.id} />
+                  : <WorldOperations key={user.id} userId={user.id} worldId={worldId} worldQuery={worldQuery} />}
       </main>
     </div>
   </div>;

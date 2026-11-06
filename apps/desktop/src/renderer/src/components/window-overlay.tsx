@@ -60,7 +60,7 @@ function WindowOverlayInner() {
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col overflow-auto bg-background">
-      {overlay.type === "admin" && <AdminPage key={overlay.module ?? "games"} module={overlay.module} onClose={close} />}
+      {overlay.type === "admin" && <AdminPage key={overlay.module ?? "games"} module={overlay.module} worldId={overlay.worldId} worldQuery={overlay.worldQuery} onClose={close} />}
       {/* Creating a workspace is the onboarding flow entered at the
           workspace step: a second workspace still needs its own runtime and
           its own Mika, so running one flow keeps the two from drifting. */}
