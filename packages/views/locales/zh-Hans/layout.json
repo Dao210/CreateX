@@ -43,7 +43,6 @@
     "loading_named": "正在加载「{{name}}」…"
   },
   "sidebar": {
-    "world_group": "世界",
     "explore_group": "探索",
     "personal_account": "个人账号",
     "switch_world": "切换世界",

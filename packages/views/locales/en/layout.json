@@ -43,7 +43,6 @@
     "loading_named": "Loading {{name}}…"
   },
   "sidebar": {
-    "world_group": "World",
     "explore_group": "Explore",
     "personal_account": "Personal account",
     "switch_world": "Switch world",

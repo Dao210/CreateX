@@ -135,7 +135,6 @@ export function AppSidebar({ topSlot, headerClassName, headerStyle }: AppSidebar
       <Sidebar variant="inset" collapsible="icon">
         {topSlot}
         <SidebarHeader className={cn("py-3", headerClassName)} style={headerStyle}>
-          <SidebarGroupLabel className={GROUP_LABEL_CLASS_NAME}>{t($ => $.sidebar.world_group)}</SidebarGroupLabel>
           <SidebarMenu className="gap-0.5">
             <SidebarMenuItem>
               <SidebarMenuButton

@@ -43,7 +43,6 @@
     "loading_named": "{{name}} 불러오는 중…"
   },
   "sidebar": {
-    "world_group": "세계",
     "explore_group": "탐험",
     "personal_account": "개인 계정",
     "switch_world": "세계 전환",
