@@ -345,13 +345,12 @@ func TestGetConfigExposesWorkspaceCreationDisabled(t *testing.T) {
 
 // TestGetConfigExposesServerVersion verifies /api/config reports the build
 // version main.go stamps into handler.Config via -X main.version on a
-// self-hosted deployment, so operators can confirm what's deployed from the
-// Help popover.
+// self-hosted deployment, so operators can confirm what's deployed.
 func TestGetConfigExposesServerVersion(t *testing.T) {
 	origCfg := testHandler.cfg
 	defer func() { testHandler.cfg = origCfg }()
 
-	// Self-hosted frontend origin: the version row is meant for these deployments.
+	// Self-hosted frontend origin: the version field is meant for these deployments.
 	t.Setenv("AURO_APP_URL", "https://auro.self-hosted.example")
 	t.Setenv("FRONTEND_ORIGIN", "")
 
@@ -384,7 +383,7 @@ func TestGetConfigExposesServerVersion(t *testing.T) {
 // TestGetConfigOmitsServerVersionOnOfficialCloud verifies the build version is
 // suppressed on the managed cloud (frontend host auro.ai) even when the
 // binary is stamped, while a self-hosted frontend origin still reports it. The
-// managed cloud is continuously deployed, so its users don't need the row.
+// managed cloud is continuously deployed, so its users don't need the field.
 func TestGetConfigOmitsServerVersionOnOfficialCloud(t *testing.T) {
 	origCfg := testHandler.cfg
 	defer func() { testHandler.cfg = origCfg }()

@@ -80,7 +80,6 @@ export function AuthInitializer({
           daemonAppUrl: cfg.daemon_app_url,
         });
         configStore.getState().setFeatureFlags(cfg.feature_flags);
-        configStore.getState().setServerVersion(cfg.server_version);
         // Absent on every server that predates the worktree save gate, which
         // is exactly when the client must not offer the mode (#7113).
         configStore

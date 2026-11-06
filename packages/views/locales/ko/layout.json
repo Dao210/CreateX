@@ -35,8 +35,7 @@
     "docs": "문서",
     "changelog": "변경 로그",
     "discord": "Discord",
-    "feedback": "피드백",
-    "server_version": "서버 버전 {{version}}"
+    "feedback": "피드백"
   },
   "workspace_loader": {
     "loading_workspace": "세계 로딩 중...",
