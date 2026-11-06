@@ -119,12 +119,13 @@ function MeContent({ storage, workspace, userId }: {
 
   if (games.isPending) return <p role="status" className="p-6 text-body text-muted-foreground">{t($ => $.loading)}</p>;
   if (games.isError) return <ErrorCard message={adminT($ => $.game_policy_error)} retry={() => void games.refetch()} retryLabel={t($ => $.retry)} />;
-  return <>
+  return <div className="flex min-h-0 flex-1 flex-col">
     <PageHeader>
       <Shapes className="size-4 text-muted-foreground" aria-hidden />
       <h1 className="min-w-0 flex-1 truncate text-body font-medium">{t(($) => $.title)}</h1>
     </PageHeader>
-    <div className="mx-auto w-full max-w-[1180px] space-y-6 px-4 pb-12 pt-4">
+    <div className="min-h-0 flex-1 overflow-y-auto">
+      <div className="mx-auto w-full max-w-[1180px] space-y-6 px-4 pb-12 pt-4">
       <section className="space-y-4">
         <p className="flex min-w-0 items-start gap-2 text-caption text-muted-foreground">
           <Globe2 className="mt-0.5 size-3.5 shrink-0" aria-hidden />
@@ -213,8 +214,9 @@ function MeContent({ storage, workspace, userId }: {
           </section>
         </TabsContent>
       </Tabs>
+      </div>
     </div>
-  </>;
+  </div>;
 }
 
 function Stat({ icon, label, value }: { icon: ReactNode; label: string; value: ReactNode }) {
