@@ -18,7 +18,7 @@ export function profileFor(agent: Agent, index: number): Profile {
 }
 export function newTown(agents: Agent[]): Town {
   return { version: 1, revision: 0, profiles: agents.map(profileFor), memories: [], relationships: [], plans: [], activities: [], conversations: [], jobs: [],
-    model: { mode: "rules", state: "rules", residentLimit: 5, dailyLimit: 100, budgetDay: "", calls: 0 } };
+    model: { mode: "rules", state: "rules", residentLimit: 5, dailyLimit: 100, budgetDay: "", calls: 0 }, civilization: null };
 }
 export function placePosition(place: PlaceId, profile: Profile) {
   return place === "home" ? TOWN_HOMES[profile.home]! : TOWN_PLACES[place];

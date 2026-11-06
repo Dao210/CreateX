@@ -9,7 +9,7 @@ import { TestApiClient } from "./fixtures";
 // It refuses an existing simulation and never replaces another world's state.
 test.skip(process.env.LIFE_E2E !== "1", "Set LIFE_E2E=1 against a migrated API/Web environment with no existing Life world.");
 test.setTimeout(240_000);
-test.use({ actionTimeout: 15_000, viewport: { width: 1440, height: 1000 } });
+test.use({ launchOptions: { args: ["--enable-unsafe-swiftshader"] }, actionTimeout: 15_000, viewport: { width: 1440, height: 1000 } });
 let api: TestApiClient;
 let outsider: TestApiClient;
 let world: Awaited<ReturnType<TestApiClient["createWorkspace"]>>;
@@ -20,7 +20,7 @@ const run = promisify(execFile);
 
 async function restartAPI(bootstrap?: string, modelEnv: Record<string, string> = {}) {
   await run("make", ["down", "ARGS=--components api"], { timeout: 30_000 });
-  await run("make", ["up", "C=api", ...(bootstrap ? [`AGENT_LIFE_WORKSPACE_ID=${bootstrap}`] : [])], { timeout: 60_000, env: { ...process.env, ...modelEnv } });
+  await run("make", ["up", "C=api", "ARGS=", ...(bootstrap ? [`AGENT_LIFE_WORKSPACE_ID=${bootstrap}`] : [])], { timeout: 60_000, env: { ...process.env, ...modelEnv } });
 }
 async function health() {
   const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || `http://localhost:${process.env.PORT || "8080"}`}/health`);
@@ -50,6 +50,8 @@ test.beforeAll(async () => {
   // No viewer or player is connected while the integrated service advances.
   await expect.poll(tick, { timeout: 20_000 }).toBeGreaterThanOrEqual(3);
   tickBefore = await tick();
+  // Advance this disposable fixture to morning so the scene covers outdoor life.
+  await pool.query("UPDATE life_world SET tick=540,next_tick_at=clock_timestamp() WHERE workspace_id=$1", [world.id]);
 });
 test.afterAll(async () => {
   if (other) await outsider.deleteWorkspace();
@@ -73,21 +75,26 @@ test("headless simulation, real snapshot viewer, workspace isolation and main-se
   await page.context().addCookies([{ name: "auro-locale", value: "zh-Hans", url: baseURL! }]);
   await page.addInitScript((token) => localStorage.setItem("auro_token", token), api.getToken()!);
   await page.goto(`/${world.slug}/life`);
-  await expect(page.getByRole("heading", { name: "居民生活", exact: true })).toBeVisible({ timeout: 45_000 });
+  await expect(page.getByRole("heading", { name: "文明世界", exact: true })).toBeVisible({ timeout: 45_000 });
+  await expect(page.getByTestId("town-map")).toHaveAttribute("data-scene-state", "ready", { timeout: 60000 });
+  await expect(page.getByTestId("town-map").locator("canvas")).toBeVisible();
   await expect(page.getByRole("heading", { name: "世界事件", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Mika", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Rowan", exact: true }).click();
   await expect(page).toHaveURL(/resident=a11fe000-0000-4000-8000-000000000002/);
   await expect(page.getByRole("heading", { name: "Rowan", exact: true })).toBeVisible();
-  const visibleTick = async () => Number((await page.getByTestId("life-tick").innerText()).replace(/\D/g, ""));
+  const visibleTick = async () => Number(await page.getByTestId("life-tick").getAttribute("data-tick"));
   const firstVisibleTick = await visibleTick();
   await expect.poll(visibleTick, { timeout: 10_000 }).toBeGreaterThan(firstVisibleTick);
   await expect.poll(() => commitFrames).toBeGreaterThan(0);
   await page.getByRole("heading", { name: "世界事件", exact: true }).scrollIntoViewIfNeeded();
   await expect(page.getByRole("heading", { name: "世界事件", exact: true })).toBeInViewport();
   await expect.poll(tick).toBeGreaterThan(tickBefore);
-  await page.getByRole("heading", { name: "居民生活", exact: true }).scrollIntoViewIfNeeded();
+  await page.getByRole("heading", { name: "文明世界", exact: true }).scrollIntoViewIfNeeded();
   await page.screenshot({ path: "test-results/agent-life/world-desktop.png", fullPage: true });
+  await page.getByRole("button", { name: "跟随选中居民", exact: true }).click();
+  await page.screenshot({ path: "test-results/agent-life/resident-closeup.png", fullPage: true });
+  await page.getByRole("button", { name: "俯瞰小镇", exact: true }).click();
   const commandHeaders = { Authorization: `Bearer ${api.getToken()}`, "X-Workspace-ID": world.id };
   await page.getByRole("button", { name: "迎接新居民", exact: true }).click();
   const dialog = page.getByRole("dialog");
@@ -98,7 +105,16 @@ test("headless simulation, real snapshot viewer, workspace isolation and main-se
   await expect(page.getByRole("button", { name: "测试诗人", exact: true })).toBeAttached();
   const created = await request.get("/api/life", { headers: commandHeaders });
   expect((await created.json()).agents).toHaveLength(21);
+  await page.getByRole("button", { name: "创造储存设计", exact: true }).click();
+  await dialog.getByRole("textbox", { name: "设计名字", exact: true }).fill("QA 共用粮仓");
+  await dialog.getByRole("button", { name: "保存设计", exact: true }).click();
+  await expect(dialog).not.toBeVisible();
   await page.getByRole("button", { name: "Mika", exact: true }).click();
+  await page.getByRole("button", { name: "向居民推荐设计", exact: true }).click();
+  await dialog.getByLabel("储存设计", { exact: true }).selectOption({ label: "QA 共用粮仓" });
+  await dialog.getByRole("button", { name: "提出建议", exact: true }).click();
+  await expect(dialog).not.toBeVisible();
+  await expect(page.locator(".town-suggestions")).toContainText("QA 共用粮仓");
   await page.getByRole("button", { name: "提议一场活动", exact: true }).click();
   await dialog.getByRole("textbox", { name: "活动名字", exact: true }).fill("QA 邻里读书会");
   await dialog.getByLabel("地点", { exact: true }).selectOption("square");
@@ -118,7 +134,7 @@ test("headless simulation, real snapshot viewer, workspace isolation and main-se
   expect(away.ok()).toBe(true);
   await page.goto(returnUrl);
   await expect(page.getByRole("heading", { name: "你离开以后", exact: true })).toBeVisible();
-  await page.getByRole("heading", { name: "居民生活", exact: true }).scrollIntoViewIfNeeded();
+  await page.getByRole("heading", { name: "文明世界", exact: true }).scrollIntoViewIfNeeded();
   await page.evaluate(() => document.documentElement.classList.add("dark"));
   const foreground = await page.locator(".town-page").evaluate(node => getComputedStyle(node).color);
   await expect.poll(() => page.locator(".town-resident-list button[aria-pressed=false]").first().evaluate(node => getComputedStyle(node).color)).toBe(foreground);
@@ -165,7 +181,7 @@ test("headless simulation, real snapshot viewer, workspace isolation and main-se
     await new Promise<void>((resolve, reject) => model.close(error => error ? reject(error) : resolve()));
   }
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.getByRole("heading", { name: "居民生活", exact: true }).scrollIntoViewIfNeeded();
+  await page.getByRole("heading", { name: "文明世界", exact: true }).scrollIntoViewIfNeeded();
   await page.screenshot({ path: "test-results/agent-life/town-mobile-top.png", fullPage: true });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.getByRole("heading", { name: "世界事件", exact: true }).scrollIntoViewIfNeeded();

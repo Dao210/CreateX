@@ -129,3 +129,63 @@ CLIs and use `server/pkg/llm` only. Restart and backend shutdown join both loops
 Verification adds causal invitation/attendance and personal-memory tests, durable
 command/retry/revision tests, a fixture model budget test, and the authenticated
 Life E2E with a local HTTP model fixture. It does not invoke a real provider.
+
+## Civilization prototype and 3D world
+
+The next Life version replaces the SVG map with a shared, lazy-loaded Three.js
+scene in `packages/views/agent-life/scene`. Web and Desktop mount the same page;
+there is no separate app. Local CC0 humanoid rigs and authored clips drive walking,
+conversation and work. Carrying uses hand targets on the actual crate. The camera
+supports pan, orbit, zoom and selected-resident follow. Interiors expose their roof
+when the selected resident is inside. The renderer stops when hidden, caps pixel
+ratio, batches static architecture and disposes its GPU resources. Failed WebGL or
+asset loading offers a visible retry while the server-backed resident data remains
+readable. Asset origins and licenses are in the scene's `assets/README.md`.
+
+`Town.civilization` is additive bounded JSON in the existing `life_world.town`
+column. Migration `355_life_civic_actions` widens the existing action CHECK to
+allow the five civic actions; it does not rewrite stored actions or world data.
+Its down migration refuses to discard a history that already contains civic actions.
+Go and the compute bundle use protocol v3 and must be deployed together. Existing
+residents, resources, IDs, events and the singleton binding are preserved; the
+first resumed Tick initializes the missing civilization object.
+
+The first functional item is an immutable storage design with three parameter
+sets. Members save a design and suggest it to one resident through the existing
+idempotent command endpoint. Saving a design consumes no simulated resources and
+does not build anything. Residents may accept or decline based on their interests
+and cooperation preferences. They can also propose a light store without a player,
+after an actual local encounter and observing their own surplus.
+
+Only completed local conversations and proximity reveal projects. Collaborators
+transfer their personal wood at the site, then invest labor. Completed stores hold
+real shared food, with atomic deposits and withdrawals. Equal allowances and
+contribution-based allowances impose different per-day limits. Maintenance can be
+voluntary or assigned by a daily rota; sturdy designs decay at half the rate.
+Rule amendments require informed member votes and a two-thirds majority. Initial
+and adopted rule versions are included in immutable world events. Shared meals
+use the existing invitation and attendance mechanism. Three actual meals with at
+least three attendees produce a tradition milestone; scheduling alone does not.
+
+Civic facts are emitted before the 96-entry viewer projection is trimmed. Every
+settled action still owns exactly one terminal action event; civic events carry
+its source action when applicable. All state, inventories, contributions and
+facts commit through the existing Tick transaction/revision fence. Viewer-only
+animation cannot settle or reward actions.
+
+Bounds: 24 designs, 3 project sites, 24 suggestions and debates, 60 residents,
+30 recent gathering IDs and 96 recent civic facts. Completed activities can be
+pruned when not referenced by a model job; their immutable world events remain.
+Food now replenishes at 120 units per simulated day per 20 residents (rounded),
+wood at 480 per day. Existing stock is retained. This is a deliberately bounded
+civilization prototype, not an open-ended building/technology system. Seasons,
+complex economies, continuous historical replay and the broader creation catalog
+remain later design stages.
+
+Verification includes the core day/week simulations, simultaneous last-item
+withdrawal, knowledge isolation, allowance differences, civic-event projection
+trimming, PostgreSQL command retries and stale-Tick rejection, the main-service
+and compute-child restart scenario, and authenticated desktop/mobile-width Web
+screenshots. A real-device 60-resident GPU benchmark and human review against the
+concept art remain separate acceptance checks; software WebGL E2E is functional
+validation, not evidence of those results.

@@ -107,6 +107,7 @@ type Town struct {
 	Conversations []Conversation `json:"conversations"`
 	Jobs          []ModelJob     `json:"jobs"`
 	Model         ModelStatus    `json:"model"`
+	Civilization  *Civilization  `json:"civilization"`
 }
 
 var places = map[string]Position{"home": {2, 2}, "farm": {9, 2}, "forest": {9, 6}, "square": {3, 6}, "cafe": {6, 5}, "library": {6, 2}, "shop": {10, 4}}
@@ -219,7 +220,7 @@ func validateTown(t *Town, agents map[string]bool, tick int64) error {
 	if !contains([]string{"rules", "llm"}, t.Model.Mode) || !contains([]string{"rules", "ready", "unconfigured", "budget", "error"}, t.Model.State) || t.Model.ResidentLimit < 1 || t.Model.ResidentLimit > 60 || t.Model.DailyLimit < 1 || t.Model.DailyLimit > 1000 || t.Model.Calls < 0 || t.Model.Calls > 1000 {
 		return errors.New("invalid model status")
 	}
-	return nil
+	return validateCivilization(t.Civilization, agents, tick)
 }
 func validateSlots(slots []PlanSlot) error {
 	if len(slots) < 1 || len(slots) > 10 {

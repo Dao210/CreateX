@@ -26,7 +26,8 @@ describe("Agent Life rule authority", () => {
       lowestFullness = Math.min(lowestFullness, ...state.agents.map((a) => a.fullness));
     }
     expect(lowestFullness).toBeGreaterThan(0);
-    expect(kinds).toEqual(new Set(["MOVE", "REST", "EAT", "GATHER_WOOD", "WORK", "TALK"]));
+    for (const kind of ["MOVE", "REST", "EAT", "GATHER_WOOD", "WORK", "TALK", "DELIVER_WOOD", "BUILD", "STORE_FOOD"]) expect(kinds.has(kind)).toBe(true);
+    expect(state.town!.civilization!.projects.some(project => project.status === "active")).toBe(true);
     expect(state.agents.map((a) => a.position)).not.toEqual(agents.map((a) => a.position));
   }, 30_000);
 
@@ -45,13 +46,13 @@ describe("Agent Life rule authority", () => {
   it("settles competing resource consumers once and records failed preconditions without a reward", () => {
     const agents = seedResidents(2).map((a) => ({ ...a, position: { ...LIFE_MAP.forest } }));
     const resources = seedResources(agents);
-    resources.find((r) => r.owner === "forest")!.amount = 0;
+    resources.find((r) => r.owner === "forest")!.amount = 3;
     const actions = agents.map((a) => ({ id: randomUUID(), agentId: a.id, intent: { kind: "GATHER_WOOD" as const }, reason: "test", startedTick: 0, dueTick: 1, status: "running" as const }));
     const original: Simulation = { tick: 0, agents, resources, actions };
     const result = advanceTick(original, randomUUID);
     expect(result.completed.map((a) => a.status)).toEqual(["completed", "failed"]);
     expect(result.state.resources.filter((r) => r.kind === "wood" && r.owner !== "forest").reduce((s, r) => s + r.amount, 0)).toBe(3);
-    expect(original.resources.find((r) => r.owner === "forest")!.amount).toBe(0);
+    expect(original.resources.find((r) => r.owner === "forest")!.amount).toBe(3);
     const replay = advanceTick(result.state, randomUUID);
     expect(replay.completed.some((a) => actions.some((old) => a.id === old.id))).toBe(false);
   });

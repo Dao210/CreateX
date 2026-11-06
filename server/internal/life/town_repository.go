@@ -19,19 +19,21 @@ import (
 )
 
 type TownCommand struct {
-	RequestID  string   `json:"requestId"`
-	Kind       string   `json:"kind"`
-	ResidentID string   `json:"residentId,omitempty"`
-	Text       string   `json:"text,omitempty"`
-	Title      string   `json:"title,omitempty"`
-	Interest   string   `json:"interest,omitempty"`
-	Place      string   `json:"place,omitempty"`
-	StartsIn   int64    `json:"startsIn,omitempty"`
-	Duration   int64    `json:"duration,omitempty"`
-	Name       string   `json:"name,omitempty"`
-	Occupation string   `json:"occupation,omitempty"`
-	Background string   `json:"background,omitempty"`
-	Interests  []string `json:"interests,omitempty"`
+	RequestID   string   `json:"requestId"`
+	Kind        string   `json:"kind"`
+	ResidentID  string   `json:"residentId,omitempty"`
+	Text        string   `json:"text,omitempty"`
+	Title       string   `json:"title,omitempty"`
+	Interest    string   `json:"interest,omitempty"`
+	Place       string   `json:"place,omitempty"`
+	StartsIn    int64    `json:"startsIn,omitempty"`
+	Duration    int64    `json:"duration,omitempty"`
+	Name        string   `json:"name,omitempty"`
+	Occupation  string   `json:"occupation,omitempty"`
+	Background  string   `json:"background,omitempty"`
+	Interests   []string `json:"interests,omitempty"`
+	Variant     string   `json:"variant,omitempty"`
+	PrototypeID string   `json:"prototypeId,omitempty"`
 }
 type CommandResult struct {
 	ID   string `json:"id"`
@@ -120,10 +122,18 @@ func validateCommand(c TownCommand) error {
 			}
 			seen[i] = true
 		}
+	case "prototype":
+		if !cleanText(c.Name, 1, 60) || !contains([]string{"light", "sturdy", "large"}, c.Variant) || c.ResidentID != "" {
+			return townError("invalid_request", 400)
+		}
+	case "suggest_project":
+		if _, err := uuid.Parse(c.PrototypeID); err != nil {
+			return townError("invalid_request", 400)
+		}
 	default:
 		return townError("invalid_request", 400)
 	}
-	if c.Kind != "resident" {
+	if c.Kind != "resident" && c.Kind != "prototype" {
 		if _, err := uuid.Parse(c.ResidentID); err != nil {
 			return townError("invalid_request", 400)
 		}
@@ -168,7 +178,7 @@ func (r *Repository) Command(ctx context.Context, workspaceID, userID string, c 
 			return e
 		}
 		t := state.Town
-		if c.Kind != "resident" {
+		if c.Kind != "resident" && c.Kind != "prototype" {
 			found := false
 			for _, a := range state.Agents {
 				if a.ID == c.ResidentID {
@@ -182,6 +192,25 @@ func (r *Repository) Command(ctx context.Context, workspaceID, userID string, c 
 		id := uuid.NewString()
 		out = CommandResult{id, c.Kind}
 		switch c.Kind {
+		case "prototype":
+			civilization := ensureCivilization(t)
+			if len(civilization.Prototypes) >= 24 {
+				return townError("prototype_capacity", 409)
+			}
+			civilization.Prototypes = append(civilization.Prototypes, StoragePrototype{ID: id, AuthorID: &userID, Name: c.Name, Variant: c.Variant, CreatedTick: state.Tick})
+		case "suggest_project":
+			civilization := ensureCivilization(t)
+			found := false
+			for _, prototype := range civilization.Prototypes {
+				found = found || prototype.ID == c.PrototypeID
+			}
+			if !found {
+				return townError("prototype_not_found", 404)
+			}
+			if len(civilization.Suggestions) >= 24 {
+				return townError("suggestion_capacity", 409)
+			}
+			civilization.Suggestions = append(civilization.Suggestions, PrototypeSuggestion{ID: id, PrototypeID: c.PrototypeID, ResidentID: c.ResidentID, CreatedTick: state.Tick, Status: "pending"})
 		case "message":
 			if !modelReady {
 				return townError("life_model_unavailable", 503)

@@ -189,10 +189,10 @@ func (q *Queries) GetLifeBinding(ctx context.Context) (LifeWorld, error) {
 const getLifeHistory = `-- name: GetLifeHistory :one
 SELECT jsonb_build_object(
  'workspaceId',w.workspace_id,'sinceSequence',$1::bigint,
- 'throughSequence',COALESCE((SELECT max(sequence) FROM life_event WHERE world_id=w.id AND kind IN ('town_command','town_activity','town_conversation','goal_reached')),0),
- 'total',(SELECT count(*) FROM life_event WHERE world_id=w.id AND sequence>$1 AND kind IN ('town_command','town_activity','town_conversation','goal_reached')),
+ 'throughSequence',COALESCE((SELECT max(sequence) FROM life_event WHERE world_id=w.id AND kind IN ('town_command','town_activity','town_conversation','goal_reached','civilization_event')),0),
+ 'total',(SELECT count(*) FROM life_event WHERE world_id=w.id AND sequence>$1 AND kind IN ('town_command','town_activity','town_conversation','goal_reached','civilization_event')),
  'events',COALESCE((SELECT jsonb_agg(jsonb_build_object('id',e.id,'sequence',e.sequence,'tick',e.tick,'actionId',e.action_id,'agentId',e.agent_id,'kind',e.kind,'payload',e.payload,'occurredAt',e.occurred_at) ORDER BY e.sequence DESC)
-  FROM (SELECT world_id, id, tick, action_id, agent_id, kind, payload, occurred_at, sequence FROM life_event WHERE world_id=w.id AND sequence>$1 AND kind IN ('town_command','town_activity','town_conversation','goal_reached') ORDER BY sequence DESC LIMIT 200) e),'[]'::jsonb)
+  FROM (SELECT world_id, id, tick, action_id, agent_id, kind, payload, occurred_at, sequence FROM life_event WHERE world_id=w.id AND sequence>$1 AND kind IN ('town_command','town_activity','town_conversation','goal_reached','civilization_event') ORDER BY sequence DESC LIMIT 200) e),'[]'::jsonb)
 )::jsonb AS history FROM life_world w WHERE w.workspace_id=$2
 `
 
@@ -234,7 +234,7 @@ const getLifeSnapshot = `-- name: GetLifeSnapshot :one
 SELECT jsonb_build_object(
  'world', jsonb_build_object('id',w.id,'workspaceId',w.workspace_id,'tick',w.tick,'tickMs',w.tick_ms,'updatedAt',w.updated_at),
  'town', w.town,
- 'eventCursor',COALESCE((SELECT max(sequence) FROM life_event WHERE world_id=w.id AND kind IN ('town_command','town_activity','town_conversation','goal_reached')),0),
+ 'eventCursor',COALESCE((SELECT max(sequence) FROM life_event WHERE world_id=w.id AND kind IN ('town_command','town_activity','town_conversation','goal_reached','civilization_event')),0),
  'agents', COALESCE((SELECT jsonb_agg(jsonb_build_object(
    'id',a.id,'name',a.name,'position',jsonb_build_object('x',a.x,'y',a.y),
    'energy',a.energy,'fullness',a.fullness,'social',a.social,'personality',a.personality,'goal',a.goal

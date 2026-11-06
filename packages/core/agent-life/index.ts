@@ -4,3 +4,5 @@ export * from "./brain";
 export * from "./rules";
 export * from "./town-schema";
 export * from "./town";
+export * from "./civilization-schema";
+export * from "./civilization";

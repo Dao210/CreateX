@@ -9,6 +9,7 @@ export const ActionIntentSchema = z.discriminatedUnion("kind", [
   z.strictObject({ kind: z.literal("GATHER_WOOD") }),
   z.strictObject({ kind: z.literal("WORK") }),
   z.strictObject({ kind: z.literal("TALK"), targetId: z.string().uuid() }),
+  ...(["DELIVER_WOOD", "BUILD", "STORE_FOOD", "WITHDRAW_FOOD", "MAINTAIN"] as const).map(kind => z.strictObject({ kind: z.literal(kind), projectId: z.string().uuid() })),
 ]);
 export const PlannerProposalSchema = z.strictObject({ intent: ActionIntentSchema, reason: z.string().min(1).max(240) });
 export const PLANNER_JSON_SCHEMA = z.toJSONSchema(PlannerProposalSchema);
@@ -36,7 +37,7 @@ export const EventSchema = z.object({
 });
 export const LifeSnapshotSchema = z.object({
   world: WorldSchema.nullable(), agents: z.array(AgentSchema).default([]), resources: z.array(ResourceSchema.extend({ kind: z.string() })).default([]),
-  actions: z.array(ActionSchema.extend({ intent: z.object({ kind: z.string(), to: PositionSchema.optional(), targetId: z.string().optional() }), status: z.string() })).default([]), events: z.array(EventSchema).default([]),
+  actions: z.array(ActionSchema.extend({ intent: z.object({ kind: z.string(), to: PositionSchema.optional(), targetId: z.string().optional(), projectId: z.string().uuid().optional() }), status: z.string() })).default([]), events: z.array(EventSchema).default([]),
   eventCursor: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER).default(0),
   town: TownReadSchema.nullable().default(null),
 });

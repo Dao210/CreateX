@@ -12,7 +12,7 @@ import (
 	"github.com/google/uuid"
 )
 
-const protocolVersion = 2
+const protocolVersion = 3
 const maxFrame = 4 * 1024 * 1024
 
 type Position struct {
@@ -44,9 +44,10 @@ type Resource struct {
 	Amount int    `json:"amount"`
 }
 type Intent struct {
-	Kind     string    `json:"kind"`
-	To       *Position `json:"to,omitempty"`
-	TargetID string    `json:"targetId,omitempty"`
+	Kind      string    `json:"kind"`
+	To        *Position `json:"to,omitempty"`
+	TargetID  string    `json:"targetId,omitempty"`
+	ProjectID string    `json:"projectId,omitempty"`
 }
 type Action struct {
 	ID          string `json:"id"`
@@ -143,7 +144,7 @@ func validateResult(before Simulation, result TickResult) error {
 	if err := validateState(after); err != nil {
 		return err
 	}
-	if after.Tick != before.Tick+1 || len(after.Agents) != len(before.Agents) || len(after.Actions) != len(after.Agents) || len(result.Events) > 300 {
+	if after.Tick != before.Tick+1 || len(after.Agents) != len(before.Agents) || len(after.Actions) != len(after.Agents) || len(result.Events) > 600 {
 		return errors.New("invalid tick transition")
 	}
 	if before.Town != nil && (after.Town == nil || before.Town.Revision != after.Town.Revision) {
@@ -215,7 +216,7 @@ func validateResult(before Simulation, result TickResult) error {
 				return errors.New("invalid terminal event")
 			}
 			traced[a.ID] = true
-		} else if e.Kind != "resources_replenished" && e.Kind != "goal_reached" && e.Kind != "town_conversation" && e.Kind != "town_activity" {
+		} else if e.Kind != "resources_replenished" && e.Kind != "goal_reached" && e.Kind != "town_conversation" && e.Kind != "town_activity" && e.Kind != "civilization_event" {
 			return errors.New("invalid world event")
 		}
 		if !json.Valid(e.Payload) {

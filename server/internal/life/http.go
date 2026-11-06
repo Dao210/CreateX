@@ -125,6 +125,10 @@ func commandKeys(raw []byte, kind string) bool {
 		keys = []string{"residentId", "title", "interest", "place", "startsIn", "duration"}
 	case "resident":
 		keys = []string{"name", "occupation", "background", "interests"}
+	case "prototype":
+		keys = []string{"name", "variant"}
+	case "suggest_project":
+		keys = []string{"residentId", "prototypeId"}
 	default:
 		return false
 	}

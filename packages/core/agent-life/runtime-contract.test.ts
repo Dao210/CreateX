@@ -14,10 +14,10 @@ describe("internal life compute protocol", () => {
   });
   it.each([
     { version: 99, requestId, operation: "seed" },
-    { version: 2, requestId, operation: "exec", code: "anything" },
-    { version: 2, requestId, operation: "seed", databaseUrl: "forbidden" },
-    { version: 2, requestId, operation: "tick", state: { ...state, tick: -1 } },
-    { version: 2, requestId, operation: "tick", state: { ...state, agents: [...agents, ...agents, ...agents, ...agents] } },
+    { version: LIFE_PROTOCOL_VERSION, requestId, operation: "exec", code: "anything" },
+    { version: LIFE_PROTOCOL_VERSION, requestId, operation: "seed", databaseUrl: "forbidden" },
+    { version: LIFE_PROTOCOL_VERSION, requestId, operation: "tick", state: { ...state, tick: -1 } },
+    { version: LIFE_PROTOCOL_VERSION, requestId, operation: "tick", state: { ...state, agents: [...agents, ...agents, ...agents, ...agents] } },
   ])("rejects unsupported or unbounded requests", (request) => {
     expect(RuntimeRequestSchema.safeParse(request).success).toBe(false);
   });

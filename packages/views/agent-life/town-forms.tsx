@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { useT } from "../i18n";
 
 type CommandInput = TownCommand extends infer C ? C extends TownCommand ? Omit<C, "requestId"> : never : never;
-function useSubmit(workspaceId: string) {
+export function useSubmit(workspaceId: string) {
   const mutation = useTownCommands(workspaceId);
   const receipt = useRef<{ key: string; command: TownCommand } | null>(null);
   return { ...mutation, resetIntent: () => { receipt.current = null; mutation.reset(); }, send: async (input: CommandInput) => {

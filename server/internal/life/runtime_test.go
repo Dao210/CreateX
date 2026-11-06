@@ -31,7 +31,7 @@ func TestRuntimeUsesOneProcessAndStripsCredentials(t *testing.T) {
 	t.Setenv("DATABASE_URL", "must-not-reach-compute")
 	t.Setenv("AURO_TOKEN", "must-not-reach-compute")
 	t.Setenv("NODE_OPTIONS", "--this-option-must-not-reach-compute")
-	runtime := stubRuntime(t, `process.stdout.write(JSON.stringify({version:2,requestId:q.requestId,result:{pid:process.pid,secret:!!(process.env.DATABASE_URL||process.env.AURO_TOKEN||process.env.NODE_OPTIONS)}})+'\n');`)
+	runtime := stubRuntime(t, `process.stdout.write(JSON.stringify({version:3,requestId:q.requestId,result:{pid:process.pid,secret:!!(process.env.DATABASE_URL||process.env.AURO_TOKEN||process.env.NODE_OPTIONS)}})+'\n');`)
 	var first, second struct {
 		PID    int  `json:"pid"`
 		Secret bool `json:"secret"`
@@ -53,7 +53,7 @@ func TestRuntimeUsesOneProcessAndStripsCredentials(t *testing.T) {
 
 func TestRuntimeRejectsBrokenFramesAndReapsTimedOutChild(t *testing.T) {
 	for _, tc := range []struct{ name, body string }{
-		{"identity", `process.stdout.write(JSON.stringify({version:2,requestId:'other',result:{}})+'\n');`},
+		{"identity", `process.stdout.write(JSON.stringify({version:3,requestId:'other',result:{}})+'\n');`},
 		{"version", `process.stdout.write(JSON.stringify({version:99,requestId:q.requestId,result:{}})+'\n');`},
 		{"malformed", `process.stdout.write('not-json\n');`},
 		{"oversized", `process.stdout.write('x'.repeat(4*1024*1024+1)+'\n');`},
@@ -80,7 +80,7 @@ func TestRuntimeRejectsBrokenFramesAndReapsTimedOutChild(t *testing.T) {
 
 func TestRuntimeRestartsAfterChildExit(t *testing.T) {
 	marker, _ := json.Marshal(filepath.Join(t.TempDir(), "started"))
-	runtime := stubRuntime(t, `const fs=await import('node:fs');if(!fs.existsSync(`+string(marker)+`)){fs.writeFileSync(`+string(marker)+`,'1');process.exit(1);}process.stdout.write(JSON.stringify({version:2,requestId:q.requestId,result:{ok:true}})+'\n');`)
+	runtime := stubRuntime(t, `const fs=await import('node:fs');if(!fs.existsSync(`+string(marker)+`)){fs.writeFileSync(`+string(marker)+`,'1');process.exit(1);}process.stdout.write(JSON.stringify({version:3,requestId:q.requestId,result:{ok:true}})+'\n');`)
 	var value struct {
 		OK bool `json:"ok"`
 	}

@@ -3,6 +3,7 @@ import { ruleBrain, type AgentBrain } from "./brain";
 import { LIFE_CAPACITY, DURATIONS, balance, feasible } from "./rules";
 import type { Town } from "./town-schema";
 import { beginTownTick, finishTownTick, settleTownTalk, townProposal } from "./town";
+import { beginCivilizationTick, civilizationProposal, civicActionFeasible, settleCivicAction, shareCivicKnowledge, finishCivilizationTick } from "./civilization";
 
 export type Simulation = { tick: number; agents: Agent[]; resources: Resource[]; actions: Action[]; town?: Town | null };
 export type EngineEvent = { actionId: string | null; agentId: string | null; kind: string; payload: Record<string, unknown> };
@@ -33,9 +34,10 @@ export function advanceTick(previous: Simulation, nextId: () => string, brain: A
   const state = structuredClone(previous);
   state.tick++;
   beginTownTick(state, nextId);
+  beginCivilizationTick(state, nextId);
   const events: EngineEvent[] = [], completed: Action[] = [], started: Action[] = [];
   const replenished: Record<string, number> = {};
-  for (const [owner, kind, rate] of [["forest", "wood", 3], ["farm", "food", 10]] as const) {
+  for (const [owner, kind, rate] of [["forest", "wood", state.tick % 3 === 0 ? 1 : 0], ["farm", "food", state.tick % 12 === 0 ? Math.max(1, Math.round(state.agents.length / 20)) : 0]] as const) {
     const delta = Math.min(rate, 600 - balance(state.resources, owner, kind));
     if (delta > 0) { change(state.resources, owner, kind, delta); replenished[`${owner}:${kind}`] = delta; }
   }
@@ -51,7 +53,7 @@ export function advanceTick(previous: Simulation, nextId: () => string, brain: A
     if (!agent) throw new Error("action_owner_missing");
     const before = structuredClone({ agent, resources: state.resources });
     const intent = PlannerProposalSchema.parse({ intent: action.intent, reason: action.reason }).intent;
-    const valid = feasible(agent, intent, state.agents, state.resources);
+    const valid = "projectId" in intent ? civicActionFeasible(state, agent, intent) : feasible(agent, intent, state.agents, state.resources);
     if (valid) {
       switch (intent.kind) {
         case "MOVE": agent.position = intent.to; break;
@@ -64,9 +66,14 @@ export function advanceTick(previous: Simulation, nextId: () => string, brain: A
           const targetBefore = target.social;
           target.social = clamp(target.social + 30); agent.social = clamp(agent.social + 35);
           settleTownTalk(state, agent, target, nextId);
+          shareCivicKnowledge(state, agent, target, action.id, nextId);
+          shareCivicKnowledge(state, target, agent, action.id, nextId);
           events.push({ actionId: action.id, agentId: agent.id, kind: "action_completed", payload: { intent, reason: action.reason, socialDelta: agent.social - before.agent.social, targetId: target.id, targetSocialDelta: target.social - targetBefore } });
           break;
         }
+        case "DELIVER_WOOD": case "BUILD": case "STORE_FOOD": case "WITHDRAW_FOOD": case "MAINTAIN":
+          settleCivicAction(state, agent, intent, action.id, nextId);
+          break;
       }
     }
     action.status = valid ? "completed" : "failed";
@@ -91,12 +98,22 @@ export function advanceTick(previous: Simulation, nextId: () => string, brain: A
       residents: state.agents.filter(other => Math.abs(other.position.x - agent.position.x) + Math.abs(other.position.y - agent.position.y) <= 2),
       resources: state.resources.filter(r => r.owner === agent.id || r.owner === "farm" || r.owner === "forest"),
     });
-    const proposal = PlannerProposalSchema.parse((brain === ruleBrain ? townProposal(state, agent) : undefined) ?? brain.choose(observation));
-    if (!feasible(agent, proposal.intent, state.agents, state.resources)) throw new Error("invalid_brain_proposal");
+    const civic = brain === ruleBrain ? civilizationProposal(state, agent) : undefined;
+    const proposal = PlannerProposalSchema.parse(civic ?? (brain === ruleBrain ? townProposal(state, agent) : undefined) ?? brain.choose(observation));
+    const available = "projectId" in proposal.intent ? civicActionFeasible(state, agent, proposal.intent) : feasible(agent, proposal.intent, state.agents, state.resources);
+    if (!available) throw new Error("invalid_brain_proposal");
     const action: Action = { id: nextId(), agentId: agent.id, ...proposal, startedTick: state.tick, dueTick: state.tick + DURATIONS[proposal.intent.kind], status: "running" };
     state.actions.push(action); started.push(action);
   }
   finishTownTick(state, nextId);
+  finishCivilizationTick(state, previous, nextId);
+  for (const item of state.town!.civilization!.news) {
+    if (!previous.town?.civilization?.news.some(old => old.id === item.id)) {
+      events.push({ actionId: null, agentId: item.residentId, kind: "civilization_event", payload: { ...item } });
+    }
+  }
+  // Keep the snapshot bounded only after every new civic fact has entered the event output.
+  state.town!.civilization!.news = state.town!.civilization!.news.slice(-96);
   for (const conversation of state.town!.conversations) {
     if (!previous.town?.conversations.some(c => c.id === conversation.id)) events.push({ actionId: null, agentId: conversation.residentId, kind: "town_conversation", payload: { ...conversation } });
   }
