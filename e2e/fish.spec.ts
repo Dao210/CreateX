@@ -82,8 +82,61 @@ test("previews and releases into the same open ocean, supports a narrow viewport
   const scene = page.getByTestId("fish-scene");
   await expect(scene).toHaveAttribute("data-fish-count", "6");
   const oceanCanvas = await scene.locator("canvas").elementHandle();
+  await expect(page.getByRole("button", { name: "连接 Agent", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "创造一条鱼", exact: true })).toHaveCount(1);
   await page.getByRole("button", { name: "创造一条鱼", exact: true }).click();
   const dialog = page.getByRole("dialog");
+  await expect(dialog.getByText(/首次使用，Agent 会先连接/)).toBeVisible();
+  await expect(dialog.getByRole("checkbox", { name: "创造后放入大海沟" })).toBeChecked();
+  await page.evaluate(() => Object.defineProperty(navigator, "clipboard", {
+   configurable: true,
+   value: { writeText: async (text: string) => { document.documentElement.dataset.fishCopy = text; } },
+  }));
+  const copy = dialog.getByRole("button", { name: "复制创造指令", exact: true });
+  await copy.click();
+  await expect(dialog.getByRole("status")).toHaveText("已复制，请到 Agent 中粘贴并发送。");
+  const readTask = async () => {
+   const text = await page.locator("html").getAttribute("data-fish-copy");
+   return { text: text!, data: JSON.parse(text!.slice(text!.indexOf("\n\n") + 2)) };
+  };
+  const initialTask = await readTask();
+  expect(initialTask.data).toMatchObject({ workspace_id: world.id, creation: { name: null, description: "", destination: "public" } });
+  expect(initialTask.text).toContain("fish_get_catalog");
+  expect(initialTask.text).toContain("验证成功后继续创作");
+  expect(initialTask.text).not.toContain(token);
+  await page.screenshot({ path: "test-results/fish/create-dialog.png", fullPage: true });
+  await page.evaluate(() => document.documentElement.classList.add("dark"));
+  await page.screenshot({ path: "test-results/fish/create-dialog-dark.png", fullPage: true });
+  await page.evaluate(() => document.documentElement.classList.remove("dark"));
+  await dialog.getByRole("textbox", { name: "鱼的名字（选填）", exact: true }).fill("鱼".repeat(41));
+  await expect(copy).toBeDisabled();
+  await dialog.getByRole("textbox", { name: "鱼的名字（选填）", exact: true }).fill("UI 珍珠鱼");
+  await dialog.getByRole("textbox", { name: "你想创造怎样的鱼（选填）", exact: true }).fill("珍珠白，长尾，缓缓滑翔");
+  await dialog.getByRole("checkbox", { name: "创造后放入大海沟" }).uncheck();
+  await expect(dialog.getByRole("status")).toHaveCount(0);
+  await copy.click();
+  expect((await readTask()).data.creation).toEqual({ name: "UI 珍珠鱼", description: "珍珠白，长尾，缓缓滑翔", destination: "preview" });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.screenshot({ path: "test-results/fish/create-dialog-mobile.png", fullPage: true });
+  expect(await dialog.evaluate(node => node.scrollWidth <= node.clientWidth)).toBe(true);
+  await page.evaluate(() => Object.defineProperty(navigator, "clipboard", {
+   configurable: true,
+   value: { writeText: async () => { throw new Error("Clipboard denied"); } },
+  }));
+  await copy.click();
+  await expect(dialog.getByRole("alert")).toHaveText("复制失败，请选中下方文字复制。");
+  const fallback = dialog.getByRole("textbox", { name: "创造指令", exact: true });
+  await expect(fallback).toHaveValue((await readTask()).text);
+  await fallback.focus();
+  expect(await fallback.evaluate(node => (node as HTMLTextAreaElement).selectionEnd - (node as HTMLTextAreaElement).selectionStart)).toBe((await readTask()).text.length);
+  await dialog.getByRole("button", { name: "自己设置外形", exact: true }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(1);
+  await expect(dialog.getByRole("textbox", { name: "名字", exact: true })).toHaveValue("UI 珍珠鱼");
+  await dialog.getByRole("button", { name: "返回 Agent 创造", exact: true }).click();
+  await expect(dialog.getByRole("textbox", { name: "你想创造怎样的鱼（选填）", exact: true })).toHaveValue("珍珠白，长尾，缓缓滑翔");
+  await expect(dialog.getByRole("checkbox", { name: "创造后放入大海沟" })).not.toBeChecked();
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await dialog.getByRole("button", { name: "自己设置外形", exact: true }).click();
   await expect(dialog.locator("canvas")).toBeVisible({ timeout: 30000 });
   await dialog.getByRole("textbox", { name: "名字", exact: true }).fill("UI 珍珠鱼");
   await dialog.getByRole("button", { name: "保存鱼", exact: true }).click();
@@ -153,6 +206,9 @@ test("previews and releases into the same open ocean, supports a narrow viewport
   await page.goto(`/${world.slug}/me?filter=fish`);
   const creation = page.getByRole("group", { name: "UI 珍珠鱼", exact: true });
   await expect(creation.getByRole("button", { name: "修改鱼", exact: true })).toBeVisible();
+  await creation.getByRole("button", { name: "修改鱼", exact: true }).click();
+  await expect(page.getByRole("dialog").getByRole("textbox", { name: "名字", exact: true })).toHaveValue("UI 珍珠鱼");
+  await page.getByRole("dialog").getByRole("button", { name: "取消", exact: true }).click();
   await creation.getByRole("button", { name: "归档", exact: true }).click();
   await expect(creation).not.toBeVisible();
   await page.getByRole("button", { name: "显示已归档", exact: true }).click();

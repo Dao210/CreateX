@@ -11,8 +11,8 @@ import { Button, buttonVariants } from "@auro/ui/components/ui/button";
 import { GameAccessBoundary } from "../admin/game-access-boundary";
 import { AppLink, useNavigation } from "../navigation";
 import { useT } from "../i18n";
-import { FishConnection } from "./fish-connection";
-import { FishEditor, previewResident } from "./fish-editor";
+import { FishCreateDialog } from "./fish-create-dialog";
+import { previewResident } from "./fish-editor";
 import { FishThumbnail } from "./fish-thumbnail";
 
 const Scene = lazy(() => import("./fish-scene"));
@@ -192,8 +192,7 @@ function OceanContent({ storage, workspace, userId }: { storage: StorageAdapter;
       <div className="fish-header-actions">
         {!shared && <AppLink href={paths.fish()} className={buttonVariants({ variant: "outline", size: "sm" })}>{t($ => $.trench)}</AppLink>}
         <AppLink href={`${paths.me()}?filter=fish`} className={buttonVariants({ variant: "outline", size: "sm" })}>{t($ => $.creations)}</AppLink>
-        <FishConnection workspace={workspace} userId={userId} />
-        {shared && <FishEditor onSave={save} pending={busy} />}
+        <FishCreateDialog workspace={workspace} userId={userId} onSave={save} pending={busy} />
       </div>
     </header>
     {error && <div className="fish-action-error" role="alert">

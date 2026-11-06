@@ -18,3 +18,15 @@
 .fish-page:fullscreen .fish-header-actions{display:none}
 
 .fish-ocean-navigation{display:flex;align-items:center;justify-content:flex-end;gap:.5rem;padding:.75rem 1rem}
+.fish-create-dialog{width:min(94vw,480px);max-width:480px;gap:1.25rem}
+.fish-create-dialog [data-slot=dialog-header]{padding-right:1.5rem}
+.fish-create-connection{display:flex;gap:.65rem;align-items:flex-start;padding:.85rem;border-radius:.75rem;background:var(--muted);color:var(--muted-foreground);font-size:var(--text-caption);line-height:1.6}
+.fish-create-connection>svg{width:1.1rem;height:1.1rem;flex-shrink:0;margin-top:.15rem;color:var(--foreground)}
+.fish-create-field{display:flex;flex-direction:column;gap:.5rem;font-size:var(--text-caption)}
+.fish-create-field textarea{min-height:90px;resize:vertical}
+.fish-create-publication{display:flex;flex-direction:column;gap:.35rem}.fish-create-publication .fish-check{color:var(--foreground)}
+.fish-create-publication p{padding-left:1.35rem;font-size:var(--text-caption);color:var(--muted-foreground);line-height:1.5}
+.fish-create-publication input{accent-color:var(--brand)}
+.fish-create-status{font-size:var(--text-caption);color:var(--muted-foreground);text-align:center;line-height:1.5}
+.fish-create-alternatives{display:flex;align-items:center;justify-content:space-between;gap:.75rem;font-size:var(--text-caption)}
+.fish-create-alternatives>button{padding-left:0}.fish-create-alternatives>a{color:var(--muted-foreground);text-decoration:underline;text-underline-offset:.2em}

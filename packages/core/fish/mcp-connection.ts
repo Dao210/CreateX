@@ -29,6 +29,21 @@ export function buildFishMCPContext(input: {
 
 export type FishMCPContext = ReturnType<typeof buildFishMCPContext>;
 
+export function buildFishCreationInstructions(context: FishMCPContext, prompt: string, creation: {
+  name: string;
+  description: string;
+  releaseToPublic: boolean;
+}) {
+  return `${prompt}\n\n${JSON.stringify({
+    ...context,
+    creation: {
+      name: creation.name.trim() || null,
+      description: creation.description.trim(),
+      destination: creation.releaseToPublic ? "public" : "preview",
+    },
+  }, null, 2)}`;
+}
+
 export function buildFishMCPManualConfig(context: FishMCPContext, command: string, client: string) {
   const profile = `fish-${context.workspace_id.slice(0, 8)}`;
   const args = ["--server-url", context.server_url, "--workspace-id", context.workspace_id, "--profile", profile, "fish", "mcp"];

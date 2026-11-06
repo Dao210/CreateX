@@ -53,7 +53,9 @@ HTTP 资源：
 
 MCP 提供 `fish_get_catalog`、`fish_validate`、`fish_save`、`fish_list`、`fish_get`、`fish_get_ocean`、`fish_get_public_ocean`、`fish_create_ocean`、`fish_release`、`fish_apply_revision` 和 `fish_recall`。工具 Schema 由 `tools/list` 返回。
 
-首次接入只完成认证与只读目录验收，不创建鱼。Node 连接器复用现有浏览器登录/PAT API，凭据按 API、世界及账号保存在 `~/.createx/fish-mcp/`，不写入指令、URL 或 MCP 配置。浏览器返回海洋页面不代表当前 Agent 聊天工具已重载，必须在实际客户端成功调用 `fish_get_catalog`。
+Web/Desktop 通过单一「创造一条鱼」浮框提供完整创作指令。名字可选（留空由 Agent 命名，最终作品限 40 个 Unicode 码点），描述可选。「创造后放入大海沟」默认选中并显示平台用户可见的后果；取消后仅保存并返回私人预览链接。复制的 JSON 将 `creation.name`、`creation.description`、`creation.destination` 与账号/世界连接数据一起交给 Agent，不含凭据。手动设置外形在同一浮框内切换，保存后预览，投放仍需明确操作；「我的创作」继续直接编辑作品。
+
+首次接入完成认证、客户端注册和实际 `fish_get_catalog` 验证后，Agent 继续原创作任务；仅连接请求不创建安装测试鱼。Node 连接器复用现有浏览器登录/PAT API，凭据按 API、世界及账号保存在 `~/.createx/fish-mcp/`，不写入指令、URL 或 MCP 配置。浏览器返回海洋页面不代表当前 Agent 聊天工具已重载。若需重载工具或开启新聊天，明确提示用户重贴原始完整创作指令以恢复任务。
 
 用户要求投放到大海沟时，Agent 校验并保存后调用 `fish_release`，传入 `destination: "public"` 和精确版本。投放返回 `resident.oceanId` 和定位到该居民的 `oceanUrl`。仅创建作品时，提供 `?fish=<id>&revision=<n>` 的海景预览。
 

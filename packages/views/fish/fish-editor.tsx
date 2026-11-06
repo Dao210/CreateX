@@ -7,17 +7,87 @@ import { Input } from "@auro/ui/components/ui/input";
 import { Textarea } from "@auro/ui/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@auro/ui/components/ui/dialog";
 import { useT } from "../i18n";
+
 const Scene = lazy(() => import("./fish-scene"));
+
 export function previewResident(spec: FishSpec): FishResident {
- return { id: "preview", oceanId: "preview", revision: 1, seed: 17, fish: { id: "preview", workspaceId: "preview", ownerId: "preview", revision: 1, contentHash: JSON.stringify(spec), compilerVersion: 1, rulesVersion: 1, draft: spec, origin: "manual", archived: false, createdAt: "2026-11-03T00:00:00Z" } };
+  return { id: "preview", oceanId: "preview", revision: 1, seed: 17, fish: { id: "preview", workspaceId: "preview", ownerId: "preview", revision: 1, contentHash: JSON.stringify(spec), compilerVersion: 1, rulesVersion: 1, draft: spec, origin: "manual", archived: false, createdAt: "2026-11-03T00:00:00Z" } };
 }
-export function FishEditor({ character, onSave, pending }: { character?: FishCharacter; onSave: (draft: FishSpec, character?: FishCharacter) => Promise<boolean>; pending: boolean }) {
- const { t } = useT("fish");
- const names = [t($ => $.azure), t($ => $.copper), t($ => $.ribbon), t($ => $.glider), t($ => $.rose), t($ => $.dart)];
- const initial = character?.draft ?? { ...FISH_EXAMPLES[0]!, name: names[0]! };
- const [open, setOpen] = useState(false), [spec, setSpec] = useState<FishSpec>(initial), [shape, setShape] = useState(0), [advanced, setAdvanced] = useState(false), [json, setJson] = useState(""), [error, setError] = useState("");
- const parsed = useMemo(() => { try { return FishSpecSchema.safeParse(advanced ? JSON.parse(json) : spec); } catch { return null; } }, [advanced, json, spec]);
- const draft = parsed?.success ? parsed.data : null;
- const residents = useMemo(() => draft ? [previewResident(draft)] : [], [draft]);
- return <Dialog open={open} onOpenChange={value => { if (pending) return; setOpen(value); if (value) { setSpec(initial); setAdvanced(false); setError(""); } }}><DialogTrigger render={<Button variant={character ? "outline" : "default"} size="sm" />}>{character ? t($ => $.edit) : t($ => $.create)}</DialogTrigger><DialogContent className="fish-editor"><DialogHeader><DialogTitle>{character ? t($ => $.edit) : t($ => $.create)}</DialogTitle></DialogHeader><div className="fish-editor-preview">{open && draft && <Suspense fallback={<p>{t($ => $.loading)}</p>}><Scene residents={residents} preview /></Suspense>}{!draft && <p role="status">{t($ => $.invalid)} {parsed && !parsed.success ? parsed.error.issues.slice(0, 2).map(issue => issue.path.join(".")).join(", ") : ""}</p>}</div><div className="fish-form"><label><span>{t($ => $.name)}</span><Input value={spec.name} maxLength={80} disabled={advanced || pending} onChange={e => setSpec({ ...spec, name: e.target.value })} /></label><label><span>{t($ => $.shape)}</span><select value={shape} disabled={advanced || pending} onChange={e => { const index = Number(e.target.value); setShape(index); setSpec({ ...structuredClone(FISH_EXAMPLES[index]!), name: spec.name }); }}>{names.map((name, i) => <option key={i} value={i}>{name}</option>)}</select></label><label><span>{t($ => $.color)}</span><input type="color" value={spec.appearance.body} disabled={advanced || pending} onChange={e => setSpec({ ...spec, appearance: { ...spec.appearance, body: e.target.value } })} /></label><label><span>{t($ => $.speed)}</span><input type="range" min="150" max="1800" step="50" value={spec.motion.speed} disabled={advanced || pending} onChange={e => setSpec({ ...spec, motion: { ...spec.motion, speed: Number(e.target.value) } })} /></label></div><label className="fish-check"><input type="checkbox" checked={advanced} disabled={pending} onChange={e => { setAdvanced(e.target.checked); setJson(JSON.stringify(spec, null, 2)); }} />{t($ => $.advanced)}</label>{advanced && <Textarea aria-label={t($ => $.advanced)} value={json} disabled={pending} onChange={e => setJson(e.target.value)} className="fish-json" />}{error && <p role="alert" className="text-caption text-destructive">{error}</p>}<DialogFooter><Button variant="outline" disabled={pending} onClick={() => setOpen(false)}>{t($ => $.cancel)}</Button><Button disabled={pending || !draft} aria-busy={pending} onClick={async () => { if (!draft) return; const saved = await onSave(draft, character); if (saved) setOpen(false); else setError(t($ => $.error)); }}>{t($ => $.save)}</Button></DialogFooter></DialogContent></Dialog>;
+
+export function FishDesignForm({ spec, onChange, onSave, onCancel, pending }: {
+  spec: FishSpec;
+  onChange: (spec: FishSpec) => void;
+  onSave: (draft: FishSpec) => Promise<boolean>;
+  onCancel: () => void;
+  pending: boolean;
+}) {
+  const { t } = useT("fish");
+  const names = [t($ => $.azure), t($ => $.copper), t($ => $.ribbon), t($ => $.glider), t($ => $.rose), t($ => $.dart)];
+  const [shape, setShape] = useState(0);
+  const [advanced, setAdvanced] = useState(false);
+  const [json, setJson] = useState("");
+  const [error, setError] = useState("");
+  const parsed = useMemo(() => {
+    try { return FishSpecSchema.safeParse(advanced ? JSON.parse(json) : spec); } catch { return null; }
+  }, [advanced, json, spec]);
+  const draft = parsed?.success ? parsed.data : null;
+  const residents = useMemo(() => draft ? [previewResident(draft)] : [], [draft]);
+
+  return <>
+    <div className="fish-editor-preview">
+      {draft && <Suspense fallback={<p>{t($ => $.loading)}</p>}><Scene residents={residents} preview /></Suspense>}
+      {!draft && <p role="status">{t($ => $.invalid)} {parsed && !parsed.success ? parsed.error.issues.slice(0, 2).map(issue => issue.path.join(".")).join(", ") : ""}</p>}
+    </div>
+    <div className="fish-form">
+      <label><span>{t($ => $.name)}</span><Input value={spec.name} maxLength={80} disabled={advanced || pending} onChange={e => onChange({ ...spec, name: e.target.value })} /></label>
+      <label><span>{t($ => $.shape)}</span><select value={shape} disabled={advanced || pending} onChange={e => {
+        const index = Number(e.target.value);
+        setShape(index);
+        onChange({ ...structuredClone(FISH_EXAMPLES[index]!), name: spec.name });
+      }}>{names.map((name, i) => <option key={i} value={i}>{name}</option>)}</select></label>
+      <label><span>{t($ => $.color)}</span><input type="color" value={spec.appearance.body} disabled={advanced || pending} onChange={e => onChange({ ...spec, appearance: { ...spec.appearance, body: e.target.value } })} /></label>
+      <label><span>{t($ => $.speed)}</span><input type="range" min="150" max="1800" step="50" value={spec.motion.speed} disabled={advanced || pending} onChange={e => onChange({ ...spec, motion: { ...spec.motion, speed: Number(e.target.value) } })} /></label>
+    </div>
+    <label className="fish-check"><input type="checkbox" checked={advanced} disabled={pending} onChange={e => {
+      if (!e.target.checked && draft) onChange(draft);
+      setAdvanced(e.target.checked);
+      setJson(JSON.stringify(spec, null, 2));
+    }} />{t($ => $.advanced)}</label>
+    {advanced && <Textarea aria-label={t($ => $.advanced)} value={json} disabled={pending} onChange={e => setJson(e.target.value)} className="fish-json" />}
+    {error && <p role="alert" className="text-caption text-destructive">{error}</p>}
+    <DialogFooter>
+      <Button variant="outline" disabled={pending} onClick={onCancel}>{t($ => $.cancel)}</Button>
+      <Button disabled={pending || !draft} aria-busy={pending} onClick={async () => {
+        if (!draft) return;
+        setError("");
+        try { if (!await onSave(draft)) setError(t($ => $.error)); }
+        catch { setError(t($ => $.error)); }
+      }}>{t($ => $.save)}</Button>
+    </DialogFooter>
+  </>;
+}
+
+export function FishEditor({ character, onSave, pending }: {
+  character: FishCharacter;
+  onSave: (draft: FishSpec, character?: FishCharacter) => Promise<boolean>;
+  pending: boolean;
+}) {
+  const { t } = useT("fish");
+  const [open, setOpen] = useState(false);
+  const [spec, setSpec] = useState(character.draft);
+  return <Dialog open={open} onOpenChange={value => {
+    if (pending) return;
+    setOpen(value);
+    if (value) setSpec(character.draft);
+  }}>
+    <DialogTrigger render={<Button variant="outline" size="sm" />}>{t($ => $.edit)}</DialogTrigger>
+    <DialogContent className="fish-editor">
+      <DialogHeader><DialogTitle>{t($ => $.edit)}</DialogTitle></DialogHeader>
+      {open && <FishDesignForm spec={spec} onChange={setSpec} pending={pending} onCancel={() => setOpen(false)} onSave={async draft => {
+        const saved = await onSave(draft, character);
+        if (saved) setOpen(false);
+        return saved;
+      }} />}
+    </DialogContent>
+  </Dialog>;
 }
