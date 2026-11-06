@@ -1,7 +1,7 @@
 {
   "title": "Administration système",
   "mcp": "Services MCP",
-  "back": "Retour à Auro",
+  "back": "Retour à CreateX",
   "global_scope": "Tous les mondes",
   "admin_access": "Administrateur plateforme",
   "checking": "Vérification des droits…",
@@ -59,7 +59,7 @@
   "previous": "Page précédente",
   "next": "Page suivante",
   "entry": "Console d’administration",
-  "brand": "Auro",
+  "brand": "CreateX",
   "protocol": "Streamable HTTP · {{version}}",
   "milliseconds": "{{value}} ms",
   "games_title": "Gestion des jeux",

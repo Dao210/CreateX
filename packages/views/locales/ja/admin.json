@@ -1,7 +1,7 @@
 {
   "title": "システム管理",
   "mcp": "MCP サービス",
-  "back": "Auro に戻る",
+  "back": "CreateX に戻る",
   "global_scope": "全ワールド",
   "admin_access": "システム管理者",
   "checking": "管理者権限を確認中…",
@@ -59,7 +59,7 @@
   "previous": "前のページ",
   "next": "次のページ",
   "entry": "管理コンソール",
-  "brand": "Auro",
+  "brand": "CreateX",
   "protocol": "Streamable HTTP · {{version}}",
   "milliseconds": "{{value}} ms",
   "games_title": "ゲーム管理",
