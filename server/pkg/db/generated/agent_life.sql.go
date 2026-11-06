@@ -147,7 +147,9 @@ func (q *Queries) CreateLifeWorld(ctx context.Context, arg CreateLifeWorldParams
 }
 
 const deleteLifeWorldState = `-- name: DeleteLifeWorldState :exec
-WITH deleted_events AS (
+WITH deleted_requests AS (
+ DELETE FROM life_request WHERE world_id IN (SELECT life_world.id FROM life_world WHERE life_world.workspace_id=$1)
+), deleted_events AS (
  DELETE FROM life_event WHERE world_id IN (SELECT life_world.id FROM life_world WHERE life_world.workspace_id=$1)
 ), deleted_actions AS (
  DELETE FROM life_action WHERE world_id IN (SELECT life_world.id FROM life_world WHERE life_world.workspace_id=$1)
@@ -165,7 +167,7 @@ func (q *Queries) DeleteLifeWorldState(ctx context.Context, workspaceID pgtype.U
 }
 
 const getLifeBinding = `-- name: GetLifeBinding :one
-SELECT id, singleton, workspace_id, tick, tick_ms, next_tick_at, updated_at FROM life_world
+SELECT id, singleton, workspace_id, tick, tick_ms, next_tick_at, updated_at, town FROM life_world
 `
 
 func (q *Queries) GetLifeBinding(ctx context.Context) (LifeWorld, error) {
@@ -179,13 +181,60 @@ func (q *Queries) GetLifeBinding(ctx context.Context) (LifeWorld, error) {
 		&i.TickMs,
 		&i.NextTickAt,
 		&i.UpdatedAt,
+		&i.Town,
 	)
+	return i, err
+}
+
+const getLifeHistory = `-- name: GetLifeHistory :one
+SELECT jsonb_build_object(
+ 'workspaceId',w.workspace_id,'sinceSequence',$1::bigint,
+ 'throughSequence',COALESCE((SELECT max(sequence) FROM life_event WHERE world_id=w.id AND kind IN ('town_command','town_activity','town_conversation','goal_reached')),0),
+ 'total',(SELECT count(*) FROM life_event WHERE world_id=w.id AND sequence>$1 AND kind IN ('town_command','town_activity','town_conversation','goal_reached')),
+ 'events',COALESCE((SELECT jsonb_agg(jsonb_build_object('id',e.id,'sequence',e.sequence,'tick',e.tick,'actionId',e.action_id,'agentId',e.agent_id,'kind',e.kind,'payload',e.payload,'occurredAt',e.occurred_at) ORDER BY e.sequence DESC)
+  FROM (SELECT world_id, id, tick, action_id, agent_id, kind, payload, occurred_at, sequence FROM life_event WHERE world_id=w.id AND sequence>$1 AND kind IN ('town_command','town_activity','town_conversation','goal_reached') ORDER BY sequence DESC LIMIT 200) e),'[]'::jsonb)
+)::jsonb AS history FROM life_world w WHERE w.workspace_id=$2
+`
+
+type GetLifeHistoryParams struct {
+	SinceSequence int64       `json:"since_sequence"`
+	WorkspaceID   pgtype.UUID `json:"workspace_id"`
+}
+
+func (q *Queries) GetLifeHistory(ctx context.Context, arg GetLifeHistoryParams) ([]byte, error) {
+	row := q.db.QueryRow(ctx, getLifeHistory, arg.SinceSequence, arg.WorkspaceID)
+	var history []byte
+	err := row.Scan(&history)
+	return history, err
+}
+
+const getLifeRequest = `-- name: GetLifeRequest :one
+SELECT body_hash,response FROM life_request WHERE world_id=$1 AND user_id=$2 AND request_id=$3
+`
+
+type GetLifeRequestParams struct {
+	WorldID   pgtype.UUID `json:"world_id"`
+	UserID    pgtype.UUID `json:"user_id"`
+	RequestID pgtype.UUID `json:"request_id"`
+}
+
+type GetLifeRequestRow struct {
+	BodyHash string `json:"body_hash"`
+	Response []byte `json:"response"`
+}
+
+func (q *Queries) GetLifeRequest(ctx context.Context, arg GetLifeRequestParams) (GetLifeRequestRow, error) {
+	row := q.db.QueryRow(ctx, getLifeRequest, arg.WorldID, arg.UserID, arg.RequestID)
+	var i GetLifeRequestRow
+	err := row.Scan(&i.BodyHash, &i.Response)
 	return i, err
 }
 
 const getLifeSnapshot = `-- name: GetLifeSnapshot :one
 SELECT jsonb_build_object(
  'world', jsonb_build_object('id',w.id,'workspaceId',w.workspace_id,'tick',w.tick,'tickMs',w.tick_ms,'updatedAt',w.updated_at),
+ 'town', w.town,
+ 'eventCursor',COALESCE((SELECT max(sequence) FROM life_event WHERE world_id=w.id AND kind IN ('town_command','town_activity','town_conversation','goal_reached')),0),
  'agents', COALESCE((SELECT jsonb_agg(jsonb_build_object(
    'id',a.id,'name',a.name,'position',jsonb_build_object('x',a.x,'y',a.y),
    'energy',a.energy,'fullness',a.fullness,'social',a.social,'personality',a.personality,'goal',a.goal
@@ -195,9 +244,9 @@ SELECT jsonb_build_object(
  'actions', COALESCE((SELECT jsonb_agg(jsonb_build_object('id',c.id,'agentId',c.agent_id,'intent',c.intent,'reason',c.reason,
    'startedTick',c.started_tick,'dueTick',c.due_tick,'status',c.status) ORDER BY c.agent_id)
    FROM life_action c WHERE c.world_id=w.id AND c.status='running'),'[]'::jsonb),
- 'events', COALESCE((SELECT jsonb_agg(jsonb_build_object('id',e.id,'tick',e.tick,'actionId',e.action_id,
+ 'events', COALESCE((SELECT jsonb_agg(jsonb_build_object('id',e.id,'sequence',e.sequence,'tick',e.tick,'actionId',e.action_id,
    'agentId',e.agent_id,'kind',e.kind,'payload',e.payload,'occurredAt',e.occurred_at) ORDER BY e.tick DESC,e.id)
-   FROM (SELECT world_id, id, tick, action_id, agent_id, kind, payload, occurred_at FROM life_event WHERE world_id=w.id ORDER BY tick DESC,id LIMIT 80) e),'[]'::jsonb)
+   FROM (SELECT world_id, id, tick, action_id, agent_id, kind, payload, occurred_at, sequence FROM life_event WHERE world_id=w.id ORDER BY tick DESC,id LIMIT 80) e),'[]'::jsonb)
 )::jsonb AS snapshot
 FROM life_world w WHERE w.workspace_id=$1
 `
@@ -207,6 +256,22 @@ func (q *Queries) GetLifeSnapshot(ctx context.Context, workspaceID pgtype.UUID) 
 	var snapshot []byte
 	err := row.Scan(&snapshot)
 	return snapshot, err
+}
+
+const isLifeMember = `-- name: IsLifeMember :one
+SELECT EXISTS(SELECT 1 FROM member WHERE workspace_id=$1 AND user_id=$2) AS member
+`
+
+type IsLifeMemberParams struct {
+	WorkspaceID pgtype.UUID `json:"workspace_id"`
+	UserID      pgtype.UUID `json:"user_id"`
+}
+
+func (q *Queries) IsLifeMember(ctx context.Context, arg IsLifeMemberParams) (bool, error) {
+	row := q.db.QueryRow(ctx, isLifeMember, arg.WorkspaceID, arg.UserID)
+	var member bool
+	err := row.Scan(&member)
+	return member, err
 }
 
 const isLifeTickDue = `-- name: IsLifeTickDue :one
@@ -241,7 +306,7 @@ func (q *Queries) LockLifeWorkspace(ctx context.Context, id pgtype.UUID) (pgtype
 }
 
 const lockLifeWorld = `-- name: LockLifeWorld :one
-SELECT id, singleton, workspace_id, tick, tick_ms, next_tick_at, updated_at FROM life_world WHERE id=$1 FOR UPDATE
+SELECT id, singleton, workspace_id, tick, tick_ms, next_tick_at, updated_at, town FROM life_world WHERE id=$1 FOR UPDATE
 `
 
 func (q *Queries) LockLifeWorld(ctx context.Context, id pgtype.UUID) (LifeWorld, error) {
@@ -255,6 +320,7 @@ func (q *Queries) LockLifeWorld(ctx context.Context, id pgtype.UUID) (LifeWorld,
 		&i.TickMs,
 		&i.NextTickAt,
 		&i.UpdatedAt,
+		&i.Town,
 	)
 	return i, err
 }
@@ -265,6 +331,29 @@ SELECT 1 FROM life_world WHERE workspace_id=$1 FOR UPDATE
 
 func (q *Queries) LockLifeWorldForDeletion(ctx context.Context, workspaceID pgtype.UUID) error {
 	_, err := q.db.Exec(ctx, lockLifeWorldForDeletion, workspaceID)
+	return err
+}
+
+const saveLifeRequest = `-- name: SaveLifeRequest :exec
+INSERT INTO life_request(world_id,user_id,request_id,body_hash,response) VALUES($1,$2,$3,$4,$5)
+`
+
+type SaveLifeRequestParams struct {
+	WorldID   pgtype.UUID `json:"world_id"`
+	UserID    pgtype.UUID `json:"user_id"`
+	RequestID pgtype.UUID `json:"request_id"`
+	BodyHash  string      `json:"body_hash"`
+	Response  []byte      `json:"response"`
+}
+
+func (q *Queries) SaveLifeRequest(ctx context.Context, arg SaveLifeRequestParams) error {
+	_, err := q.db.Exec(ctx, saveLifeRequest,
+		arg.WorldID,
+		arg.UserID,
+		arg.RequestID,
+		arg.BodyHash,
+		arg.Response,
+	)
 	return err
 }
 
@@ -316,6 +405,23 @@ func (q *Queries) SaveLifeResource(ctx context.Context, arg SaveLifeResourcePara
 		arg.Kind,
 		arg.Amount,
 	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const saveLifeTown = `-- name: SaveLifeTown :execrows
+UPDATE life_world SET town=$2 WHERE id=$1
+`
+
+type SaveLifeTownParams struct {
+	ID   pgtype.UUID `json:"id"`
+	Town []byte      `json:"town"`
+}
+
+func (q *Queries) SaveLifeTown(ctx context.Context, arg SaveLifeTownParams) (int64, error) {
+	result, err := q.db.Exec(ctx, saveLifeTown, arg.ID, arg.Town)
 	if err != nil {
 		return 0, err
 	}

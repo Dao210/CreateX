@@ -57,6 +57,12 @@
 //     point counts, bounds and endpoints, and a constrained component schema.
 //     Ownership and the full vector coordinate array are excluded.
 //
+//   - Resident town planning and dialogue — server/internal/life/model.go.
+//     Sends one simulated resident profile, up to 12 personal memories, local
+//     observations and known activities, plus bounded member dialogue when sent.
+//     Enabled only by AGENT_LIFE_MODEL_MODE=llm, with durable real-day budgets.
+//     Product chats, private creation drafts and credentials are excluded.
+//
 // Request shape beyond the prompts is deployment-controlled and lives in
 // Config: MaxRetries (transport budget) and DisableThinking, which appends
 // `chat_template_kwargs: {"enable_thinking": false}` to every request body for

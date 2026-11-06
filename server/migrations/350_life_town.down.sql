@@ -1,0 +1,2 @@
+DROP TABLE IF EXISTS life_request;
+ALTER TABLE life_world DROP COLUMN IF EXISTS town;

@@ -7,7 +7,7 @@ import { LIFE_PROTOCOL_VERSION, RuntimeRequestSchema, SeedSchema, TickResultSche
 const lines = createInterface({ input: process.stdin, crlfDelay: Infinity });
 // This executable is a pure compute host. It has no database, network or agent CLI integration.
 for await (const line of lines) {
-  if (Buffer.byteLength(line) > 1024 * 1024) process.exit(1);
+  if (Buffer.byteLength(line) > 4 * 1024 * 1024) process.exit(1);
   let requestId: string | null = null;
   try {
     const request = RuntimeRequestSchema.parse(JSON.parse(line));

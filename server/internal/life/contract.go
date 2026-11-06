@@ -12,8 +12,8 @@ import (
 	"github.com/google/uuid"
 )
 
-const protocolVersion = 1
-const maxFrame = 1024 * 1024
+const protocolVersion = 2
+const maxFrame = 4 * 1024 * 1024
 
 type Position struct {
 	X int `json:"x"`
@@ -58,6 +58,7 @@ type Action struct {
 	Status      string `json:"status"`
 }
 type Simulation struct {
+	Town      *Town      `json:"town,omitempty"`
 	Tick      int64      `json:"tick"`
 	Agents    []Resident `json:"agents"`
 	Resources []Resource `json:"resources"`
@@ -134,7 +135,7 @@ func validateState(s Simulation) error {
 		ids[a.ID] = true
 		owners[a.AgentID] = true
 	}
-	return nil
+	return validateTown(s.Town, agents, s.Tick)
 }
 
 func validateResult(before Simulation, result TickResult) error {
@@ -142,8 +143,11 @@ func validateResult(before Simulation, result TickResult) error {
 	if err := validateState(after); err != nil {
 		return err
 	}
-	if after.Tick != before.Tick+1 || len(after.Agents) != len(before.Agents) || len(after.Actions) != len(after.Agents) || len(result.Events) > 121 {
+	if after.Tick != before.Tick+1 || len(after.Agents) != len(before.Agents) || len(after.Actions) != len(after.Agents) || len(result.Events) > 300 {
 		return errors.New("invalid tick transition")
+	}
+	if before.Town != nil && (after.Town == nil || before.Town.Revision != after.Town.Revision) {
+		return errors.New("engine changed town revision")
 	}
 	oldAgents := map[string]Resident{}
 	for _, a := range before.Agents {
@@ -211,7 +215,7 @@ func validateResult(before Simulation, result TickResult) error {
 				return errors.New("invalid terminal event")
 			}
 			traced[a.ID] = true
-		} else if e.Kind != "resources_replenished" && e.Kind != "goal_reached" {
+		} else if e.Kind != "resources_replenished" && e.Kind != "goal_reached" && e.Kind != "town_conversation" && e.Kind != "town_activity" {
 			return errors.New("invalid world event")
 		}
 		if !json.Valid(e.Payload) {

@@ -1,4 +1,4 @@
-import { LifePage } from "@auro/views/agent-life";
+import { LifeClient } from "./life-client";
 import type { Metadata } from "next";
 import en from "@auro/views/locales/en/life.json";
 import zhHans from "@auro/views/locales/zh-Hans/life.json";
@@ -9,4 +9,4 @@ import { getRequestLocale } from "@/lib/request-locale";
 
 const locales = { en, "zh-Hans": zhHans, ja, ko, fr };
 export async function generateMetadata(): Promise<Metadata> { return { title: locales[await getRequestLocale()].title }; }
-export default function Page() { return <LifePage />; }
+export default function Page() { return <LifeClient />; }

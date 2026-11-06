@@ -1,89 +1,95 @@
 "use client";
-
-import { GameAccessBoundary } from "../admin/game-access-boundary";
-
+import "./town.css";
+import { useEffect, useState } from "react";
+import type { StorageAdapter } from "@auro/core/types";
+import { useAuthStore } from "@auro/core/auth";
 import { useQuery } from "@tanstack/react-query";
-import { House, Sprout, Trees, Users, Leaf } from "lucide-react";
-import { LIFE_MAP, type LifeSnapshot } from "@auro/core/agent-life";
-import { lifeSnapshotOptions } from "@auro/core/agent-life/queries";
+import { Leaf } from "lucide-react";
+import { type LifeSnapshot } from "@auro/core/agent-life";
+import { lifeSnapshotOptions, lifeHistoryOptions } from "@auro/core/agent-life/queries";
 import { useCurrentWorkspace } from "@auro/core/paths";
 import { Button } from "@auro/ui/components/ui/button";
 import { Progress } from "@auro/ui/components/ui/progress";
+import { GameAccessBoundary } from "../admin/game-access-boundary";
 import { useNavigation } from "../navigation";
 import { useT } from "../i18n";
-import { PageHeader } from "../layout/page-header";
+import { ActivityDialog, ResidentDialog, ResidentTalk } from "./town-forms";
+import { TownMap } from "./town-map";
 
-export function LifePage() {
+export function LifePage({ storage }: { storage: StorageAdapter }) {
+  const userId = useAuthStore(s => s.user?.id);
   const workspace = useCurrentWorkspace();
-  return workspace ? <GameAccessBoundary gameId="life"><LifeContent key={workspace.id} workspaceId={workspace.id} /></GameAccessBoundary> : null;
+  return workspace && userId ? <GameAccessBoundary gameId="life"><LifeContent key={`${workspace.id}:${userId}`} workspaceId={workspace.id} userId={userId} storage={storage} /></GameAccessBoundary> : null;
 }
-
-function LifeContent({ workspaceId }: { workspaceId: string }) {
-  const { t } = useT("life");
+const clock = (tick: number) => `${String(Math.floor(tick % 1440 / 60)).padStart(2, "0")}:${String(tick % 60).padStart(2, "0")}`;
+function LifeContent({ workspaceId, userId, storage }: { workspaceId: string; userId: string; storage: StorageAdapter }) {
+  const cursorKey = `life:last-event:${workspaceId}:${userId}`;
+  const [since] = useState<number | null>(() => { try { const raw = storage.getItem(cursorKey); if (raw === null) return null; const value = Number(raw); return Number.isSafeInteger(value) && value >= 0 ? value : null; } catch { return null; } });
+  const { t } = useT("life"), navigation = useNavigation();
   const query = useQuery(lifeSnapshotOptions(workspaceId));
-  const navigation = useNavigation();
-  const data = query.data;
-  const selectedId = navigation.searchParams.get("resident");
-  const selected = data?.agents.find((a) => a.id === selectedId) ?? data?.agents[0];
-  const choose = (id: string) => {
-    const params = new URLSearchParams(navigation.searchParams);
-    params.set("resident", id);
-    navigation.replace(`${navigation.pathname}?${params}${navigation.hash}`);
-  };
-  const actions = t(($) => $.actions, { returnObjects: true });
-  const actionName = (kind: string | undefined) => kind && Object.hasOwn(actions, kind) ? actions[kind as keyof typeof actions] : kind ? t(($) => $.unknown) : t(($) => $.idle);
-  const world = data?.world;
-  const stale = world && query.dataUpdatedAt - Date.parse(world.updatedAt) > Math.max(15_000, world.tickMs * 4);
-  const amount = (owner: string, kind: string) => data?.resources.find((r) => r.owner === owner && r.kind === kind)?.amount ?? 0;
-  return <>
-    <PageHeader><Leaf className="size-4 text-success" aria-hidden /><h1 className="flex-1 text-body font-medium">{t(($) => $.title)}</h1></PageHeader>
-    <main className="mx-auto min-h-0 w-full max-w-[1400px] flex-1 space-y-5 overflow-y-auto p-4 pb-12 lg:p-6">
-      {query.isPending && <p role="status" className="text-body text-muted-foreground">{t(($) => $.loading)}</p>}
-      {query.isError && <div role="alert" className="flex items-center gap-3 text-body text-destructive"><span>{t(($) => $.error)}</span><Button variant="outline" size="sm" onClick={() => void query.refetch()}>{t(($) => $.retry)}</Button></div>}
-      {data && !world && <p className="text-body text-muted-foreground">{t(($) => $.empty)}</p>}
+  const data = query.data, town = data?.town, world = data?.world;
+  const cursor = data?.town && data.world ? data.eventCursor : null;
+  const history = useQuery({ ...lifeHistoryOptions(workspaceId, userId, since ?? 0), enabled: cursor !== null && since !== null && since <= cursor });
+  useEffect(() => { if (cursor !== null && document.visibilityState === "visible") { try { storage.setItem(cursorKey, String(cursor)); } catch { /* Viewing remains available without durable storage. */ } } }, [cursorKey, storage, cursor]);
+  const selected = data?.agents.find(a => a.id === navigation.searchParams.get("resident")) ?? data?.agents[0];
+  const choose = (id: string) => { const params = new URLSearchParams(navigation.searchParams); params.set("resident", id); navigation.replace(`${navigation.pathname}?${params}${navigation.hash}`); };
+  const profile = town?.profiles.find(p => p.residentId === selected?.id);
+  const plan = town?.plans.find(p => p.residentId === selected?.id && p.day === Math.floor((world?.tick ?? 0) / 1440));
+  const minute = (world?.tick ?? 0) % 1440;
+  const selectedAction = data?.actions.find(a => a.agentId === selected?.id);
+  const currentSlot = plan?.slots.find(slot => slot.start <= minute && slot.end > minute);
+  const memories = town?.memories.filter(m => m.residentId === selected?.id).sort((a, b) => b.tick - a.tick).slice(0, 12) ?? [];
+  const conversations = town?.conversations.filter(c => c.residentId === selected?.id || c.otherId === selected?.id).slice(-8).reverse() ?? [];
+  const relationships = town?.relationships.filter(r => r.residentId === selected?.id).sort((a, b) => b.familiarity - a.familiarity).slice(0, 6) ?? [];
+  const residentName = (id: string | null) => data?.agents.find(a => a.id === id)?.name ?? t($ => $.visitor);
+  const actions = t($ => $.actions, { returnObjects: true });
+  const actionName = (kind: string | undefined) => kind && Object.hasOwn(actions, kind) ? actions[kind as keyof typeof actions] : t($ => $.idle);
+  const dailyAction = selectedAction?.reason.startsWith("daily_") && currentSlot;
+  const currentActionLabel = dailyAction && selectedAction?.intent.kind === "MOVE"
+    ? t($ => $.going_to, { place: t($ => $.places[currentSlot.place]) })
+    : dailyAction && selectedAction?.intent.kind === "REST" ? t($ => $.purposes[currentSlot.purpose]) : actionName(selectedAction?.intent.kind);
+  const stale = world && query.dataUpdatedAt - Date.parse(world.updatedAt) > Math.max(15000, world.tickMs * 4);
+  return <div className="town-page">
+    <header className="town-page-header"><Leaf aria-hidden /><h1>{t($ => $.title)}</h1><div><ResidentDialog workspaceId={workspaceId} disabled={!town || (data?.agents.length ?? 0) >= 60} /></div></header>
+    <main className="town-main">
+      {query.isPending && <p role="status" className="town-state">{t($ => $.loading)}</p>}
+      {query.isError && <div role="alert" className="town-state"><p>{t($ => $.error)}</p><Button variant="outline" size="sm" onClick={() => void query.refetch()}>{t($ => $.retry)}</Button></div>}
+      {data && !world && <p className="town-state">{t($ => $.empty)}</p>}
       {data && world && <>
-        <header className="flex flex-wrap items-end justify-between gap-3">
-          <div><p data-testid="life-tick" className="font-mono text-caption uppercase tracking-widest text-muted-foreground">{t(($) => $.tick, { tick: world.tick })}</p><h2 className="mt-1 font-serif text-title-lg">{t(($) => $.day, { day: Math.floor(world.tick / 1440) + 1, time: `${String(Math.floor(world.tick % 1440 / 60)).padStart(2, "0")}:${String(world.tick % 60).padStart(2, "0")}` })}</h2></div>
-          <p role="status" className={`flex items-center gap-2 text-caption ${stale ? "text-warning" : "text-success"}`}><span className="size-2 rounded-full bg-current" aria-hidden />{stale ? t(($) => $.paused) : t(($) => $.live)}</p>
-        </header>
-        <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1fr)_300px]">
-          <section aria-label={t(($) => $.map)} className="min-w-0 overflow-x-auto rounded-xl border border-border bg-card p-3">
-            <div className="relative grid min-w-[560px] grid-cols-12 overflow-hidden rounded-lg bg-success/5" style={{ gridTemplateRows: "repeat(8, 56px)" }}>
-              {Array.from({ length: 96 }, (_, i) => {
-                const x = i % 12, y = Math.floor(i / 12);
-                const landmark = ([["home", House], ["farm", Sprout], ["forest", Trees], ["square", Users]] as const).find(([key]) => LIFE_MAP[key].x === x && LIFE_MAP[key].y === y);
-                const Icon = landmark?.[1];
-                return <div key={i} className={`relative flex min-h-0 flex-col border-b border-r border-border/30 p-1 ${landmark ? "bg-success/10" : ""}`}>
-                  {landmark && Icon && <div className="flex shrink-0 items-center gap-1 overflow-hidden text-success"><Icon className="size-3 shrink-0" aria-hidden /><span className="truncate text-micro">{t(($) => $.places[landmark[0]])}</span></div>}
-                  <div className="flex min-h-0 flex-1 flex-wrap content-start gap-0.5 overflow-y-auto">{data.agents.filter((agent) => agent.position.x === x && agent.position.y === y).map((agent) => <Button key={agent.id} variant={selected?.id === agent.id ? "brand" : "outline"} size="icon-xs" className="shrink-0 rounded-full font-mono shadow-sm" aria-label={t(($) => $.position, { name: agent.name, x, y })} aria-pressed={selected?.id === agent.id} title={`${agent.name} · ${actionName(data.actions.find((a) => a.agentId === agent.id)?.intent.kind)}`} onClick={() => choose(agent.id)}>{data.agents.findIndex((a) => a.id === agent.id) + 1}</Button>)}</div>
-                </div>;
-              })}
-            </div>
-          </section>
-          <aside className="min-w-0 space-y-4">
-            {selected && <section className="space-y-4 rounded-xl border border-border bg-card p-4" aria-label={selected.name}>
-              <div><p className="text-caption text-muted-foreground">{t(($) => $.residents)} · {data.agents.length}</p><h3 className="mt-1 font-serif text-title-lg">{selected.name}</h3><p className="mt-1 text-body text-brand">{actionName(data.actions.find((a) => a.agentId === selected.id)?.intent.kind)}</p></div>
-              {(["energy", "fullness", "social"] as const).map((need) => <div key={need}><div className="mb-1 flex justify-between text-caption"><span>{t(($) => $[need])}</span><span className="font-mono">{selected[need]}</span></div><Progress value={selected[need]} aria-label={t(($) => $[need])} /></div>)}
-              <p className="text-caption text-muted-foreground">{t(($) => $.inventory, { food: amount(selected.id, "food"), wood: amount(selected.id, "wood"), coins: amount(selected.id, "coins") })}</p>
-              <p className="text-caption">{t(($) => $.goals, { resource: selected.goal.kind === "wood" ? t(($) => $.wood) : t(($) => $.coins), amount: amount(selected.id, selected.goal.kind), target: selected.goal.target })}</p>
-            </section>}
-            <div className="flex max-h-48 flex-wrap gap-1 overflow-y-auto" aria-label={t(($) => $.residents)}>{data.agents.map((agent) => <Button key={agent.id} variant={selected?.id === agent.id ? "brand" : "ghost"} size="xs" aria-pressed={selected?.id === agent.id} onClick={() => choose(agent.id)}>{agent.name}</Button>)}</div>
-          </aside>
+        <header className="town-intro"><div><p data-testid="life-tick" className="town-overline">{t($ => $.tick, { tick: world.tick })}</p><h2>{t($ => $.day, { day: Math.floor(world.tick / 1440) + 1, time: clock(world.tick) })}</h2></div><div className="town-intro-status"><span role="status"><span className="town-live-dot" /> {stale ? t($ => $.paused) : t($ => $.live)}</span><span>{t($ => $.resident_count, { count: data.agents.length })}</span>{town && <span className="town-badge">{t($ => $.model_states[town.model.state])}</span>}</div></header>
+        {history.data && history.data.total > 0 && <section className="town-panel"><h3 className="town-section-title">{t($ => $.while_away)}</h3><p className="town-note">{t($ => $.away_count, { count: history.data.total })}</p><ol className="town-event-list">{history.data.events.slice(0, 5).map(event => <li key={event.id}><time>{clock(event.tick)}</time>{eventText(event, data, actionName, t)}</li>)}</ol></section>}
+        <div className="town-grid">
+          <div className="town-map-column"><TownMap data={data} selectedId={selected?.id} onSelect={choose} /><div className="town-resident-list" aria-label={t($ => $.residents)}>{data.agents.map(agent => <Button key={agent.id} variant={agent.id === selected?.id ? "brand" : "ghost"} size="xs" aria-pressed={agent.id === selected?.id} onClick={() => choose(agent.id)}>{agent.name}</Button>)}</div>
+            <section className="town-panel"><h3 className="town-section-title">{t($ => $.activities)}</h3>
+              {!town?.activities.length && <p className="town-note">{t($ => $.activities_empty)}</p>}
+              {town?.activities.slice(-6).reverse().map(activity => <article className="town-activity" key={activity.id}><strong>{activity.title}</strong><p>{residentName(activity.organizerId)} · {t($ => $.places[activity.place])} · {clock(activity.startTick)}–{clock(activity.endTick)}</p><p>{t($ => $.activity_states[activity.status])} · {t($ => $.attendee_count, { count: activity.attendees.length })}</p>{activity.decision && <p className="town-note">{activity.decision === "model_failed" ? t($ => $.command_error) : activity.decision === "shared_interest" ? t($ => $.shared_interest) : activity.decision === "different_interest" ? t($ => $.different_interest) : activity.decision}</p>}</article>)}
+              {selected && town && <div><ActivityDialog workspaceId={workspaceId} data={data} residentId={selected.id} /></div>}
+            </section>
+          </div>
+          {selected && <aside className="town-panel town-resident-sidebar" aria-label={selected.name}>
+            <div className="town-profile"><h3>{selected.name}</h3><p>{profile && t($ => $.occupations[profile.occupation])} · {currentActionLabel}</p>{profile?.background && <p>{profile.background}</p>}<div className="town-tags">{profile?.interests.map(interest => <span className="town-badge" key={interest}>{t($ => $.interests[interest])}</span>)}{plan && <span className="town-badge">{plan.source === "model" ? t($ => $.model_plan) : t($ => $.routine_plan)}</span>}</div></div>
+            <div className="town-needs">{(["energy", "fullness", "social"] as const).map(need => <div key={need}><span>{t($ => $[need])} {selected[need]}</span><Progress value={selected[need]} aria-label={t($ => $[need])} /></div>)}</div>
+            <section><h4 className="town-section-title">{t($ => $.today_plan)}</h4><ol className="town-agenda">{plan?.slots.filter(slot => slot.end > minute).slice(0, 5).map(slot => <li key={slot.start} className={slot.start <= minute && slot.end > minute ? "town-current" : ""}><time>{clock(slot.start)}</time><span>{t($ => $.purposes[slot.purpose])} · {t($ => $.places[slot.place])}{slot.reason && <p className="town-note">{slot.reason}</p>}</span></li>)}</ol></section>
+            <section><h4 className="town-section-title">{t($ => $.relationships)}</h4>{!relationships.length && <p className="town-note">{t($ => $.relationships_empty)}</p>}{relationships.map(row => <div key={row.otherId} className="town-relation"><Button variant="link" size="xs" onClick={() => choose(row.otherId)}>{residentName(row.otherId)}</Button><span>{t($ => $.familiarity, { count: row.familiarity })}</span></div>)}</section>
+            <ResidentTalk key={selected.id} workspaceId={workspaceId} data={data} residentId={selected.id} />
+          </aside>}
         </div>
-        <section aria-labelledby="life-events-title" className="rounded-xl border border-border bg-card p-4">
-          <h2 id="life-events-title" className="mb-3 text-title-sm font-medium">{t(($) => $.events)}</h2>
-          <ol className="max-h-48 space-y-2 overflow-y-auto" aria-live="off">{data.events.map((event) => <li key={event.id} className="flex items-start gap-4 text-caption"><span className="w-16 shrink-0 font-mono text-muted-foreground">{t(($) => $.tick, { tick: event.tick })}</span><span className={event.kind === "action_failed" ? "text-warning" : "text-foreground"}>{eventText(event, data, actionName, t)}</span></li>)}</ol>
-        </section>
+        <div className="town-stories">
+          <section className="town-panel"><h3 className="town-section-title">{t($ => $.memories)}</h3>{!memories.length && <p className="town-note">{t($ => $.memories_empty)}</p>}<ol className="town-memory-list">{memories.map(memory => <li key={memory.id}><time>{t($ => $.day, { day: Math.floor(memory.tick / 1440) + 1, time: clock(memory.tick) })} · {t($ => $.memory_kinds[memory.kind])}</time>{memory.text || t($ => $.meeting_memory, { name: residentName(memory.otherId) })}{memory.evidence.length > 0 && <p className="town-note">{t($ => $.memory_evidence, { count: memory.evidence.length })}</p>}</li>)}</ol></section>
+          <section className="town-panel"><h3 className="town-section-title">{t($ => $.conversations)}</h3>{!conversations.length && <p className="town-note">{t($ => $.conversations_empty)}</p>}<div className="town-conversation-list">{conversations.map(conversation => <article key={conversation.id} className="town-conversation"><small>{clock(conversation.tick)} · {conversation.source === "rules" ? t($ => $.rule_conversation) : conversation.source === "model" ? t($ => $.model_conversation) : t($ => $.visitor)}</small>{conversation.source === "rules" ? <p>{conversation.activityIds.length ? t($ => $.invitation_record, { name: residentName(conversation.residentId), other: residentName(conversation.otherId), title: conversation.lines[0]?.text }) : t($ => $.meeting_record, { name: residentName(conversation.residentId), other: residentName(conversation.otherId) })}</p> : conversation.lines.map((line, i) => <p key={i}><strong>{residentName(line.speakerId)}</strong> {line.text}</p>)}</article>)}</div></section>
+        </div>
+        <section className="town-panel"><h3 className="town-section-title">{t($ => $.events)}</h3><ol className="town-event-list">{data.events.filter(e => e.kind !== "resources_replenished").slice(0, 12).map(event => <li key={event.id}><time>{clock(event.tick)}</time>{eventText(event, data, actionName, t)}</li>)}</ol></section>
       </>}
     </main>
-  </>;
+  </div>;
 }
-
 function eventText(event: LifeSnapshot["events"][number], data: LifeSnapshot, actionName: (kind: string | undefined) => string, t: ReturnType<typeof useT<"life">>["t"]) {
-  if (event.kind === "resources_replenished") return t(($) => $.replenished);
-  if (event.kind === "world_created") return t(($) => $.created, { count: Number(event.payload.residents) || data.agents.length });
+  if (event.kind === "world_created") return t($ => $.created, { count: data.agents.length });
+  if (event.kind === "town_conversation") return t($ => $.conversation_event);
+  if (event.kind === "town_activity") return t($ => $.activity_event, { title: typeof event.payload.title === "string" ? event.payload.title : "" });
+  if (event.kind === "town_command") return t($ => $.town_changed);
   const intent = event.payload.intent;
   const kind = intent && typeof intent === "object" && "kind" in intent && typeof intent.kind === "string" ? intent.kind : undefined;
-  const name = data.agents.find((a) => a.id === event.agentId)?.name ?? t(($) => $.unknown);
-  return t(($) => event.kind === "action_failed" ? $.failed : $.completed, { name, action: actionName(kind) });
+  const name = data.agents.find(a => a.id === event.agentId)?.name ?? t($ => $.visitor);
+  return t($ => event.kind === "action_failed" ? $.failed : $.completed, { name, action: actionName(kind) });
 }

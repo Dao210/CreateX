@@ -56,6 +56,7 @@ func TestDocumentedConsumersAreTheOnlyCallers(t *testing.T) {
 	consumers := map[string]bool{
 		"internal/handler/chat_title.go":                  false,
 		"internal/service/chat_quick_actions_generate.go": false,
+		"internal/life/model.go":                          false,
 		"internal/deal/model.go":                          false,
 		"internal/siege/recognition.go":                   false,
 	}

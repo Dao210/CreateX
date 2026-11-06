@@ -1,10 +1,10 @@
-# Weavea Agent Life — integrated Phase 1
+# Agent Life — integrated simulation and resident town
 
 ## Requirement baseline
 
 The Phase 1 task brief is the available requirement source. The linked [完整 PRD 聊天](https://chatgpt.com/g/g-p-6ae4458d02cc819184fa9e93a8e0eb71-weaveaworld/c/6ae44601-ba64-83e8-b075-750039172240) did not expose its reply text through the reader or browser. Map dimensions, clock ratio and yields remain provisional until that text is available.
 
-The rules-only scope remains one simulation bound to one existing world, 20 preset residents and six actions. The pure engine supports tests at 60 residents. LLM planning, resident creation, diaries, combat, reproduction, markets and cross-world behavior are deferred.
+The resident-town upgrade retains one simulation bound to one existing world and the 20 existing residents. Up to 60 residents share daily agendas, local encounters, individual memories, relationships and scheduled activities. The six authoritative actions remain engine-owned. Member-created residents and member-visible conversations are supported. Combat, reproduction, complex markets and cross-world behavior remain out of scope.
 
 ## Ownership
 
@@ -65,3 +65,67 @@ Goal facts enter `world_inbox_event` in the Tick transaction and use the existin
 - Run Web/Desktop checks/builds, lifecycle/deploy/CI-scope scripts and inbox/game-admin regressions for shared integration changes.
 
 Do not run the restart E2E against a shared daily or production environment. Production deployment and a long wall-clock soak are separate acceptance steps.
+
+## Resident town
+
+The existing `life_world.town` document stores bounded profiles, plans, individual
+memories, relationships, activities, conversations, model jobs and a command
+revision. Migration 350 adds it without changing resident IDs, inventories, goals
+or the clock. A missing document is initialized from the current residents on the
+next simulation operation. Compute protocol 2 has a four-MiB frame bound; backend
+and its bundled runtime must be upgraded together.
+
+Daily routines use homes, farm, forest, square, cafe, library and shop. Passive
+energy, fullness and social need decrease once every 5, 10 and 15 simulation
+minutes respectively, so a meaningful daily agenda can coexist with survival. Physical
+survival and resource rules remain authoritative. Invitations travel only through
+completed colocated conversations. An activity exists in shared storage before
+other residents know about it; attendance requires personal knowledge, interest
+or familiarity and actual presence. The organizer accepts or declines a member's
+proposal. Model decisions cannot invent invitations or memory evidence.
+
+`POST /api/life/commands` accepts strict message, activity and resident commands.
+Messages are capped at 1,000 Unicode code points; resident names at 40, backgrounds
+at 400. Activities start 30–1,200 simulation minutes later, last 15–180 minutes,
+and respect venue hours. The shared UI offers one-hour activities. Successful
+commands and their account/world/request-ID receipts commit atomically; a changed
+body with the same ID returns 409. `life_request` is removed with its world.
+Commands increment the town revision; an older Tick cannot overwrite them.
+
+The map, agendas, relationships and local history use shared Web/Desktop views.
+Hosts inject storage for an account/world-scoped last-viewed event-sequence pointer.
+`GET /api/life/history?since=<sequence>` returns the count and latest 200 important
+world events after that pointer, including later events in the same Tick; the return summary labels itself as recent
+records. No simulated progress is stored in client preferences.
+
+## Model operation
+
+`AGENT_LIFE_MODEL_MODE=rules` is explicit model-free daily life. To enable the
+existing main-service LLM gateway, set `AGENT_LIFE_MODEL_MODE=llm` and configure
+`AURO_LLM_API_KEY` and/or `AURO_LLM_BASE_URL`, plus `AURO_LLM_DEFAULT_MODEL` as needed.
+The first `AGENT_LIFE_MODEL_RESIDENTS` profiles (default 5) receive model agenda
+and dialogue jobs; other residents retain identified rule-driven routines.
+`AGENT_LIFE_MODEL_DAILY_LIMIT` defaults to 100 model decision calls per real UTC day
+for this simulation, independently of the accelerated game clock. A 15-second
+request deadline also bounds configured transport retries. Transport and parameter
+compatibility retries inside a decision call are not separate budget entries;
+`AURO_LLM_MAX_RETRIES` still bounds their transport retry ceiling.
+
+Go claims persisted jobs under the world lock, charges the shared budget before
+calling the model, and applies output in a later transaction. Leases are reclaimable
+after a minute. Job identity/lease, current day, participants and activity timing
+are rechecked before applying a result. The model sees only the resident profile,
+up to 12 personal memories, nearby residents and up to six known activities, plus
+a bounded visitor message when submitted. It receives no product chats, creation
+drafts, workspace/account credentials, database access or arbitrary execution.
+Model input/output never enters the credential-free Node child as executable code.
+
+Missing configuration, exhausted budgets and failed decisions remain visible.
+The system does not fabricate a successful model conversation. Simulation Ticks
+continue independently of model latency. Conversation controls show that text is
+visible to current world members. These NPC calls are independent of product-agent
+CLIs and use `server/pkg/llm` only. Restart and backend shutdown join both loops.
+
+Verification adds causal invitation/attendance and personal-memory tests, durable
+command/retry/revision tests, a fixture model budget test, and the authenticated
+Life E2E with a local HTTP model fixture. It does not invoke a real provider.

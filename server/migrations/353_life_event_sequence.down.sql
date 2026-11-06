@@ -1,0 +1,1 @@
+ALTER TABLE life_event DROP COLUMN IF EXISTS sequence;

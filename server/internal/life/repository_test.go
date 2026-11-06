@@ -53,9 +53,9 @@ func lifeDatabase(t *testing.T) (*Repository, *testutil.Fixture, string, *NodeRu
 		t.Fatal(err)
 	}
 	t.Cleanup(pool.Close)
-	for _, name := range []string{"workspace", "life_world", "life_agent", "life_resource", "life_action", "life_event", "world_inbox_event"} {
+	for _, name := range []string{"user", "member", "workspace", "life_world", "life_agent", "life_resource", "life_action", "life_event", "life_request", "world_inbox_event"} {
 		table := pgx.Identifier{name}.Sanitize()
-		if _, err = pool.Exec(ctx, "CREATE TABLE "+table+" (LIKE public."+table+" INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES)"); err != nil {
+		if _, err = pool.Exec(ctx, "CREATE TABLE "+table+" (LIKE public."+table+" INCLUDING DEFAULTS INCLUDING IDENTITY INCLUDING CONSTRAINTS INCLUDING INDEXES)"); err != nil {
 			t.Fatal(err)
 		}
 	}

@@ -1,3 +1,4 @@
+import { defaultStorage } from "@auro/core/platform";
 import { lazy, Suspense, useEffect } from "react";
 import { createMemoryRouter, Outlet, useMatches } from "react-router-dom";
 import type { RouteObject } from "react-router-dom";
@@ -158,7 +159,7 @@ export const appRoutes: RouteObject[] = [
           { path: "siege", element: <Suspense><SiegePage /></Suspense>, handle: { title: "Siege" } },
           { path: "tanks", element: <TanksPage />, handle: { title: "Tank Defense" } },
           { path: "fish", element: <OceanPage />, handle: { title: "Ocean" } },
-          { path: "life", element: <Suspense><LifePage /></Suspense>, handle: { title: "Agent Life" } },
+          { path: "life", element: <Suspense><LifePage storage={defaultStorage} /></Suspense>, handle: { title: "Agent Life" } },
           { path: "me", element: <MePageRoute />, handle: { title: "My Creations" } },
           {
             path: "siege/campaign",

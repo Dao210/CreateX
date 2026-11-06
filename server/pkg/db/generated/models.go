@@ -861,6 +861,16 @@ type LifeEvent struct {
 	Kind       string             `json:"kind"`
 	Payload    []byte             `json:"payload"`
 	OccurredAt pgtype.Timestamptz `json:"occurred_at"`
+	Sequence   pgtype.Int8        `json:"sequence"`
+}
+
+type LifeRequest struct {
+	WorldID   pgtype.UUID        `json:"world_id"`
+	UserID    pgtype.UUID        `json:"user_id"`
+	RequestID pgtype.UUID        `json:"request_id"`
+	BodyHash  string             `json:"body_hash"`
+	Response  []byte             `json:"response"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
 type LifeResource struct {
@@ -878,6 +888,7 @@ type LifeWorld struct {
 	TickMs      int32              `json:"tick_ms"`
 	NextTickAt  pgtype.Timestamptz `json:"next_tick_at"`
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+	Town        []byte             `json:"town"`
 }
 
 type McpActivity struct {
@@ -1411,4 +1422,57 @@ type WorldInboxEvent struct {
 	OccurredAt   pgtype.Timestamptz `json:"occurred_at"`
 	DeliveredAt  pgtype.Timestamptz `json:"delivered_at"`
 	SummarizedAt pgtype.Timestamptz `json:"summarized_at"`
+}
+
+type WorldOpsAction struct {
+	WorkspaceID pgtype.UUID        `json:"workspace_id"`
+	UserID      pgtype.UUID        `json:"user_id"`
+	Game        string             `json:"game"`
+	Kind        string             `json:"kind"`
+	Origin      string             `json:"origin"`
+	OccurredAt  pgtype.Timestamptz `json:"occurred_at"`
+}
+
+type WorldOpsCoverage struct {
+	StartedAt pgtype.Timestamptz `json:"started_at"`
+}
+
+type WorldOpsCreation struct {
+	WorkspaceID pgtype.UUID `json:"workspace_id"`
+	UserID      pgtype.UUID `json:"user_id"`
+	Game        string      `json:"game"`
+	SubjectID   string      `json:"subject_id"`
+	Revision    int32       `json:"revision"`
+	Origin      string      `json:"origin"`
+	OccurredAt  interface{} `json:"occurred_at"`
+}
+
+type WorldOpsFollowup struct {
+	ID          pgtype.UUID        `json:"id"`
+	WorkspaceID pgtype.UUID        `json:"workspace_id"`
+	AssigneeID  pgtype.UUID        `json:"assignee_id"`
+	Reason      string             `json:"reason"`
+	DueOn       pgtype.Date        `json:"due_on"`
+	Version     int32              `json:"version"`
+	ClosedAt    pgtype.Timestamptz `json:"closed_at"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+}
+
+type WorldOpsFollowupEntry struct {
+	WorkspaceID pgtype.UUID        `json:"workspace_id"`
+	FollowupID  pgtype.UUID        `json:"followup_id"`
+	Version     int32              `json:"version"`
+	ActorID     pgtype.UUID        `json:"actor_id"`
+	Action      string             `json:"action"`
+	AssigneeID  pgtype.UUID        `json:"assignee_id"`
+	DueOn       pgtype.Date        `json:"due_on"`
+	Note        string             `json:"note"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+}
+
+type WorldOpsVisit struct {
+	WorkspaceID pgtype.UUID        `json:"workspace_id"`
+	UserID      pgtype.UUID        `json:"user_id"`
+	VisitDay    pgtype.Date        `json:"visit_day"`
+	FirstSeenAt pgtype.Timestamptz `json:"first_seen_at"`
 }

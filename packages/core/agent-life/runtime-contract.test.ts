@@ -13,11 +13,11 @@ describe("internal life compute protocol", () => {
     expect(TickResultSchema.parse(advanceTick(state, randomUUID)).state.tick).toBe(1);
   });
   it.each([
-    { version: 2, requestId, operation: "seed" },
-    { version: 1, requestId, operation: "exec", code: "anything" },
-    { version: 1, requestId, operation: "seed", databaseUrl: "forbidden" },
-    { version: 1, requestId, operation: "tick", state: { ...state, tick: -1 } },
-    { version: 1, requestId, operation: "tick", state: { ...state, agents: [...agents, ...agents, ...agents, ...agents] } },
+    { version: 99, requestId, operation: "seed" },
+    { version: 2, requestId, operation: "exec", code: "anything" },
+    { version: 2, requestId, operation: "seed", databaseUrl: "forbidden" },
+    { version: 2, requestId, operation: "tick", state: { ...state, tick: -1 } },
+    { version: 2, requestId, operation: "tick", state: { ...state, agents: [...agents, ...agents, ...agents, ...agents] } },
   ])("rejects unsupported or unbounded requests", (request) => {
     expect(RuntimeRequestSchema.safeParse(request).success).toBe(false);
   });

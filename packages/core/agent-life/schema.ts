@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { TownReadSchema } from "./town-schema";
 
 export const PositionSchema = z.strictObject({ x: z.number().int().min(0).max(11), y: z.number().int().min(0).max(7) });
 export const ActionIntentSchema = z.discriminatedUnion("kind", [
@@ -30,15 +31,20 @@ export const WorldSchema = z.object({
   tickMs: z.number().int().positive(), updatedAt: z.string(),
 });
 export const EventSchema = z.object({
-  id: z.string().uuid(), tick: z.number().int().nonnegative(), actionId: z.string().uuid().nullable(),
+  id: z.string().uuid(), sequence: z.number().int().nonnegative().default(0), tick: z.number().int().nonnegative(), actionId: z.string().uuid().nullable(),
   agentId: z.string().uuid().nullable(), kind: z.string(), payload: z.record(z.string(), z.unknown()), occurredAt: z.string(),
 });
 export const LifeSnapshotSchema = z.object({
   world: WorldSchema.nullable(), agents: z.array(AgentSchema).default([]), resources: z.array(ResourceSchema.extend({ kind: z.string() })).default([]),
   actions: z.array(ActionSchema.extend({ intent: z.object({ kind: z.string(), to: PositionSchema.optional(), targetId: z.string().optional() }), status: z.string() })).default([]), events: z.array(EventSchema).default([]),
+  eventCursor: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER).default(0),
+  town: TownReadSchema.nullable().default(null),
 });
 export type Agent = z.infer<typeof AgentSchema>;
 export type Resource = z.infer<typeof ResourceSchema>;
 export type Action = z.infer<typeof ActionSchema>;
 export type LifeEvent = z.infer<typeof EventSchema>;
 export type LifeSnapshot = z.infer<typeof LifeSnapshotSchema>;
+
+export const LifeHistorySchema = z.object({ workspaceId: z.string().uuid(), sinceSequence: z.number().int().nonnegative(), throughSequence: z.number().int().nonnegative(), total: z.number().int().nonnegative(), events: EventSchema.array().max(200) });
+export type LifeHistory = z.infer<typeof LifeHistorySchema>;

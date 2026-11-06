@@ -1,5 +1,6 @@
 // @vitest-environment node
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { newTown, seedResidents } from "../agent-life";
 import { ApiClient } from "./client";
 
 afterEach(() => vi.unstubAllGlobals());
@@ -17,4 +18,16 @@ describe("Life snapshot API boundary", () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify(value), { status: 200 })));
     await expect(new ApiClient("https://api.example.test").getLifeSnapshot(workspaceId)).rejects.toThrow("invalid_life_response");
   });
+});
+
+it("validates town mutations and tolerates additive town response fields", async () => {
+  const workspaceId = "a11fe000-0000-4000-8000-000000000001";
+  const request = { requestId: workspaceId, kind: "message" as const, residentId: workspaceId, text: "Hello" };
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ id: "bad", kind: "message" }), { status: 200 })));
+  await expect(new ApiClient("https://api.example.test").submitTownCommand(workspaceId, request)).rejects.toThrow("invalid_life_response");
+  const agents = seedResidents();
+  const town = { ...newTown(agents), futureField: "safe", model: { ...newTown(agents).model, state: "future_state" } };
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ world: { id: workspaceId, workspaceId, tick: 1, tickMs: 2000, updatedAt: "2026-11-06T00:00:00Z" }, agents, town }), { status: 200 })));
+  const result = await new ApiClient("https://api.example.test").getLifeSnapshot(workspaceId);
+  expect(result.town?.model.state).toBe("unconfigured");
 });

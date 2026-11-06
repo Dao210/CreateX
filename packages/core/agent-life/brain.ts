@@ -1,3 +1,4 @@
+import { nextTownStep } from "./navigation";
 import type { ActionIntent, Agent, Resource, Proposal } from "./schema";
 import { LIFE_MAP, balance, feasible, samePosition } from "./rules";
 
@@ -7,8 +8,7 @@ export interface AgentBrain { choose(observation: Observation): Proposal }
 // output must pass PlannerProposalSchema before reaching an AgentBrain adapter.
 export interface LLMPlanner { plan(observation: Observation, signal: AbortSignal): Promise<unknown> }
 function toward(agent: Readonly<Agent>, destination: Agent["position"], reason: string): Proposal {
-  const { x, y } = agent.position;
-  return { intent: { kind: "MOVE", to: { x: x + Math.sign(destination.x - x), y: x === destination.x ? y + Math.sign(destination.y - y) : y } }, reason };
+  return { intent: { kind: "MOVE", to: nextTownStep(agent.position, destination) }, reason };
 }
 // A Brain only proposes commands. Feasibility and settlement remain engine-owned.
 export const ruleBrain: AgentBrain = {

@@ -114,6 +114,8 @@ _features/
 # Agent working notes stay local; the Siege PRD is referenced from docs.
 tasks/*
 !tasks/prd-siege-playability.md
+!tasks/prd-agent-life-town.md
+!tasks/prd-agent-life-civilization.md
 
 # Python (agent tooling)
 __pycache__/

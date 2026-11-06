@@ -18,15 +18,18 @@ type Status struct {
 	Tick  int64
 }
 type Service struct {
-	Repository *Repository
-	Engine     Engine
-	Bus        *events.Bus
-	status     atomic.Pointer[Status]
-	done       chan struct{}
+	Repository  *Repository
+	Engine      Engine
+	Bus         *events.Bus
+	Coordinator *Coordinator
+	status      atomic.Pointer[Status]
+	done        chan struct{}
 }
 
 func NewService(repository *Repository, engine Engine, bus *events.Bus) *Service {
-	return &Service{Repository: repository, Engine: engine, Bus: bus, done: make(chan struct{})}
+	s := &Service{Repository: repository, Engine: engine, Bus: bus, done: make(chan struct{})}
+	s.Coordinator = &Coordinator{Repository: repository, Mode: "rules", ResidentLimit: 5, DailyLimit: 100, Notify: s.notify}
+	return s
 }
 func (s *Service) Status() Status {
 	if status := s.status.Load(); status != nil {
@@ -120,6 +123,11 @@ func (s *Service) Step(ctx context.Context) (bool, error) {
 func (s *Service) Run(ctx context.Context) {
 	defer close(s.done)
 	defer s.Engine.Close()
+	if s.Coordinator != nil {
+		stopped := make(chan struct{})
+		go func() { defer close(stopped); s.Coordinator.Run(ctx) }()
+		defer func() { <-stopped }()
+	}
 	defer func() { s.setStatus("stopped", s.Status().Tick) }()
 	ticker := time.NewTicker(250 * time.Millisecond)
 	defer ticker.Stop()
@@ -147,5 +155,11 @@ func (s *Service) Wait(ctx context.Context) error {
 		return nil
 	case <-ctx.Done():
 		return ctx.Err()
+	}
+}
+
+func (s *Service) notify(workspace string) {
+	if s.Bus != nil {
+		s.Bus.Publish(events.Event{Type: protocol.EventLifeUpdated, WorkspaceID: workspace, ActorType: "system", Payload: map[string]any{"workspace_id": workspace}})
 	}
 }

@@ -113,6 +113,7 @@ func (r *Repository) Initialize(ctx context.Context, workspaceID string, seed Se
 
 func (r *Repository) Load(ctx context.Context, binding db.LifeWorld) (Simulation, error) {
 	var snapshot struct {
+		Town  *Town `json:"town"`
 		World *struct {
 			ID   string `json:"id"`
 			Tick int64  `json:"tick"`
@@ -131,7 +132,7 @@ func (r *Repository) Load(ctx context.Context, binding db.LifeWorld) (Simulation
 	if snapshot.World == nil || snapshot.World.ID != util.UUIDToString(binding.ID) {
 		return Simulation{}, ErrStaleTick
 	}
-	state := Simulation{Tick: snapshot.World.Tick, Agents: snapshot.Agents, Resources: snapshot.Resources, Actions: snapshot.Actions}
+	state := Simulation{Tick: snapshot.World.Tick, Agents: snapshot.Agents, Resources: snapshot.Resources, Actions: snapshot.Actions, Town: snapshot.Town}
 	return state, validateState(state)
 }
 
@@ -164,6 +165,13 @@ func (r *Repository) Commit(ctx context.Context, binding db.LifeWorld, before Si
 		return err
 	}
 	if current.WorkspaceID != binding.WorkspaceID || current.Tick != before.Tick {
+		return ErrStaleTick
+	}
+	var currentTown *Town
+	if err = json.Unmarshal(current.Town, &currentTown); err != nil {
+		return err
+	}
+	if (currentTown == nil) != (before.Town == nil) || (currentTown != nil && currentTown.Revision != before.Town.Revision) {
 		return ErrStaleTick
 	}
 	due, err := q.IsLifeTickDue(ctx, binding.ID)
@@ -235,6 +243,9 @@ func (r *Repository) Commit(ctx context.Context, binding db.LifeWorld, before Si
 				return err
 			}
 		}
+	}
+	if err = oneRow(q.SaveLifeTown(ctx, db.SaveLifeTownParams{ID: binding.ID, Town: rawJSON(result.State.Town)})); err != nil {
+		return err
 	}
 	if err = q.CommitLifeTick(ctx, db.CommitLifeTickParams{ID: binding.ID, Tick: result.State.Tick}); err != nil {
 		return err

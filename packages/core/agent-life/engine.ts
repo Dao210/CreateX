@@ -1,8 +1,10 @@
 import { PlannerProposalSchema, type Agent, type Action, type Resource } from "./schema";
 import { ruleBrain, type AgentBrain } from "./brain";
 import { LIFE_CAPACITY, DURATIONS, balance, feasible } from "./rules";
+import type { Town } from "./town-schema";
+import { beginTownTick, finishTownTick, settleTownTalk, townProposal } from "./town";
 
-export type Simulation = { tick: number; agents: Agent[]; resources: Resource[]; actions: Action[] };
+export type Simulation = { tick: number; agents: Agent[]; resources: Resource[]; actions: Action[]; town?: Town | null };
 export type EngineEvent = { actionId: string | null; agentId: string | null; kind: string; payload: Record<string, unknown> };
 export type TickResult = { state: Simulation; completed: Action[]; started: Action[]; events: EngineEvent[] };
 const clamp = (n: number) => Math.min(100, Math.max(0, n));
@@ -30,6 +32,7 @@ export function seedResources(agents: Agent[]): Resource[] {
 export function advanceTick(previous: Simulation, nextId: () => string, brain: AgentBrain = ruleBrain): TickResult {
   const state = structuredClone(previous);
   state.tick++;
+  beginTownTick(state, nextId);
   const events: EngineEvent[] = [], completed: Action[] = [], started: Action[] = [];
   const replenished: Record<string, number> = {};
   for (const [owner, kind, rate] of [["forest", "wood", 3], ["farm", "food", 10]] as const) {
@@ -38,7 +41,9 @@ export function advanceTick(previous: Simulation, nextId: () => string, brain: A
   }
   if (Object.keys(replenished).length) events.push({ actionId: null, agentId: null, kind: "resources_replenished", payload: replenished });
   for (const agent of state.agents) {
-    agent.energy = clamp(agent.energy - 1); agent.fullness = clamp(agent.fullness - 1); agent.social = clamp(agent.social - 1);
+    if (state.tick % 5 === 0) agent.energy = clamp(agent.energy - 1);
+    if (state.tick % 10 === 0) agent.fullness = clamp(agent.fullness - 1);
+    if (state.tick % 15 === 0) agent.social = clamp(agent.social - 1);
   }
   const due = state.actions.filter((a) => a.status === "running" && a.dueTick <= state.tick).sort((a, b) => a.agentId.localeCompare(b.agentId));
   for (const action of due) {
@@ -58,6 +63,7 @@ export function advanceTick(previous: Simulation, nextId: () => string, brain: A
           const target = state.agents.find((a) => a.id === intent.targetId)!;
           const targetBefore = target.social;
           target.social = clamp(target.social + 30); agent.social = clamp(agent.social + 35);
+          settleTownTalk(state, agent, target, nextId);
           events.push({ actionId: action.id, agentId: agent.id, kind: "action_completed", payload: { intent, reason: action.reason, socialDelta: agent.social - before.agent.social, targetId: target.id, targetSocialDelta: target.social - targetBefore } });
           break;
         }
@@ -81,11 +87,22 @@ export function advanceTick(previous: Simulation, nextId: () => string, brain: A
   for (let i = 0; i < state.agents.length; i++) {
     const agent = state.agents[(i + state.tick) % state.agents.length]!;
     if (state.actions.some((a) => a.agentId === agent.id)) continue;
-    const observation = structuredClone({ tick: state.tick, self: agent, residents: state.agents, resources: state.resources });
-    const proposal = PlannerProposalSchema.parse(brain.choose(observation));
+    const observation = structuredClone({ tick: state.tick, self: agent,
+      residents: state.agents.filter(other => Math.abs(other.position.x - agent.position.x) + Math.abs(other.position.y - agent.position.y) <= 2),
+      resources: state.resources.filter(r => r.owner === agent.id || r.owner === "farm" || r.owner === "forest"),
+    });
+    const proposal = PlannerProposalSchema.parse((brain === ruleBrain ? townProposal(state, agent) : undefined) ?? brain.choose(observation));
     if (!feasible(agent, proposal.intent, state.agents, state.resources)) throw new Error("invalid_brain_proposal");
     const action: Action = { id: nextId(), agentId: agent.id, ...proposal, startedTick: state.tick, dueTick: state.tick + DURATIONS[proposal.intent.kind], status: "running" };
     state.actions.push(action); started.push(action);
+  }
+  finishTownTick(state, nextId);
+  for (const conversation of state.town!.conversations) {
+    if (!previous.town?.conversations.some(c => c.id === conversation.id)) events.push({ actionId: null, agentId: conversation.residentId, kind: "town_conversation", payload: { ...conversation } });
+  }
+  for (const activity of state.town!.activities) {
+    const old = previous.town?.activities.find(a => a.id === activity.id);
+    if (old && (old.status !== activity.status || old.attendees.length !== activity.attendees.length)) events.push({ actionId: null, agentId: activity.organizerId, kind: "town_activity", payload: { ...activity } });
   }
   return { state, completed, started, events };
 }
