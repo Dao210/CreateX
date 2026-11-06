@@ -60,6 +60,10 @@ const NAV_ITEM_CLASS_NAME =
   "text-muted-foreground hover:not-data-active:bg-sidebar-accent/70 data-active:bg-sidebar-accent data-active:text-sidebar-accent-foreground";
 const GROUP_LABEL_CLASS_NAME =
   "h-6 group-data-[collapsible=icon]:mt-0 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:text-micro group-data-[collapsible=icon]:opacity-100";
+const EXPLORE_GROUP_LABEL_CLASS_NAME = cn(
+  GROUP_LABEL_CLASS_NAME,
+  "text-sidebar-foreground! font-semibold! before:mr-2 before:h-3.5 before:w-0.5 before:shrink-0 before:rounded-full before:bg-brand before:content-[''] group-data-[collapsible=icon]:before:hidden",
+);
 
 interface AppSidebarProps {
   /** Rendered above SidebarHeader (e.g. desktop traffic light spacer) */
@@ -180,7 +184,7 @@ export function AppSidebar({ topSlot, headerClassName, headerStyle }: AppSidebar
           {exploreEntries.length > 0 && (
             <>
               <SidebarGroup role="group" aria-label={t($ => $.sidebar.explore_group)}>
-                <SidebarGroupLabel className={GROUP_LABEL_CLASS_NAME}>{t($ => $.sidebar.explore_group)}</SidebarGroupLabel>
+                <SidebarGroupLabel className={EXPLORE_GROUP_LABEL_CLASS_NAME}>{t($ => $.sidebar.explore_group)}</SidebarGroupLabel>
                 <SidebarGroupContent>
                   <SidebarMenu className="gap-0.5">
                     {exploreEntries.map(key => {
@@ -195,7 +199,7 @@ export function AppSidebar({ topSlot, headerClassName, headerStyle }: AppSidebar
                             tooltip={label}
                             className={NAV_ITEM_CLASS_NAME}
                           >
-                            <Icon />
+                            <Icon className="text-brand group-data-[active]/menu-button:text-sidebar-accent-foreground" />
                             <span>{label}</span>
                           </SidebarMenuButton>
                         </SidebarMenuItem>
@@ -217,8 +221,10 @@ export function AppSidebar({ topSlot, headerClassName, headerStyle }: AppSidebar
                     tooltip={creationsLabel}
                     className={NAV_ITEM_CLASS_NAME}
                   >
-                    <CreationsIcon />
-                    <span>{creationsLabel}</span>
+                    <CreationsIcon className="text-brand group-data-[active]/menu-button:text-sidebar-accent-foreground" />
+                    <span className="font-medium text-sidebar-foreground group-data-[active]/menu-button:text-sidebar-accent-foreground">
+                      {creationsLabel}
+                    </span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               </SidebarMenu>
