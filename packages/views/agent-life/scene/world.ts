@@ -12,6 +12,7 @@ export interface Building {
   door: THREE.Group;
   entrance: THREE.Vector3;
   interior: THREE.Vector3;
+  doorway: THREE.Vector3;
   place: PlaceId;
   home?: number;
 }
@@ -42,13 +43,21 @@ function groundTexture() {
   road([-12.5, 12.5], [22.5, 12.5]);
   for (const home of TOWN_HOMES) {
     const p = worldPoint(home);
-    road([p.x, p.z], [p.x, p.z > 5 ? 7.5 : -7.5], 1.3);
+    if (home.y === 7) road([p.x, p.z], [-12.5, p.z], 1.3);
+    else road([p.x, p.z], [p.x, -7.5], 1.3);
+  }
+  for (const position of [...TOWN_HOMES, TOWN_PLACES.cafe, TOWN_PLACES.library, TOWN_PLACES.shop]) {
+    const p = worldPoint(position);
+    const offset = [3, 6, 10].includes(position.x) ? 4 : 0;
+    road([p.x, p.z], [p.x + offset, p.z], 1.15);
+    road([p.x + offset, p.z], [p.x + offset, p.z - 0.95], 1.15);
   }
   const plaza = point(-12.5, 12.5);
   ctx.fillStyle = "#ffffff";
   ctx.beginPath();
   ctx.ellipse(plaza[0]!, plaza[1]!, 62, 55, 0, 0, Math.PI * 2);
   ctx.fill();
+  ctx.lineWidth = 0.7;
   const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
   for (let i = 0; i < 18000; i++) {
     const x = random() * canvas.width, y = random() * canvas.height;
@@ -73,7 +82,8 @@ function windowFrame(parent: THREE.Group, material: TownMaterials, x: number, y:
 
 function house(scene: THREE.Scene, material: TownMaterials, place: PlaceId, at: THREE.Vector3, index: number, home?: number): Building {
   const group = new THREE.Group();
-  group.position.copy(at).add(new THREE.Vector3(0, 0, -3));
+  const besideJunction = [-12.5, 2.5, 22.5].some(x => Math.abs(at.x - x) < 0.01);
+  group.position.copy(at).add(new THREE.Vector3(besideJunction ? 4 : 0, 0, -3.5));
   const width = place === "library" ? 5.3 : 4.2;
   const depth = place === "shop" ? 3.6 : 4;
   const height = place === "library" || home === 0 ? 5.4 : 3.1;
@@ -124,12 +134,12 @@ function house(scene: THREE.Scene, material: TownMaterials, place: PlaceId, at: 
     for (let i = 0; i < 12; i++) box(group, i % 2 ? material.cloth : material.terra, [0.32, 0.42, 0.12], [-width / 2 + 0.5, 0.85 + Math.floor(i / 6) * 0.55, -1.3 + (i % 6) * 0.38]);
   }
   if (place === "cafe") {
-    const canopy = box(group, material.cloth, [5.1, 0.1, 2.8], [0, 2.45, depth / 2 + 1.5], [0.12, 0, 0]);
-    canopy.castShadow = true;
-    for (const x of [-2.3, 2.3]) box(group, material.wood, [0.08, 2.45, 0.08], [x, 1.2, depth / 2 + 2.7]);
-    for (const x of [-1.5, 1.5]) {
-      table(group, material, x, depth / 2 + 1.8, 0.65);
-      bench(group, material, x, depth / 2 + 2.6, 0);
+    const side = width / 2 + 1.4;
+    box(group, material.cloth, [2.8, 0.1, 4.6], [side, 2.45, 0], [0, 0, -0.08]);
+    for (const z of [-2, 2]) box(group, material.wood, [0.08, 2.35, 0.08], [side + 1.2, 1.17, z]);
+    for (const z of [-1.1, 1.1]) {
+      table(group, material, side, z, 0.65);
+      bench(group, material, side + 0.95, z, Math.PI / 2);
     }
   }
   batchArchitecture(roof);
@@ -138,7 +148,7 @@ function house(scene: THREE.Scene, material: TownMaterials, place: PlaceId, at: 
   group.userData.place = place;
   group.userData.home = home;
   scene.add(group);
-  return { group, roof, door, entrance: at.clone(), interior: group.position.clone().add(new THREE.Vector3(0, 0.4, 0.4)), place, home };
+  return { group, roof, door, entrance: at.clone(), interior: group.position.clone().add(new THREE.Vector3(0, 0.4, 0.4)), doorway: group.position.clone().add(new THREE.Vector3(0, 0, depth / 2 + 0.55)), place, home };
 }
 
 function table(parent: THREE.Group, material: TownMaterials, x: number, z: number, radius: number) {
@@ -246,7 +256,7 @@ export function createTownWorld(scene: THREE.Scene, materials: TownMaterials) {
 export function updateProject(scene: THREE.Scene, material: TownMaterials, project: CivicProject, previous?: THREE.Group) {
   if (previous) { scene.remove(previous); previous.traverse(object => { if (object instanceof THREE.Mesh) object.geometry.dispose(); }); }
   const group = new THREE.Group();
-  group.position.copy(worldPoint(project.position)).add(new THREE.Vector3(0, 0, -2.6));
+  group.position.copy(worldPoint(project.position)).add(new THREE.Vector3([3, 6, 10].includes(project.position.x) ? 4 : 0, 0, -2.6));
   const design = STORAGE_DESIGNS[project.variant];
   const progress = project.labor / design.labor;
   box(group, material.stone, [4, 0.2, 3], [0, 0.1, 0]);

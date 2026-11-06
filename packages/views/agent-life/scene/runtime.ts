@@ -159,19 +159,38 @@ export class TownRuntime {
         if (!moving && action?.intent.kind === "REST" && action.reason.startsWith("daily_")) {
           const building = this.world.buildings.find(row => row.entrance.distanceToSquared(current) < 0.01);
           if (building) {
-            actor.target.copy(building.interior).add(new THREE.Vector3((slot % 3 - 1) * 0.7, 0, Math.floor(slot / 3) * 0.65));
+            if (actor.entry?.buildingId !== building.group.uuid || actor.entry.phase === "exit" || actor.entry.phase === "road") actor.entry = { buildingId: building.group.uuid, phase: "door" };
+            if (actor.entry.phase === "door" && actor.group.position.distanceTo(building.doorway) < 0.3) actor.entry.phase = "inside";
+            actor.target.copy(actor.entry.phase === "inside" ? building.interior : building.doorway);
+            if (actor.entry.phase === "inside") actor.target.add(new THREE.Vector3((slot % 3 - 1) * 0.5, 0, Math.floor(slot / 3) * 0.5));
             actor.interior = building.group.uuid; occupied.add(building.group.uuid);
           }
+        }
+        if (!actor.interior && actor.entry) {
+          const building = this.world.buildings.find(row => row.group.uuid === actor.entry!.buildingId);
+          if (building) {
+            if (actor.entry.phase === "inside" || actor.entry.phase === "door") actor.entry.phase = "exit";
+            if (actor.entry.phase === "exit" && actor.group.position.distanceTo(building.doorway) < 0.3) actor.entry.phase = "road";
+            if (actor.entry.phase === "road" && actor.group.position.distanceTo(building.entrance) < 0.3) actor.entry = undefined;
+            else actor.target.copy(actor.entry?.phase === "road" ? building.entrance : building.doorway);
+            occupied.add(building.group.uuid);
+          } else actor.entry = undefined;
         }
         const direction = actor.target.clone().sub(actor.group.position);
         if (direction.lengthSq() > 0.002) {
           const angle = Math.atan2(direction.x, direction.z);
           actor.group.rotation.y += Math.atan2(Math.sin(angle - actor.group.rotation.y), Math.cos(angle - actor.group.rotation.y)) * Math.min(1, delta * 9);
+        } else if (action?.intent.projectId) {
+          const project = this.world.projects.get(action.intent.projectId);
+          if (project) actor.group.lookAt(project.group.position.clone().setY(actor.group.position.y));
         } else if (action?.intent.kind === "TALK") {
           const other = action.intent.targetId && this.residents.get(action.intent.targetId);
           if (other) actor.group.lookAt(other.group.position.clone().setY(actor.group.position.y));
         }
-        actor.group.position.lerp(actor.target, this.reduced.matches ? 1 : Math.min(1, delta * 14));
+        if (actor.entry && !this.reduced.matches) {
+          const distance = direction.length();
+          actor.group.position.addScaledVector(direction, distance > 0 ? Math.min(1, delta * 2.5 / distance) : 0);
+        } else actor.group.position.lerp(actor.target, this.reduced.matches ? 1 : Math.min(1, delta * 14));
         actor.marker.visible = agent.id === this.selectedId;
         const carrying = !!action && ((action.reason === "deliver_materials" && data.resources.some(row => row.owner === agent.id && row.kind === "wood" && row.amount >= 3))
           || (action.reason === "share_surplus" && data.resources.some(row => row.owner === agent.id && row.kind === "food" && row.amount >= 5)));

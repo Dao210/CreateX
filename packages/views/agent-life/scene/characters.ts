@@ -28,6 +28,7 @@ export interface ResidentActor {
   marker: THREE.Mesh;
   target: THREE.Vector3;
   interior?: string;
+  entry?: { buildingId: string; phase: "door" | "inside" | "exit" | "road" };
   model: THREE.Object3D;
   dispose: () => void;
 }
