@@ -53,7 +53,7 @@ type Broadcaster interface {
 	SendToUser(userID string, message []byte, excludeWorkspace ...string)
 
 	// Broadcast fans a message out to every connection on this node.
-	// Used for daemon:* events that have no workspace scope.
+	// Used for daemon presence and shared Life invalidations without a workspace scope.
 	Broadcast(message []byte)
 }
 

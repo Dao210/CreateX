@@ -16,7 +16,6 @@ import (
 )
 
 var ErrStaleTick = errors.New("life tick changed before commit")
-var ErrBindingMismatch = errors.New("life world is bound to a different workspace")
 
 type Repository struct{ Pool *pgxpool.Pool }
 
@@ -66,9 +65,6 @@ func (r *Repository) Initialize(ctx context.Context, workspaceID string, seed Se
 	}
 	existing, err := q.GetLifeBinding(ctx)
 	if err == nil {
-		if existing.WorkspaceID != workspace {
-			return empty, ErrBindingMismatch
-		}
 		return existing, tx.Commit(ctx)
 	}
 	if !errors.Is(err, pgx.ErrNoRows) {
@@ -156,15 +152,12 @@ func (r *Repository) Commit(ctx context.Context, binding db.LifeWorld, before Si
 	}
 	defer tx.Rollback(ctx)
 	q := db.New(tx)
-	// Match workspace deletion: workspace fence, world row, then inbox source lock.
-	if _, err = q.LockLifeWorkspace(ctx, binding.WorkspaceID); err != nil {
-		return err
-	}
+	// The simulation is shared; workspace deletion can detach its historical source without deleting it.
 	current, err := q.LockLifeWorld(ctx, binding.ID)
 	if err != nil {
 		return err
 	}
-	if current.WorkspaceID != binding.WorkspaceID || current.Tick != before.Tick {
+	if current.Tick != before.Tick {
 		return ErrStaleTick
 	}
 	var currentTown *Town
@@ -239,7 +232,7 @@ func (r *Repository) Commit(ctx context.Context, binding db.LifeWorld, before Si
 			return err
 		}
 		if event.Kind == "goal_reached" {
-			if err = recordGoal(ctx, q, binding, before, result.State, event); err != nil {
+			if err = recordGoal(ctx, q, current, before, result.State, event); err != nil {
 				return err
 			}
 		}
@@ -285,6 +278,9 @@ func recordGoal(ctx context.Context, q *db.Queries, binding db.LifeWorld, before
 	}
 	if amount(before) >= goal.Target || amount(after) < goal.Target {
 		return errors.New("goal milestone was not crossed")
+	}
+	if !binding.WorkspaceID.Valid {
+		return nil
 	}
 	if err := q.LockWorldInboxWrites(ctx, util.UUIDToString(binding.WorkspaceID)); err != nil {
 		return err

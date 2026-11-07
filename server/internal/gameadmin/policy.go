@@ -71,6 +71,12 @@ func defaultPolicy(id string) Policy {
 
 func Resolve(id, scope string, defaultVisible bool, access, visibility string) Effective {
 	out := Effective{GameID: id, Reason: "scope"}
+	if id == "life" {
+		out.Available = true
+		out.Visible = visibility == "show" || visibility != "hide" && defaultVisible
+		out.Reason = "available"
+		return out
+	}
 	if scope == "disabled" {
 		out.Reason = "disabled"
 		return out
@@ -95,6 +101,9 @@ func normalize(id string, in PolicyInput) (Policy, error) {
 	if in.DefaultVisible == nil || in.Overrides == nil || len(in.Overrides) > 500 || in.ExpectedRevision < 0 || in.ExpectedRevision >= math.MaxInt32 {
 		return Policy{}, ErrInvalid
 	}
+	if id == "life" && in.Scope != "all" {
+		return Policy{}, ErrInvalid
+	}
 	if in.Scope != "all" && in.Scope != "selected" && in.Scope != "disabled" {
 		return Policy{}, ErrInvalid
 	}
@@ -111,6 +120,9 @@ func normalize(id string, in PolicyInput) (Policy, error) {
 			return Policy{}, ErrInvalid
 		}
 		seen[override.WorkspaceID] = true
+		if id == "life" && override.Access != "inherit" {
+			return Policy{}, ErrInvalid
+		}
 		if override.Access != "inherit" || override.Visibility != "inherit" {
 			out.Overrides = append(out.Overrides, override)
 		}

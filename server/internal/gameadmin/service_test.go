@@ -229,7 +229,7 @@ func TestDBConcurrentPolicySaveAndAuditRollback(t *testing.T) {
 	}
 }
 
-func TestDBLifeWorldSelectionKeepsSimulationDataIsolated(t *testing.T) {
+func TestDBLifeWorldVisibilityUsesSharedSimulation(t *testing.T) {
 	pool := testDB(t)
 	ctx := context.Background()
 	fx := testutil.New(pool, "", "")
@@ -240,9 +240,9 @@ func TestDBLifeWorldSelectionKeepsSimulationDataIsolated(t *testing.T) {
 	s := &Service{Pool: pool, Auth: gate}
 	fx.Insert(t, "life_world", testutil.Cols{"id": uuid.NewString(), "workspace_id": home, "tick_ms": 2000})
 	visible := true
-	in := PolicyInput{Scope: "selected", DefaultVisible: &visible, Overrides: []Override{{chosen, "allow", "show"}}}
+	in := PolicyInput{Scope: "all", DefaultVisible: &visible, Overrides: []Override{{home, "inherit", "hide"}}}
 	preview, err := s.Preview(ctx, "life", in)
-	if err != nil || preview.Available != 1 || preview.Visible != 1 {
+	if err != nil || preview.Available != 2 || preview.Visible != 1 {
 		t.Fatalf("preview=%+v err=%v", preview, err)
 	}
 	policy, err := s.Update(ctx, actor, "life", in)
@@ -250,11 +250,11 @@ func TestDBLifeWorldSelectionKeepsSimulationDataIsolated(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, tc := range []struct {
-		world     string
-		available bool
+		world   string
+		visible bool
 	}{{home, false}, {chosen, true}} {
 		out, err := s.Effective(ctx, tc.world, "life")
-		if err != nil || out.Available != tc.available || out.Visible != tc.available {
+		if err != nil || !out.Available || out.Visible != tc.visible {
 			t.Fatalf("effective=%+v err=%v", out, err)
 		}
 	}
@@ -267,8 +267,8 @@ func TestDBLifeWorldSelectionKeepsSimulationDataIsolated(t *testing.T) {
 		Agents []json.RawMessage `json:"agents"`
 	}
 	testutil.Call(t, handler.ServeHTTP, req).Want(200).JSON(&snapshot)
-	if snapshot.World != nil || len(snapshot.Agents) != 0 {
-		t.Fatalf("selected world received another world's simulation: %+v", snapshot)
+	if snapshot.World == nil {
+		t.Fatal("another world could not view the shared simulation")
 	}
 	in.ExpectedRevision = policy.Revision
 	in.Scope = "all"
@@ -282,15 +282,15 @@ func TestDBLifeWorldSelectionKeepsSimulationDataIsolated(t *testing.T) {
 	}
 	in.ExpectedRevision = policy.Revision
 	in.Scope = "disabled"
-	if _, err = s.Update(ctx, actor, "life", in); err != nil {
-		t.Fatal(err)
+	if _, err = s.Update(ctx, actor, "life", in); !errors.Is(err, ErrInvalid) {
+		t.Fatalf("accepted a Life-only access restriction: %v", err)
 	}
 	if n := fx.Count(t, "SELECT count(*) FROM life_world WHERE workspace_id=$1", home); n != 1 {
 		t.Fatal("policy change removed simulation")
 	}
 }
 
-func TestDBLifeScopeMigrationPreservesAudience(t *testing.T) {
+func TestDBLifeSharedMigrationPreservesVisibilityAndRemovesAudienceRestrictions(t *testing.T) {
 	for _, mode := range []string{"default", "inherit", "deny", "uninitialized"} {
 		t.Run(mode, func(t *testing.T) {
 			pool := testDB(t)
@@ -315,17 +315,22 @@ func TestDBLifeScopeMigrationPreservesAudience(t *testing.T) {
 				t.Fatal(err)
 			}
 			fx.Exec(t, string(raw))
+			shared, err := os.ReadFile("../../migrations/356_life_shared_world.up.sql")
+			if err != nil {
+				t.Fatal(err)
+			}
+			fx.Exec(t, string(shared))
 			s := &Service{Pool: pool}
 			policy, _, err := loadPolicy(context.Background(), db.New(pool), "life")
-			if err != nil || policy.Scope != "selected" || policy.Revision != 3 || policy.DefaultVisible != defaultVisible {
+			if err != nil || policy.Scope != "all" || policy.Revision != 4 || policy.DefaultVisible != defaultVisible {
 				t.Fatalf("migrated policy=%+v err=%v", policy, err)
 			}
 			for _, tc := range []struct {
-				id        string
-				available bool
-			}{{home, mode == "inherit" || mode == "default"}, {other, false}} {
+				id      string
+				visible bool
+			}{{home, true}, {other, true}} {
 				out, err := s.Effective(context.Background(), tc.id, "life")
-				if err != nil || out.Available != tc.available || out.Visible != tc.available {
+				if err != nil || !out.Available || out.Visible != tc.visible {
 					t.Fatalf("audience=%+v err=%v", out, err)
 				}
 			}

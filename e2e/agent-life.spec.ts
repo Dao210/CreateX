@@ -16,6 +16,8 @@ let world: Awaited<ReturnType<TestApiClient["createWorkspace"]>>;
 let other: Awaited<ReturnType<TestApiClient["createWorkspace"]>>;
 let pool: pg.Pool;
 let tickBefore: number;
+let simulationId = "";
+let sourceDeleted = false;
 const run = promisify(execFile);
 
 async function restartAPI(bootstrap?: string, modelEnv: Record<string, string> = {}) {
@@ -50,15 +52,28 @@ test.beforeAll(async () => {
   // No viewer or player is connected while the integrated service advances.
   await expect.poll(tick, { timeout: 20_000 }).toBeGreaterThanOrEqual(3);
   tickBefore = await tick();
+  simulationId = (await pool.query("SELECT id FROM life_world WHERE workspace_id=$1", [world.id])).rows[0].id;
   // Advance this disposable fixture to morning so the scene covers outdoor life.
   await pool.query("UPDATE life_world SET tick=540,next_tick_at=clock_timestamp() WHERE workspace_id=$1", [world.id]);
 });
 test.afterAll(async () => {
   if (other) await outsider.deleteWorkspace();
-  if (world) await api.deleteWorkspace(); await pool?.end();
+  if (world && !sourceDeleted) await api.deleteWorkspace();
+  if (simulationId) {
+    // This scenario owns the simulation in its disposable database; deleting an entry world preserves it.
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      await client.query("SELECT id FROM life_world WHERE id=$1 FOR UPDATE", [simulationId]);
+      for (const table of ["life_request", "life_event", "life_action", "life_resource", "life_agent"]) await client.query(`DELETE FROM ${table} WHERE world_id=$1`, [simulationId]);
+      await client.query("DELETE FROM life_world WHERE id=$1", [simulationId]);
+      await client.query("COMMIT");
+    } catch (error) { await client.query("ROLLBACK"); throw error; } finally { client.release(); }
+  }
+  await pool?.end();
 });
 
-test("headless simulation, real snapshot viewer, workspace isolation and main-service and compute-process restart", async ({ page, request, baseURL }) => {
+test("headless simulation, shared cross-world viewer and commands, membership boundaries and main-service and compute-process restart", async ({ page, request, baseURL }) => {
   let commitFrames = 0;
   page.on("websocket", (socket) => socket.on("framereceived", (frame) => {
     try { if (JSON.parse(frame.payload.toString()).type === "life:updated") commitFrames++; } catch { /* Ignore non-JSON dev-server frames. */ }
@@ -69,12 +84,13 @@ test("headless simulation, real snapshot viewer, workspace isolation and main-se
   expect(denied.status()).toBe(404);
   const empty = await request.get("/api/life", { headers: { Authorization: `Bearer ${outsider.getToken()}`, "X-Workspace-ID": other.id } });
   expect(empty.status()).toBe(200);
-  expect((await empty.json()).world).toBeNull();
+  const shared = await empty.json();
+  expect(shared.world.id).toBe(simulationId); expect(shared.world.workspaceId).toBe(other.id); expect(shared.agents).toHaveLength(20);
   const snapshot = await request.get("/api/life", { headers });
   expect(snapshot.status()).toBe(200); expect((await snapshot.json()).agents).toHaveLength(20);
   await page.context().addCookies([{ name: "auro-locale", value: "zh-Hans", url: baseURL! }]);
-  await page.addInitScript((token) => localStorage.setItem("auro_token", token), api.getToken()!);
-  await page.goto(`/${world.slug}/life`);
+  await page.addInitScript((token) => localStorage.setItem("auro_token", token), outsider.getToken()!);
+  await page.goto(`/${other.slug}/life`);
   await expect(page.getByRole("heading", { name: "文明世界", exact: true })).toBeVisible({ timeout: 45_000 });
   await expect(page.getByTestId("town-map")).toHaveAttribute("data-scene-state", "ready", { timeout: 60000 });
   await expect(page.getByTestId("town-map").locator("canvas")).toBeVisible();
@@ -95,7 +111,7 @@ test("headless simulation, real snapshot viewer, workspace isolation and main-se
   await page.getByRole("button", { name: "跟随选中居民", exact: true }).click();
   await page.screenshot({ path: "test-results/agent-life/resident-closeup.png", fullPage: true });
   await page.getByRole("button", { name: "俯瞰小镇", exact: true }).click();
-  const commandHeaders = { Authorization: `Bearer ${api.getToken()}`, "X-Workspace-ID": world.id };
+  const commandHeaders = { Authorization: `Bearer ${outsider.getToken()}`, "X-Workspace-ID": other.id };
   await page.getByRole("button", { name: "迎接新居民", exact: true }).click();
   const dialog = page.getByRole("dialog");
   await dialog.getByRole("textbox", { name: "名字", exact: true }).fill("测试诗人");
@@ -129,7 +145,7 @@ test("headless simulation, real snapshot viewer, workspace isolation and main-se
   await page.getByTestId("town-map").scrollIntoViewIfNeeded();
   await page.screenshot({ path: "test-results/agent-life/town-desktop.png", fullPage: true });
   const returnUrl = page.url();
-  await page.goto(`/${world.slug}/me`);
+  await page.goto(`/${other.slug}/me`);
   const away = await request.post("/api/life/commands", { headers: commandHeaders, data: { requestId: crypto.randomUUID(), kind: "activity", residentId: "a11fe000-0000-4000-8000-000000000002", title: "QA 自然漫步", interest: "nature", place: "square", startsIn: 180, duration: 60 } });
   expect(away.ok()).toBe(true);
   await page.goto(returnUrl);
@@ -187,7 +203,12 @@ test("headless simulation, real snapshot viewer, workspace isolation and main-se
   await page.getByRole("heading", { name: "世界事件", exact: true }).scrollIntoViewIfNeeded();
   await expect(page.getByRole("heading", { name: "世界事件", exact: true })).toBeInViewport();
   await page.screenshot({ path: "test-results/agent-life/world-mobile.png", fullPage: true });
-  const audit = (await pool.query(`SELECT count(*) AS missing FROM life_action a LEFT JOIN life_event e ON e.action_id=a.id WHERE a.world_id=(SELECT id FROM life_world WHERE workspace_id=$1) AND a.status<>'running' AND e.action_id IS NULL`, [world.id])).rows[0];
+  await api.deleteWorkspace(); sourceDeleted = true;
+  const preserved = await (await request.get("/api/life", { headers: commandHeaders })).json();
+  expect(preserved.world.id).toBe(simulationId); expect(preserved.agents).toHaveLength(21);
+  const sourceFreeTick = Number((await pool.query("SELECT tick FROM life_world WHERE id=$1", [simulationId])).rows[0].tick);
+  await expect.poll(async () => Number((await pool.query("SELECT tick FROM life_world WHERE id=$1", [simulationId])).rows[0].tick)).toBeGreaterThan(sourceFreeTick);
+  const audit = (await pool.query(`SELECT count(*) AS missing FROM life_action a LEFT JOIN life_event e ON e.action_id=a.id WHERE a.world_id=(SELECT id FROM life_world WHERE id=$1) AND a.status<>'running' AND e.action_id IS NULL`, [simulationId])).rows[0];
   expect(audit.missing).toBe("0");
 
 });

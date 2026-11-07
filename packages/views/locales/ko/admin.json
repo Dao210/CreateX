@@ -78,7 +78,7 @@
   "game_exception_count": "세계 예외 {{count}}개",
   "game_uninitialized": "초기화되지 않음",
   "game_last_update": "최근 데이터 업데이트: {{time}}",
-  "game_binding_help": "시뮬레이션 데이터는 세계별로 분리됩니다. 초기화되지 않은 세계에는 초기화 전 상태가 표시됩니다. 이 설정은 시뮬레이션을 시작하거나 중지하거나 초기화하지 않습니다.",
+  "game_binding_help": "모든 세계에서 같은 주민과 진행 상황을 공유합니다.",
   "game_exceptions": "세계 예외",
   "game_world": "세계",
   "game_world_access": "게임 접근",
@@ -206,5 +206,6 @@
     "cancel": "취소",
     "conflict": "후속 조치가 변경되었습니다. 다시 열어 최신 버전을 확인하세요.",
     "save_error": "후속 조치를 저장하지 못했습니다. 다시 시도하세요."
-  }
+  },
+  "game_life_shared": "문명은 모든 세계가 공유하는 하나의 시뮬레이션입니다. 세계 구성원은 모두 보고 조작할 수 있으며 이 설정은 사이드바 표시만 변경합니다."
 }

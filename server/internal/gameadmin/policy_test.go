@@ -22,7 +22,9 @@ func TestResolve(t *testing.T) {
 		{"disabled wins", "tanks", "disabled", "allow", "show", true, false, false},
 		{"life all without simulation", "life", "all", "inherit", "inherit", true, true, true},
 		{"life selected world", "life", "selected", "allow", "show", true, true, true},
-		{"life other world", "life", "selected", "inherit", "show", true, false, false},
+		{"life other world", "life", "selected", "inherit", "show", true, true, true},
+		{"life cannot be closed", "life", "disabled", "deny", "show", true, true, true},
+		{"life can hide its entry", "life", "selected", "deny", "hide", true, true, false},
 		{"unknown scope closed", "siege", "future", "allow", "show", true, false, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -49,7 +51,9 @@ func TestNormalizeRejectsAmbiguousPolicies(t *testing.T) {
 	}
 	for _, id := range GameIDs {
 		for _, scope := range []string{"all", "selected", "disabled"} {
-			if _, err := normalize(id, PolicyInput{Scope: scope, DefaultVisible: &visible, Overrides: []Override{}}); err != nil {
+			_, err := normalize(id, PolicyInput{Scope: scope, DefaultVisible: &visible, Overrides: []Override{}})
+			restrictedLife := id == "life" && scope != "all"
+			if (err != nil) != restrictedLife {
 				t.Fatalf("%s scope %s: %v", id, scope, err)
 			}
 		}

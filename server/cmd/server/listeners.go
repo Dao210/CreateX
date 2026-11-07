@@ -256,10 +256,10 @@ func registerListeners(bus *events.Bus, b realtime.Broadcaster) {
 		if e.WorkspaceID != "" {
 			realtime.M.RecordEvent(e.Type)
 			b.BroadcastToWorkspace(e.WorkspaceID, data)
-		} else if strings.HasPrefix(e.Type, "daemon:") {
+		} else if strings.HasPrefix(e.Type, "daemon:") || e.Type == protocol.EventLifeUpdated {
 			realtime.M.RecordEvent(e.Type)
 			b.Broadcast(data)
 		}
-		// Otherwise drop — no global broadcast for non-daemon events without a workspace.
+		// Only daemon presence and shared Life invalidations may fan out without a workspace.
 	})
 }

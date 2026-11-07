@@ -75,20 +75,8 @@ func (q *Queries) DeleteTaskTokensByAgent(ctx context.Context, agentID pgtype.UU
 }
 
 const deleteWorkspaceAdministration = `-- name: DeleteWorkspaceAdministration :exec
-WITH life_worlds AS MATERIALIZED (
-    SELECT id FROM life_world WHERE workspace_id = $1
-), removed_life_requests AS (
-    DELETE FROM life_request WHERE world_id IN (SELECT id FROM life_worlds)
-), removed_life_actions AS (
-    DELETE FROM life_action WHERE world_id IN (SELECT id FROM life_worlds)
-), removed_life_events AS (
-    DELETE FROM life_event WHERE world_id IN (SELECT id FROM life_worlds)
-), removed_life_resources AS (
-    DELETE FROM life_resource WHERE world_id IN (SELECT id FROM life_worlds)
-), removed_life_agents AS (
-    DELETE FROM life_agent WHERE world_id IN (SELECT id FROM life_worlds)
-), removed_life_worlds AS (
-    DELETE FROM life_world WHERE id IN (SELECT id FROM life_worlds)
+WITH detached_life_source AS (
+    UPDATE life_world SET workspace_id = NULL WHERE workspace_id = $1
 ), game_overrides_deleted AS (
     DELETE FROM game_world_override WHERE workspace_id = $1
 ),

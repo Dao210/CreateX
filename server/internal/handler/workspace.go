@@ -978,7 +978,7 @@ func (h *Handler) DeleteWorkspace(w http.ResponseWriter, r *http.Request) {
 		failWorkspaceDelete(w, r, workspaceID, "lock workspace", err)
 		return
 	}
-	if err := qtx.LockLifeWorldForDeletion(r.Context(), requester.WorkspaceID); err != nil {
+	if err := qtx.LockLifeWorldForSourceDeletion(r.Context(), requester.WorkspaceID); err != nil {
 		failWorkspaceDelete(w, r, workspaceID, "lock life world", err)
 		return
 	}
@@ -1064,10 +1064,6 @@ func (h *Handler) DeleteWorkspace(w http.ResponseWriter, r *http.Request) {
 		{
 			name: "delete leaf data",
 			run:  func() error { return qtx.DeleteWorkspaceLeafData(ctx, requester.WorkspaceID) },
-		},
-		{
-			name: "delete life simulation",
-			run:  func() error { return qtx.DeleteLifeWorldState(ctx, requester.WorkspaceID) },
 		},
 		{
 			name: "delete autopilot runs",

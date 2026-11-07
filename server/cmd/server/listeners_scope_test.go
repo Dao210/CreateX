@@ -251,3 +251,19 @@ func TestRegisterListeners_InvitationRevokedStillTargetsInviteeNotActor(t *testi
 }
 
 func inviteePtr(s string) *string { return &s }
+
+func TestRegisterListeners_SharedLifeInvalidationIsGlobal(t *testing.T) {
+	for _, eventType := range []string{protocol.EventLifeUpdated, protocol.EventChatMessage} {
+		bus := events.New()
+		broadcaster := &fakeBroadcaster{}
+		registerListeners(bus, broadcaster)
+		bus.Publish(events.Event{Type: eventType, ActorType: "system", Payload: map[string]any{"tick": 42}})
+		want := 0
+		if eventType == protocol.EventLifeUpdated {
+			want = 1
+		}
+		if broadcaster.broadcastCalled != want || len(broadcaster.workspaceCalls) != 0 {
+			t.Fatalf("%s: global=%d workspace=%d", eventType, broadcaster.broadcastCalled, len(broadcaster.workspaceCalls))
+		}
+	}
+}

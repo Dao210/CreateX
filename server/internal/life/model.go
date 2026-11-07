@@ -24,7 +24,7 @@ type Coordinator struct {
 	Model         string
 	ResidentLimit int
 	DailyLimit    int
-	Notify        func(string)
+	Notify        func()
 }
 
 func (c *Coordinator) Ready() bool {
@@ -243,14 +243,14 @@ func validateDecision(d modelDecision, input modelContext) error {
 	return nil
 }
 func (c *Coordinator) Step(ctx context.Context) error {
-	binding, err := c.Repository.Binding(ctx)
+	_, err := c.Repository.Binding(ctx)
 	if err != nil {
 		return err
 	}
 	var claimed *ModelJob
 	var input modelContext
 	changed := false
-	err = c.Repository.mutateTown(ctx, binding.WorkspaceID, func(state *Simulation, _ db.LifeWorld, _ *db.Queries) error {
+	err = c.Repository.mutateTown(ctx, pgtype.UUID{}, func(state *Simulation, _ db.LifeWorld, _ *db.Queries) error {
 		t := state.Town
 		desired := c.desired()
 		if t.Model.Mode != desired.Mode || t.Model.ResidentLimit != desired.ResidentLimit || t.Model.DailyLimit != desired.DailyLimit || t.Model.BudgetDay != desired.BudgetDay || t.Model.State == "unconfigured" && desired.State == "ready" || t.Model.State == "ready" && desired.State == "unconfigured" {
@@ -301,9 +301,8 @@ func (c *Coordinator) Step(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	workspace := util.UUIDToString(binding.WorkspaceID)
 	if changed && c.Notify != nil {
-		c.Notify(workspace)
+		c.Notify()
 	}
 	if claimed == nil {
 		return nil
@@ -318,7 +317,7 @@ func (c *Coordinator) Step(ctx context.Context) error {
 	if callErr == nil {
 		callErr = validateDecision(decision, input)
 	}
-	err = c.Repository.mutateTown(ctx, binding.WorkspaceID, func(state *Simulation, binding db.LifeWorld, q *db.Queries) error {
+	err = c.Repository.mutateTown(ctx, pgtype.UUID{}, func(state *Simulation, binding db.LifeWorld, q *db.Queries) error {
 		t := state.Town
 		index := -1
 		for i, j := range t.Jobs {
@@ -450,7 +449,7 @@ func (c *Coordinator) Step(ctx context.Context) error {
 		return nil
 	})
 	if err == nil && c.Notify != nil {
-		c.Notify(workspace)
+		c.Notify()
 	}
 	return err
 }

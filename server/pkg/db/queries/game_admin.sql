@@ -46,8 +46,8 @@ VALUES ($1, $2, $3, $4);
 
 
 -- name: GetLifeGameBinding :one
-SELECT w.id, w.name, w.slug, l.updated_at
-FROM life_world l JOIN workspace w ON w.id = l.workspace_id LIMIT 1;
+SELECT COALESCE(w.id,l.id)::uuid AS id, COALESCE(w.name,'')::text AS name, COALESCE(w.slug,'')::text AS slug, l.updated_at
+FROM life_world l LEFT JOIN workspace w ON w.id = l.workspace_id LIMIT 1;
 
 
 

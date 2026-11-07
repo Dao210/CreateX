@@ -2054,11 +2054,16 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 			}
 			r.Handle("/api/game-progress", progress)
 			r.Handle("/api/game-progress/*", progress)
-			r.Method("GET", "/api/life", gameGuard("life", life.Handler(queries)))
-			r.Method("GET", "/api/life/history", gameGuard("life", life.HistoryHandler(queries)))
+			// Life is shared by all world members; game policies only control its entry visibility.
+			lifeReader := life.Reader(queries)
+			lifeHistory := life.HistoryHandler(queries)
 			if opts.Life != nil {
-				r.Method("POST", "/api/life/commands", gameGuard("life", http.HandlerFunc(opts.Life.Commands)))
+				lifeReader = opts.Life
+				lifeHistory = life.HistoryHandler(opts.Life)
+				r.Post("/api/life/commands", opts.Life.Commands)
 			}
+			r.Get("/api/life", life.Handler(lifeReader))
+			r.Get("/api/life/history", lifeHistory)
 
 			// Task messages (user-facing, not daemon auth)
 			r.Get("/api/tasks/{taskId}/messages", h.ListTaskMessagesByUser)

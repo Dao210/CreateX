@@ -40,7 +40,7 @@ func serveSnapshot(w http.ResponseWriter, r *http.Request, reader Reader, worksp
 		_, _ = w.Write([]byte(`{"code":"invalid_workspace"}`))
 		return
 	}
-	// One SQL statement gives agents, resources, actions and events the same MVCC snapshot.
+	// Route membership is already resolved. The one shared simulation has one coherent MVCC snapshot.
 	raw, err := reader.GetLifeSnapshot(r.Context(), id)
 	if errors.Is(err, pgx.ErrNoRows) {
 		_, _ = w.Write([]byte(`{"world":null,"agents":[],"resources":[],"actions":[],"events":[]}`))
@@ -67,7 +67,7 @@ func (s *Service) Commands(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, `{"code":"invalid_request"}`, 400)
 		return
 	}
-	result, err := s.Repository.Command(r.Context(), middleware.WorkspaceIDFromContext(r.Context()), util.UUIDToString(member.UserID), command, s.Coordinator != nil && s.Coordinator.Ready())
+	result, err := s.Command(r.Context(), middleware.WorkspaceIDFromContext(r.Context()), util.UUIDToString(member.UserID), command, s.Coordinator != nil && s.Coordinator.Ready())
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Cache-Control", "no-store")
 	if err != nil {
@@ -81,7 +81,7 @@ func (s *Service) Commands(w http.ResponseWriter, r *http.Request) {
 		_ = json.NewEncoder(w).Encode(map[string]string{"code": "life_unavailable"})
 		return
 	}
-	s.notify(middleware.WorkspaceIDFromContext(r.Context()))
+	s.notify()
 	_ = json.NewEncoder(w).Encode(result)
 }
 

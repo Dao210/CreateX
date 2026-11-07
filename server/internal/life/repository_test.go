@@ -98,15 +98,15 @@ func TestDBSingleWriterRollbackRestartAndMilestones(t *testing.T) {
 		t.Fatal("duplicate residents")
 	}
 	other := fx.Workspace(t, "Other", "other")
-	if _, err = repo.Initialize(ctx, other, seed); !errors.Is(err, ErrBindingMismatch) {
-		t.Fatalf("binding mismatch: %v", err)
+	if shared, e := repo.Initialize(ctx, other, seed); e != nil || util.UUIDToString(shared.ID) != world {
+		t.Fatalf("shared initialization: %+v %v", shared, e)
 	}
 	bus := events.New()
 	var published atomic.Int32
 	bus.Subscribe("life:updated", func(event events.Event) {
 		published.Add(1)
-		if event.WorkspaceID != workspace {
-			t.Error("cross-world event")
+		if event.WorkspaceID != "" {
+			t.Error("shared update was restricted to one workspace")
 		}
 	})
 	service := NewService(repo, runtime, bus)
@@ -218,12 +218,12 @@ func TestDBSingleWriterRollbackRestartAndMilestones(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err = db.New(repo.Pool).GetLifeSnapshot(ctx, otherID); !errors.Is(err, pgx.ErrNoRows) {
-		t.Fatalf("cross-world snapshot: %v", err)
+	if raw, e := db.New(repo.Pool).GetLifeSnapshot(ctx, otherID); e != nil || !strings.Contains(string(raw), world) {
+		t.Fatalf("shared snapshot: %s %v", raw, e)
 	}
 }
 
-func TestDBPrepareRefusesLegacyWriterAndDeletedWorkspace(t *testing.T) {
+func TestDBPrepareRefusesLegacyWriterAndSurvivesDeletedSource(t *testing.T) {
 	repo, fx, workspace, runtime := lifeDatabase(t)
 	ctx := context.Background()
 	service := NewService(repo, runtime, nil)
@@ -266,10 +266,10 @@ func TestDBPrepareRefusesLegacyWriterAndDeletedWorkspace(t *testing.T) {
 	if _, err = q.LockLifeWorkspace(ctx, workspaceID); err != nil {
 		t.Fatal(err)
 	}
-	if err = q.LockLifeWorldForDeletion(ctx, workspaceID); err != nil {
+	if err = q.LockLifeWorldForSourceDeletion(ctx, workspaceID); err != nil {
 		t.Fatal(err)
 	}
-	if err = q.DeleteLifeWorldState(ctx, workspaceID); err != nil {
+	if _, err = tx.Exec(ctx, "UPDATE life_world SET workspace_id=NULL WHERE workspace_id=$1", workspaceID); err != nil {
 		t.Fatal(err)
 	}
 	if _, err = tx.Exec(ctx, "DELETE FROM workspace WHERE id=$1", workspaceID); err != nil {
@@ -278,10 +278,16 @@ func TestDBPrepareRefusesLegacyWriterAndDeletedWorkspace(t *testing.T) {
 	if err = tx.Commit(ctx); err != nil {
 		t.Fatal(err)
 	}
-	if err = repo.Commit(ctx, binding, before, result); !errors.Is(err, pgx.ErrNoRows) {
-		t.Fatalf("wrote deleted world: %v", err)
+	if err = repo.Commit(ctx, binding, before, result); err != nil {
+		t.Fatalf("shared simulation stopped after source deletion: %v", err)
 	}
-	if fx.Count(t, "SELECT count(*) FROM life_agent") != 0 {
-		t.Fatal("orphan residents")
+	if fx.Count(t, "SELECT count(*) FROM life_agent") != 20 || fx.Count(t, "SELECT tick FROM life_world") != 1 {
+		t.Fatal("source deletion removed shared residents or progress")
+	}
+	if fx.Count(t, "SELECT count(*) FROM life_world WHERE workspace_id IS NULL") != 1 {
+		t.Fatal("source was not detached")
+	}
+	if err = service.Coordinator.Step(ctx); err != nil {
+		t.Fatalf("model coordinator depends on deleted source: %v", err)
 	}
 }

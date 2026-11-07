@@ -78,7 +78,7 @@
   "game_exception_count": "Exceptions par monde : {{count}}",
   "game_uninitialized": "Non initialisé",
   "game_last_update": "Dernière mise à jour : {{time}}",
-  "game_binding_help": "Les données de simulation restent propres à chaque monde. Un monde sans simulation affiche un état non initialisé. Ces réglages ne démarrent, n’arrêtent et ne réinitialisent pas la simulation.",
+  "game_binding_help": "Tous les mondes partagent les mêmes habitants et la même progression.",
   "game_exceptions": "Exceptions par monde",
   "game_world": "Monde",
   "game_world_access": "Accès au jeu",
@@ -206,5 +206,6 @@
     "cancel": "Annuler",
     "conflict": "Ce suivi a changé. Rouvrez-le pour afficher la dernière version.",
     "save_error": "Impossible d’enregistrer le suivi. Réessayez."
-  }
+  },
+  "game_life_shared": "La civilisation est partagée entre tous les mondes. Leurs membres peuvent la consulter et agir ; ces réglages contrôlent uniquement son entrée dans la barre latérale."
 }

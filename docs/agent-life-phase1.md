@@ -4,7 +4,7 @@
 
 The Phase 1 task brief is the available requirement source. The linked [完整 PRD 聊天](https://chatgpt.com/g/g-p-6ae4458d02cc819184fa9e93a8e0eb71-weaveaworld/c/6ae44601-ba64-83e8-b075-750039172240) did not expose its reply text through the reader or browser. Map dimensions, clock ratio and yields remain provisional until that text is available.
 
-The resident-town upgrade retains one simulation bound to one existing world and the 20 existing residents. Up to 60 residents share daily agendas, local encounters, individual memories, relationships and scheduled activities. The six authoritative actions remain engine-owned. Member-created residents and member-visible conversations are supported. Combat, reproduction, complex markets and cross-world behavior remain out of scope.
+The resident-town upgrade retains one shared simulation and the 20 existing residents. Any world member can enter it from their own world; the source workspace is historical metadata, not an access boundary. Up to 60 residents share daily agendas, local encounters, individual memories, relationships and scheduled activities. The six authoritative actions remain engine-owned. Member-created residents and member-visible conversations are supported. Combat, reproduction, complex markets and cross-world behavior remain out of scope.
 
 ## Ownership
 
@@ -18,13 +18,13 @@ The resident-town upgrade retains one simulation bound to one existing world and
 | `server/internal/life/service.go` | Background scheduling, stale-result rejection, commit notifications and shutdown |
 | `packages/views/agent-life` | Shared Web/Desktop viewer, route-driven world and selection |
 
-There is no independent Life application, database client, HTTP listener, service unit or launch component. Main API startup owns the compute process. Resident Life keeps existing membership and game-access guards. Game availability affects access and message projection; it does not stop the simulation.
+There is no independent Life application, database client, HTTP listener, service unit or launch component. Main API startup owns the compute process. Life keeps the ordinary login and route-world membership boundary. It has no separate game-access, source-membership or role guard; game administration controls its sidebar visibility only. Other product data keeps its existing permissions.
 
 ## Tick and transaction boundary
 
 1. Read the persisted binding and database due time. Load a single MVCC snapshot of residents, resources and running actions.
 2. Compute the next Tick in TypeScript outside the database transaction. The host has no DATABASE_URL, account or model credentials. It exposes only seed and tick operations; no arbitrary code or task execution.
-3. Begin the write transaction. Lock the workspace, then its life world, matching the workspace-delete fence. Check the input Tick still matches and recheck database wall-clock eligibility after locking.
+3. Begin the write transaction and lock the shared Life world. Check the input Tick and town revision still match, then recheck database wall-clock eligibility. Member commands also lock their route workspace and recheck membership. Source-world deletion locks and detaches the same Life row; it cannot delete or pause the shared simulation.
 4. Validate resident/inventory identity, bounded needs/resources, action projections and one terminal event per settled action. Store completed/new actions, residents, resources, events and source inbox facts through sqlc.
 5. Advance the clock and commit together. Only then publish `life:updated` through the existing event bus/realtime broadcaster. A stale result is discarded; failed computation or SQL advances nothing.
 
@@ -36,7 +36,7 @@ The interval is 2 wall-clock seconds per simulation minute. Downtime pauses prog
 
 - Build with `make life-build` or `pnpm build:life`. Output is `server/bin/runtime/life/engine.mjs`, including Zod; production requires Node >=22 and no node_modules for this compute bundle.
 - `make up` starts the API with its internal runtime. `make start`, `make dev` and `make server` use the same API target and build the runtime automatically. Existing worlds resume from `life_world`.
-- To initialize the first simulation, explicitly identify an existing world: `make up AGENT_LIFE_WORKSPACE_ID=<uuid>`. Initialization requires a main-service restart if the API is already running. Startup rejects a different persisted binding and never chooses a user's world implicitly. There is no new admin start/reset/rebind interface.
+- The first authenticated member visit initializes the singleton if none exists. Concurrent visits reuse the same 20 residents and simulation ID. `make up AGENT_LIFE_WORKSPACE_ID=<uuid>` remains an optional initial bootstrap; an existing simulation is always reused. There is no admin start/reset/rebind requirement.
 - `AGENT_LIFE_ENGINE_PATH` is an operational override. The default resolves `runtime/life/engine.mjs` beside the actual server executable; resolving the release path prevents a web-only switch from changing the running backend's runtime version.
 - Before upgrading an old checkout, stop its standalone Life component with that checkout's old management command. Main-service startup rejects an existing PostgreSQL session bearing the old writer's application name. Never run the old writer alongside the new owner.
 - `make down` cancels scheduling, joins the in-flight Tick and compute child before closing the database pool, and preserves committed data. A dead compute process is reaped and recreated on the next attempt; failed attempts do not commit.
@@ -44,9 +44,9 @@ The interval is 2 wall-clock seconds per simulation minute. Downtime pauses prog
 
 ## Frontend and existing product services
 
-The existing `/{slug}/life` page and `/api/life` read contract stay in place. Realtime commit notifications invalidate the world-scoped TanStack Query cache. A 30-second reconciliation interval and reconnect/focus refresh recover missed notifications. The client never runs the clock or settles actions.
+The existing `/{slug}/life` page and `/api/life` read contract stay in place. Every entry resolves the shared simulation; returned `workspaceId` denotes the viewer's route context, while the simulation `world.id` stays the same. History and command receipts are shared too. Realtime commit notifications invalidate the world-scoped TanStack Query cache. A 30-second reconciliation interval and reconnect/focus refresh recover missed notifications. The client never runs the clock or settles actions.
 
-Goal facts enter `world_inbox_event` in the Tick transaction and use the existing inbox projector. Closing a game does not delete state or stop the simulation. Workspace deletion takes the same lock order and cleans up the Life tables in its application transaction. Product-agent schedulers, CLIs and runtime credentials are not used for simulated residents.
+Goal facts enter `world_inbox_event` in the Tick transaction and use the existing inbox projector. Closing a game does not delete state or stop the simulation. Workspace deletion detaches the historical source when applicable and retains all shared Life state. A goal's existing Inbox projection keeps its historical source; after that source is deleted, canonical Life events continue without writing notices into the deleted world. Product-agent schedulers, CLIs and runtime credentials are not used for simulated residents.
 
 ## Build and delivery
 
@@ -72,7 +72,7 @@ The existing `life_world.town` document stores bounded profiles, plans, individu
 memories, relationships, activities, conversations, model jobs and a command
 revision. Migration 350 adds it without changing resident IDs, inventories, goals
 or the clock. A missing document is initialized from the current residents on the
-next simulation operation. Compute protocol 2 has a four-MiB frame bound; backend
+next simulation operation. Compute protocol 3 has a four-MiB frame bound; backend
 and its bundled runtime must be upgraded together.
 
 Daily routines use homes, farm, forest, square, cafe, library and shop. Passive
@@ -189,3 +189,21 @@ and compute-child restart scenario, and authenticated desktop/mobile-width Web
 screenshots. A real-device 60-resident GPU benchmark and human review against the
 concept art remain separate acceptance checks; software WebGL E2E is functional
 validation, not evidence of those results.
+
+
+## Shared access migration
+
+Migration `356_life_shared_world` makes the historical source nullable and removes
+Life-specific access restrictions, preserving entry visibility preferences. It
+changes no resident, resource, action, contribution or event IDs. Source deletion
+is a detach operation in workspace administration. Commands from any member
+world share the same transactional receipt and Tick revision fence; changing
+entry routes cannot duplicate a creation or overwrite a later command.
+
+The main service publishes only shared invalidation metadata (`world_id`, `tick`
+or a refresh hint), without conversations or source workspace metadata. The
+realtime broadcaster explicitly permits `life:updated` global fanout; unrelated
+unscoped product events remain dropped. The existing world-scoped Query cache
+refreshes through its current membership context. Conversations and resident
+backgrounds in Life are visible across entry worlds; product chats and other
+games remain separately scoped.

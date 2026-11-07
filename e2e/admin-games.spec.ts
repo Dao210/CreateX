@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { TestApiClient } from "./fixtures";
+import pg from "pg";
 
 // This scenario changes global policies. Run only against an explicitly isolated
 // managed environment whose AURO_ADMIN_EMAILS includes the fixture email.
@@ -15,6 +16,9 @@ let alpha: World;
 let beta: World;
 const worlds: World[] = [];
 let baseline: Policy[] = [];
+let baselineLifeId = "";
+let ownedLifeId = "";
+let pool: pg.Pool;
 
 async function call(path: string, options: { method?: string; body?: unknown; world?: World; client?: TestApiClient } = {}) {
   const headers: Record<string, string> = { Authorization: `Bearer ${(options.client ?? admin).getToken()}`, "Content-Type": "application/json" };
@@ -34,6 +38,8 @@ async function effective(world: World) {
   const response = await call("/api/games", { world });expect(response.status).toBe(200);return (await response.json()).games;
 }
 test.beforeAll(async () => {
+  pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
+  baselineLifeId = (await pool.query("SELECT id FROM life_world")).rows[0]?.id ?? "";
   admin = new TestApiClient();await admin.login(process.env.GAME_ADMIN_E2E_EMAIL || "game-admin-e2e@example.invalid", "Game admin QA");
   const access = await call("/api/admin/access");expect((await access.json()).isAdmin).toBe(true);
   baseline = await policies();
@@ -47,6 +53,15 @@ test.afterAll(async () => {
   for (const policy of baseline) await save(policy.gameId, { scope: policy.scope, defaultVisible: policy.defaultVisible, overrides: policy.overrides });
   if (outsider) { await outsider.deleteWorkspace(); }
   for (const world of worlds) { admin.setWorkspaceId(world.id);admin.setWorkspaceSlug(world.slug);await admin.deleteWorkspace(); }
+  if (ownedLifeId) {
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");await client.query("SELECT id FROM life_world WHERE id=$1 FOR UPDATE",[ownedLifeId]);
+      for (const table of ["life_request","life_event","life_action","life_resource","life_agent"]) await client.query(`DELETE FROM ${table} WHERE world_id=$1`,[ownedLifeId]);
+      await client.query("DELETE FROM life_world WHERE id=$1",[ownedLifeId]);await client.query("COMMIT");
+    } catch(error) {await client.query("ROLLBACK");throw error;} finally {client.release();}
+  }
+  await pool?.end();
 });
 
 test("global policies, module routes, world inheritance, hidden access and server restrictions", async ({ page, baseURL }, testInfo) => {
@@ -80,19 +95,22 @@ test("global policies, module routes, world inheritance, hidden access and serve
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await page.screenshot({ path: testInfo.outputPath("admin-games-mobile.png"), fullPage: true });
   await page.setViewportSize({ width: 1440, height: 1000 });
-  await page.getByRole("button", { name: /Agent Life/ }).click();await expect(page.getByText("Not initialized", { exact: true })).toBeVisible();
-  await expect(page.getByRole("option", { name: "All worlds" })).toHaveCount(1);
-  await page.getByRole("combobox", { name: "Availability", exact: true }).selectOption("selected");
+  await page.getByRole("button", { name: /Civilization/ }).click();
+  await expect(page.getByRole("combobox", { name: "Availability", exact: true })).toBeDisabled();
   await page.getByRole("searchbox", { name: "Find a world" }).fill(alpha.slug);
   await page.getByRole("button", { name: `Add exception for ${alpha.name}` }).click();
+  await page.getByRole("combobox", { name: `${alpha.name} · Sidebar entry`, exact: true }).selectOption("hide");
   await expect(page.getByRole("button", { name: "Save policy" })).toBeEnabled();await page.getByRole("button", { name: "Save policy" }).click();
-  await expect.poll(async () => (await effective(alpha)).find((game: { gameId: string }) => game.gameId === "life")).toMatchObject({ available: true, visible: true });
-  expect((await effective(beta)).find((game: { gameId: string }) => game.gameId === "life").available).toBe(false);
-  const emptyLife = await call("/api/life", { world: alpha });expect(emptyLife.status).toBe(200);expect((await emptyLife.json()).world).toBeNull();
-  expect((await call("/api/life", { world: beta })).status).toBe(403);
-  await page.screenshot({ path: testInfo.outputPath("resident-life-world-selection.png"), fullPage: true });
-  await page.goto(`/${alpha.slug}/life`);await expect(page.getByRole("link", { name: "Agent Life", exact: true })).toBeVisible();
-  await expect(page.getByText("This world has no life simulation yet.")).toBeVisible();
+  await expect.poll(async () => (await effective(alpha)).find((game: { gameId: string }) => game.gameId === "life")).toMatchObject({ available: true, visible: false });
+  expect((await effective(beta)).find((game: { gameId: string }) => game.gameId === "life").available).toBe(true);
+  const sharedLife = await call("/api/life", { world: alpha });expect(sharedLife.status).toBe(200);
+  const shared = await sharedLife.json();expect(shared.world).not.toBeNull();
+  if (!baselineLifeId) ownedLifeId = shared.world.id;
+  const otherEntry = await call("/api/life", { world: beta });expect(otherEntry.status).toBe(200);
+  expect((await otherEntry.json()).world.id).toBe(shared.world.id);
+  await page.screenshot({ path: testInfo.outputPath("shared-life-entry-visibility.png"), fullPage: true });
+  await page.goto(`/${alpha.slug}/life`);await expect(page.getByRole("heading", { name: "Civilization", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Mika", exact: true })).toBeVisible();
 
   await page.goto(`/${beta.slug}/siege`);await expect(page.getByText("This game is not open in the current world.")).toBeVisible();
   expect((await call("/api/siege/library", { world: beta })).status).toBe(403);

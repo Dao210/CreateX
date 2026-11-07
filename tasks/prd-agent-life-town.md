@@ -5,7 +5,7 @@
 Upgrade the existing `/{slug}/life` feature inside the main application. Preserve
 the singleton binding, resident identities, inventories, goals and committed Tick.
 Users observe, speak with residents, suggest a scheduled activity and create a
-resident. Existing game access and world membership apply to all reads and writes.
+resident. World membership authorizes every read and write through the current entry route; all entry worlds share one simulation without source-world membership or a Life-specific access policy.
 
 ## Acceptance
 
@@ -21,8 +21,7 @@ resident. Existing game access and world membership apply to all reads and write
   states prevent runaway calls, stale writes and fabricated world effects.
 - Model mode is explicitly configured; rules mode remains visibly identified.
   An unconfigured or failed model never masquerades as a successful response.
-- User commands have durable account/world-scoped retry receipts. Commands and
-  model results use the same workspace/world lock order and revision fence as Tick.
+- User commands have durable account/shared-simulation retry receipts. Changing entry routes cannot duplicate an acknowledged command. Commands, model results and Tick share the same world revision fence; member commands additionally fence current-route membership. Deleting the historical source detaches it without deleting the simulation.
 - Shared Web/Desktop UI supports observation, resident details, agenda, memories,
   relations, conversation, activity proposal and resident creation; all five
   locales, keyboard access, narrow screens and reduced motion are covered.

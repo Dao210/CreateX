@@ -78,7 +78,7 @@
   "game_exception_count": "{{count}} 个世界例外",
   "game_uninitialized": "未初始化",
   "game_last_update": "数据最近更新于 {{time}}",
-  "game_binding_help": "模拟数据按世界隔离；尚未启动模拟的世界进入后显示未初始化。这些设置不会启动、停止或重置模拟。",
+  "game_binding_help": "所有世界进入同一套模拟，共享居民与进度。",
   "game_exceptions": "世界例外",
   "game_world": "世界",
   "game_world_access": "游戏访问",
@@ -206,5 +206,6 @@
     "cancel": "取消",
     "conflict": "跟进已被更新。请重新打开，查看最新版本。",
     "save_error": "保存跟进失败，请重试。"
-  }
+  },
+  "game_life_shared": "文明世界使用同一套共享模拟。世界成员均可查看和操作，这里的设置只控制侧栏入口。"
 }

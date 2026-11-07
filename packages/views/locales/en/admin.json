@@ -78,7 +78,7 @@
   "game_exception_count": "World exceptions: {{count}}",
   "game_uninitialized": "Not initialized",
   "game_last_update": "Last data update: {{time}}",
-  "game_binding_help": "Simulation data stays within its world. Worlds without an initialized simulation show an empty state. These settings do not start, stop or reset the simulation.",
+  "game_binding_help": "One shared simulation, available from every world. Residents and progress are shared.",
   "game_exceptions": "World exceptions",
   "game_world": "World",
   "game_world_access": "Game access",
@@ -206,5 +206,6 @@
     "cancel": "Cancel",
     "conflict": "This follow-up has changed. Reopen it to use the latest version.",
     "save_error": "Could not save the follow-up. Please retry."
-  }
+  },
+  "game_life_shared": "Life is one shared civilization. Any world member can view and operate it; settings here only control sidebar visibility."
 }

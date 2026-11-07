@@ -50,15 +50,6 @@ func (s *Service) Prepare(ctx context.Context, bootstrapWorkspace string) error 
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		return err
 	}
-	if err == nil && bootstrapWorkspace != "" {
-		requested, e := util.ParseUUID(bootstrapWorkspace)
-		if e != nil {
-			return e
-		}
-		if requested != binding.WorkspaceID {
-			return ErrBindingMismatch
-		}
-	}
 	if errors.Is(err, pgx.ErrNoRows) && bootstrapWorkspace == "" {
 		s.setStatus("uninitialized", 0)
 		return nil
@@ -115,7 +106,7 @@ func (s *Service) Step(ctx context.Context) (bool, error) {
 	}
 	s.setStatus("running", result.State.Tick)
 	if s.Bus != nil {
-		s.Bus.Publish(events.Event{Type: protocol.EventLifeUpdated, WorkspaceID: util.UUIDToString(binding.WorkspaceID), ActorType: "system", Payload: map[string]any{"world_id": util.UUIDToString(binding.ID), "workspace_id": util.UUIDToString(binding.WorkspaceID), "tick": result.State.Tick}})
+		s.Bus.Publish(events.Event{Type: protocol.EventLifeUpdated, ActorType: "system", Payload: map[string]any{"world_id": util.UUIDToString(binding.ID), "tick": result.State.Tick}})
 	}
 	return true, nil
 }
@@ -158,8 +149,8 @@ func (s *Service) Wait(ctx context.Context) error {
 	}
 }
 
-func (s *Service) notify(workspace string) {
+func (s *Service) notify() {
 	if s.Bus != nil {
-		s.Bus.Publish(events.Event{Type: protocol.EventLifeUpdated, WorkspaceID: workspace, ActorType: "system", Payload: map[string]any{"workspace_id": workspace}})
+		s.Bus.Publish(events.Event{Type: protocol.EventLifeUpdated, ActorType: "system", Payload: map[string]any{"shared": true}})
 	}
 }

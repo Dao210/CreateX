@@ -33,16 +33,13 @@ it("adds a world exception and previews its effective result", async () => {
   expect(screen.getByText("Unavailable")).toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "Restore inheritance · Alpha" }));expect(screen.queryByRole("combobox", { name: "Alpha · Game access" })).not.toBeInTheDocument();
 });
-it("lets resident life select any world before a simulation is initialized", async () => {
+it("keeps shared Life available while allowing entry visibility changes", async () => {
   mocks.list.mockResolvedValue([{ policy: { ...policy, gameId: "life" }, worlds: [], impact: { total: 2, available: 2, visible: 2 }, binding: null }]);
-  mocks.save.mockResolvedValue({ ...policy, gameId: "life", scope: "selected", revision: 4 });
+  mocks.save.mockResolvedValue({ ...policy, gameId: "life", revision: 4 });
   render();expect(await screen.findByText("Not initialized")).toBeInTheDocument();
-  expect(screen.getByRole("option", { name: "All worlds" })).toBeInTheDocument();
-  expect(screen.getByRole("searchbox", { name: "Find a world" })).toBeInTheDocument();
-  fireEvent.change(screen.getByRole("combobox", { name: "Availability" }), { target: { value: "selected" } });
+  expect(screen.getByRole("combobox", { name: "Availability" })).toBeDisabled();
   fireEvent.click(await screen.findByRole("button", { name: "Add exception for Alpha" }));
-  fireEvent.click(screen.getByRole("button", { name: "Alpha" }));
-  expect(screen.getByText("Available", { exact: true })).toBeInTheDocument();
+  expect(screen.queryByRole("combobox", { name: "Alpha · Game access" })).not.toBeInTheDocument();
   const save = screen.getByRole("button", { name: "Save policy" });await waitFor(() => expect(save).toBeEnabled());fireEvent.click(save);
-  await waitFor(() => expect(mocks.save).toHaveBeenCalledWith("life", { expectedRevision: 3, scope: "selected", defaultVisible: true, overrides: [{ workspaceId: world.id, access: "allow", visibility: "inherit" }] }));
+  await waitFor(() => expect(mocks.save).toHaveBeenCalledWith("life", { expectedRevision: 3, scope: "all", defaultVisible: true, overrides: [{ workspaceId: world.id, access: "inherit", visibility: "show" }] }));
 });

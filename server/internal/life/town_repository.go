@@ -50,7 +50,7 @@ func cleanText(s string, min, max int) bool {
 	return s == strings.TrimSpace(s) && utf8.RuneCountInString(s) >= min && utf8.RuneCountInString(s) <= max && strings.IndexFunc(s, func(r rune) bool { return unicode.IsControl(r) && r != '\n' && r != '\t' }) < 0
 }
 
-// All town mutations share the Tick and workspace-deletion fences.
+// Shared simulation writes use the world revision fence; member commands also lock their route workspace.
 func (r *Repository) mutateTown(ctx context.Context, workspace pgtype.UUID, fn func(*Simulation, db.LifeWorld, *db.Queries) error) error {
 	tx, err := r.Pool.Begin(ctx)
 	if err != nil {
@@ -58,15 +58,14 @@ func (r *Repository) mutateTown(ctx context.Context, workspace pgtype.UUID, fn f
 	}
 	defer tx.Rollback(ctx)
 	q := db.New(tx)
-	if _, err = q.LockLifeWorkspace(ctx, workspace); err != nil {
-		return err
+	if workspace.Valid {
+		if _, err = q.LockLifeWorkspace(ctx, workspace); err != nil {
+			return err
+		}
 	}
 	binding, err := q.GetLifeBinding(ctx)
 	if err != nil {
 		return err
-	}
-	if binding.WorkspaceID != workspace {
-		return townError("life_uninitialized", 409)
 	}
 	binding, err = q.LockLifeWorld(ctx, binding.ID)
 	if err != nil {

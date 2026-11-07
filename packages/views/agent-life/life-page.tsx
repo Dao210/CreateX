@@ -10,7 +10,6 @@ import { lifeSnapshotOptions, lifeHistoryOptions } from "@auro/core/agent-life/q
 import { useCurrentWorkspace } from "@auro/core/paths";
 import { Button } from "@auro/ui/components/ui/button";
 import { Progress } from "@auro/ui/components/ui/progress";
-import { GameAccessBoundary } from "../admin/game-access-boundary";
 import { useNavigation } from "../navigation";
 import { useT } from "../i18n";
 import { ActivityDialog, ResidentDialog, ResidentTalk } from "./town-forms";
@@ -21,7 +20,7 @@ const TownScene = lazy(() => import("./scene/town-scene"));
 export function LifePage({ storage }: { storage: StorageAdapter }) {
   const userId = useAuthStore(s => s.user?.id);
   const workspace = useCurrentWorkspace();
-  return workspace && userId ? <GameAccessBoundary gameId="life"><LifeContent key={`${workspace.id}:${userId}`} workspaceId={workspace.id} userId={userId} storage={storage} /></GameAccessBoundary> : null;
+  return workspace && userId ? <LifeContent key={`${workspace.id}:${userId}`} workspaceId={workspace.id} userId={userId} storage={storage} /> : null;
 }
 const clock = (tick: number) => `${String(Math.floor(tick % 1440 / 60)).padStart(2, "0")}:${String(tick % 60).padStart(2, "0")}`;
 function LifeContent({ workspaceId, userId, storage }: { workspaceId: string; userId: string; storage: StorageAdapter }) {

@@ -1,6 +1,6 @@
 -- name: GetLifeSnapshot :one
 SELECT jsonb_build_object(
- 'world', jsonb_build_object('id',w.id,'workspaceId',w.workspace_id,'tick',w.tick,'tickMs',w.tick_ms,'updatedAt',w.updated_at),
+ 'world', jsonb_build_object('id',w.id,'workspaceId',sqlc.arg(workspace_id)::uuid,'tick',w.tick,'tickMs',w.tick_ms,'updatedAt',w.updated_at),
  'town', w.town,
  'eventCursor',COALESCE((SELECT max(sequence) FROM life_event WHERE world_id=w.id AND kind IN ('town_command','town_activity','town_conversation','goal_reached','civilization_event')),0),
  'agents', COALESCE((SELECT jsonb_agg(jsonb_build_object(
@@ -16,32 +16,14 @@ SELECT jsonb_build_object(
    'agentId',e.agent_id,'kind',e.kind,'payload',e.payload,'occurredAt',e.occurred_at) ORDER BY e.tick DESC,e.id)
    FROM (SELECT * FROM life_event WHERE world_id=w.id ORDER BY tick DESC,id LIMIT 80) e),'[]'::jsonb)
 )::jsonb AS snapshot
-FROM life_world w WHERE w.workspace_id=$1;
+FROM life_world w;
 
 
 
 
 
--- name: LockLifeWorldForDeletion :exec
+-- name: LockLifeWorldForSourceDeletion :exec
 SELECT 1 FROM life_world WHERE workspace_id=$1 FOR UPDATE;
-
-
-
-
-
--- name: DeleteLifeWorldState :exec
-WITH deleted_requests AS (
- DELETE FROM life_request WHERE world_id IN (SELECT life_world.id FROM life_world WHERE life_world.workspace_id=$1)
-), deleted_events AS (
- DELETE FROM life_event WHERE world_id IN (SELECT life_world.id FROM life_world WHERE life_world.workspace_id=$1)
-), deleted_actions AS (
- DELETE FROM life_action WHERE world_id IN (SELECT life_world.id FROM life_world WHERE life_world.workspace_id=$1)
-), deleted_resources AS (
- DELETE FROM life_resource WHERE world_id IN (SELECT life_world.id FROM life_world WHERE life_world.workspace_id=$1)
-), deleted_agents AS (
- DELETE FROM life_agent WHERE world_id IN (SELECT life_world.id FROM life_world WHERE life_world.workspace_id=$1)
-)
-DELETE FROM life_world WHERE life_world.workspace_id=$1;
 
 -- name: GetLifeBinding :one
 SELECT * FROM life_world;
@@ -101,9 +83,9 @@ SELECT EXISTS(SELECT 1 FROM member WHERE workspace_id=$1 AND user_id=$2) AS memb
 
 -- name: GetLifeHistory :one
 SELECT jsonb_build_object(
- 'workspaceId',w.workspace_id,'sinceSequence',sqlc.arg(since_sequence)::bigint,
+ 'workspaceId',sqlc.arg(workspace_id)::uuid,'sinceSequence',sqlc.arg(since_sequence)::bigint,
  'throughSequence',COALESCE((SELECT max(sequence) FROM life_event WHERE world_id=w.id AND kind IN ('town_command','town_activity','town_conversation','goal_reached','civilization_event')),0),
  'total',(SELECT count(*) FROM life_event WHERE world_id=w.id AND sequence>sqlc.arg(since_sequence) AND kind IN ('town_command','town_activity','town_conversation','goal_reached','civilization_event')),
  'events',COALESCE((SELECT jsonb_agg(jsonb_build_object('id',e.id,'sequence',e.sequence,'tick',e.tick,'actionId',e.action_id,'agentId',e.agent_id,'kind',e.kind,'payload',e.payload,'occurredAt',e.occurred_at) ORDER BY e.sequence DESC)
   FROM (SELECT * FROM life_event WHERE world_id=w.id AND sequence>sqlc.arg(since_sequence) AND kind IN ('town_command','town_activity','town_conversation','goal_reached','civilization_event') ORDER BY sequence DESC LIMIT 200) e),'[]'::jsonb)
-)::jsonb AS history FROM life_world w WHERE w.workspace_id=sqlc.arg(workspace_id);
+)::jsonb AS history FROM life_world w;
