@@ -1,4 +1,5 @@
 "use client";
+import { useCreationEntry } from "../common/use-creation-entry";
 import { useId, useState } from "react";
 import { Cable, Check, Copy } from "lucide-react";
 import { api } from "@auro/core/api";
@@ -19,7 +20,7 @@ export function FishCreateDialog({ workspace, userId, onSave, pending }: {
 }) {
   const { t } = useT("fish"), navigation = useNavigation();
   const nameId = useId(), nameHelpId = useId(), connectionHelpId = useId(), visibilityId = useId();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useCreationEntry();
   const [manual, setManual] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");

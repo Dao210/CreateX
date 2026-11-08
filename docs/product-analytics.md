@@ -75,7 +75,8 @@ Filter all production reports to `environment = production` and exclude
 `is_test = true`. Use Asia/Shanghai as the reporting timezone.
 
 1. Acquisition: pageview visitor count by referrer/UTM/country/language;
-   homepage → `cta_clicked` with `cta = header_play` → signup →
+   homepage → `cta_clicked` with `cta = hero_create_tank`, `hero_create_fish`,
+   `hero_create_resident` or the corresponding `card_create_*` action → signup →
    onboarding completed → battle started, within 7 days. This is a new-user
    funnel. Returning players may bypass signup and must be viewed separately.
 2. Gameplay: unique players and attempts by `game`/`mode`, results by

@@ -1,4 +1,5 @@
 "use client";
+import { useCreationEntry } from "../common/use-creation-entry";
 import { useRef, useState } from "react";
 import { InterestSchema, OccupationSchema, type TownCommand, type LifeSnapshot } from "@auro/core/agent-life";
 import { useTownCommands } from "@auro/core/agent-life/queries";
@@ -22,7 +23,7 @@ export function useSubmit(workspaceId: string) {
 }
 export function ResidentDialog({ workspaceId, disabled }: { workspaceId: string; disabled: boolean }) {
   const { t } = useT("life");
-  const [open, setOpen] = useState(false), [name, setName] = useState(""), [background, setBackground] = useState("");
+  const [open, setOpen] = useCreationEntry(!disabled), [name, setName] = useState(""), [background, setBackground] = useState("");
   const [occupation, setOccupation] = useState<"artist" | ReturnType<typeof OccupationSchema.parse>>("artist");
   const [interest, setInterest] = useState<ReturnType<typeof InterestSchema.parse>>("reading");
   const command = useSubmit(workspaceId);

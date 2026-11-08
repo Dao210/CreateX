@@ -1,13 +1,29 @@
 import { StrictMode } from "react";
-import { fireEvent, render, waitFor } from "@testing-library/react";
-import { expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ pathname: "/", captureEvent: vi.fn(), initAnalytics: vi.fn(), captureSignupSource: vi.fn(), analyticsPath: vi.fn(() => "/safe") }));
+const mocks = vi.hoisted(() => ({ pathname: "/", loadAnalytics: vi.fn(), captureEvent: vi.fn(), initAnalytics: vi.fn(), captureSignupSource: vi.fn(), analyticsPath: vi.fn(() => "/safe") }));
 vi.mock("next/navigation", () => ({ usePathname: () => mocks.pathname }));
-vi.mock("@auro/core/analytics", () => mocks);
-import { SiteAnalytics } from "./site-analytics";
+beforeEach(() => {
+  vi.resetModules();
+  vi.clearAllMocks();
+  mocks.pathname = "/";
+  vi.doMock("@auro/core/analytics", () => { mocks.loadAnalytics(); return mocks; });
+});
+afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
+
+it("does not download the analytics SDK when public configuration disables it", async () => {
+  const json = vi.fn().mockResolvedValue({});
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json }));
+  const { SiteAnalytics } = await import("./site-analytics");
+  render(<SiteAnalytics />);
+  await waitFor(() => expect(json).toHaveBeenCalledOnce());
+  expect(mocks.loadAnalytics).not.toHaveBeenCalled();
+  expect(mocks.captureEvent).not.toHaveBeenCalled();
+});
 
 it("boots without application providers, captures one pageview in StrictMode, and wires explicit CTAs", async () => {
+  const { SiteAnalytics } = await import("./site-analytics");
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ posthog_key: "test-key", posthog_host: "/api/collect", analytics_environment: "dev" }) }));
   const tree = () => <StrictMode><SiteAnalytics /><button data-analytics-cta="header_play">Play</button></StrictMode>;
   const view = render(tree());

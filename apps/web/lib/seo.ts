@@ -56,7 +56,7 @@ export function gameStructuredData(requestedLocale: SupportedLocale, path: Marke
       {
         "@type": "VideoGame", "@id": gameId, url: `${SITE_URL}/`,
         name: BRAND_NAME, alternateName: BRAND_NAME_ZH,
-        description: brand.description, genre: ["Creative adventure", "Virtual civilization simulation"],
+        description: brand.description, genre: ["Creative games", "Tank defense", "Life simulation"],
         applicationCategory: "GameApplication", operatingSystem: "Web browser", gamePlatform: "Web browser",
         image: `${SITE_URL}/images/weave-a-world-social.png`,
       },

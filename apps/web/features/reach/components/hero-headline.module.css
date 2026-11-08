@@ -1,9 +1,9 @@
 .headline {
   max-width: 100%;
-  color: #e8e1d5;
-  font-size: 2.3rem;
-  font-weight: 600;
-  line-height: 1.2;
+  color: #eee7d9;
+  font-size: clamp(var(--text-display-sm), 9.1vw, calc(var(--text-display) * 1.2));
+  font-weight: 500;
+  line-height: 1.25;
   letter-spacing: -0.035em;
 }
 
@@ -11,7 +11,7 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  row-gap: 0.04em;
+  row-gap: 0.12em;
 }
 
 .creation {
@@ -24,7 +24,7 @@
   display: inline-block;
   height: 1.2em;
   overflow: hidden;
-  color: #c8622d;
+  color: #df9a6e;
   mask-image: linear-gradient(transparent, #000 8%, #000 92%, transparent);
 }
 
@@ -40,12 +40,24 @@
 
 .world {
   white-space: nowrap;
+  font-family: var(--font-serif);
+  font-size: 1.3em;
+  font-weight: 400;
+  letter-spacing: -.045em;
 }
 
 .headline:lang(en),
 .headline:lang(ja),
 .headline:lang(ko) {
-  font-size: clamp(1.5rem, 6.6vw, 2.3rem);
+  font-size: clamp(var(--text-display-sm), 8.4vw, calc(var(--text-display) * 1.2));
+}
+
+.headline:lang(ja) .world {
+  font-size: 1em;
+}
+
+.headline:lang(en) .world {
+  font-size: 1.55em;
 }
 
 /* Four equal rows include the first phrase twice. Each phrase holds for 2s,
@@ -62,12 +74,14 @@
   .headline:lang(en),
   .headline:lang(ja),
   .headline:lang(ko) {
-    font-size: 3rem;
+    font-size: calc(var(--text-display) * 4 / 3);
   }
 
   .visual {
     flex-direction: row;
     flex-wrap: wrap;
+    align-items: baseline;
+    column-gap: .3em;
   }
 
   .visual:lang(en),
@@ -78,6 +92,12 @@
   .separator {
     display: inline;
   }
+
+  .world,
+  .headline:lang(en) .world,
+  .headline:lang(ja) .world {
+    font-size: 1em;
+  }
 }
 
 @media (min-width: 1024px) {
@@ -85,7 +105,7 @@
   .headline:lang(en),
   .headline:lang(ja),
   .headline:lang(ko) {
-    font-size: 3.5rem;
+    font-size: calc(var(--text-display) * 1.7);
   }
 }
 

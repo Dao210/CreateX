@@ -11,19 +11,18 @@ let lastRoute: string | null = null;
 
 function loadAnalytics(): Promise<Analytics | null> {
   if (!boot) {
-    boot = Promise.all([
-      import("@auro/core/analytics"),
-      fetch("/api/config", { credentials: "same-origin", signal: AbortSignal.timeout(8000) })
-        .then(response => response.ok ? response.json() : null),
-    ]).then(([analytics, raw]) => {
-      const config = parseWithFallback(raw, AnalyticsPublicConfigSchema, null as {
-        posthog_key?: string; posthog_host?: string; analytics_environment?: string;
-      } | null, { endpoint: "/api/config:analytics", redact: true });
-      if (!config?.posthog_key) return null;
-      analytics.captureSignupSource();
-      analytics.initAnalytics({ key: config.posthog_key, host: config.posthog_host ?? "", environment: config.analytics_environment });
-      return analytics;
-    }).catch(() => { boot = null; return null; });
+    boot = fetch("/api/config", { credentials: "same-origin", signal: AbortSignal.timeout(8000) })
+      .then(response => response.ok ? response.json() : null)
+      .then(async raw => {
+        const config = parseWithFallback(raw, AnalyticsPublicConfigSchema, null as {
+          posthog_key?: string; posthog_host?: string; analytics_environment?: string;
+        } | null, { endpoint: "/api/config:analytics", redact: true });
+        if (!config?.posthog_key) return null;
+        const analytics = await import("@auro/core/analytics");
+        analytics.captureSignupSource();
+        analytics.initAnalytics({ key: config.posthog_key, host: config.posthog_host ?? "", environment: config.analytics_environment });
+        return analytics;
+      }).catch(() => { boot = null; return null; });
   }
   return boot;
 }

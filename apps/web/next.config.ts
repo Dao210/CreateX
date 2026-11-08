@@ -45,6 +45,9 @@ const nextConfig: NextConfig = {
   ...(allowedDevOrigins && allowedDevOrigins.length > 0
     ? { allowedDevOrigins }
     : {}),
+  async headers() {
+    return [{ source: "/media/gameplay/:path*", headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }] }];
+  },
   images: {
     formats: ["image/avif", "image/webp"],
     qualities: [75, 80, 85],

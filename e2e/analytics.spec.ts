@@ -21,6 +21,7 @@ function capturedEvents(request: Request): CapturedEvent[] {
 
 test("marketing sends explicit, scrubbed pageviews and CTA events through the real SDK", async ({ page }) => {
   const events: CapturedEvent[] = [];
+  await page.route("**/www.googletagmanager.com/**", route => route.fulfill({ contentType: "application/javascript", body: "" }));
   // Exercise the SDK's human-visitor path; its automation filter otherwise drops events.
   await page.addInitScript(() => {
     Object.defineProperty(navigator, "webdriver", { get: () => false });
@@ -39,9 +40,9 @@ test("marketing sends explicit, scrubbed pageviews and CTA events through the re
   });
   await page.goto("/?utm_source=analytics-qa&code=secret-token");
   await expect.poll(() => events.filter(event => event.event === "$pageview" && event.properties.page === "/").length, { timeout: 20000 }).toBe(1);
-  await page.locator('[data-analytics-cta="header_play"]').click();
+  await page.locator('[data-analytics-cta="hero_create_tank"]').click();
   await expect(page).toHaveURL(/\/login/);
-  await expect.poll(() => events.some(event => event.event === "cta_clicked" && event.properties.cta === "header_play"), { timeout: 10000 }).toBe(true);
+  await expect.poll(() => events.some(event => event.event === "cta_clicked" && event.properties.cta === "hero_create_tank"), { timeout: 10000 }).toBe(true);
   await page.goto("/about?token=another-secret");
   await expect.poll(() => events.some(event => event.event === "$pageview" && event.properties.page === "/about"), { timeout: 20000 }).toBe(true);
   expect(JSON.stringify(events)).not.toContain("secret-token");

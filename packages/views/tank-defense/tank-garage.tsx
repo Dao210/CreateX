@@ -18,6 +18,7 @@ import { TankBattle } from "./tank-battle";
 import { TankCharacterEditor } from "./tank-character-editor";
 import { TankMCPConnection } from "./tank-mcp-connection";
 import { TankConnectionReturn } from "./tank-connection-return";
+import { useCreationEntry } from "../common/use-creation-entry";
 
 export function TankGarage({ storage, storageKey, workspace, userId }: { storage: StorageAdapter; storageKey: string; workspace: { id: string; slug: string; name?: string }; userId: string }) {
   const { t } = useT("tanks");
@@ -32,7 +33,7 @@ export function TankGarage({ storage, storageKey, workspace, userId }: { storage
   const [autoStartId, setAutoStartId] = useState<string | null>(null);
   const [selectedMap, setSelectedMap] = useState<string | null>(null);
   const [selectedMode, setSelectedMode] = useState<TankMode | null>(null);
-  const [editorOpen, setEditorOpen] = useState(false);
+  const [editorOpen, setEditorOpen] = useCreationEntry();
   const [editing, setEditing] = useState<TankCharacter | null>(null);
   const request = useRef<{ input: string; id: string } | null>(null);
   const frozen = sessionId ? session.data : undefined;

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { ReachLanding } from "@/features/reach/components/reach-landing";
+import { PlayLanding } from "@/features/play/play-landing";
 import { getRequestLocale } from "@/lib/request-locale";
 import { gameStructuredData, publicPageMetadata } from "@/lib/seo";
 import { StructuredData } from "@/components/structured-data";
@@ -13,7 +13,7 @@ export default async function LandingPage() {
   return (
     <>
       <StructuredData data={gameStructuredData(locale)} />
-      <ReachLanding locale={locale} />
+      <PlayLanding locale={locale} />
     </>
   );
 }

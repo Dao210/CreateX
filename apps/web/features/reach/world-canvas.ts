@@ -14,7 +14,7 @@ function inkPath(ctx: CanvasRenderingContext2D, d: string, fill?: string, stroke
   if (stroke) { ctx.strokeStyle = stroke; ctx.stroke(path); }
 }
 
-/** Render once per snapshot/view; animation composites this cached scene. */
+/** Render only when the snapshot, selection or viewport changes. */
 export function drawWorldScene(ctx: CanvasRenderingContext2D, width: number, height: number, snapshot: WorldSnapshot, focus?: WorldPoint, selectedId?: string, trail: WorldPoint[] = []) {
   const view = worldView(width, height, focus);
   ctx.fillStyle = WORLD_INK.ground;

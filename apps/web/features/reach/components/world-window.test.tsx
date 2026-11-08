@@ -24,18 +24,35 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
 describe("world map rendering", () => {
-  it("draws each silhouette at its own map coordinates", () => {
+  it("draws a live selection once without a continuous Canvas loop", () => {
     const snapshot = { ...previewSnapshot(), entities: [{ ...previewSnapshot().entities[0]!, x: 640, y: 320, status: "alive" as const }] };
     const ready = vi.fn();
-    render(<WorldWindow snapshot={snapshot} label="Map" onReady={ready} />);
+    render(<WorldWindow snapshot={snapshot} selectedId={snapshot.entities[0]!.id} label="Map" onReady={ready} />);
     act(() => frames.shift()?.(100));
     expect(context.translate).toHaveBeenCalledWith(640, 320);
-    expect(context.drawImage).toHaveBeenCalledOnce();
     const sceneDraws = context.fill.mock.calls.length;
     act(() => frames.shift()?.(200));
-    expect(context.drawImage).toHaveBeenCalledTimes(2);
+    expect(requestAnimationFrame).toHaveBeenCalledOnce();
+    expect(context.clearRect).toHaveBeenCalledOnce();
     expect(context.fill).toHaveBeenCalledTimes(sceneDraws);
     expect(ready).toHaveBeenCalledOnce();
+  });
+  it("ignores unchanged resize notifications and repaints at the new size", () => {
+    let resized = () => {};
+    vi.stubGlobal("ResizeObserver", class {
+      constructor(callback: () => void) { resized = callback; }
+      observe() {}
+      disconnect() {}
+    });
+    render(<WorldWindow snapshot={previewSnapshot()} label="Map" />);
+    act(() => frames.shift()?.(100));
+    act(resized);
+    expect(requestAnimationFrame).toHaveBeenCalledOnce();
+    vi.mocked(HTMLCanvasElement.prototype.getBoundingClientRect).mockReturnValue({ width: 1200, height: 512, left: 0, top: 0 } as DOMRect);
+    act(resized);
+    act(() => frames.shift()?.(200));
+    expect(context.clearRect).toHaveBeenLastCalledWith(0, 0, 1200, 512);
+    expect(requestAnimationFrame).toHaveBeenCalledTimes(2);
   });
   it("uses the same focused map transform for pointer selection", () => {
     const snapshot = { ...previewSnapshot(), entities: [{ ...previewSnapshot().entities[0]!, x: 1000, y: 512, status: "alive" as const }] };
@@ -46,13 +63,15 @@ describe("world map rendering", () => {
     act(() => view.getByRole("img").dispatchEvent(new MouseEvent("pointerup", { bubbles: true, clientX: 512, clientY: 256 })));
     expect(select).toHaveBeenCalledWith(snapshot.entities[0]!.id);
   });
-  it("draws once for reduced motion and again when data changes", () => {
+  it.each([false, true])("draws again on data changes (reduced motion: %s)", (reducedMotion) => {
     const snapshot = previewSnapshot();
-    const view = render(<WorldWindow snapshot={snapshot} label="Map" reducedMotion />);
+    const view = render(<WorldWindow snapshot={snapshot} label="Map" reducedMotion={reducedMotion} />);
     act(() => frames.shift()?.(100));
     expect(requestAnimationFrame).toHaveBeenCalledTimes(1);
-    view.rerender(<WorldWindow snapshot={{ ...snapshot, beat: 413 }} label="Map" reducedMotion />);
+    view.rerender(<WorldWindow snapshot={{ ...snapshot, beat: 413 }} label="Map" reducedMotion={reducedMotion} />);
     expect(requestAnimationFrame).toHaveBeenCalledTimes(2);
+    act(() => frames.shift()?.(200));
+    expect(context.clearRect).toHaveBeenCalledTimes(2);
   });
   it("does no rendering work while the map is off screen", () => {
     render(<WorldWindow snapshot={previewSnapshot()} label="Map" active={false} />);

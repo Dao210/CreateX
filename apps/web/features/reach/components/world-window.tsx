@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import type { WorldSnapshot } from "../types";
 import { drawWorldScene } from "../world-canvas";
 import { hitEntity, worldView, type WorldPoint } from "../world-presentation";
-import { WORLD_INK } from "../world-art";
 import styles from "./world-preview.module.css";
 
 type Props = {
@@ -33,13 +32,9 @@ export function WorldWindow({ snapshot, active = true, label, selectedId, select
     if (!canvas || !active || typeof Path2D === "undefined") return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-    const scene = document.createElement("canvas");
-    const sceneCtx = scene.getContext("2d");
-    if (!sceneCtx) return;
-    let width = 0;
-    let height = 0;
-    let lastFrame = -Infinity;
     let announcedReady = false;
+    let paintedWidth = 0;
+    let paintedHeight = 0;
     const currentFocus = focusX !== undefined && focusY !== undefined ? { x: focusX, y: focusY } : undefined;
     const selected = snapshot.entities.find((entity) => entity.id === selectedId);
     const trail = trailRef.current;
@@ -48,38 +43,25 @@ export function WorldWindow({ snapshot, active = true, label, selectedId, select
       trail.points = [...trail.points.slice(-7), { x: selected.x, y: selected.y }];
     }
 
-    const draw = (now: number) => {
-      if (!reducedMotion) frameRef.current = requestAnimationFrame(draw);
-      if (now - lastFrame < 1000 / 24 || width <= 0 || height <= 0) return;
-      lastFrame = now;
+    const draw = () => {
+      frameRef.current = null;
+      const { width, height } = canvas.getBoundingClientRect();
+      if (width <= 0 || height <= 0) return;
+      paintedWidth = width;
+      paintedHeight = height;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width = Math.round(width * dpr);
+      canvas.height = Math.round(height * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, width, height);
-      ctx.drawImage(scene, 0, 0, width, height);
-      if (selected && !reducedMotion) {
-        const view = worldView(width, height, currentFocus);
-        const pulse = (now / 1000 / Math.max(1, beatSeconds)) * Math.PI * 2;
-        ctx.strokeStyle = WORLD_INK.accent;
-        ctx.globalAlpha = 0.18 + Math.sin(pulse) * 0.08;
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.ellipse(selected.x * view.scale + view.offsetX, (selected.y + 25) * view.scale + view.offsetY, 24 + Math.sin(pulse) * 3, 11, 0, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.globalAlpha = 1;
-      }
+      drawWorldScene(ctx, width, height, snapshot, currentFocus, selectedId, trail.points);
+      setViewport((previous) => previous.width === width && previous.height === height ? previous : { width, height });
       if (!announcedReady) { announcedReady = true; onReady?.(); }
     };
 
     const resize = () => {
-      const rect = canvas.getBoundingClientRect();
-      width = rect.width; height = rect.height;
-      if (width <= 0 || height <= 0) return;
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      canvas.width = scene.width = Math.round(width * dpr);
-      canvas.height = scene.height = Math.round(height * dpr);
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      sceneCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      drawWorldScene(sceneCtx, width, height, snapshot, currentFocus, selectedId, trail.points);
-      setViewport((previous) => previous.width === width && previous.height === height ? previous : { width, height });
-      lastFrame = -Infinity;
+      const { width, height } = canvas.getBoundingClientRect();
+      if (width === paintedWidth && height === paintedHeight) return;
       if (frameRef.current !== null) cancelAnimationFrame(frameRef.current);
       frameRef.current = requestAnimationFrame(draw);
     };
@@ -87,7 +69,7 @@ export function WorldWindow({ snapshot, active = true, label, selectedId, select
     observer.observe(canvas);
     resize();
     return () => { observer.disconnect(); if (frameRef.current !== null) cancelAnimationFrame(frameRef.current); };
-  }, [active, snapshot, selectedId, focusX, focusY, beatSeconds, reducedMotion, onReady]);
+  }, [active, snapshot, selectedId, focusX, focusY, onReady]);
 
   const view = viewport.width > 0 ? worldView(viewport.width, viewport.height, focus) : undefined;
   const selected = snapshot.entities.find((entity) => entity.id === selectedId);
@@ -103,6 +85,7 @@ export function WorldWindow({ snapshot, active = true, label, selectedId, select
         const entity = hitEntity(snapshot.entities, { x: (event.clientX - rect.left - camera.offsetX) / camera.scale, y: (event.clientY - rect.top - camera.offsetY) / camera.scale }, 28 / camera.scale);
         if (entity) onSelect?.(entity.id);
       }} />
+      {selected && view && <span aria-hidden="true" className={styles.mapPulse} data-active={active && !reducedMotion} style={{ left, top: top + 25 * view.scale, animationDuration: `${Math.max(1, beatSeconds)}s` }} />}
       {selected && markerVisible && <span className={styles.mapName} style={{ left, top }}>{selectedName ?? selected.name}</span>}
     </div>
   );

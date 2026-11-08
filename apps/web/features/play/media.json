@@ -1,0 +1,20 @@
+{
+  "tank": {
+    "video": "/media/gameplay/tank.51fd4d9e02.mp4",
+    "poster": "/media/gameplay/tank.631868fe99.webp",
+    "width": 960,
+    "height": 600
+  },
+  "fish": {
+    "video": "/media/gameplay/fish.3820249afa.mp4",
+    "poster": "/media/gameplay/fish.5795e2d6f3.webp",
+    "width": 960,
+    "height": 600
+  },
+  "resident": {
+    "video": "/media/gameplay/resident.1d24dc7129.mp4",
+    "poster": "/media/gameplay/resident.a020a27de9.webp",
+    "width": 960,
+    "height": 600
+  }
+}

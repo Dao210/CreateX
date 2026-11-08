@@ -21,10 +21,10 @@ describe("game search identity", () => {
     }
   });
 
-  it("uses the supplied Chinese identity and game category", () => {
+  it("describes the concrete creations in Chinese search results", () => {
     const metadata = publicPageMetadata("/", "zh-Hans");
-    expect(metadata.title).toEqual({ absolute: "织个世界 Weave a World — 创造型冒险与虚拟文明模拟游戏" });
-    expect(metadata.description).toContain("创造生命，编织世界");
+    expect(metadata.title).toEqual({ absolute: "织个世界 Weave a World — 创造坦克、鱼与小镇居民" });
+    expect(metadata.description).toContain("你创造的东西，就是你参与游戏的方式");
     expect(metadata.openGraph).toMatchObject({ siteName: "Weave a World", locale: "zh_CN" });
     expect(metadata.twitter).toMatchObject({ card: "summary_large_image" });
   });

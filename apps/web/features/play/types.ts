@@ -1,0 +1,32 @@
+export const GAME_IDS = ["tank", "fish", "resident"] as const;
+export type GameId = (typeof GAME_IDS)[number];
+export type GameCopy = {
+  label: string;
+  creation: string;
+  experience: string;
+  action: string;
+  mode: string;
+  description: string;
+  example: string;
+  exampleDetail: string;
+  sceneLabel: string;
+};
+export type PlayCopy = {
+  eyebrow: string;
+  intro: string;
+  choose: string;
+  how: string;
+  recorded: string;
+  accelerated: string;
+  play: string;
+  pause: string;
+  mediaError: string;
+  example: string;
+  gamesTitle: string;
+  gamesLead: string;
+  stepsTitle: string;
+  steps: { title: string; body: string }[];
+  closing: string;
+  chooseFirst: string;
+  games: Record<GameId, GameCopy>;
+};
