@@ -402,16 +402,19 @@ function normalizeEnvironment(value: string | undefined): string {
  * from; both fields are intentionally opaque JSON so the schema can evolve
  * without a backend deploy.
  */
-export function captureSignupSource(): void {
+export type SignupSourceContext = { search: string; referrer: string; origin: string };
+
+export function captureSignupSource(context?: SignupSourceContext): void {
   if (typeof window === "undefined" || typeof document === "undefined") return;
   if (readCookie(SIGNUP_SOURCE_COOKIE)) return;
+  const entry = context ?? { search: window.location.search, referrer: document.referrer, origin: window.location.origin };
 
   const source: Record<string, string> = {};
   const cap = (v: string) =>
     v.length > SIGNUP_SOURCE_VALUE_MAX_LEN ? v.slice(0, SIGNUP_SOURCE_VALUE_MAX_LEN) : v;
 
   try {
-    const params = new URLSearchParams(window.location.search);
+    const params = new URLSearchParams(entry.search);
     for (const key of UTM_KEYS) {
       const v = params.get(key);
       if (v) source[key] = cap(v);
@@ -420,7 +423,7 @@ export function captureSignupSource(): void {
     // URL APIs unavailable — skip silently.
   }
 
-  const refOrigin = safeReferrerOrigin(document.referrer);
+  const refOrigin = safeReferrerOrigin(entry.referrer, entry.origin);
   if (refOrigin) source.referrer_origin = cap(refOrigin);
 
   if (Object.keys(source).length === 0) return;
@@ -436,11 +439,11 @@ export function captureSignupSource(): void {
   document.cookie = `${SIGNUP_SOURCE_COOKIE}=${encodeURIComponent(payload)}; path=/; max-age=${maxAge}; samesite=lax`;
 }
 
-function safeReferrerOrigin(referrer: string): string {
+function safeReferrerOrigin(referrer: string, origin: string): string {
   if (!referrer) return "";
   try {
     const url = new URL(referrer);
-    if (url.origin === window.location.origin) return "";
+    if (url.origin === origin) return "";
     return url.origin;
   } catch {
     return "";

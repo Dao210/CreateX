@@ -11,8 +11,8 @@ import { beforeAll, describe, expect, it } from "vitest";
  * Does the brand chip actually render blue?
  *
  * This lives in apps/web because it tests the COMPILED STYLESHEET, not React
- * behaviour: `globals.css` is the app's artifact, and the `dark` variant is
- * defined there (`@custom-variant dark (&:is(.dark *))`) — that definition is
+ * behaviour: `application.css` is the app's utility artifact, and the `dark`
+ * variant comes from its globals.css reference — that definition is
  * what decides the outcome below. It follows the same pattern as
  * font-fallback-order.test.ts, which also asserts on the app's CSS.
  *
@@ -141,7 +141,7 @@ function winning(
   return baseClassOf(candidates.at(-1)!.sel);
 }
 
-const WEB_CSS = resolve(repoRoot, "apps/web/app/globals.css");
+const WEB_CSS = resolve(repoRoot, "apps/web/app/application.css");
 const DESKTOP_CSS = resolve(repoRoot, "apps/desktop/src/renderer/src/globals.css");
 
 // The chip's own composition: layout classes only, colour from the variant.

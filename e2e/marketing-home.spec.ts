@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import media from "../apps/web/features/play/media.json" with { type: "json" };
+const clipFor = (game: keyof typeof media, width: number) => width < 768 ? media[game].mobileVideo : media[game].video;
 
 const languages = [
   { locale: "en", lang: "en", creation: "Create a tank.", experience: "Defend the castle.", about: "About Weave a World" },
@@ -35,10 +36,13 @@ for (const { locale, lang, creation, experience, about } of languages) {
 test("real posters, creation links and FAQ work without JavaScript", async ({ browser, baseURL }) => {
   const context = await browser.newContext({ javaScriptEnabled: false, baseURL, viewport: { width: 390, height: 844 } });
   try {
-    const page = await context.newPage(); await page.goto("/?lang=en");
+    const page = await context.newPage();
+    const clips: string[] = []; page.on("request", r => { if (r.url().includes(".mp4")) clips.push(r.url()); });
+    await page.goto("/?lang=en");
     await expect(page.locator('img[src*="/media/gameplay/tank."]').first()).toBeVisible();
     await expect(page.locator('video')).toHaveAttribute("poster", media.tank.poster);
-    await expect(page.locator('video')).not.toHaveAttribute("src");
+    await expect(page.locator('video')).toHaveAttribute("preload", "none");
+    expect(clips).toEqual([]);
     await expect(page.locator('#create a')).toHaveCount(3);
     const faq = page.locator('section[aria-labelledby="play-faq"] details').first();
     await faq.locator("summary").click(); await expect(faq.locator("p")).toBeVisible();
@@ -79,9 +83,9 @@ test("selection synchronizes the heading, real recording, example and creation i
     await expect(page.getByRole("tabpanel")).toContainText(choice.example);
     const href = await page.locator(`[data-analytics-cta="hero_create_${choice.id}"]`).getAttribute("href");
     expect(new URL(href!, "https://local.test").searchParams.get("next")).toBe(`/onboarding?creation=${choice.id}`);
-    await expect(page.locator("video")).toHaveAttribute("src", media[choice.id].video);
+    await expect.poll(() => page.locator("video").evaluate(video => video.currentSrc && new URL(video.currentSrc).pathname)).toBe(clipFor(choice.id, page.viewportSize()!.width));
   }
-  expect([...new Set(clips)]).toEqual([media.tank.video, media.fish.video, media.resident.video]);
+  expect([...new Set(clips)]).toEqual(choices.map(choice => clipFor(choice.id, page.viewportSize()!.width)));
   await page.getByRole("tab", { name: /Resident/ }).focus(); await page.keyboard.press("ArrowLeft");
   await expect(page.getByRole("tab", { name: /Fish/ })).toBeFocused();
   await expect(page.getByRole("tab", { name: /Fish/ })).toHaveAttribute("aria-selected", "true");
@@ -91,7 +95,7 @@ test("only the current recording loads and playback pauses offscreen", async ({ 
   const clips: string[] = []; page.on("request", r => { if (r.url().includes(".mp4")) clips.push(new URL(r.url()).pathname); });
   await page.goto("/?lang=en");
   const frame = page.getByTestId("gameplay-media"); await expect(frame).toHaveAttribute("data-playing", "true");
-  expect([...new Set(clips)]).toEqual([media.tank.video]);
+  expect([...new Set(clips)]).toEqual([clipFor("tank", page.viewportSize()!.width)]);
   await page.locator("#how-it-works").scrollIntoViewIfNeeded();
   await expect.poll(() => page.locator("video").evaluate(video => video.paused)).toBe(true);
   await frame.scrollIntoViewIfNeeded(); await expect(frame).toHaveAttribute("data-playing", "true");
@@ -101,23 +105,68 @@ test("only the current recording loads and playback pauses offscreen", async ({ 
 
 for (const mode of ["reduced motion", "data saver"] as const) {
   test(`${mode} keeps the poster until the visitor chooses to play`, async ({ page }) => {
+    const clips: string[] = []; page.on("request", r => { if (r.url().includes(".mp4")) clips.push(r.url()); });
     if (mode === "reduced motion") await page.emulateMedia({ reducedMotion: "reduce" });
     else await page.addInitScript(() => Object.defineProperty(navigator, "connection", { value: { saveData: true }, configurable: true }));
     await page.goto("/?lang=en");
     await expect(page.getByRole("tab", { name: /Tank/ })).toBeEnabled();
-    await expect(page.locator("video")).not.toHaveAttribute("src");
+    expect(clips).toEqual([]);
+    expect(await page.locator("video").evaluate(video => video.paused)).toBe(true);
     await expect(page.locator("video")).toHaveAttribute("poster", media.tank.poster);
     await page.getByRole("button", { name: "Play gameplay recording" }).click();
     await expect(page.getByTestId("gameplay-media")).toHaveAttribute("data-playing", "true");
   });
 }
 
-test("a failed recording preserves the real poster and creation entry", async ({ page }) => {
-  await page.route("**/media/gameplay/*.mp4", route => route.abort());
+test("playback and pause work before hydration and survive the React handoff", async ({ page }) => {
+  let release!: () => void;
+  const hydration = new Promise<void>(resolve => { release = resolve; });
+  const errors: string[] = [];
+  page.on("console", message => { if (message.type() === "error" && /hydrat|didn't match/i.test(message.text())) errors.push(message.text()); });
+  await page.route("**/_next/static/chunks/**", async route => { await hydration; await route.continue(); });
+  try {
+    await page.goto("/?lang=en", { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("tab", { name: /Tank/ })).toBeDisabled();
+    await expect(page.getByTestId("gameplay-media")).toHaveAttribute("data-playing", "true");
+    await expect.poll(() => page.evaluate(() => performance.getEntriesByName("auro-gameplay-first-frame").length)).toBe(1);
+    await page.getByRole("button", { name: "Pause gameplay recording" }).click();
+    expect(await page.locator("video").evaluate(video => video.paused)).toBe(true);
+    release();
+    await expect(page.getByRole("tab", { name: /Tank/ })).toBeEnabled();
+    await expect(page.getByRole("button", { name: "Play gameplay recording" })).toBeVisible();
+    expect(await page.locator("video").evaluate(video => video.paused)).toBe(true);
+    await page.getByRole("button", { name: "Play gameplay recording" }).click();
+    await expect(page.getByTestId("gameplay-media")).toHaveAttribute("data-playing", "true");
+    expect(errors).toEqual([]);
+  } finally { release(); }
+});
+
+test("a failed recording preserves the poster and supports a manual retry", async ({ page }) => {
+  let retry = false;
+  await page.route("**/media/gameplay/*.mp4", route => retry ? route.continue() : route.abort());
   await page.goto("/?lang=en");
   await expect(page.getByRole("status")).toContainText("recording could not load");
   await expect(page.getByTestId("gameplay-media").locator("img")).toBeVisible();
   await expect(page.locator('[data-analytics-cta="hero_create_tank"]')).toBeVisible();
+  retry = true;
+  await page.getByRole("button", { name: "Play gameplay recording" }).click();
+  await expect(page.getByTestId("gameplay-media")).toHaveAttribute("data-playing", "true");
+  await expect(page.getByRole("status")).not.toBeVisible();
+});
+
+test("an autoplay refusal keeps manual playback available", async ({ page }) => {
+  await page.addInitScript(() => {
+    const play = HTMLMediaElement.prototype.play;
+    let refused = false;
+    HTMLMediaElement.prototype.play = function () {
+      if (!refused) { refused = true; return Promise.reject(new DOMException("Blocked by browser policy", "NotAllowedError")); }
+      return play.call(this);
+    };
+  });
+  await page.goto("/?lang=en");
+  await expect(page.getByRole("tab", { name: /Tank/ })).toBeEnabled();
+  await page.getByRole("button", { name: "Play gameplay recording" }).click();
+  await expect(page.getByTestId("gameplay-media")).toHaveAttribute("data-playing", "true");
 });
 
 test("mobile navigation reaches the actual game choices", async ({ page }) => {
@@ -125,6 +174,20 @@ test("mobile navigation reaches the actual game choices", async ({ page }) => {
   await page.locator("header summary").click();
   await page.locator("header").getByRole("link", { name: "Choose a game", exact: true }).click();
   await expect(page).toHaveURL(/#games$/); await expect(page.getByRole("tablist")).toBeInViewport();
+});
+
+test("the public page scrolls naturally with only marketing styles loaded", async ({ page, browserName }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/?lang=en");
+  await expect(page.locator(".landing-light")).toHaveCSS("overflow-y", "auto");
+  if (browserName === "webkit") {
+    // Playwright mobile WebKit does not implement wheel gestures.
+    await page.locator(".landing-light").evaluate(element => { element.scrollTop = 700; });
+  } else {
+    await page.mouse.move(180, 500);
+    await page.mouse.wheel(0, 700);
+  }
+  await expect.poll(() => page.locator(".landing-light").evaluate(element => element.scrollTop)).toBeGreaterThan(0);
 });
 
 test("the selected creation reaches login with its destination intact", async ({ page }) => {

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import type { CSSProperties } from "react";
 import { Instrument_Serif } from "next/font/google";
 
 // Instrument Serif is the landing display face and is Latin-only. The full
@@ -27,7 +28,7 @@ export default async function LandingLayout({
 
   return (
     <>
-      <div className={`${instrumentSerif.variable} landing-light h-full overflow-x-hidden overflow-y-auto bg-white`}>
+      <div className={`${instrumentSerif.variable} landing-light h-full overflow-x-hidden overflow-y-auto bg-white`} style={{ "--font-instrument-fallback": instrumentSerif.style.fontFamily.split(",").slice(1).join(",") } as CSSProperties}>
         {children}
       </div>
     </>

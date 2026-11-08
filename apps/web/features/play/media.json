@@ -3,18 +3,21 @@
     "video": "/media/gameplay/tank.51fd4d9e02.mp4",
     "poster": "/media/gameplay/tank.631868fe99.webp",
     "width": 960,
-    "height": 600
+    "height": 600,
+    "mobileVideo": "/media/gameplay/tank.mobile.b5780de5fb.mp4"
   },
   "fish": {
     "video": "/media/gameplay/fish.3820249afa.mp4",
     "poster": "/media/gameplay/fish.5795e2d6f3.webp",
     "width": 960,
-    "height": 600
+    "height": 600,
+    "mobileVideo": "/media/gameplay/fish.mobile.639978c04e.mp4"
   },
   "resident": {
     "video": "/media/gameplay/resident.1d24dc7129.mp4",
     "poster": "/media/gameplay/resident.a020a27de9.webp",
     "width": 960,
-    "height": 600
+    "height": 600,
+    "mobileVideo": "/media/gameplay/resident.mobile.93e9c6ee6a.mp4"
   }
 }

@@ -10,7 +10,23 @@ beforeEach(() => {
   mocks.pathname = "/";
   vi.doMock("@auro/core/analytics", () => { mocks.loadAnalytics(); return mocks; });
 });
-afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
+afterEach(() => { cleanup(); window.history.replaceState({}, "", "/"); vi.unstubAllGlobals(); });
+
+it("waits for video playback, but flushes an early CTA with its original attribution", async () => {
+  window.history.replaceState({}, "", "/?utm_source=original&code=private");
+  vi.stubGlobal("matchMedia", vi.fn(() => ({ matches: false })));
+  const fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ posthog_key: "test-key" }) });
+  vi.stubGlobal("fetch", fetch);
+  const { SiteAnalytics } = await import("./site-analytics");
+  const view = render(<><div data-gameplay="tank"><video /></div><SiteAnalytics /><button data-analytics-cta="hero_create_tank">Create</button></>);
+  expect(fetch).not.toHaveBeenCalled();
+  fireEvent.click(view.getByRole("button", { name: "Create" }));
+  window.history.replaceState({}, "", "/login");
+  await waitFor(() => expect(mocks.captureEvent).toHaveBeenCalledTimes(2));
+  expect(mocks.captureSignupSource).toHaveBeenCalledWith(expect.objectContaining({ search: "?utm_source=original&code=private" }));
+  expect(mocks.analyticsPath).toHaveBeenCalledWith("/");
+  expect(mocks.analyticsPath).not.toHaveBeenCalledWith("/login");
+});
 
 it("does not download the analytics SDK when public configuration disables it", async () => {
   const json = vi.fn().mockResolvedValue({});

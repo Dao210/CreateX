@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import type { CSSProperties } from "react";
 import Script from "next/script";
 import { SiteAnalytics } from "@/components/site-analytics";
 import { Inter, Geist_Mono, Source_Serif_4 } from "next/font/google";
@@ -27,6 +28,7 @@ import "./globals.css";
 // blockquote rendered as browser-synthesized oblique. Keep in sync with desktop's
 // `@fontsource-variable/inter/wght-italic.css` import.
 const inter = Inter({
+  preload: false,
   subsets: ["latin"],
   style: ["normal", "italic"],
   variable: "--font-inter",
@@ -132,6 +134,7 @@ export default async function RootLayout({
       lang={HTML_LANG[locale]}
       suppressHydrationWarning
       className={cn("antialiased font-sans h-full", inter.variable, geistMono.variable, sourceSerif.variable)}
+      style={{ "--font-inter-fallback": inter.style.fontFamily.split(",").slice(1).join(",") } as CSSProperties}
     >
       <body className="h-full overflow-hidden">
         {/*

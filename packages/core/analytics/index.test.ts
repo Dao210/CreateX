@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock posthog-js before importing the module under test so the module's
@@ -39,6 +40,22 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+});
+
+describe("deferred signup attribution", () => {
+  it("uses the original entry after navigation and keeps only the referrer origin", async () => {
+    vi.stubGlobal("window", { location: { search: "?utm_source=later", origin: "https://weavea.world" } });
+    const document = { cookie: "", referrer: "" };
+    vi.stubGlobal("document", document);
+    const { analytics } = await loadModule();
+    analytics.captureSignupSource({ search: "?utm_source=original&code=private", referrer: "https://example.com/callback?code=private", origin: "https://weavea.world" });
+    const payload = decodeURIComponent(document.cookie.split(";")[0]!.split("=")[1]!);
+    expect(JSON.parse(payload)).toEqual({ utm_source: "original", referrer_origin: "https://example.com" });
+    expect(payload).not.toContain("private");
+    const first = document.cookie;
+    analytics.captureSignupSource({ search: "?utm_source=overwrite", referrer: "", origin: "https://weavea.world" });
+    expect(document.cookie).toBe(first);
+  });
 });
 
 describe("initAnalytics super-properties", () => {

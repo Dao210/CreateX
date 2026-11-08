@@ -1,15 +1,25 @@
-@import "tailwindcss";
-@import "tw-animate-css";
-@import "shadcn/tailwind.css";
+@import "tailwindcss" source(none);
 @import "../../../packages/ui/styles/tokens.css";
 @import "../../../packages/ui/styles/base.css";
 @import "./custom.css";
 
 @custom-variant dark (&:is(.dark *));
 
-@source "../../../packages/ui/**/*.{ts,tsx}";
-@source "../../../packages/core/**/*.{ts,tsx}";
-@source "../../../packages/views/**/*.{ts,tsx}";
+/* Public routes share only their own utilities; application layouts add the rest. */
+@source "./layout.tsx";
+@source "./(landing)/layout.tsx";
+@source "./not-found.tsx";
+@source "../features/play";
+@source "../features/reach/components/marketing-chrome.tsx";
+@source "../features/reach/components/about-page.tsx";
+
+/* Use next/font's metric-adjusted local faces while the first video buffers. */
+html:has([data-gameplay]):not([data-gameplay-ready]) {
+  --font-inter: var(--font-inter-fallback);
+}
+html:has([data-gameplay]):not([data-gameplay-ready]) .landing-light {
+  --font-instrument-serif: var(--font-instrument-fallback);
+}
 
 /* Font stack. `--font-inter` is the next/font Inter family (+ its synthetic
    size-adjusted fallback), set on <html> by inter.variable in app/layout.tsx.

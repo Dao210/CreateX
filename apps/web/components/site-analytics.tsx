@@ -1,28 +1,17 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
-import { parseWithFallback } from "@auro/core/api/schema";
-import { AnalyticsPublicConfigSchema } from "@auro/core/analytics/config";
+import type { SignupSourceContext } from "@auro/core/analytics";
 
 type Analytics = typeof import("@auro/core/analytics");
 let boot: Promise<Analytics | null> | null = null;
 let lastRoute: string | null = null;
 
-function loadAnalytics(): Promise<Analytics | null> {
+function loadAnalytics(entry: SignupSourceContext): Promise<Analytics | null> {
   if (!boot) {
-    boot = fetch("/api/config", { credentials: "same-origin", signal: AbortSignal.timeout(8000) })
-      .then(response => response.ok ? response.json() : null)
-      .then(async raw => {
-        const config = parseWithFallback(raw, AnalyticsPublicConfigSchema, null as {
-          posthog_key?: string; posthog_host?: string; analytics_environment?: string;
-        } | null, { endpoint: "/api/config:analytics", redact: true });
-        if (!config?.posthog_key) return null;
-        const analytics = await import("@auro/core/analytics");
-        analytics.captureSignupSource();
-        analytics.initAnalytics({ key: config.posthog_key, host: config.posthog_host ?? "", environment: config.analytics_environment });
-        return analytics;
-      }).catch(() => { boot = null; return null; });
+    boot = import("./load-site-analytics").then(module => module.loadSiteAnalytics(entry))
+      .catch(() => { boot = null; return null; });
   }
   return boot;
 }
@@ -30,25 +19,41 @@ function loadAnalytics(): Promise<Analytics | null> {
 /** Marketing and application routes share identity without application providers. */
 export function SiteAnalytics() {
   const pathname = usePathname();
+  const entry = useRef<SignupSourceContext | null>(null);
+  const flushPageview = useRef<(() => void) | null>(null);
   useEffect(() => {
     if (!pathname) return;
+    entry.current ??= { search: window.location.search, referrer: document.referrer, origin: window.location.origin };
+    const source = entry.current;
+    const language = document.documentElement.lang;
     const pageview = () => {
       if (lastRoute === pathname) return;
       lastRoute = pathname;
-      void loadAnalytics().then(analytics => {
+      void loadAnalytics(source).then(analytics => {
         if (!analytics) { if (lastRoute === pathname) lastRoute = null; return; }
         const route = analytics.analyticsPath(pathname);
         analytics.captureEvent("$pageview", {
           $current_url: `${window.location.origin}${route}`,
           $pathname: route,
           page: route,
-          language: document.documentElement.lang,
+          language,
         });
       });
     };
-    pageview();
+    flushPageview.current = pageview;
+    const video = pathname === "/" ? document.querySelector("[data-gameplay] video") : null;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const ready = () => { clearTimeout(timer); video?.removeEventListener("playing", ready); pageview(); };
+    if (video instanceof HTMLVideoElement && video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      video.addEventListener("playing", ready, { once: true });
+      timer = setTimeout(ready, 4000);
+    } else pageview();
     window.addEventListener("online", pageview);
-    return () => window.removeEventListener("online", pageview);
+    return () => {
+      clearTimeout(timer); video?.removeEventListener("playing", ready); window.removeEventListener("online", pageview);
+      if (window.location.pathname !== pathname) pageview();
+      flushPageview.current = null;
+    };
   }, [pathname]);
 
   useEffect(() => {
@@ -56,8 +61,13 @@ export function SiteAnalytics() {
       const element = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-analytics-cta]") : null;
       const cta = element?.dataset.analyticsCta;
       if (!cta) return;
-      void loadAnalytics().then(analytics => analytics?.captureEvent("cta_clicked", {
-        cta, page: analytics.analyticsPath(window.location.pathname), language: document.documentElement.lang,
+      flushPageview.current?.();
+      const source = entry.current;
+      if (!source) return;
+      const pathname = window.location.pathname;
+      const language = document.documentElement.lang;
+      void loadAnalytics(source).then(analytics => analytics?.captureEvent("cta_clicked", {
+        cta, page: analytics.analyticsPath(pathname), language,
       }, { sendInstantly: true }));
     };
     document.addEventListener("click", click);

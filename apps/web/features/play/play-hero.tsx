@@ -34,7 +34,7 @@ export function PlayHero({ locale, copy }: { locale: SupportedLocale; copy: Play
       </div>
       <div id={`${id}-scene`} role="tabpanel" aria-labelledby={`${id}-${selected}`} className={styles.scene} tabIndex={0}>
         <div className={styles.sceneTop}><span className={styles.sceneMark} aria-hidden="true" /><span>{selected === "resident" ? copy.accelerated : copy.recorded}</span><span className={styles.sceneCount} aria-hidden="true">0{GAME_IDS.indexOf(selected) + 1} / 03</span></div>
-        <GameplayVideo key={selected} media={media[selected]} label={game.sceneLabel} copy={copy} />
+        <GameplayVideo key={selected} game={selected} media={media[selected]} label={game.sceneLabel} copy={copy} />
         <div className={styles.specimen}><span>{copy.example}</span><div><strong>{game.example}</strong><p>{game.exampleDetail}</p></div></div>
       </div>
       <div className={styles.heroActions}>

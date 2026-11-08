@@ -42,6 +42,10 @@ const nextConfig: NextConfig = {
   distDir: process.env.AURO_WEB_DIST_DIR || ".next",
   ...(process.env.STANDALONE === "true" ? { output: "standalone" as const } : {}),
   transpilePackages: ["@auro/core", "@auro/ui", "@auro/views"],
+  webpack(config) {
+    config.module.rules.push({ resourceQuery: /^\?source$/, type: "asset/source" });
+    return config;
+  },
   ...(allowedDevOrigins && allowedDevOrigins.length > 0
     ? { allowedDevOrigins }
     : {}),

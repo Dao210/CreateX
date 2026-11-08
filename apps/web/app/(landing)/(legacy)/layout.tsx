@@ -1,6 +1,7 @@
 import { ApplicationShell } from "@/components/application-shell";
 import { LocaleProvider } from "@/features/landing/i18n";
 import { getRequestLocale } from "@/lib/request-locale";
+import "../../application.css";
 
 export default async function LegacyLandingLayout({ children }: { children: React.ReactNode }) {
   const locale = await getRequestLocale();

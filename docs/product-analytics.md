@@ -34,6 +34,10 @@ mount application providers, authentication or chat stores. Login identifies
 the browser with the user UUID; backend events use the same UUID. Logout resets
 the identity. Attribution is captured on the first public visit. The existing
 signup-source cookie supplies first-touch attribution to server signup events.
+On the gameplay homepage, config validation and SDK loading wait for playback,
+with a bounded timeout when autoplay does not start. An early tagged CTA flushes
+the pending pageview immediately. Entry attribution and click context are saved
+before asynchronous loading so navigation does not replace their source URL.
 
 ## Event contract
 

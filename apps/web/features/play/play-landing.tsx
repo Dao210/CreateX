@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Plus } from "lucide-react";
 import type { SupportedLocale } from "@auro/core/i18n";
@@ -7,6 +6,7 @@ import { creationLoginHref } from "@/lib/creation-entry";
 import { MarketingFooter, MarketingHeader } from "@/features/reach/components/marketing-chrome";
 import { playCopyForLocale } from "./copy";
 import { PlayHero } from "./play-hero";
+import gameplayBootstrap from "./gameplay-runtime.js?source";
 import { GAME_IDS } from "./types";
 import media from "./media.json";
 import styles from "./play-landing.module.css";
@@ -19,6 +19,7 @@ export function PlayLanding({ locale }: { locale: SupportedLocale }) {
       <section className={styles.hero}>
         <MarketingHeader locale={locale} />
         <div className={styles.container}><PlayHero locale={locale} copy={copy} /></div>
+        <script dangerouslySetInnerHTML={{ __html: gameplayBootstrap }} />
       </section>
       <section id="create" className={styles.creations} aria-labelledby="creations-title">
         <div className={styles.container}>
@@ -26,7 +27,10 @@ export function PlayLanding({ locale }: { locale: SupportedLocale }) {
           <div className={styles.creationGrid}>{GAME_IDS.map((key, index) => {
             const game = copy.games[key];
             return <article key={key} className={styles.creationCard} data-game={key}>
-              <div className={styles.cardPicture}><Image src={media[key].poster} width={960} height={600} alt={game.sceneLabel} loading="lazy" unoptimized /><span className={styles.cardMode}>{game.mode}</span></div>
+              <div className={styles.cardPicture}>
+                {/* eslint-disable-next-line @next/next/no-img-element -- The recording pipeline precompresses these hashed WebP stills. */}
+                <img src={media[key].poster} width={960} height={600} alt={game.sceneLabel} decoding="async" loading="lazy" fetchPriority="low" /><span className={styles.cardMode}>{game.mode}</span>
+              </div>
               <div className={styles.cardBody}><p className={styles.cardLabel}><span aria-hidden="true">0{index + 1}</span>{game.label}</p><h3>{game.experience}</h3><p className={styles.description}>{game.description}</p><Link href={creationLoginHref(locale, key)} prefetch={false} data-analytics-cta={`card_create_${key}`} className={styles.cardLink}>{game.action}<ArrowRight size={17} aria-hidden="true" /></Link></div>
             </article>;
           })}</div>

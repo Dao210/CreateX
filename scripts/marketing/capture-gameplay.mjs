@@ -47,12 +47,13 @@ try {
       await fetch(`/capture?kind=${kind}`, { method: 'POST', body: new Blob(chunks, { type: recorder.mimeType }) }); stream.getTracks().forEach(track => track.stop());
     }, kind);
     await page.close();
-    const mp4 = resolve(temp, `${kind}.mp4`), still = resolve(temp, `${kind}.png`), poster = resolve(temp, `${kind}.webp`);
+    const mp4 = resolve(temp, `${kind}.mp4`), mobile = resolve(temp, `${kind}.mobile.mp4`), still = resolve(temp, `${kind}.png`), poster = resolve(temp, `${kind}.webp`);
     execFileSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-y', '-i', resolve(temp, `${kind}.webm`), '-an', '-vf', 'fps=24', '-c:v', 'libx264', '-preset', 'slow', '-crf', '27', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', mp4]);
+    execFileSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-y', '-i', resolve(temp, `${kind}.webm`), '-an', '-vf', 'fps=24,scale=640:400', '-c:v', 'libx264', '-preset', 'slow', '-crf', '27', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', mobile]);
     execFileSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-y', '-i', mp4, '-ss', kind === 'resident' ? '2.5' : '0.5', '-frames:v', '1', still]);
     execFileSync('cwebp', ['-quiet', '-q', '82', '-m', '6', still, '-o', poster]);
-    const asset = async (path, extension) => { const data = await readFile(path); const hash = createHash('sha256').update(data).digest('hex').slice(0, 10); const name = `${kind}.${hash}.${extension}`; await copyFile(path, resolve(output, name)); return `/media/gameplay/${name}`; };
-    manifest[kind] = { video: await asset(mp4, 'mp4'), poster: await asset(poster, 'webp'), width: 960, height: 600 };
+    const asset = async (path, extension, suffix = '') => { const data = await readFile(path); const hash = createHash('sha256').update(data).digest('hex').slice(0, 10); const name = `${kind}${suffix}.${hash}.${extension}`; await copyFile(path, resolve(output, name)); return `/media/gameplay/${name}`; };
+    manifest[kind] = { video: await asset(mp4, 'mp4'), mobileVideo: await asset(mobile, 'mp4', '.mobile'), poster: await asset(poster, 'webp'), width: 960, height: 600 };
     console.log(kind, JSON.stringify(manifest[kind]));
   }
   await writeFile(resolve(root, 'apps/web/features/play/media.json'), JSON.stringify(manifest, null, 2) + '\n');
