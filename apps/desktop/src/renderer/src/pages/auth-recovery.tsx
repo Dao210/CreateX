@@ -1,6 +1,6 @@
 import { useAuthStore } from "@auro/core/auth";
 import { Button } from "@auro/ui/components/ui/button";
-import { AuroIcon } from "@auro/ui/components/common/auro-icon";
+import { BrandMark } from "@auro/ui/components/common/brand-mark";
 import { useT } from "@auro/views/i18n";
 import { DragStrip } from "@auro/views/platform";
 
@@ -21,7 +21,7 @@ export function DesktopAuthRecoveryPage({
       <DragStrip />
       <div className="flex flex-1 items-center justify-center p-8">
         <div className="flex max-w-sm flex-col items-center text-center">
-          <AuroIcon bordered size="lg" />
+          <BrandMark className="h-8 w-auto" />
           <h1 className="mt-6 text-title font-semibold">
             {t(($) => $.desktop.recovery.title)}
           </h1>

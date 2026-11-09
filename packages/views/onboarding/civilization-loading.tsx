@@ -6,7 +6,7 @@ import { matchLocale } from "@auro/core/i18n";
 import { useCivilizationOnboarding } from "@auro/core/onboarding";
 import { useAuthStore } from "@auro/core/auth";
 import type { Workspace } from "@auro/core/types";
-import { AuroIcon } from "@auro/ui/components/common/auro-icon";
+import { BrandMark } from "@auro/ui/components/common/brand-mark";
 import { Button } from "@auro/ui/components/ui/button";
 import { DragStrip } from "../platform";
 import { useT } from "../i18n";
@@ -47,7 +47,7 @@ export function CivilizationLoading({ onComplete }: { onComplete: (workspace: Wo
       <DragStrip />
       <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_50%_42%,var(--muted),transparent_65%)]" />
       <header className="flex items-center justify-between gap-4 px-6 sm:px-10">
-        <AuroIcon noSpin className="size-6" aria-hidden />
+        <BrandMark className="h-6 w-auto shrink-0" />
         <OnboardingLogoutButton inline />
       </header>
       <main className="flex flex-1 flex-col items-center justify-center px-6 py-12 text-center sm:py-16">

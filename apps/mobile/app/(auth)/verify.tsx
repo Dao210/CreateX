@@ -7,7 +7,7 @@ import { Text } from "@/components/ui/text";
 import { OtpInput, type OtpInputRef } from "@/components/ui/otp-input";
 import { TextField } from "@/components/ui/text-field";
 import { Button } from "@/components/ui/button";
-import { AuroLogo } from "@/components/brand/auro-logo";
+import { BrandMark } from "@/components/brand/brand-mark";
 import { useAuthStore } from "@/data/auth-store";
 import { i18n, useT } from "@/lib/i18n";
 import { mapAuthError } from "@/lib/auth-error";
@@ -86,7 +86,7 @@ export default function Verify() {
       >
         <ScrollView contentContainerClassName="grow justify-center px-6 py-8 gap-6" keyboardShouldPersistTaps="handled">
           <View className="items-center gap-3">
-            <AuroLogo size={32} />
+            <BrandMark size={32} />
             <View className="gap-1 items-center">
               <Text className="text-2xl font-semibold text-foreground">
                 {settingPassword ? t(setup === "signup" ? "password.signup_title" : "password.reset_title") : t("verify.enter_title")}

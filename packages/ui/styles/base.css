@@ -14,17 +14,6 @@
   color: var(--shiki-dark) !important;
 }
 
-/* Auro icon: entrance spin animation */
-@keyframes entrance-spin {
-  0% { transform: rotate(0deg); opacity: 0; }
-  50% { opacity: 1; }
-  100% { transform: rotate(360deg); opacity: 1; }
-}
-
-.animate-entrance-spin {
-  animation: entrance-spin 0.6s ease-out forwards;
-}
-
 /* Onboarding: step / phase entry — 400ms fade.
  * Applied on mount so every new step (and intra-step phase switch, via
  * key=phase remount) plays once. `both` fill-mode commits the `from`
@@ -288,7 +277,6 @@ html[data-dnd-dragging="true"] * {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .animate-entrance-spin,
   .animate-onboarding-enter,
   .animate-welcome-emoji-pop,
   .animate-completion-badge,

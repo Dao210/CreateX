@@ -1,6 +1,6 @@
 import { LoginPage } from "@auro/views/auth";
 import { DragStrip } from "@auro/views/platform";
-import { AuroIcon } from "@auro/ui/components/common/auro-icon";
+import { BrandMark } from "@auro/ui/components/common/brand-mark";
 
 function requireRuntimeAppUrl(): string {
   const runtimeConfig = window.desktopAPI.runtimeConfig;
@@ -26,7 +26,7 @@ export function DesktopLoginPage() {
     <div className="flex h-screen flex-col">
       <DragStrip />
       <LoginPage
-        logo={<AuroIcon bordered size="lg" />}
+        logo={<BrandMark className="h-8 w-auto" />}
         onSuccess={() => {
           // Auth store update triggers AppContent re-render → shows DesktopShell.
           // Initial workspace navigation happens in routes.tsx via IndexRedirect.

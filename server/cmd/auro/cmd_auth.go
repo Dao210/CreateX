@@ -525,7 +525,7 @@ const callbackSuccessHTML = `<!DOCTYPE html>
   .icon-wrap { width: 48px; height: 48px; margin: 0 auto 24px; background: var(--accent-bg); border-radius: 50%; display: flex; align-items: center; justify-content: center; }
   .icon-wrap svg { width: 24px; height: 24px; color: var(--accent); }
   .brand { display: flex; align-items: center; justify-content: center; gap: 6px; margin-bottom: 8px; }
-  .asterisk { display: inline-block; width: 14px; height: 14px; background: var(--fg); clip-path: polygon(45% 62.1%,45% 100%,55% 100%,55% 62.1%,81.8% 88.9%,88.9% 81.8%,62.1% 55%,100% 55%,100% 45%,62.1% 45%,88.9% 18.2%,81.8% 11.1%,55% 37.9%,55% 0%,45% 0%,45% 37.9%,18.2% 11.1%,11.1% 18.2%,37.9% 45%,0% 45%,0% 55%,37.9% 55%,11.1% 81.8%,18.2% 88.9%); }
+  .brand-mark { display: block; width: 40px; height: auto; }
   h1 { font-size: 20px; font-weight: 600; margin-bottom: 8px; }
   p { font-size: 14px; color: var(--fg2); line-height: 1.5; }
   .hint { margin-top: 24px; font-size: 13px; color: var(--fg2); opacity: 0.7; }
@@ -536,7 +536,7 @@ const callbackSuccessHTML = `<!DOCTYPE html>
     <div class="icon-wrap">
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
     </div>
-    <div class="brand"><span class="asterisk"></span></div>
+    <div class="brand"><svg class="brand-mark" viewBox="0 0 322.41 191.11" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M70.7 186C39.3 179.8 12.8 154.5 3.5 122C0 109.7 0.2 88.5 4.1 76C19.5 25.7 72.7 0 123 18.6C131.2 21.6 142.7 28.1 143.4 30C143.6 30.6 138.1 36.3 131.3 42.7L118.9 54.4L112.1 51.5C75 36 35.7 61.2 35.7 100.5C35.7 116 41.3 128.4 53.3 139.5C72.5 157.2 99.9 157.7 122.5 140.7C127.6 136.9 132.9 131.8 176.2 89.5C201.4 64.8 204.4 63 219.2 63C228.7 63 229.7 63.2 235.9 66.4C239.6 68.2 243.4 70.6 244.4 71.7C246.1 73.6 246 73.8 240.7 78.8C237.6 81.6 221.2 97.5 204.2 114C149.6 167 147.9 168.6 134.5 175.9C116.5 185.8 90.4 189.9 70.7 186ZM207.7 186.4C194.8 184.9 177.3 178.5 168.4 172.2L165.5 170.2L177.7 158.6C184.5 152.2 190.3 146.8 190.8 146.7C191.2 146.5 194.5 147.7 198 149.4C232.4 165.8 272.7 139.4 272.7 100.5C272.7 75.6 254.3 52.5 230.5 47.4C223.2 45.8 209.4 46.8 202.5 49.4C192.1 53.4 190.5 54.8 143.1 101.6C110.8 133.4 105.2 137.1 88.7 136.9C80.1 136.9 73 134.6 67.2 130.2C64.7 128.3 59.7 133.5 116.3 78C153.6 41.5 164.2 31.6 171.5 26.7C193.4 12.3 222.2 8.5 247.7 16.7C297.3 32.5 322.4 91.1 299.7 138C283.4 171.5 246.2 191.1 207.7 186.4Z"/></svg></div>
     <h1>Authentication successful</h1>
     <p>You can close this tab and return to the terminal.</p>
     <p class="hint">Your CLI session is now authenticated.</p>

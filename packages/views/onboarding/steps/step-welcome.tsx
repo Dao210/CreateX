@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { ArrowRight, Loader2 } from "lucide-react";
 import { Button } from "@auro/ui/components/ui/button";
-import { AuroIcon } from "@auro/ui/components/common/auro-icon";
+import { BrandMark } from "@auro/ui/components/common/brand-mark";
 import { DragStrip } from "@auro/views/platform";
 import { useT } from "../../i18n";
 
@@ -61,7 +61,7 @@ export function StepWelcome({
         <div className="flex flex-1 flex-col justify-center px-6 pb-12 sm:px-10 md:px-20 lg:px-20 xl:px-24">
           <div className="flex w-full max-w-[540px] flex-col gap-8">
             <div className="flex items-center gap-2.5">
-              <AuroIcon className="size-5 text-foreground" noSpin />
+              <BrandMark className="h-5 w-auto shrink-0 text-foreground" />
               <span className="font-serif text-title-lg font-medium tracking-tight">
                 {t(($) => $.welcome.wordmark)}
               </span>

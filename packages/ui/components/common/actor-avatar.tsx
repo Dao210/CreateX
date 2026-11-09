@@ -9,7 +9,7 @@ import {
   type AvatarSize,
 } from "@auro/ui/lib/avatar-size";
 import { parseAvatarEmoji } from "@auro/ui/lib/avatar-emoji";
-import { AuroIcon } from "./auro-icon";
+import { BrandMark } from "./brand-mark";
 
 interface ActorAvatarProps {
   name: string;
@@ -73,7 +73,7 @@ function ActorAvatar({
           onError={() => setImgError(true)}
         />
       ) : isSystem ? (
-        <AuroIcon noSpin style={{ width: px * 0.55, height: px * 0.55 }} />
+        <BrandMark style={{ width: px * 0.7, height: px * 0.7 }} />
       ) : isAgent ? (
         <Bot style={{ width: px * 0.55, height: px * 0.55 }} />
       ) : isSquad ? (

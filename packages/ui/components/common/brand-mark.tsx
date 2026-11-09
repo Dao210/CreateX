@@ -5,14 +5,16 @@
  * the header, the footer and the favicon all come from one outline.
  * `currentColor` keeps a single asset usable on the dark marketing chrome and on
  * light surfaces; the tab icon reuses the same path in `apps/web/public/favicon.svg`.
+ * Native and standalone CLI adapters are listed in `docs/brand-and-seo.md`.
  */
-export function BrandMark({ className }: { className?: string }) {
+export function BrandMark({ className, ...props }: React.ComponentProps<"svg">) {
   return (
     <svg
       viewBox="0 0 322.41 191.11"
       aria-hidden="true"
       className={className}
       fill="currentColor"
+      {...props}
     >
       <path
         fillRule="evenodd"

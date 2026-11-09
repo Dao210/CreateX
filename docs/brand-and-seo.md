@@ -14,6 +14,24 @@ world changed by player creations. Distinguish the present simulation preview
 from the longer-term virtual civilization direction. Do not invent player
 counts, pricing, ratings, release dates or features.
 
+## Brand artwork
+
+Web and Desktop use `BrandMark` from
+`packages/ui/components/common/brand-mark.tsx`, including world preparation,
+onboarding, authentication and system avatars.
+
+Mobile owns its native SVG adapter in
+`apps/mobile/components/brand/brand-mark.tsx`; the standalone CLI authentication
+callback embeds the same outline in `server/cmd/auro/cmd_auth.go`. Keep their
+viewBox and path aligned with `BrandMark` when changing the artwork. Use
+`currentColor` on Web/Desktop and the local theme foreground on Mobile.
+
+The favicon and PWA assets already carry this outline; their rasterisation
+commands are in `apps/web/app/manifest.ts`. Mobile's full-bleed, opaque
+`apps/mobile/assets/icon.png` is rasterised at 1024 × 1024 from
+`apps/web/public/icons/icon.svg`, without desktop padding. Native icon changes
+require a new app build; a Web deployment does not update installed native apps.
+
 ## Worlds, creations and accounts
 
 The application calls a workspace a **world**: 世界 / World / Monde / ワールド / 세계.

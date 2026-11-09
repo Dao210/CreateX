@@ -8,7 +8,7 @@ import {
 } from "@auro/core/onboarding";
 import { cn } from "@auro/ui/lib/utils";
 import { Button } from "@auro/ui/components/ui/button";
-import { AuroIcon } from "@auro/ui/components/common/auro-icon";
+import { BrandMark } from "@auro/ui/components/common/brand-mark";
 import { DotSphere } from "@auro/ui/components/ui/dot-sphere";
 import {
   Stepper,
@@ -164,7 +164,7 @@ export function StepSidebar({
         <div className="relative flex min-h-0 flex-1 flex-col pt-5">
           <header className="flex min-h-9 shrink-0 items-center justify-between gap-3">
             <span className="flex min-w-0 items-center gap-2">
-              <AuroIcon className="size-5 shrink-0 text-foreground" noSpin />
+              <BrandMark className="h-5 w-auto shrink-0 text-foreground" />
               <span className="truncate text-label font-medium text-foreground">
                 {t(($) => $.step_nav.wordmark)}
               </span>
