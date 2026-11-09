@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Copy, Crosshair, Maximize, Minimize, Pause, Play, RotateCcw, Waves, X } from "lucide-react";
 import { useAuthStore } from "@auro/core/auth";
 import { useCurrentWorkspace, useWorkspacePaths } from "@auro/core/paths";
-import { FISH_EXAMPLES, fishOceanOptions, publicFishOceanOptions, useFishActions, type FishCharacter, type FishResident, type FishSpec, type PublicFishResident } from "@auro/core/fish";
+import { buildFishMCPContext, FISH_EXAMPLES, fishOceanOptions, publicFishOceanOptions, useFishActions, type FishCharacter, type FishResident, type FishSpec, type PublicFishResident } from "@auro/core/fish";
 import type { StorageAdapter } from "@auro/core/types";
 import { Button, buttonVariants } from "@auro/ui/components/ui/button";
 import { GameAccessBoundary } from "../admin/game-access-boundary";
@@ -14,6 +14,7 @@ import { useT } from "../i18n";
 import { FishCreateDialog } from "./fish-create-dialog";
 import { previewResident } from "./fish-editor";
 import { FishThumbnail } from "./fish-thumbnail";
+import { AIConnectionReturn } from "../common/ai-connection-return";
 
 const Scene = lazy(() => import("./fish-scene"));
 const EMPTY_RESIDENTS: FishResident[] = [];
@@ -39,6 +40,7 @@ export function FishPage({ storage }: { storage: StorageAdapter }) {
 
 function OceanContent({ storage, workspace, userId }: { storage: StorageAdapter; workspace: { id: string; slug: string; name: string }; userId: string }) {
   const { t } = useT("fish");
+  const { t: common } = useT("common");
   const navigation = useNavigation(), paths = useWorkspacePaths();
   const oceanId = navigation.searchParams.get("ocean") ?? "";
   const residentId = navigation.searchParams.get("resident") ?? "";
@@ -185,6 +187,7 @@ function OceanContent({ storage, workspace, userId }: { storage: StorageAdapter;
   const canRelease = releaseCandidate && releaseCandidate.ownerId === userId && !releaseCandidate.archived && !previewQuery.data?.archived && !publicQuery.data?.focus;
   const canApply = selected && selectedOwn && draft && !draft.archived && selected.fish.revision !== draft.revision;
   const selectionMissing = !activeQuery.isPending && !activeQuery.isError && ((fishId && previewQuery.isError && !selectedFish) || (residentId && !selected));
+  const connection = buildFishMCPContext({ appUrl: navigation.getShareableUrl("/"), serverUrl: api.getBaseUrl(), workspaceId: workspace.id, workspaceSlug: workspace.slug, workspaceName: workspace.name, userId });
 
   return <div className="fish-page" ref={root}>
     <header className="fish-header">
@@ -195,6 +198,7 @@ function OceanContent({ storage, workspace, userId }: { storage: StorageAdapter;
         <FishCreateDialog workspace={workspace} userId={userId} onSave={save} pending={busy} />
       </div>
     </header>
+    <AIConnectionReturn source="fish-connect" className="mx-4 mb-3" instructions={`${common($ => $.ai_tools.continue_prompt)}\n\n${JSON.stringify(connection, null, 2)}`} />
     {error && <div className="fish-action-error" role="alert">
       <span>{t($ => $.error)}</span>
       <Button variant="outline" size="xs" onClick={() => { if (retry.current) void run(retry.current); }}>{t($ => $.retry)}</Button>

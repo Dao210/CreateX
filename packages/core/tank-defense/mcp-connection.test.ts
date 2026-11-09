@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import { buildTankMCPContext, buildTankMCPManualConfig } from "./mcp-connection";
+import { buildTankMCPContext, buildTankMCPInstructions, buildTankMCPManualConfig } from "./mcp-connection";
 
 const input = {
   appUrl: "https://play.example.test/acme/tanks",
@@ -12,6 +12,12 @@ const input = {
 };
 
 describe("tank MCP connection instructions", () => {
+  it("keeps connection-only and explicit creative requests distinct with the full account context", () => {
+    const context = buildTankMCPContext(input);
+    const parse = (instructions: string) => JSON.parse(instructions.split("\n\n")[1]!);
+    expect(parse(buildTankMCPInstructions(context, "Connect only"))).toEqual(context);
+    expect(parse(buildTankMCPInstructions(context, "Connect and continue", "Create a green tank"))).toEqual({ ...context, task: "Create a green tank" });
+  });
   it("distributes the guide and connector from the Web origin while keeping API and account identity", () => {
     const info = buildTankMCPContext(input);
     expect(info.setup_url).toBe("https://play.example.test/.well-known/tanks-mcp/setup.md");

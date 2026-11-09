@@ -1,22 +1,14 @@
 "use client";
 
-import { Cable, X } from "lucide-react";
-import { Button } from "@auro/ui/components/ui/button";
+import { api } from "@auro/core/api";
+import { buildTankMCPContext, buildTankMCPInstructions } from "@auro/core/tank-defense";
 import { useNavigation } from "../navigation";
 import { useT } from "../i18n";
+import { AIConnectionReturn } from "../common/ai-connection-return";
 
-export function TankConnectionReturn() {
+export function TankConnectionReturn({ workspace, userId }: { workspace: { id: string; slug: string; name?: string }; userId: string }) {
   const navigation = useNavigation();
-  const { t } = useT("tanks");
-  if (navigation.searchParams.get("from") !== "tank-connect") return null;
-  const dismiss = () => {
-    const params = new URLSearchParams(navigation.searchParams);
-    params.delete("from");
-    navigation.replace(`${navigation.pathname}${params.size ? `?${params}` : ""}${navigation.hash}`);
-  };
-  return <aside className="tank-connection-return" role="status" aria-label={t($ => $.garage.connect)}>
-    <Cable className="size-4 shrink-0" aria-hidden />
-    <p>{t($ => $.garage.return_hint)}</p>
-    <Button variant="ghost" size="icon-sm" aria-label={t($ => $.garage.dismiss_return_hint)} onClick={dismiss}><X /></Button>
-  </aside>;
+  const { t } = useT("common");
+  const context = buildTankMCPContext({ appUrl: navigation.getShareableUrl("/"), serverUrl: api.getBaseUrl(), workspaceId: workspace.id, workspaceSlug: workspace.slug, workspaceName: workspace.name, userId });
+  return <AIConnectionReturn source="tank-connect" className="tank-connection-return" instructions={buildTankMCPInstructions(context, t($ => $.ai_tools.continue_prompt))} />;
 }

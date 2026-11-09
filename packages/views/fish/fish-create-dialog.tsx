@@ -1,7 +1,7 @@
 "use client";
 import { useCreationEntry } from "../common/use-creation-entry";
 import { useId, useState } from "react";
-import { Cable, Check, Copy } from "lucide-react";
+import { Cable } from "lucide-react";
 import { api } from "@auro/core/api";
 import { buildFishCreationInstructions, buildFishMCPContext, FISH_EXAMPLES, FishSpecSchema, type FishSpec } from "@auro/core/fish";
 import { Button } from "@auro/ui/components/ui/button";
@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { useNavigation } from "../navigation";
 import { useT } from "../i18n";
 import { FishDesignForm } from "./fish-editor";
+import { AIInstructionCopy } from "../common/ai-instruction-copy";
 
 export function FishCreateDialog({ workspace, userId, onSave, pending }: {
   workspace: { id: string; slug: string; name: string };
@@ -26,12 +27,9 @@ export function FishCreateDialog({ workspace, userId, onSave, pending }: {
   const [description, setDescription] = useState("");
   const [releaseToPublic, setReleaseToPublic] = useState(true);
   const [spec, setSpec] = useState<FishSpec>({ ...FISH_EXAMPLES[0]!, name: t($ => $.azure) });
-  const [copiedInstructions, setCopiedInstructions] = useState("");
-  const [copyError, setCopyError] = useState(false);
   const context = buildFishMCPContext({ appUrl: navigation.getShareableUrl("/"), serverUrl: api.getBaseUrl(), workspaceId: workspace.id, workspaceSlug: workspace.slug, workspaceName: workspace.name, userId });
   const instructions = buildFishCreationInstructions(context, t($ => $.create_prompt), { name, description, releaseToPublic });
   const validName = !name.trim() || FishSpecSchema.shape.name.safeParse(name.trim()).success;
-  const copied = copiedInstructions === instructions;
 
   return <Dialog open={open} onOpenChange={value => { if (!pending) setOpen(value); }}>
     <DialogTrigger render={<Button size="sm" />}>{t($ => $.create)}</DialogTrigger>
@@ -60,18 +58,7 @@ export function FishCreateDialog({ workspace, userId, onSave, pending }: {
           <label className="fish-check"><input type="checkbox" checked={releaseToPublic} aria-describedby={visibilityId} onChange={e => setReleaseToPublic(e.target.checked)} />{t($ => $.create_release)}</label>
           <p id={visibilityId}>{releaseToPublic ? t($ => $.release_visibility) : t($ => $.create_private)}</p>
         </div>
-        <Button disabled={!validName} aria-describedby={connectionHelpId} onClick={async () => {
-          try {
-            await navigator.clipboard.writeText(instructions);
-            setCopiedInstructions(instructions);
-            setCopyError(false);
-          } catch { setCopyError(true); setCopiedInstructions(""); }
-        }}>{copied ? <Check aria-hidden /> : <Copy aria-hidden />}{t($ => $.copy_creation)}</Button>
-        {copied && <p role="status" className="fish-create-status">{t($ => $.creation_copied)}</p>}
-        {copyError && <>
-          <p role="alert" className="text-caption text-destructive">{t($ => $.copy_error)}</p>
-          <Textarea aria-label={t($ => $.creation_instructions)} readOnly value={instructions} onFocus={e => e.currentTarget.select()} className="fish-json" />
-        </>}
+        <AIInstructionCopy instructions={instructions} label={t($ => $.copy_creation)} instructionsLabel={t($ => $.creation_instructions)} copiedMessage={t($ => $.creation_copied)} descriptionId={connectionHelpId} disabled={!validName} />
         <div className="fish-create-alternatives">
           <Button variant="link" onClick={() => {
             setSpec({ ...spec, name: name.trim() || spec.name });

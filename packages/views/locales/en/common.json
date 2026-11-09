@@ -128,5 +128,22 @@
   },
   "navigation": {
     "open_in_new_tab": "Open in new tab"
+  },
+  "ai_tools": {
+    "copy_again": "Copy again",
+    "show_instructions": "View full instructions",
+    "full_instructions": "Full instructions",
+    "copy_error": "Copy failed. Select the text below and copy it.",
+    "paste_instructions": "Copied. Next: paste into a WorkBuddy or Codex conversation and send.",
+    "step_send": "Copy the instructions, paste into an AI conversation and send",
+    "step_authorize": "If authorization is needed, sign in with your game account",
+    "step_return": "Return to your AI tool and follow its next step",
+    "return_title": "Continue in your AI tool",
+    "return_help": "Return to the conversation where you started connecting to see the result and next step.",
+    "copy_continue": "Copy continuation instructions",
+    "paste_continue": "Return to the original AI conversation, paste and send.",
+    "new_chat_help": "Need a new conversation? Copy the full original task from your previous conversation or creation dialog.",
+    "dismiss": "Dismiss connection guidance",
+    "continue_prompt": "Continue connecting the AI tool using the connection data below and setup_url. Verify the tools in this conversation before reporting success. Resume any unfinished task in the original conversation. If the task is missing, ask for the complete original task instead of guessing its requirements or publication choice. If I need to authorize or reload tools, give me one specific next step."
   }
 }

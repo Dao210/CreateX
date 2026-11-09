@@ -128,5 +128,22 @@
   },
   "navigation": {
     "open_in_new_tab": "在新标签页打开"
+  },
+  "ai_tools": {
+    "copy_again": "再次复制",
+    "show_instructions": "查看完整指令",
+    "full_instructions": "完整指令",
+    "copy_error": "复制失败，请选中下方文字复制。",
+    "paste_instructions": "已复制。下一步：到 WorkBuddy 或 Codex 的对话中粘贴并发送。",
+    "step_send": "复制指令，粘贴到 AI 对话并发送",
+    "step_authorize": "如需授权，使用当前游戏账号登录",
+    "step_return": "回到 AI 工具，按提示继续",
+    "return_title": "回到 AI 工具继续",
+    "return_help": "请回到发起连接的对话，查看连接结果和下一步。",
+    "copy_continue": "复制继续指令",
+    "paste_continue": "回到原来的 AI 对话，粘贴并发送。",
+    "new_chat_help": "需要新对话？请从原对话或创作弹窗复制完整任务。",
+    "dismiss": "关闭接入提示",
+    "continue_prompt": "请按下方连接信息和 setup_url 继续连接 AI 工具，实际验证当前对话的工具可用后再报告完成。若原对话中有未完成的任务，请继续；若缺少原任务，请让我提供完整原始任务，不要猜测创作要求或公开选择。如需我授权或重新加载工具，请给出一个明确的下一步。"
   }
 }

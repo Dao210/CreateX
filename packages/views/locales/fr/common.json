@@ -128,5 +128,22 @@
   },
   "navigation": {
     "open_in_new_tab": "Ouvrir dans un nouvel onglet"
+  },
+  "ai_tools": {
+    "copy_again": "Copier à nouveau",
+    "show_instructions": "Voir les instructions complètes",
+    "full_instructions": "Instructions complètes",
+    "copy_error": "Échec de la copie. Sélectionnez le texte ci-dessous et copiez-le.",
+    "paste_instructions": "Copié. Ensuite, collez dans une conversation WorkBuddy ou Codex et envoyez.",
+    "step_send": "Copiez les instructions, collez-les dans une conversation IA et envoyez",
+    "step_authorize": "Si une autorisation est demandée, connectez-vous avec votre compte de jeu",
+    "step_return": "Revenez à votre outil IA et suivez ses instructions",
+    "return_title": "Continuer dans votre outil IA",
+    "return_help": "Revenez à la conversation où vous avez lancé la connexion pour consulter le résultat et la suite.",
+    "copy_continue": "Copier les instructions pour continuer",
+    "paste_continue": "Revenez à la conversation IA d’origine, collez et envoyez.",
+    "new_chat_help": "Une nouvelle conversation est nécessaire ? Copiez la tâche d’origine complète depuis la conversation précédente ou la fenêtre de création.",
+    "dismiss": "Fermer le guide de connexion",
+    "continue_prompt": "Poursuivez la connexion de l’outil IA avec les données ci-dessous et setup_url. Vérifiez réellement les outils dans cette conversation avant d’annoncer la réussite. Reprenez toute tâche inachevée de la conversation d’origine. Si la tâche manque, demandez la tâche d’origine complète au lieu de deviner les exigences ou le choix de publication. Si je dois autoriser ou recharger les outils, indiquez une seule prochaine action précise."
   }
 }

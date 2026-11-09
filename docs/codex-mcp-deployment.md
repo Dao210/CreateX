@@ -2,7 +2,7 @@
 
 Createx 当前已实现经典坦克角色协议 `tank-defense@1`。Codex 可以通过 MCP 读取目录、校验和保存角色，再创建工作区内的坦克对局。模型由 Codex 提供，服务端负责确定性校验、编译和持久化，不需要额外配置生成模型。
 
-已有可访问的站点时，优先在坦克页面点击「连接 Agent」→「复制连接指令」，粘贴给 Codex 完成安装和配置；首次连接按提示在浏览器登录。该流程使用站点自带的 Node 连接器，无需编译 Auro CLI。以下步骤用于本项目开发环境的部署与高级手动配置。
+已有可访问的站点时，优先在坦克页面点击「连接 AI 工具」→「复制连接指令」，粘贴给 Codex 完成安装和配置；首次连接按提示在浏览器登录。该流程使用站点自带的 Node 连接器，无需编译 Auro CLI。以下步骤用于本项目开发环境的部署与高级手动配置。
 
 本机使用推荐 stdio：Codex 启动本项目的 `auro tanks mcp`，CLI 使用独立 profile 的凭据访问 Createx API。API、Web 和 PostgreSQL 由项目环境单独运行，Codex 不负责启动主站。已有远程主站时，也可以使用第 6 节的 HTTP 配置。
 
@@ -34,7 +34,7 @@ make status
 | `CREATEX_API_URL` | `make status` 中 api 的 HTTP 地址，传给 CLI 的 `--server-url` |
 | `CREATEX_APP_URL` | `make status` 中 web 的地址，用于浏览器登录和游玩 |
 | `CREATEX_PROFILE` | 当前环境的独立 CLI 配置名；登录与 MCP 配置必须一致 |
-| 工作区 UUID | 从游戏页面的「连接 Agent」配置或第 3 节命令获取；不使用工作区 slug 或 UUID 短前缀 |
+| 工作区 UUID | 从游戏页面的「连接 AI 工具」配置或第 3 节命令获取；不使用工作区 slug 或 UUID 短前缀 |
 
 确认 api、web 处于 `running`，数据库可连接。若显示 `mismatch`，先核对端口所属环境并解决冲突，不要把其他 checkout 的监听进程当作本环境。工作树的数据库与端口交给现有环境脚本和 `.env.worktree` 管理，不复制其他 checkout 的 `.env`。
 
@@ -74,7 +74,7 @@ AURO_APP_URL="$CREATEX_APP_URL" \
   workspace list --full-id
 ```
 
-记录目标工作区的完整 UUID 和 slug。也可以打开 Web 的 `/{workspaceSlug}/tanks`，点击「连接 Agent」并展开「手动配置」，选择 Codex 并填写 CLI 绝对路径，复制页面生成的配置与登录命令。页面生成的 profile 通常为 `tanks-<UUID前8位>`；若采用该配置，登录时也使用它，不要混用本例的 `createx-tanks`。
+记录目标工作区的完整 UUID 和 slug。也可以打开 Web 的 `/{workspaceSlug}/tanks`，点击「连接 AI 工具」并展开「手动配置」，选择 Codex 并填写 CLI 绝对路径，复制页面生成的配置与登录命令。页面生成的 profile 通常为 `tanks-<UUID前8位>`；若采用该配置，登录时也使用它，不要混用本例的 `createx-tanks`。
 
 CLI 将凭据存入 `~/.auro/profiles/<profile>/config.json`。本机 stdio 的 Codex 配置无需填写 Token，也不会读取浏览器登录凭据。
 

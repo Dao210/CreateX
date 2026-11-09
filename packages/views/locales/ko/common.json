@@ -128,5 +128,22 @@
   },
   "navigation": {
     "open_in_new_tab": "새 탭에서 열기"
+  },
+  "ai_tools": {
+    "copy_again": "다시 복사",
+    "show_instructions": "전체 지침 보기",
+    "full_instructions": "전체 지침",
+    "copy_error": "복사하지 못했습니다. 아래 텍스트를 선택하여 복사하세요.",
+    "paste_instructions": "복사했습니다. 다음으로 WorkBuddy 또는 Codex 대화에 붙여넣고 보내세요.",
+    "step_send": "지침을 복사하여 AI 대화에 붙여넣고 보내기",
+    "step_authorize": "인증이 필요하면 게임과 같은 계정으로 로그인",
+    "step_return": "AI 도구로 돌아가 안내에 따라 계속하기",
+    "return_title": "AI 도구로 돌아가 계속하기",
+    "return_help": "연결을 시작한 대화로 돌아가 결과와 다음 단계를 확인하세요.",
+    "copy_continue": "계속하기 지침 복사",
+    "paste_continue": "원래 AI 대화로 돌아가 붙여넣고 보내세요.",
+    "new_chat_help": "새 대화가 필요한가요? 이전 대화 또는 창작 창에서 원래 작업 전체를 복사하세요.",
+    "dismiss": "연결 안내 닫기",
+    "continue_prompt": "아래 연결 정보와 setup_url에 따라 AI 도구 연결을 계속하세요. 이 대화에서 도구를 실제로 검증한 후 완료를 알리세요. 원래 대화에 미완료 작업이 있으면 계속하세요. 작업이 없으면 요구 사항이나 공개 설정을 추측하지 말고 원래 작업 전체를 요청하세요. 인증이나 도구 새로고침이 필요하면 구체적인 다음 행동을 하나씩 알려주세요."
   }
 }

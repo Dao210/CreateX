@@ -16,7 +16,7 @@ beforeEach(() => {
 
 async function open() {
   renderWithI18n(<TankMCPConnection workspace={workspace} userId={userId} />);
-  fireEvent.click(screen.getByRole("button", { name: "Connect Agent" }));
+  fireEvent.click(screen.getByRole("button", { name: "Connect AI tool" }));
   return screen.findByRole("dialog");
 }
 
@@ -40,8 +40,8 @@ it("offers one instruction-copy action without asking the user to select a clien
     user_id: userId,
   });
   expect(context).not.toHaveProperty("token");
-  expect(await screen.findByRole("button", { name: "Copied" })).toBeVisible();
-  expect(screen.getByRole("status")).toHaveTextContent("Paste the instructions");
+  expect(await screen.findByRole("button", { name: "Copy again" })).toBeVisible();
+  expect(screen.getByRole("status")).toHaveTextContent("paste into a WorkBuddy or Codex conversation and send");
 });
 
 it("reveals selectable instructions and a retry action when clipboard access fails", async () => {
@@ -53,7 +53,7 @@ it("reveals selectable instructions and a retry action when clipboard access fai
   expect(fallback).toHaveAttribute("readonly");
   expect((fallback as HTMLTextAreaElement).value).toContain(workspace.id);
   fireEvent.click(screen.getByRole("button", { name: "Copy connection instructions" }));
-  expect(await screen.findByRole("button", { name: "Copied" })).toBeVisible();
+  expect(await screen.findByRole("button", { name: "Copy again" })).toBeVisible();
   expect(screen.queryByRole("alert")).not.toBeInTheDocument();
 });
 
@@ -71,10 +71,25 @@ it("keeps manual CLI configuration behind an explicit expandable control", async
   expect(screen.getByRole("button", { name: "Copy connection instructions" })).toBeVisible();
 });
 
+it("offers explicit creative tasks with the same connection context without executing them", async () => {
+  await open();
+  fireEvent.click(screen.getByRole("button", { name: "Try creating with AI" }));
+  const tasks = await screen.findAllByRole("button", { name: "Copy task" });
+  fireEvent.click(tasks[0]!);
+  await waitFor(() => expect(writeText).toHaveBeenCalledOnce());
+  const text = writeText.mock.calls[0]![0] as string;
+  const data = JSON.parse(text.slice(text.indexOf("{\n")));
+  expect(data).toMatchObject({ workspace_id: workspace.id, user_id: userId, task: "Create a green light tank, save it and give me a play link." });
+  expect(text).not.toContain("Only connect");
+  fireEvent.click(tasks[1]!);
+  await waitFor(() => expect(writeText).toHaveBeenCalledTimes(2));
+  expect(JSON.parse(writeText.mock.calls[1]![0].split("\n\n")[1]).task).toBe("Show me my existing tanks.");
+});
+
 it("presents the simplified Chinese flow", async () => {
   renderWithI18n(<TankMCPConnection workspace={workspace} userId={userId} />, { locale: "zh-Hans" });
-  fireEvent.click(screen.getByRole("button", { name: "连接 Agent" }));
+  fireEvent.click(screen.getByRole("button", { name: "连接 AI 工具" }));
   expect(await screen.findByRole("button", { name: "复制连接指令" })).toBeVisible();
-  expect(screen.getByText("首次连接时，可能需要登录游戏所用的账号。")).toBeVisible();
+  expect(screen.getByText("如需授权，使用当前游戏账号登录")).toBeVisible();
   expect(screen.getByRole("button", { name: "手动配置" })).toHaveAttribute("aria-expanded", "false");
 });

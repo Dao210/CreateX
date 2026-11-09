@@ -30,7 +30,7 @@ it("dismisses the return guidance without changing the frozen battle or other UR
   mocks.search = `session=${session.id}&from=tank-connect&source=shared`; mocks.hash = "#loadout";
   mocks.session.mockResolvedValue(session); mocks.list.mockResolvedValue([character]);
   render(<TankGarage workspace={{ id: "workspace", slug: "acme" }} userId="user" storageKey="test" storage={storage} />);
-  expect(await screen.findByRole("status", { name: "Connect Agent" })).toHaveTextContent("Once your agent finishes connecting");
+  expect(await screen.findByRole("region", { name: "Continue in your AI tool" })).toHaveTextContent("Return to the conversation where you started connecting");
   const board = screen.getByTestId("tank-battlefield");
   expect(board).toHaveAttribute("data-phase", "ready");
   expect(mocks.create).not.toHaveBeenCalled();
@@ -38,7 +38,7 @@ it("dismisses the return guidance without changing the frozen battle or other UR
   fireEvent.click(screen.getByRole("button", { name: "Start defense" }));
   fireEvent.click(screen.getByRole("button", { name: "Dismiss connection guidance" }));
   expect(mocks.replace).toHaveBeenLastCalledWith(`/acme/tanks?session=${session.id}&source=shared#loadout`);
-  expect(screen.queryByRole("status", { name: "Connect Agent" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("region", { name: "Continue in your AI tool" })).not.toBeInTheDocument();
   expect(screen.getByTestId("tank-battlefield")).toBe(board);
   expect(board).toHaveAttribute("data-phase", "running");
   expect(board).toHaveAttribute("data-character-id", character.blueprint.id);
@@ -47,7 +47,7 @@ it("dismisses the return guidance without changing the frozen battle or other UR
 it("does not treat other navigation parameters as proof of an agent connection", async () => {
   mocks.search = "from=connected&mcp=connected";
   render(<TankGarage workspace={{ id: "workspace", slug: "acme" }} userId="user" storageKey="test" storage={storage} />);
-  expect(screen.queryByRole("status", { name: "Connect Agent" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("region", { name: "Continue in your AI tool" })).not.toBeInTheDocument();
 });
 
 it("shows a failed session without silently substituting a classic battle", async () => {

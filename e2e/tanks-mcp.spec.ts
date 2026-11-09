@@ -91,7 +91,7 @@ test(`connector authorization redirects the browser after ${method} without leak
     expect(completed.gameUrl).toBe(destination);
     await expect(page).toHaveURL(destination);
     await expect(page.getByTestId("tank-battlefield")).toHaveAttribute("data-phase", "ready", { timeout: 45000 });
-    await expect(page.getByRole("status", { name: "连接 Agent", exact: true })).toContainText("Agent 完成连接后");
+    await expect(page.getByRole("region", { name: "回到 AI 工具继续", exact: true })).toContainText("请回到发起连接的对话");
     expect(new URL(page.url()).searchParams.has("token")).toBe(false);
     expect(new URL(page.url()).searchParams.has("state")).toBe(false);
     expect(navigationHeaders.length).toBeGreaterThan(0);
@@ -142,7 +142,18 @@ test("MCP creates a real playable tank and later edits cannot alter its frozen s
   await expect(board).toHaveAttribute("data-character-id", `${character.id}@1`); await expect(board).toHaveAttribute("data-player-speed", "106");
   await page.getByRole("button", { name: "开始守卫", exact: true }).click();
   await page.screenshot({ path: "test-results/tanks/tank-mcp-character.png", fullPage: true });
-  await page.getByRole("button", { name: "连接 Agent", exact: true }).click();
+  await page.getByRole("button", { name: "连接 AI 工具", exact: true }).click();
+  const connectionDialog = page.getByRole("dialog");
+  await expect(connectionDialog).toContainText("复制指令，粘贴到 AI 对话并发送");
+  await expect(connectionDialog.getByRole("button", { name: "手动配置", exact: true })).toHaveAttribute("aria-expanded", "false");
+  await page.screenshot({ path: "test-results/tanks/connection-dialog.png", fullPage: true });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await connectionDialog.getByRole("button", { name: "试试让 AI 创造", exact: true }).click();
+  await expect(connectionDialog.getByText("创造一辆绿色轻型坦克，保存并给我游玩链接。", { exact: true })).toBeVisible();
+  expect(await connectionDialog.evaluate(node => node.scrollWidth <= node.clientWidth)).toBe(true);
+  await page.screenshot({ path: "test-results/tanks/connection-dialog-mobile.png", fullPage: true });
+  await connectionDialog.getByRole("button", { name: "试试让 AI 创造", exact: true }).click();
+  await page.setViewportSize({ width: 1440, height: 1000 });
   await page.getByRole("dialog").getByRole("button", { name: "手动配置", exact: true }).click();
   await expect(page.getByRole("dialog")).toContainText("[mcp_servers.auro_tanks]");
   await expect(page.getByRole("dialog")).toContainText(workspace.id);

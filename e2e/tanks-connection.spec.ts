@@ -1,6 +1,11 @@
 import { expect, test } from "@playwright/test";
 import { json, mockWorkspaceRequests } from "./perf/fixtures/workspace-api";
-import { USER_ID, WORKSPACE_ID, WORKSPACE_SLUG } from "./perf/fixtures/typing-under-live-runs";
+import { USER_ID, WORKSPACE_ID, WORKSPACE_SLUG } from "./perf/fixtures/world";
+import type { BrowserContext } from "@playwright/test";
+
+async function mockWorldVisit(context: BrowserContext, origin: string) {
+  await context.route("**/api/world-visit", route => route.request().method() === "OPTIONS" ? route.fallback() : route.fulfill({ ...json({}), headers: { "access-control-allow-origin": origin, "access-control-allow-credentials": "true" } }));
+}
 
 // Browser/asset wiring only: synthetic API responses, no account or DB resources.
 test("connection instructions and installation files work in the production Web UI", async ({ page, context, baseURL }, testInfo) => {
@@ -12,18 +17,19 @@ test("connection instructions and installation files work in the production Web 
   ]);
   await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin });
   await mockWorkspaceRequests(context, origin, diagnostics);
+  await mockWorldVisit(context, origin);
   await context.route("**/api/game-progress", async route => {
     if (route.request().method() === "OPTIONS") return route.fallback();
     return route.fulfill({ ...json({ workspaceId: WORKSPACE_ID, siege: null, tanks: null }), headers: { "access-control-allow-origin": origin, "access-control-allow-credentials": "true" } });
   });
   await context.routeWebSocket(url => url.pathname === "/ws", socket => { socket.onMessage(() => {}); });
   await page.goto(`/${WORKSPACE_SLUG}/tanks?lang=zh-Hans`);
-  await page.getByRole("button", { name: "连接 Agent", exact: true }).click();
+  await page.getByRole("button", { name: "连接 AI 工具", exact: true }).click();
   const dialog = page.getByRole("dialog");
   await expect(dialog.getByRole("button", { name: "手动配置" })).toHaveAttribute("aria-expanded", "false");
   await expect(dialog.getByRole("combobox")).toHaveCount(0);
   await dialog.getByRole("button", { name: "复制连接指令" }).click();
-  await expect(dialog.getByRole("button", { name: "已复制", exact: true })).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "再次复制", exact: true })).toBeVisible();
   const copied = await page.evaluate(() => navigator.clipboard.readText());
   const data = JSON.parse(copied.slice(copied.indexOf("{\n")));
   expect(data).toMatchObject({ workspace_id: WORKSPACE_ID, user_id: USER_ID, app_url: origin });
@@ -35,6 +41,11 @@ test("connection instructions and installation files work in the production Web 
   expect(connector.status()).toBe(200);
   expect(await connector.text()).toContain("export async function install");
   await page.screenshot({ path: testInfo.outputPath("connection-desktop.png") });
+  await page.emulateMedia({ colorScheme: "dark" });
+  await expect(page.locator("html")).toHaveClass(/dark/);
+  await page.screenshot({ path: testInfo.outputPath("connection-desktop-dark.png") });
+  await page.emulateMedia({ colorScheme: "light" });
+  await expect(page.locator("html")).not.toHaveClass(/dark/);
 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.screenshot({ path: testInfo.outputPath("connection-mobile.png") });
@@ -54,12 +65,13 @@ test("return guidance is dismissible on phones without changing the current game
   const diagnostics = { unknownRequests: [] as string[], external: [] as string[] };
   await context.addCookies([{ name: "auro_logged_in", value: "1", url: origin }]);
   await mockWorkspaceRequests(context, origin, diagnostics);
+  await mockWorldVisit(context, origin);
   await context.route("**/api/game-progress", route => route.request().method() === "OPTIONS" ? route.fallback() : route.fulfill({ ...json({ workspaceId: WORKSPACE_ID, siege: null, tanks: null }), headers: { "access-control-allow-origin": origin, "access-control-allow-credentials": "true" } }));
   await context.routeWebSocket(url => url.pathname === "/ws", socket => { socket.onMessage(() => {}); });
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(`/${WORKSPACE_SLUG}/tanks?lang=zh-Hans&from=tank-connect&stage=2#loadout`);
-  const hint = page.getByRole("status", { name: "连接 Agent", exact: true });
-  await expect(hint).toContainText("Agent 完成连接后");
+  const hint = page.getByRole("region", { name: "回到 AI 工具继续", exact: true });
+  await expect(hint).toContainText("请回到发起连接的对话");
   const board = page.getByTestId("tank-battlefield");
   await expect(board).toHaveAttribute("data-phase", "ready");
   await page.screenshot({ path: testInfo.outputPath("connection-return-mobile.png") });

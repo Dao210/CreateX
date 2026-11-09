@@ -8,7 +8,9 @@
 
 ### 让 Agent 自动配置（默认）
 
-打开 `/{workspaceSlug}/tanks`，点击「连接 Agent」→「复制连接指令」，粘贴到 Codex 或其他能够执行本地安装、配置 MCP 的 Agent 中。Web 和 Desktop 使用同一流程。指令自动携带当前站点、API 地址、世界及账号 ID，不包含登录令牌。
+打开 `/{workspaceSlug}/tanks`，点击「连接 AI 工具」→「复制连接指令」，粘贴到 WorkBuddy、Codex 等能够执行本地安装、配置 MCP 的 AI 对话中并发送。Web 和 Desktop 共用「复制并发送 → 按提示授权 → 回到 AI 工具继续」的引导。指令自动携带当前站点、API 地址、世界及账号 ID，不包含登录令牌。完整指令可按需展开，复制失败时可手动选中复制。
+
+「试试让 AI 创造」提供创造并游玩、查看已有坦克两条可复制任务，携带完整连接上下文和显式 `task`。用户发送任务后，AI 先复用或连接并实际验证，再执行任务；单独连接仍不创建角色或对局。授权回跳仅提示回到原 AI 对话，并提供「复制继续指令」，不显示未经验证的连接成功。需要新对话时，由原 AI 提供包含任务与连接数据的完整恢复指令。
 
 Agent 读取当前 Web 站点的 `/.well-known/tanks-mcp/setup.md`，下载同目录的 `connect.mjs`。这是随 Web 一起分发、使用 Node.js 22+ 内置模块的独立 stdio 连接器，不依赖上游 Auro 发布包、Go 编译或 daemon。首次使用通过现有 `/login?cli_callback=…&cli_state=…` 浏览器流程登录游戏页面的同一账号，并沿用现有 PAT API。连接器验证账号、世界访问权限及 `tank_get_catalog` 后，输出当前客户端所需的配置，不修改其他 MCP 连接。
 
@@ -32,7 +34,7 @@ cd server
 go build -o bin/auro ./cmd/auro
 ```
 
-打开 `/{workspaceSlug}/tanks`，点击「连接 Agent」，展开「手动配置」后复制当前世界的配置。外部 Agent 运行的机器必须能访问配置中的服务地址；本机 `localhost` 地址不能交给另一台机器上的 Agent。
+打开 `/{workspaceSlug}/tanks`，点击「连接 AI 工具」，展开「手动配置」后复制当前世界的配置。外部 Agent 运行的机器必须能访问配置中的服务地址；本机 `localhost` 地址不能交给另一台机器上的 Agent。
 
 开发环境中如果 PATH 中的 `auro` 仍是旧版本，将配置的 `command` 改为本项目 `server/bin/auro` 的绝对路径。不要覆盖其他项目的 CLI 链接。
 

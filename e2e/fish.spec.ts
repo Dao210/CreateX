@@ -12,6 +12,29 @@ test.afterAll(async()=>{if(workspace){api.setWorkspaceId(workspace.id);api.setWo
 test.beforeEach(async({page,baseURL})=>{await page.context().addCookies([{name:"auro-locale",value:"zh-Hans",url:baseURL!}]);await page.addInitScript(value=>localStorage.setItem("auro_token",value),token);});
 const headers=(worldId=workspace.id)=>({Authorization:`Bearer ${token}`,"X-Workspace-ID":worldId,Accept:"application/json, text/event-stream","MCP-Protocol-Version":"2025-11-25"});
 async function tool(request:APIRequestContext,name:string,args:object={},worldId=workspace.id){const response=await request.post("/api/fish/mcp",{headers:headers(worldId),data:{jsonrpc:"2.0",id:randomUUID(),method:"tools/call",params:{name,arguments:args}}});expect(response.status()).toBe(200);const body=await response.json();expect(body.error).toBeUndefined();expect(body.result.isError,JSON.stringify(body.result)).toBe(false);return body.result.structuredContent;}
+test("authorization return offers scoped continuation without claiming a connected client", async ({ page }) => {
+ await page.goto(`/${workspace.slug}/fish?from=fish-connect&source=shared#ocean`);
+ const guidance = page.getByRole("region", { name: "回到 AI 工具继续", exact: true });
+ await expect(guidance).toContainText("请回到发起连接的对话");
+ await page.evaluate(() => Object.defineProperty(navigator, "clipboard", {
+  configurable: true, value: { writeText: async (text: string) => { document.documentElement.dataset.continuation = text; } },
+ }));
+ await guidance.getByRole("button", { name: "复制继续指令", exact: true }).click();
+ await expect(guidance.getByRole("status")).toHaveText("回到原来的 AI 对话，粘贴并发送。");
+ const text = (await page.locator("html").getAttribute("data-continuation"))!;
+ const data = JSON.parse(text.slice(text.indexOf("\n\n") + 2));
+ expect(data).toMatchObject({ workspace_id: workspace.id, setup_url: expect.stringContaining("/.well-known/fish-mcp/setup.md") });
+ expect(data.user_id).toBeTruthy();
+ expect(data).not.toHaveProperty("creation");
+ expect(text).not.toContain(token);
+ await page.setViewportSize({ width: 390, height: 844 });
+ await expect(guidance).toBeVisible();
+ expect(await guidance.evaluate(node => node.scrollWidth <= node.clientWidth)).toBe(true);
+ await page.screenshot({ path: "test-results/fish/connection-return-mobile.png", fullPage: true });
+ await guidance.getByRole("button", { name: "关闭接入提示", exact: true }).click();
+ await expect(page).toHaveURL(new RegExp(`/${workspace.slug}/fish\\?source=shared#ocean$`));
+ await expect(guidance).toHaveCount(0);
+});
 test("MCP creates a persistent fish, applies an exact revision and recalls without deleting the creation",async({request,page})=>{
  const errors:string[]=[];page.on("pageerror",e=>errors.push(e.message));
  page.on("console", message => {
@@ -82,11 +105,11 @@ test("previews and releases into the same open ocean, supports a narrow viewport
   const scene = page.getByTestId("fish-scene");
   await expect(scene).toHaveAttribute("data-fish-count", "6", { timeout: 60_000 });
   const oceanCanvas = await scene.locator("canvas").elementHandle();
-  await expect(page.getByRole("button", { name: "连接 Agent", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "连接 AI 工具", exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "创造一条鱼", exact: true })).toHaveCount(1);
   await page.getByRole("button", { name: "创造一条鱼", exact: true }).click();
   const dialog = page.getByRole("dialog");
-  await expect(dialog.getByText(/首次使用，Agent 会先连接/)).toBeVisible();
+  await expect(dialog.getByText(/首次使用会引导你登录授权/)).toBeVisible();
   await expect(dialog.getByRole("checkbox", { name: "创造后放入大海沟" })).toBeChecked();
   await page.evaluate(() => Object.defineProperty(navigator, "clipboard", {
    configurable: true,
@@ -94,7 +117,7 @@ test("previews and releases into the same open ocean, supports a narrow viewport
   }));
   const copy = dialog.getByRole("button", { name: "复制创造指令", exact: true });
   await copy.click();
-  await expect(dialog.getByRole("status")).toHaveText("已复制，请到 Agent 中粘贴并发送。");
+  await expect(dialog.getByRole("status")).toHaveText("已复制。到 AI 对话中粘贴并发送，它会接着完成创作。");
   const readTask = async () => {
    const text = await page.locator("html").getAttribute("data-fish-copy");
    return { text: text!, data: JSON.parse(text!.slice(text!.indexOf("\n\n") + 2)) };
@@ -105,9 +128,11 @@ test("previews and releases into the same open ocean, supports a narrow viewport
   expect(initialTask.text).toContain("验证成功后继续创作");
   expect(initialTask.text).not.toContain(token);
   await page.screenshot({ path: "test-results/fish/create-dialog.png", fullPage: true });
-  await page.evaluate(() => document.documentElement.classList.add("dark"));
+  await page.emulateMedia({ colorScheme: "dark" });
+  await expect(page.locator("html")).toHaveClass(/dark/);
   await page.screenshot({ path: "test-results/fish/create-dialog-dark.png", fullPage: true });
-  await page.evaluate(() => document.documentElement.classList.remove("dark"));
+  await page.emulateMedia({ colorScheme: "light" });
+  await expect(page.locator("html")).not.toHaveClass(/dark/);
   await dialog.getByRole("textbox", { name: "鱼的名字（选填）", exact: true }).fill("鱼".repeat(41));
   await expect(copy).toBeDisabled();
   await dialog.getByRole("textbox", { name: "鱼的名字（选填）", exact: true }).fill("UI 珍珠鱼");
@@ -132,7 +157,7 @@ test("previews and releases into the same open ocean, supports a narrow viewport
   await dialog.getByRole("button", { name: "自己设置外形", exact: true }).click();
   await expect(page.getByRole("dialog")).toHaveCount(1);
   await expect(dialog.getByRole("textbox", { name: "名字", exact: true })).toHaveValue("UI 珍珠鱼");
-  await dialog.getByRole("button", { name: "返回 Agent 创造", exact: true }).click();
+  await dialog.getByRole("button", { name: "返回 AI 创造", exact: true }).click();
   await expect(dialog.getByRole("textbox", { name: "你想创造怎样的鱼（选填）", exact: true })).toHaveValue("珍珠白，长尾，缓缓滑翔");
   await expect(dialog.getByRole("checkbox", { name: "创造后放入大海沟" })).not.toBeChecked();
   await page.setViewportSize({ width: 1440, height: 1000 });

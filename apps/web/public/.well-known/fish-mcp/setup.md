@@ -136,10 +136,13 @@ because configuration was saved or because the installer's HTTP check succeeded.
 
 If tools cannot be refreshed in the current chat, report that setup and the
 server check succeeded, and give the precise reload/new-chat step still required.
+Use the client's actual supported mechanism; do not guess menus or shortcuts.
 Do not imply that the current conversation already has the new tools.
-For a creation request, ask the user to paste the entire original creation
-request after reloading or opening the new chat, preserving its name,
-description and publication choice. Resume verification and creation there.
+If a new chat is required, provide one copyable complete request containing the
+original connection JSON, name, description and publication choice, not just
+"continue". Include any known saved result and write requestIds. Ask the user to
+paste it after reloading or opening the new chat. Resume verification and
+creation there, reusing the matching connection and valid authorization.
 
 After verification, continue a supplied creation task immediately. For a
 connection-only request, provide the returned `gameUrl` if available. It is a
@@ -175,3 +178,44 @@ personal-ocean release omits `destination`. On retry keep the same arguments
 and `requestId`. Open the returned `oceanUrl` and verify its resident is the
 one just released. Use `fish_get_public_ocean` to read the Great Trench. Later revisions require explicit `fish_apply_revision`, and
 `fish_recall` with `destination: "public"` withdraws a public resident and preserves the creation.
+
+## User-facing guidance and recovery
+
+Keep messages short and give one concrete next action when the user needs to
+intervene. Match the user's language. Suggested wording:
+
+- Sign-in: "Sign in and authorize with your game account on the page that
+  opened, then return to this conversation." If no browser opened, provide the
+  actual sign-in link instead of claiming that a page opened.
+- Reload required: "Connection settings are saved. This conversation still
+  needs to load the tools. Next: <the client's supported reload step>."
+- New chat required: "Open a new conversation and paste the complete task
+  below." Provide the full request as described above.
+- Private preview completed: "Saved, not published. <private preview link>.
+  Tell me if you'd like to change its appearance."
+- Public release completed: "Released into the Great Trench. <returned
+  oceanUrl>. Tell me if you'd like to modify or recall it."
+
+Do not stop at connection success when the request includes a creation task.
+The publication choice must survive sign-in and tool reload. Later edits,
+applying a revision or recalling a resident require the user's explicit request.
+
+Returning to the game page is navigation, not proof that this AI conversation
+has loaded tools. Continue setup automatically after authorization; the game's
+"Copy continuation instructions" action is recovery, not a required extra step.
+If it arrives without the original creation, ask for the complete original task
+instead of guessing its name, description or publication choice. After an
+uncertain write result, check for the completed result before creating again;
+a new chat with only the original brief cannot guarantee retry idempotency
+without the original requestId.
+
+The installed connector accepts `check`, `login`, and `stdio` with the same
+connection arguments. Diagnose with `check`; repeat authorization with `login`
+when needed. Installation reuses a valid stored credential.
+
+- `401`: authorize again with `login` or `install`.
+- Wrong account: sign in with the account specified by the connection data.
+- `403`: check world membership and global MCP policy; do not bypass them.
+- Network failure: check the actual Web/API addresses from the AI's machine.
+- Sign-in timeout: rerun the same command and finish login within five minutes.
+- Tools unavailable after registration: reload or open a new chat as above.

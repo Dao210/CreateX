@@ -29,6 +29,10 @@ export function buildTankMCPContext(input: {
 
 export type TankMCPContext = ReturnType<typeof buildTankMCPContext>;
 
+export function buildTankMCPInstructions(context: TankMCPContext, prompt: string, task?: string) {
+  return `${prompt}\n\n${JSON.stringify({ ...context, ...(task ? { task } : {}) }, null, 2)}`;
+}
+
 export function buildTankMCPManualConfig(context: TankMCPContext, command: string, client: string) {
   const profile = `tanks-${context.workspace_id.slice(0, 8)}`;
   const args = ["--server-url", context.server_url, "--workspace-id", context.workspace_id, "--profile", profile, "tanks", "mcp"];

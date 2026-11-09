@@ -18,7 +18,7 @@
 .fish-page:fullscreen .fish-header-actions{display:none}
 
 .fish-ocean-navigation{display:flex;align-items:center;justify-content:flex-end;gap:.5rem;padding:.75rem 1rem}
-.fish-create-dialog{width:min(94vw,480px);max-width:480px;gap:1.25rem}
+.fish-create-dialog{width:min(94vw,480px);max-width:480px;max-height:92dvh;overflow-y:auto;gap:1.25rem}
 .fish-create-dialog [data-slot=dialog-header]{padding-right:1.5rem}
 .fish-create-connection{display:flex;gap:.65rem;align-items:flex-start;padding:.85rem;border-radius:.75rem;background:var(--muted);color:var(--muted-foreground);font-size:var(--text-caption);line-height:1.6}
 .fish-create-connection>svg{width:1.1rem;height:1.1rem;flex-shrink:0;margin-top:.15rem;color:var(--foreground)}
