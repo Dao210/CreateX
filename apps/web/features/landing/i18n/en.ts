@@ -260,7 +260,7 @@ export function createEnDict(
         label: "Company",
         links: [
           { label: "About", href: "/about" },
-          { label: "Licensing", href: "/licensing" },
+          { label: "Terms of Service", href: "/terms" },
           { label: "Privacy", href: "/privacy" },
           { label: "Contact Sales", href: "/contact-sales" },
         ],
@@ -313,87 +313,88 @@ export function createEnDict(
     },
   },
 
-  licensing: {
-    title: "Licensing",
+  terms: {
+    title: "Terms of Service",
+    lastUpdated: "Last updated: November 9, 2026",
     intro: [
-      "Auro is released under the [Auro License](https://github.com/auro-ai/auro/blob/main/LICENSE): the Apache License 2.0 with a few additional conditions. The source code is public, and using Auro inside your own organization is free, including self-hosting it for your whole team.",
-      "The main additional condition covers hosted use: offering Auro to people outside your organization requires a commercial license. This page shows where that line falls, using the questions we hear most often. It is a plain-language guide, not legal advice. If anything here differs from the LICENSE, the LICENSE controls.",
+      "Welcome to Weave a World. These terms are an agreement between you and the Weave a World team (“we”, “us”) and set the ground rules for using our website and hosted service, including creating and playing with tanks, fish, and town residents on the web and desktop apps.",
+      "By creating an account or using Weave a World, you agree to these terms. They are written to be read, not lawyered — if anything is unclear, tell us and we will clarify it.",
     ],
-    rule: {
-      title: "The rule of thumb",
-      text: "Is anyone outside your organization driving the instance — creating issues, talking to agents, or triggering work? If so, through any interface (web, Slack, or API), that is a hosted service. If they only receive results your team produced with Auro, that is internal use.",
-    },
-    scenarios: {
-      title: "Common scenarios",
-      scenarioColumn: "Scenario",
-      licenseColumn: "Commercial license",
-      required: "Required",
-      notRequired: "Not required",
-      items: [
-        {
-          scenario: "Your organization uses Auro internally",
-          example: "Self-hosted, across any number of creative spaces.",
-          required: false,
-        },
-        {
-          scenario:
-            "You deploy Auro for a client, who owns it and uses it internally",
-          example: "Implementation, training, consulting, or customization work.",
-          required: false,
-        },
-        {
-          scenario:
-            "Your team uses Auro to do work for clients, who only receive the deliverables",
-          example:
-            "An agency that runs its content production in Auro and ships the finished work.",
-          required: false,
-        },
-        {
-          scenario:
-            "Agents only push reports or notifications to a client\u2019s Slack channel",
-          example:
-            "The client reads them but never interacts with the instance.",
-          required: false,
-        },
-        {
-          scenario:
-            "You run and manage Auro instances for clients on your own infrastructure",
-          example: "A managed service, whether or not you charge for it.",
-          required: true,
-        },
-        {
-          scenario: "People outside your organization sign in to your instance",
-          example: "Clients, partners, or the public get their own accounts.",
-          required: true,
-        },
-        {
-          scenario:
-            "People outside your organization drive your instance through another entry point",
-          example:
-            "A public website backed by Auro, a Slack integration, or an API \u2014 even when it is free.",
-          required: true,
-        },
-        {
-          scenario: "You embed Auro in a product you sell or distribute",
-          example: "Auro ships as a component of another commercial offering.",
-          required: true,
-        },
-      ],
-    },
     sections: [
       {
-        heading: "Other conditions",
-        bullets: [
-          "Branding: keep the Auro logo, product name, and the copyright and attribution information shown in the Auro interface, unless we have given you a written branding waiver.",
-          "Attribution: if you build on Auro\u2019s backend, daemon, or CLI without the Auro interface, keep the copyright and NOTICE information, and state in your user-facing documentation that your product is built on Auro, with a link to the [GitHub repository](https://github.com/auro-ai/auro).",
-          "Forks: publishing the source code of a fork is not a hosted service and needs no commercial license. Anyone who operates a hosted service from that fork needs their own.",
-          "A commercial license and a branding waiver are separate grants. One does not include the other.",
+        heading: "The service",
+        paragraphs: [
+          "Weave a World is a platform for personal creations and play. You can design your own tank and defend a castle, create a fish and watch it swim in the ocean, welcome a resident to a shared town, and see what other members have made.",
+          "Your creations live in your world. Some spaces — like the shared ocean or a published fish page — are visible to others, and we show you exactly when something leaves your world.",
         ],
       },
       {
-        heading: "Getting a commercial license",
+        heading: "Your account",
+        bullets: [
+          "Provide accurate sign-in information and keep your credentials safe, including the access tokens you issue to connected agents. You are responsible for what happens through your account.",
+          "Weave a World is not directed to anyone under 16. If we learn that an account belongs to someone under 16, we may close it.",
+          "If you connect an agent or automation through MCP or another interface, it acts on your behalf: you are responsible for what it does in your worlds.",
+        ],
+      },
+      {
+        heading: "Your creations",
+        bullets: [
+          "You own what you make. Your tank characters, fish designs, blueprints, and other creations belong to you, and nothing in these terms takes that away.",
+          "You give us the license we need to run the service: to store, reproduce, and render your creations, back them up, and show them to the members of your world.",
+          "When you publish a creation to a shared or public space — such as the shared ocean — you also let us display that frozen revision there until you unpublish or delete it. After that it stops being shown, though copies may survive in backups for a while.",
+          "Only create and share things you have the right to share, and respect other people’s intellectual property.",
+        ],
+      },
+      {
+        heading: "Acceptable use",
+        bullets: [
+          "Don’t break the law, infringe others’ rights, or upload content that is illegal, hateful, or sexually explicit.",
+          "Don’t attack, overload, or probe the service beyond what its interfaces allow, and don’t use it to host or spread malware.",
+          "Don’t disrupt shared spaces for others — the shared ocean, the town, and world messages are common areas.",
+          "Don’t misrepresent game progress or interfere with other members’ creations.",
+        ],
+      },
+      {
+        heading: "Game progress",
         paragraphs: [
-          "Tell us about your use case through [Contact Sales](/contact-sales) and we\u2019ll get back to you within three business days. Not sure whether your setup needs a license? Ask us on [Discord](" + discordUrl + ") or through the same form.",
+          "Progress such as tank records and siege stars is kept for you as a personal record. It is reported by your client rather than verified on the server as a competitive ranking, and it may be adjusted when game rules change. Progress has no monetary value, and there is no wagering.",
+        ],
+      },
+      {
+        heading: "Availability and changes",
+        paragraphs: [
+          "We work on Weave a World continuously, and features or game rules may change. We try hard not to lose your creations or progress when they do. The service may be unavailable from time to time, and we may change or discontinue a feature — or the service — if we have to.",
+        ],
+      },
+      {
+        heading: "Suspension and termination",
+        bullets: [
+          "You can stop using Weave a World at any time and ask us to delete your account, your worlds, or individual creations.",
+          "We may suspend or limit an account that breaks these terms or puts the service or other members at risk. When we do, we will tell you why when the law allows.",
+        ],
+      },
+      {
+        heading: "Disclaimers",
+        paragraphs: [
+          "The service is provided “as is”. We disclaim warranties to the fullest extent the law allows, though nothing here limits warranties that cannot be disclaimed under applicable law.",
+        ],
+      },
+      {
+        heading: "Limitation of liability",
+        paragraphs: [
+          "To the fullest extent the law allows, the Weave a World team is not liable for indirect, incidental, or consequential damages, or for lost data or profits arising from your use of the service. Nothing in these terms excludes liability that cannot be excluded under applicable law.",
+        ],
+      },
+      {
+        heading: "Changes to these terms",
+        paragraphs: [
+          "We may update these terms as the product changes. We will post the new version on this page and update the date at the top. If a change is significant, we will give notice before it takes effect — continuing to use the service after that means you accept the update.",
+        ],
+      },
+      {
+        heading: "Contact us",
+        paragraphs: [
+          "Questions about these terms? Reach the team through the [about page](/about).",
         ],
       },
     ],
@@ -401,99 +402,85 @@ export function createEnDict(
 
   privacy: {
     title: "Privacy Policy",
-    lastUpdated: "Last updated: September 24, 2026",
+    lastUpdated: "Last updated: November 9, 2026",
     intro: [
-      "This Privacy Policy explains how Index Labs (Hong Kong) Limited (“Auro”, “we”, “us”) collects, uses, and shares personal information when you visit auro.ai, contact us, or use Auro Cloud, our hosted service, including the web, desktop, and mobile apps.",
-      "It does not cover Auro deployments you host yourself. The operator of a self-hosted deployment controls its data, and any AI providers, integrations, or analytics it uses depend on how they configure it. The only thing a self-hosted server sends us is a daily usage snapshot: a random ID for the deployment, so snapshots from the same server can be linked; the server version; approximate counts of creative spaces, members, agents, and connected daemons; and the number of agent runs started, completed, failed, and cancelled that day. It contains no names, email addresses, or content. Setting DO_NOT_TRACK=1 turns off this snapshot.",
+      "This Privacy Policy explains how the Weave a World team (“we”, “us”) collects, uses, and shares personal information when you visit our website or use Weave a World, our hosted creation and play service, including the web and desktop apps.",
+      "It is a plain-language description of our practices. Where local law gives you specific rights, we honor them as described below.",
     ],
     sections: [
       {
         heading: "Information we collect",
         bullets: [
-          "Account information: your name, email address, and profile picture. If you sign in with Google, we receive your name, email address, and profile picture from Google. You can also add profile details such as language, time zone, and a short bio, and answer onboarding questions such as your role, your use case, and how you heard about Auro.",
-          "Content you create: creative spaces, issues, comments, chat messages, attachments, agent instructions, and anything else you or your agents put into Auro Cloud.",
-          "Contact Sales inquiries: your name, business email, company name and size, country or region, use case, goals, and communication preferences. To prevent abuse, we also record the IP address and browser user agent the form was sent from.",
-          "Billing information: subscription payments are handled by Stripe on pages hosted by Stripe. We never receive or store your full card details.",
-          "Usage and device information: app version, operating system, client type, and a randomly generated installation ID; the name of each machine you connect as a runtime (its hostname by default); and crash and error reports. Before a report is sent, we filter recognizable email addresses and credentials out of the error message, but reports can still contain other details about what went wrong.",
+          "Account information: your name, email address, and profile details such as your avatar and language, plus the nickname you choose for a world. You can also answer onboarding questions, such as what you like to create.",
+          "Content you create: your worlds, tank characters, fish designs, blueprints, town contributions, messages, and anything else you or your connected agents put into the service. Creations you publish to a shared or public space are visible there.",
+          "Agent connections: if you connect an agent through MCP or another interface, we store the connection’s name and the access token it uses so the agent can act for you. Copied setup instructions never contain tokens.",
+          "Usage and device information: app version, operating system, client type, and a randomly generated installation ID; plus crash and error reports. Before a report is sent, we filter recognizable email addresses and credentials out of the error message, but reports can still contain other details about what went wrong.",
           "Feedback: when you send feedback, we receive your message along with the page, app version, operating system, and any error details.",
         ],
       },
       {
         heading: "How we use information",
         bullets: [
-          "To provide, operate, and secure Auro Cloud, including signing you in, syncing your creative spaces, and delivering notifications and invitations.",
-          "To respond to Contact Sales inquiries and support requests.",
-          "To send service messages such as sign-in codes and creative space invitations. We only send product updates or marketing if you opted in, and you can unsubscribe at any time.",
-          "To understand how Auro is used, fix bugs, and improve the product.",
+          "To provide, operate, and secure Weave a World — signing you in, syncing your worlds and creations, running shared spaces, and delivering notifications and invitations.",
+          "To send service messages such as sign-in codes and world invitations. We only send product updates or marketing if you opted in, and you can unsubscribe at any time.",
+          "To understand how the service is used, fix bugs, and improve it.",
           "To prevent abuse and meet our legal obligations.",
-        ],
-      },
-      {
-        heading: "Legal bases",
-        paragraphs: [
-          "Where the law requires a legal basis for processing, we rely on performing our contract with you, to provide Auro Cloud; our legitimate interests in securing, supporting, and improving Auro and responding to inquiries; your consent, for marketing messages; and compliance with our legal obligations.",
         ],
       },
       {
         heading: "AI features",
         paragraphs: [
-          "Your coding agents run on your own machines or on runtimes you connect, using the coding tools and accounts you set up. An agent running on your machine does not mean the model runs there: those tools send prompts, code, files, and tool results to their model providers, under the terms of the tool and account you use. Auro coordinates their work.",
-          "Some Auro Cloud features, such as chat titles and suggested follow-ups, send your first chat message or a few recent messages to a third-party large language model provider we choose, to generate the result. Auro does not use your content to train AI models.",
+          "Agents that play or create in your worlds connect through interfaces you authorize, such as MCP. Which model provider sees your prompts and creations depends on the agent tools and accounts you set up; that traffic follows their terms. We coordinate the work.",
+          "Some server-side features, such as the shared town simulation, may use a large language model we configure to generate resident behavior. We do not use your content to train AI models.",
         ],
       },
       {
         heading: "Cookies and analytics",
         paragraphs: [
-          "We use cookies that are needed to keep you signed in, protect against cross-site request forgery, and give you access to files you uploaded. We also use a cookie that remembers which campaign or website referred you, for up to 30 days, and cookies that remember your language and the last creative space you opened.",
-          "We use PostHog to understand product usage and to collect crash reports. When you are signed in, PostHog receives your account name and email so we can match reports to your account. We do not use advertising cookies, and we do not sell your personal information.",
+          "We use cookies that are needed to keep you signed in and protect against cross-site request forgery, plus cookies that remember your language. We use PostHog to understand product usage and to collect crash reports; when you are signed in, PostHog may receive identifiers that let us match reports to your account. We do not use advertising cookies, and we do not sell your personal information.",
         ],
       },
       {
         heading: "Who we share information with",
         paragraphs: [
-          "Information you put into a creative space is visible to its other members and admins, and to the agents and integrations they authorize, according to the creative space’s permissions. If your creative space belongs to an organization, that organization manages its content and may handle requests about it.",
-          "We also disclose information when the law requires it, and to a buyer or successor if Auro is involved in a merger, acquisition, or sale of assets.",
-          "Beyond that, we share personal information only with the service providers that help us run Auro and with integrations you choose to connect:",
+          "Content you put into a world is visible to its members according to the world’s permissions. Creations you publish to a shared or public space are visible to whoever can reach that space.",
+          "We disclose information when the law requires it. Beyond that, we share personal information only with the service providers that help us run Weave a World:",
         ],
         bullets: [
-          "Amazon Web Services: hosting, file storage, and content delivery",
-          "Vercel: hosting for the website and web app",
-          "Stripe: payments and billing",
-          "Resend: sign-in and invitation emails",
+          "Hosting and storage providers that run the website and the service",
+          "Email providers that deliver sign-in codes and invitations",
           "PostHog: product analytics and crash reports",
-          "Google: sign-in, if you choose Sign in with Google",
-          "Large language model providers: the AI features described above",
-          "Integrations you connect, such as Slack, Lark, DingTalk, WeCom, Telegram, GitHub, GitLab, or apps connected through Composio: the data you choose to exchange with them, which is also subject to their own terms",
+          "Large language model providers: only for the AI features described above",
         ],
       },
       {
         heading: "Where information is stored",
         paragraphs: [
-          "Auro Cloud is hosted on Amazon Web Services and Vercel. We and our service providers may process your information in the United States and other countries. Wherever it is processed, we protect it as described in this policy.",
+          "Weave a World runs on our own infrastructure and the service providers listed above. We and our providers may process your information in the United States and other countries. Wherever it is processed, we protect it as described in this policy.",
         ],
       },
       {
         heading: "How long we keep information",
         paragraphs: [
-          "We keep account information and creative space content for as long as your account or creative space exists. When a creative space owner deletes a creative space, its issues, comments, and other content are removed from Auro Cloud, though backups we keep for recovery may still contain copies for a period afterwards. To have files uploaded to a deleted creative space erased from our file storage, email [support@auro.ai](mailto:support@auro.ai). We keep billing records for as long as accounting and tax rules require, and product analytics, crash reports, Contact Sales inquiries, and feedback for as long as they are useful for supporting you and improving Auro. We delete inquiries and feedback on request.",
+          "We keep account information and your content for as long as your account and worlds exist. When you delete a creation, a world, or your account, the content is removed from the service, though backups we keep for recovery may still contain copies for a period afterwards. Product analytics, crash reports, and feedback are kept only as long as they are useful for supporting you and improving Weave a World, and we delete them on request.",
         ],
       },
       {
         heading: "Your choices and rights",
         paragraphs: [
-          "Depending on where you live, you may have the right to access, correct, delete, or export your personal information; to object to or restrict certain processing; to withdraw consent you have given, such as for marketing messages; and to complain to your local data protection authority. You can update your profile in Auro at any time and delete a creative space you own from its settings. For anything else, including deleting your account, email [support@auro.ai](mailto:support@auro.ai). We will respond within 30 days.",
+          "Depending on where you live, you may have the right to access, correct, delete, or export your personal information; to object to or restrict certain processing; and to complain to your local data protection authority. You can update your profile in the app at any time and delete creations or worlds you own from their settings. For anything else, including deleting your account, reach us through the [about page](/about). We aim to respond within 30 days.",
         ],
       },
       {
         heading: "Security",
         paragraphs: [
-          "We protect your information with encryption in transit, access controls, and encrypted storage for integration credentials. No system is perfectly secure, so please contact us right away if you believe your account has been compromised.",
+          "We protect your information with encryption in transit, access controls, and careful handling of agent credentials. No system is perfectly secure, so please contact us right away if you believe your account has been compromised.",
         ],
       },
       {
         heading: "Children",
         paragraphs: [
-          "Auro is not directed to children under 16, and we do not knowingly collect their personal information.",
+          "Weave a World is not directed to children under 16, and we do not knowingly collect their personal information.",
         ],
       },
       {
@@ -505,7 +492,7 @@ export function createEnDict(
       {
         heading: "Contact us",
         paragraphs: [
-          "Auro is operated by Index Labs (Hong Kong) Limited, which is responsible for your personal information. For privacy questions or requests, email [support@auro.ai](mailto:support@auro.ai).",
+          "Weave a World is operated by the Weave a World team, which is responsible for your personal information. For privacy questions or requests, reach us through the [about page](/about).",
         ],
       },
     ],

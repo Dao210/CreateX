@@ -187,18 +187,10 @@ export type LandingDict = {
       contacts: { label: string; linkLabel: string; href: string }[];
     };
   };
-  licensing: {
+  terms: {
     title: string;
+    lastUpdated: string;
     intro: string[];
-    rule: { title: string; text: string };
-    scenarios: {
-      title: string;
-      scenarioColumn: string;
-      licenseColumn: string;
-      required: string;
-      notRequired: string;
-      items: { scenario: string; example?: string; required: boolean }[];
-    };
     sections: DocumentSection[];
   };
   privacy: {

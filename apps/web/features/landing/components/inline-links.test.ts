@@ -56,14 +56,12 @@ describe("trust pages copy", () => {
     }
   });
 
-  it("translates the licensing and privacy pages in every locale", () => {
+  it("translates the terms and privacy pages in every locale", () => {
     const [en, ...others] = dicts;
     for (const t of others) {
-      expect(t.licensing.title).not.toBe(en!.licensing.title);
+      expect(t.terms.title).not.toBe(en!.terms.title);
       expect(t.privacy.title).not.toBe(en!.privacy.title);
-      expect(t.licensing.scenarios.items.map((i) => i.required)).toEqual(
-        en!.licensing.scenarios.items.map((i) => i.required),
-      );
+      expect(t.terms.sections).toHaveLength(en!.terms.sections.length);
       expect(t.privacy.sections).toHaveLength(en!.privacy.sections.length);
     }
   });

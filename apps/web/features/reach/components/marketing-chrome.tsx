@@ -7,10 +7,10 @@ import { Menu } from "lucide-react";
 import styles from "./marketing-chrome.module.css";
 
 const labels = {
-  en: { navigation: "Main navigation", menu: "Menu", language: "Language", privacy: "Privacy", licensing: "Licensing" },
-  "zh-Hans": { navigation: "主导航", menu: "菜单", language: "语言", privacy: "隐私政策", licensing: "许可协议" },
-  ja: { navigation: "メインナビゲーション", menu: "メニュー", language: "言語", privacy: "プライバシー", licensing: "ライセンス" },
-  ko: { navigation: "주요 메뉴", menu: "메뉴", language: "언어", privacy: "개인정보 처리방침", licensing: "라이선스" },
+  en: { navigation: "Main navigation", menu: "Menu", language: "Language", privacy: "Privacy", terms: "Terms" },
+  "zh-Hans": { navigation: "主导航", menu: "菜单", language: "语言", privacy: "隐私政策", terms: "服务条款" },
+  ja: { navigation: "メインナビゲーション", menu: "メニュー", language: "言語", privacy: "プライバシー", terms: "利用規約" },
+  ko: { navigation: "주요 메뉴", menu: "메뉴", language: "언어", privacy: "개인정보 처리방침", terms: "이용약관" },
 };
 const languageNames = { en: "English", "zh-Hans": "中文", ja: "日本語", ko: "한국어" };
 
@@ -56,7 +56,7 @@ export function MarketingFooter({ locale, path = "/" }: { locale: SupportedLocal
         </div>
         <div className="mt-8 flex flex-wrap items-center justify-between gap-4 border-t border-white/8 pt-6 text-caption text-white/45">
           <p>© {new Date().getFullYear()} {brand.name}</p>
-          <div className={styles.legalLinks}><a href={localizedHref("/privacy", locale)}>{copy.privacy}</a><a href={localizedHref("/licensing", locale)}>{copy.licensing}</a></div>
+          <div className={styles.legalLinks}><a href={localizedHref("/privacy", locale)}>{copy.privacy}</a><a href={localizedHref("/terms", locale)}>{copy.terms}</a></div>
         </div>
       </div>
     </footer>

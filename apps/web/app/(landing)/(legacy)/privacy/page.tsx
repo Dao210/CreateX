@@ -4,11 +4,11 @@ import { PrivacyPageClient } from "@/features/landing/components/privacy-page-cl
 export const metadata: Metadata = {
   title: "Privacy Policy",
   description:
-    "How Auro collects, uses, and protects personal information on auro.ai and Auro Cloud.",
+    "How Weave a World collects, uses, and protects personal information across the website and the hosted service.",
   openGraph: {
-    title: "Privacy Policy — Auro",
+    title: "Privacy Policy — Weave a World",
     description:
-      "How Auro collects, uses, and protects personal information.",
+      "How Weave a World collects, uses, and protects personal information.",
     url: "/privacy",
   },
   alternates: {

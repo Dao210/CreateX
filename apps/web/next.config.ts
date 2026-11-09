@@ -52,6 +52,13 @@ const nextConfig: NextConfig = {
   async headers() {
     return [{ source: "/media/gameplay/:path*", headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }] }];
   },
+  async redirects() {
+    return [
+      // The old licensing page described the upstream source-available license
+      // and never matched Weave a World, a hosted service. Users need terms.
+      { source: "/licensing", destination: "/terms", permanent: true },
+    ];
+  },
   images: {
     formats: ["image/avif", "image/webp"],
     qualities: [75, 80, 85],

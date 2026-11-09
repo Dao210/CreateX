@@ -4,7 +4,7 @@ test.use({ locale: "zh-CN" });
 
 for (const { path, title } of [
   { path: "/privacy", title: "Privacy Policy" },
-  { path: "/licensing", title: "Licensing" },
+  { path: "/terms", title: "Terms of Service" },
 ]) {
   test(`${path} respects an explicit language despite a conflicting account preference`, async ({
     page,

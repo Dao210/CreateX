@@ -4,12 +4,15 @@ import Link from "next/link";
 import { cn } from "@auro/ui/lib/utils";
 import { useAuthStore } from "@auro/core/auth";
 import { BrandMark } from "@auro/ui/components/common/brand-mark";
-import { XMark, DiscordMark, twitterUrl, discordUrl } from "./shared";
 import { useLocale, locales, localeLabels } from "../i18n";
 import { useDashboardCtaHref } from "../utils/use-dashboard-cta";
 import { brandForLocale } from "@/lib/brand";
 import { localizedHref } from "@/lib/marketing-urls";
 import { usePathname } from "next/navigation";
+
+// X and Discord point at upstream Auro accounts that do not belong to this
+// product; keep them out of the rendered footer.
+const upstreamSocialLinks = ["x.com", "discord"];
 
 export function LandingFooter({ tagline }: { tagline?: string } = {}) {
   const { t, locale, setLocale } = useLocale();
@@ -24,8 +27,8 @@ export function LandingFooter({ tagline }: { tagline?: string } = {}) {
       { label: brand.rules, href: localizedHref("/#rules", locale) },
       { label: brand.about, href: localizedHref("/about", locale) },
     ] },
-    { ...t.footer.groups.resources, links: t.footer.groups.resources.links },
-    { label: t.footer.groups.company.label, links: t.footer.groups.company.links.filter((link) => ["/privacy", "/licensing"].includes(link.href)) },
+    { ...t.footer.groups.resources, links: t.footer.groups.resources.links.filter((link) => !upstreamSocialLinks.some((host) => link.href.includes(host))) },
+    { label: t.footer.groups.company.label, links: t.footer.groups.company.links.filter((link) => ["/privacy", "/terms"].includes(link.href)) },
   ];
 
   return (
@@ -44,26 +47,6 @@ export function LandingFooter({ tagline }: { tagline?: string } = {}) {
             <p className="mt-4 max-w-[300px] text-body leading-[1.7] text-white/50 sm:text-body-lg">
               {tagline ?? brand.slogan}
             </p>
-            <div className="mt-4 flex items-center gap-3">
-              <Link
-                href={twitterUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="text-white/40 transition-colors hover:text-white"
-                aria-label="X"
-              >
-                <XMark className="size-4" />
-              </Link>
-              <Link
-                href={discordUrl}
-                target="_blank"
-                rel="noreferrer"
-                aria-label="Discord"
-                className="text-white/40 transition-colors hover:text-white"
-              >
-                <DiscordMark className="size-4" />
-              </Link>
-            </div>
             <div className="mt-6">
               <Link
                 href={ctaHref}

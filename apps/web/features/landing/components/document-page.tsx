@@ -6,7 +6,7 @@ import { LandingFooter } from "./landing-footer";
 import { InlineLinks } from "./inline-links";
 import type { DocumentSection } from "../i18n";
 
-// Shared shell for long-form pages (licensing, privacy): same reading column
+// Shared shell for long-form pages (terms, privacy): same reading column
 // and type scale as the About page.
 export function DocumentPage({
   title,
