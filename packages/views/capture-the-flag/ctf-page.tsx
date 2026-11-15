@@ -34,7 +34,6 @@ import { authenticatedFetch } from "@auro/core/api";
 import { useCurrentWorkspace, useWorkspacePaths } from "@auro/core/paths";
 import { useAuthStore } from "@auro/core/auth";
 import { Button, buttonVariants } from "@auro/ui/components/ui/button";
-import { Input } from "@auro/ui/components/ui/input";
 import {
   Dialog,
   DialogTrigger,
@@ -61,6 +60,8 @@ function download(name: string, body: Blob) {
   link.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
+const TRIAL_SEED = 12027;
+
 const baseline = () =>
   makeBaselineStrategy("my_strategy", "My strategy", "red");
 
@@ -128,10 +129,9 @@ function Content({ wsId, userId }: { wsId: string; userId: string }) {
   const [redLabel, setRedLabel] = useState(t(($) => $.baseline));
   const [blueLabel, setBlueLabel] = useState(t(($) => $.baseline));
   const strategyPanel = useRef<HTMLElement>(null);
-  const [seed, setSeed] = useState(12027),
-    [speed, setSpeed] = useState(1),
+  const [speed, setSpeed] = useState(1),
     [running, setRunning] = useState(false);
-  const [initialMatch] = useState(() => newMatch(seed, { red, blue }));
+  const [initialMatch] = useState(() => newMatch(TRIAL_SEED, { red, blue }));
   const engine = useRef<Match>(initialMatch);
   const [frame, setFrame] = useState<Frame>(() => frameOf(engine.current));
   const localRecording = useRef<Frame[]>([frame]);
@@ -160,15 +160,15 @@ function Content({ wsId, userId }: { wsId: string; userId: string }) {
     return [...unique.values()];
   }, [state.data]);
   const reset = useCallback(
-    (nextRed = red, nextBlue = blue, nextSeed = seed) => {
+    (nextRed = red, nextBlue = blue) => {
       setRunning(false);
-      engine.current = newMatch(nextSeed, { red: nextRed, blue: nextBlue });
+      engine.current = newMatch(TRIAL_SEED, { red: nextRed, blue: nextBlue });
       const next = frameOf(engine.current);
       localRecording.current = [next];
       setLocalReview(null);
       setFrame(next);
     },
-    [red, blue, seed],
+    [red, blue],
   );
   const advance = () => {
     tickMatch(engine.current, { headless: true });
@@ -382,7 +382,7 @@ function Content({ wsId, userId }: { wsId: string; userId: string }) {
         setNotice(t(($) => $.error));
         stopTrial();
       };
-      worker.postMessage({ seed, challenger, opponents });
+      worker.postMessage({ seed: TRIAL_SEED, challenger, opponents });
     } catch {
       if (generation === trialGeneration.current) {
         setNotice(t(($) => $.error));
@@ -578,9 +578,6 @@ function Content({ wsId, userId }: { wsId: string; userId: string }) {
                               ? t(($) => $.tactics.localOnly)
                               : t(($) => $.arena)}
                           </span>
-                          <span>
-                            {t(($) => $.seed)} {review.seed}
-                          </span>
                         </div>
                       }
                       controls={
@@ -735,7 +732,7 @@ function Content({ wsId, userId }: { wsId: string; userId: string }) {
                     frames: liveTimeline,
                     redName: redLabel,
                     blueName: blueLabel,
-                    seed,
+                    seed: TRIAL_SEED,
                     result: frame.result,
                   });
                   seek(index);
@@ -806,26 +803,6 @@ function Content({ wsId, userId }: { wsId: string; userId: string }) {
                           </option>
                         ))}
                       </select>
-                    </label>
-                    <label>
-                      {t(($) => $.seed)}
-                      <Input
-                        type="number"
-                        min="0"
-                        max="4294967295"
-                        value={seed}
-                        onChange={(e) => {
-                          const next = Number(e.target.value);
-                          if (
-                            Number.isInteger(next) &&
-                            next >= 0 &&
-                            next <= 0xffffffff
-                          ) {
-                            setSeed(next);
-                            reset(red, blue, next);
-                          }
-                        }}
-                      />
                     </label>
                     <Button
                       variant="outline"
@@ -921,7 +898,6 @@ function Content({ wsId, userId }: { wsId: string; userId: string }) {
                         <thead>
                           <tr>
                             <th>{t(($) => $.tactics.opponent)}</th>
-                            <th>{t(($) => $.seed)}</th>
                             <th>{t(($) => $.tactics.result)}</th>
                             <th>{t(($) => $.tactics.reason)}</th>
                             <th>{t(($) => $.tactics.simulationTime)}</th>
@@ -932,7 +908,6 @@ function Content({ wsId, userId }: { wsId: string; userId: string }) {
                           {trialResults.map((row) => (
                             <tr key={row.index}>
                               <td>{row.name}</td>
-                              <td>{row.seed}</td>
                               <td>{outcome(row.result.winner)}</td>
                               <td>{row.result.method}</td>
                               <td>{battleTime(row.duration)}</td>

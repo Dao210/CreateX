@@ -12,7 +12,6 @@
   "step": "Un pas",
   "reset": "Recommencer",
   "speed": "Vitesse",
-  "seed": "Graine",
   "swap": "Inverser les camps",
   "fullscreen": "Plein écran",
   "decision": "Décisions",
@@ -134,7 +133,7 @@
     "respawn": {
       "title": "Mort et réapparition",
       "text": "Les morts sont comptées par unité : les trois premières entraînent une réapparition après 5, 10 et 20 secondes. La quatrième élimine définitivement l’unité.",
-      "detail": "Les positions initiales et de réapparition sont tirées dans la base, à plus de 2 cases du socle, de façon reproductible selon la graine. La vie est entièrement restaurée. Les stratégies ne choisissent pas ces coordonnées."
+      "detail": "Le système choisit les positions d’apparition et de retour dans la base, à plus de 2 cases du drapeau. Les mêmes stratégies et conditions de départ reproduisent la partie. Le retour restaure toute la vie. Une stratégie ne peut pas choisir ces positions."
     },
     "strategy": {
       "title": "Créer et essayer une stratégie",
@@ -144,7 +143,7 @@
     "arena": {
       "title": "Arène officielle et classement",
       "text": "Chaque membre inscrit une version enregistrée. La confirmation publie son code complet dans ce monde ; retrait et archivage ne révoquent pas ce code. Les propriétaires et administrateurs lancent les tournois en figeant les versions.",
-      "detail": "Jusqu’à 48 membres jouent deux à deux en un seul match, avec la graine 12027 et des camps fixés au départ. Le serveur calcule les résultats. Les tournois terminés publient Glicko-2 selon Rating − 2 × RD ; moins de 10 matchs reste provisoire. Les modifications servent aux tournois suivants."
+      "detail": "Jusqu’à 48 membres s’affrontent par paires en une seule partie, avec des conditions de départ fixes et des camps attribués au début du lot. Le serveur calcule les résultats officiels. Le classement Glicko-2 utilise Rating − 2 × RD ; moins de 10 parties reste provisoire. Les nouvelles versions concernent les prochains lots."
     }
   },
   "tactics": {

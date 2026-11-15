@@ -12,7 +12,6 @@
   "step": "Step",
   "reset": "Reset",
   "speed": "Speed",
-  "seed": "Seed",
   "swap": "Swap sides",
   "fullscreen": "Fullscreen",
   "decision": "Decisions",
@@ -134,7 +133,7 @@
     "respawn": {
       "title": "Death and respawn",
       "text": "Each unit tracks its own deaths: the first three respawns take 5, 10 and 20 seconds. The fourth death permanently eliminates that unit.",
-      "detail": "Spawn and respawn locations are chosen inside the home base, more than 2 cells from its flag base, and are reproducible with the match seed. Respawning restores full health. Strategies cannot choose spawn coordinates."
+      "detail": "The system chooses spawn and respawn positions inside the home base, more than 2 cells from its flag. The same strategies and opening reproduce the match. Respawning restores full health. Strategies cannot choose spawn positions."
     },
     "strategy": {
       "title": "Create and trial a strategy",
@@ -144,7 +143,7 @@
     "arena": {
       "title": "Official arena and ranking",
       "text": "Each member may enter one saved version. Confirming entry publishes its full source to this world; withdrawing or archiving does not revoke that source. World owners and admins start batches, freezing all entries.",
-      "detail": "Up to 48 members play pairwise single matches, using seed 12027 and fixed red/blue assignments. The server computes official results. Completed batches publish Glicko-2 rankings by Rating − 2 × RD; fewer than 10 matches is provisional. New edits apply to future batches."
+      "detail": "Up to 48 members play pairwise single matches with a fixed opening and red/blue assignments set at batch start. The server computes official results. Completed batches publish Glicko-2 rankings by Rating − 2 × RD; fewer than 10 matches is provisional. New versions apply to future batches."
     }
   },
   "tactics": {

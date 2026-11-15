@@ -88,6 +88,19 @@ test("strategy import, explicit publication, official score and replay", async (
   await expect(page.locator("textarea, pre, code")).toHaveCount(0);
   await page.getByRole("button", { name: "单步", exact: true }).click();
   await expect(page.locator(".ctf-stage-meta")).toContainText("1 / 1920");
+  const firstStep = await page
+    .locator(".ctf-inspector-head .ctf-inspector-metrics")
+    .innerText();
+  await page.getByRole("button", { name: "重开", exact: true }).click();
+  await page.getByRole("button", { name: "单步", exact: true }).click();
+  await expect
+    .poll(() =>
+      page.locator(".ctf-inspector-head .ctf-inspector-metrics").innerText(),
+    )
+    .toBe(firstStep);
+  await expect(page.getByRole("spinbutton")).toHaveCount(0);
+  await expect(page.locator(".ctf-page")).not.toContainText("随机种子");
+
   await page.getByRole("button", { name: "导入策略", exact: true }).click();
   const importDialog = page.getByRole("dialog", {
     name: "导入策略",
@@ -145,6 +158,9 @@ test("strategy import, explicit publication, official score and replay", async (
   await expect(page.locator(".ctf-trial-results tbody tr")).toHaveCount(1, {
     timeout: 15000,
   });
+  await expect(page.locator(".ctf-trial-results thead")).not.toContainText(
+    "种子",
+  );
   await page.getByRole("button", { name: "复盘对局", exact: true }).click();
   await expect(
     page.getByRole("button", { name: "返回试炼", exact: true }),
@@ -153,6 +169,7 @@ test("strategy import, explicit publication, official score and replay", async (
   await localSlider.focus();
   await localSlider.press("End");
   await expect(page.locator(".ctf-event-timeline")).toContainText("战斗时间线");
+  await expect(page.locator(".ctf-stage-meta")).not.toContainText("12027");
   await page.getByRole("button", { name: "返回试炼", exact: true }).click();
   const hidden = await opponent.ctfRequest(`strategies/${saved.id}?revision=1`);
   expect(hidden.status).toBe(404);
@@ -268,6 +285,8 @@ test("strategy import, explicit publication, official score and replay", async (
   ).json();
   expect(rawOfficial.frames[0]).toHaveProperty("events");
   const official = MatchRecordSchema.parse(rawOfficial);
+  expect(official.seed).toBe(12027);
+  await expect(page.locator(".ctf-stage-meta")).not.toContainText("12027");
   // Entry order can swap the fixtures; the reverse pairing has no actual attacks.
   const hasAttacks = official.frames.some((frame) =>
     frame.events.some((event) => event.kind === "attack"),

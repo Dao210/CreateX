@@ -155,9 +155,6 @@
   font-size: var(--text-caption);
   color: var(--muted-foreground);
 }
-.ctf-controls input[type="number"] {
-  width: 110px;
-}
 .ctf-controls input[type="range"] {
   flex: 1;
   min-width: 120px;
@@ -520,7 +517,6 @@
 .ctf-stage:fullscreen .ctf-canvas { width: auto; max-width: 100%; max-height: calc(100dvh - 65px); }
 .ctf-controls { padding: .65rem 0; gap: .45rem; }
 .ctf-controls label { gap: .35rem; }
-.ctf-controls input[type="number"] { width: 95px; height: 30px; }
 .ctf-controls select { padding: .25rem .4rem; }
 .ctf-controls > button { font-size: var(--text-caption); }
 .ctf-unit-roster { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: .4rem; }
