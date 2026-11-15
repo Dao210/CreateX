@@ -636,3 +636,7 @@
 }
 
 .ctf-active-revision { display: inline-block; margin-left: .7rem; color: var(--muted-foreground); font-size: var(--text-caption); }
+
+.ctf-field-heading { flex-wrap: wrap; }
+.ctf-spawn-key { color: var(--ctf-ink); font-weight: 400; }
+.ctf-spawn-key > i { width: 17px; height: 13px; flex-shrink: 0; border: 1px dashed currentColor; border-radius: 2px; background-image: radial-gradient(currentColor .7px, transparent .7px); background-size: 4px 4px; opacity: .8; }

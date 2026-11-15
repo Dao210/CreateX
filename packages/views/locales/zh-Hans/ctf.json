@@ -270,5 +270,13 @@
       "tooLarge": "文件超过 256 KB，请选择限制以内的策略文件。"
     }
   },
-  "strategyName": "策略名称"
+  "strategyName": "策略名称",
+  "zones": {
+    "redBase": "红方基地",
+    "blueBase": "蓝方基地",
+    "field": "中央战场",
+    "spawn": "出生 / 重生区",
+    "spawnLegend": "骑兵等单位出生区",
+    "spawnHelp": "骑兵、重甲步兵和弓箭手共用出生区；旗位周围 2 格内不会出生。"
+  }
 }

@@ -71,6 +71,20 @@ test("strategy import, explicit publication, official score and replay", async (
   await expect(page).toHaveTitle(/夺旗/);
   await expect(page.locator(".ctf-unit-roster button")).toHaveCount(6);
   await expect(page.locator(".ctf-inspector")).toContainText("观察到了什么");
+  await expect(
+    page.getByText("骑兵等单位出生区", { exact: true }),
+  ).toBeVisible();
+  await expect
+    .poll(() =>
+      page
+        .locator("canvas.ctf-canvas")
+        .evaluate((el) => (el as HTMLCanvasElement).width),
+    )
+    .toBeGreaterThan(1000);
+  await page.screenshot({
+    path: "test-results/ctf/zones-start.png",
+    animations: "disabled",
+  });
   await expect(page.locator("textarea, pre, code")).toHaveCount(0);
   await page.getByRole("button", { name: "单步", exact: true }).click();
   await expect(page.locator(".ctf-stage-meta")).toContainText("1 / 1920");
@@ -293,13 +307,11 @@ test("strategy import, explicit publication, official score and replay", async (
       name: "导入策略",
       exact: true,
     });
-    await roundTrip
-      .locator('input[type="file"]')
-      .setInputFiles({
-        name: exported.suggestedFilename(),
-        mimeType: "application/json",
-        buffer: exportedBytes,
-      });
+    await roundTrip.locator('input[type="file"]').setInputFiles({
+      name: exported.suggestedFilename(),
+      mimeType: "application/json",
+      buffer: exportedBytes,
+    });
     await expect(roundTrip.getByText("可导入", { exact: true })).toBeVisible();
     await roundTrip.getByRole("button", { name: "取消", exact: true }).click();
     const downloadEvent = page.waitForEvent("download");

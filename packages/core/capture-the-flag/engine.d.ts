@@ -23,3 +23,17 @@ export const UNIT_STATS: Record<
   }
 >;
 export const FLAG_ANCHORS: Record<Side, { x: number; y: number }>;
+export const MAP_W: 100;
+export const MAP_H: 50;
+export const BASE_W: 15;
+export const BASE_SPAWN_AREAS: Readonly<
+  Record<
+    Side,
+    Readonly<{
+      minX: number;
+      maxX: number;
+      minY: number;
+      maxY: number;
+    }>
+  >
+>;

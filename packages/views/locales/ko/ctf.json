@@ -270,5 +270,13 @@
       "tooLarge": "파일이 256 KB를 초과합니다. 제한 이내의 전략 파일을 선택하세요."
     }
   },
-  "strategyName": "전략 이름"
+  "strategyName": "전략 이름",
+  "zones": {
+    "redBase": "레드 기지",
+    "blueBase": "블루 기지",
+    "field": "중앙 전장",
+    "spawn": "출생 / 부활 구역",
+    "spawnLegend": "기병 등 유닛 출생 구역",
+    "spawnHelp": "기병·중보병·궁수가 같은 출생 구역을 사용합니다. 깃발 반경 2칸 안에는 출생하지 않습니다."
+  }
 }

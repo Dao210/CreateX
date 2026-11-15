@@ -1,5 +1,11 @@
 import type { BattleEvent, Frame, Unit } from "@auro/core/capture-the-flag";
-import { FLAG_ANCHORS } from "@auro/core/capture-the-flag";
+import {
+  FLAG_ANCHORS,
+  BASE_SPAWN_AREAS,
+  BASE_W,
+  MAP_W,
+  MAP_H,
+} from "@auro/core/capture-the-flag";
 import unitAtlas from "./assets/units.webp";
 
 function assetUrl(asset: string | { src: string }) {
@@ -8,7 +14,7 @@ function assetUrl(asset: string | { src: string }) {
 export const ATLAS_URL = assetUrl(unitAtlas);
 export const FIELD_WIDTH = 1200;
 export const FIELD_HEIGHT = 640;
-const SCALE = 11.6;
+const SCALE = (FIELD_WIDTH - 40) / MAP_W;
 const COLORS = { red: "#c85843", blue: "#3c78aa" };
 export const fieldPoint = (x: number, y: number) => ({
   x: 20 + x * SCALE,
@@ -32,7 +38,15 @@ export function unitAt(frame: Frame, x: number, y: number, selected?: string) {
     )[0]?.unit.id;
 }
 
-export function drawBoard(ctx: CanvasRenderingContext2D) {
+export function drawBoard(
+  ctx: CanvasRenderingContext2D,
+  labels: {
+    redBase: string;
+    blueBase: string;
+    field: string;
+    spawn: string;
+  },
+) {
   ctx.fillStyle = "#746b4e";
   ctx.fillRect(0, 0, FIELD_WIDTH, FIELD_HEIGHT);
   const ground = ctx.createLinearGradient(0, 30, 1200, 610);
@@ -41,6 +55,14 @@ export function drawBoard(ctx: CanvasRenderingContext2D) {
   ground.addColorStop(1, "#74874e");
   ctx.fillStyle = ground;
   ctx.fillRect(20, 30, 1160, 580);
+  for (const side of ["red", "blue"] as const) {
+    const left = fieldPoint(side === "red" ? 0 : MAP_W - BASE_W, 0).x;
+    const wash = ctx.createLinearGradient(left, 0, left + BASE_W * SCALE, 0);
+    wash.addColorStop(0, side === "red" ? "#bd8a79" : "#739aa8");
+    wash.addColorStop(1, side === "red" ? "#b57e70" : "#82a7ac");
+    ctx.fillStyle = wash;
+    ctx.fillRect(left, 30, BASE_W * SCALE, MAP_H * SCALE);
+  }
   let seed = 4281;
   const random = () => {
     seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
@@ -55,17 +77,6 @@ export function drawBoard(ctx: CanvasRenderingContext2D) {
     ctx.moveTo(x, y);
     ctx.lineTo(x + random() * 3 - 1.5, y - 1 - random() * 4);
     ctx.stroke();
-  }
-  for (const side of ["red", "blue"] as const) {
-    const left = side === "red" ? 20 : 1006;
-    const tint = ctx.createLinearGradient(left, 0, left + 174, 0);
-    tint.addColorStop(
-      side === "red" ? 0 : 1,
-      side === "red" ? "#a8593b36" : "#3b7eac36",
-    );
-    tint.addColorStop(side === "red" ? 1 : 0, "#ffffff00");
-    ctx.fillStyle = tint;
-    ctx.fillRect(left, 30, 174, 580);
   }
   ctx.strokeStyle = "#eef0c31b";
   ctx.lineWidth = 1;
@@ -90,6 +101,77 @@ export function drawBoard(ctx: CanvasRenderingContext2D) {
   ctx.lineTo(600, 610);
   ctx.stroke();
   ctx.setLineDash([]);
+  for (const side of ["red", "blue"] as const) {
+    const boundary = fieldPoint(side === "red" ? BASE_W : MAP_W - BASE_W, 0).x;
+    ctx.strokeStyle = side === "red" ? "#7e453acc" : "#355f75cc";
+    ctx.lineWidth = 2;
+    ctx.setLineDash([8, 6]);
+    ctx.beginPath();
+    ctx.moveTo(boundary, 30);
+    ctx.lineTo(boundary, 610);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    const area = BASE_SPAWN_AREAS[side];
+    const topLeft = fieldPoint(area.minX - 0.5, area.minY - 0.5);
+    const width = (area.maxX - area.minX + 1) * SCALE;
+    const height = (area.maxY - area.minY + 1) * SCALE;
+    const anchor = FLAG_ANCHORS[side];
+    const flagPoint = fieldPoint(anchor.x, anchor.y);
+    // The same legal spawn cells are shared by all three unit types.
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(topLeft.x, topLeft.y, width, height);
+    ctx.moveTo(flagPoint.x + 2 * SCALE, flagPoint.y);
+    ctx.arc(flagPoint.x, flagPoint.y, 2 * SCALE, 0, Math.PI * 2);
+    ctx.clip("evenodd");
+    ctx.fillStyle = side === "red" ? "#673d3018" : "#274d5c18";
+    ctx.fillRect(topLeft.x, topLeft.y, width, height);
+    ctx.fillStyle = side === "red" ? "#fff0cc90" : "#e2f7fb90";
+    ctx.beginPath();
+    for (let x = area.minX; x <= area.maxX; x++) {
+      for (let y = area.minY; y <= area.maxY; y++) {
+        if (Math.hypot(x - anchor.x, y - anchor.y) <= 2) continue;
+        const p = fieldPoint(x, y);
+        ctx.moveTo(p.x + 0.8, p.y);
+        ctx.arc(p.x, p.y, 0.8, 0, Math.PI * 2);
+      }
+    }
+    ctx.fill();
+    ctx.restore();
+    ctx.setLineDash([7, 5]);
+    ctx.strokeStyle = side === "red" ? "#ffe1c3cc" : "#d9f4ffcc";
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(topLeft.x, topLeft.y, width, height);
+    ctx.setLineDash([]);
+    const centerX = topLeft.x + width / 2;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.font = "600 15px sans-serif";
+    ctx.fillStyle = side === "red" ? "#492a22" : "#163746";
+    ctx.fillText(
+      side === "red" ? labels.redBase : labels.blueBase,
+      centerX,
+      45,
+    );
+    ctx.font = "500 12px sans-serif";
+    const labelWidth = Math.min(
+      width,
+      ctx.measureText(labels.spawn).width + 18,
+    );
+    const labelY = topLeft.y + height + 14;
+    ctx.fillStyle = side === "red" ? "#633d33d9" : "#2c5267d9";
+    ctx.beginPath();
+    ctx.roundRect(centerX - labelWidth / 2, labelY - 10, labelWidth, 20, 4);
+    ctx.fill();
+    ctx.fillStyle = "#fff5df";
+    ctx.fillText(labels.spawn, centerX, labelY, labelWidth - 12);
+  }
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.font = "600 15px sans-serif";
+  ctx.fillStyle = "#25321d";
+  ctx.fillText(labels.field, FIELD_WIDTH / 2, 45);
   const stone = (x: number, y: number, w: number, h: number) => {
     ctx.fillStyle = ["#a19c83", "#aaa58b", "#8d8c74"][
       Math.floor(random() * 3)

@@ -270,5 +270,13 @@
       "tooLarge": "This file exceeds 256 KB. Choose a strategy file within the limit."
     }
   },
-  "strategyName": "Strategy name"
+  "strategyName": "Strategy name",
+  "zones": {
+    "redBase": "Red base",
+    "blueBase": "Blue base",
+    "field": "Open battlefield",
+    "spawn": "Spawn / respawn",
+    "spawnLegend": "Unit spawn area · incl. cavalry",
+    "spawnHelp": "Cavalry, heavy infantry and archers share the spawn area. No units spawn within 2 cells of the flag base."
+  }
 }

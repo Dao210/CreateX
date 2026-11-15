@@ -10,6 +10,10 @@ export {
   TICK_SECONDS,
   UNIT_STATS,
   FLAG_ANCHORS,
+  MAP_W,
+  MAP_H,
+  BASE_W,
+  BASE_SPAWN_AREAS,
 } from "./engine.js";
 export { validateStrategy } from "./validator.js";
 export {

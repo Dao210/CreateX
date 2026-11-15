@@ -216,6 +216,10 @@ export function BattleView({
               <Crosshair aria-hidden />
               {t(($) => $.tactics.battlefield)}
             </span>
+            <span className="ctf-spawn-key" title={t(($) => $.zones.spawnHelp)}>
+              <i aria-hidden />
+              {t(($) => $.zones.spawnLegend)}
+            </span>
             <div>
               {(["red", "blue"] as const).map((side) => (
                 <span key={side} className={`ctf-flag-state ctf-${side}`}>

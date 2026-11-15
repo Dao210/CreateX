@@ -270,5 +270,13 @@
       "tooLarge": "Le fichier dépasse 256 Ko. Choisissez une stratégie respectant cette limite."
     }
   },
-  "strategyName": "Nom de la stratégie"
+  "strategyName": "Nom de la stratégie",
+  "zones": {
+    "redBase": "Base rouge",
+    "blueBase": "Base bleue",
+    "field": "Champ central",
+    "spawn": "Apparition / retour",
+    "spawnLegend": "Zone d’apparition · cavalerie incluse",
+    "spawnHelp": "La cavalerie, l’infanterie lourde et les archers partagent cette zone. Aucune apparition à moins de 2 cases du socle du drapeau."
+  }
 }

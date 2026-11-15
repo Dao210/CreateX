@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef } from "react";
+import { useT } from "../i18n";
 import type { Frame } from "@auro/core/capture-the-flag";
 import {
   ATLAS_URL,
@@ -27,6 +28,11 @@ export function BattleCanvas({
   playing?: boolean;
   interval?: number;
 }) {
+  const { t } = useT("ctf");
+  const redBase = t(($) => $.zones.redBase);
+  const blueBase = t(($) => $.zones.blueBase);
+  const field = t(($) => $.zones.field);
+  const spawn = t(($) => $.zones.spawn);
   const canvas = useRef<HTMLCanvasElement>(null);
   const latest = useRef({ frame, selectedId, targetId, playing, interval });
   useEffect(() => {
@@ -41,7 +47,7 @@ export function BattleCanvas({
     board.height = FIELD_HEIGHT;
     const ground = board.getContext("2d");
     if (!ground) return;
-    drawBoard(ground);
+    drawBoard(ground, { redBase, blueBase, field, spawn });
     const atlas = new Image();
     atlas.src = ATLAS_URL;
     const reduced = matchMedia("(prefers-reduced-motion: reduce)");
@@ -112,13 +118,13 @@ export function BattleCanvas({
       cancelAnimationFrame(request);
       atlas.src = "";
     };
-  }, []);
+  }, [redBase, blueBase, field, spawn]);
   return (
     <canvas
       ref={canvas}
       className="ctf-canvas"
       role="img"
-      aria-label={label}
+      aria-label={`${label}; ${t(($) => $.zones.spawnHelp)}`}
       onClick={(event) => {
         const box = event.currentTarget.getBoundingClientRect();
         const id = unitAt(
