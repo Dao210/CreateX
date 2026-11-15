@@ -66,7 +66,9 @@
     "./siege/workshop": "./siege/siege-workshop.tsx",
     "./siege/campaign": "./siege/campaign/campaign-app.tsx",
     "./fish": "./fish/index.ts",
-    "./fish/fish.css": "./fish/fish.css"
+    "./fish/fish.css": "./fish/fish.css",
+    "./capture-the-flag": "./capture-the-flag/index.ts",
+    "./capture-the-flag/ctf.css": "./capture-the-flag/ctf.css"
   },
   "dependencies": {
     "@auro/core": "workspace:*",

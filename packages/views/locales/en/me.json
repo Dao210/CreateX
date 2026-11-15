@@ -10,7 +10,8 @@
     "siege": "Siege",
     "tanks": "Tank Defense",
     "mcp": "Created via MCP",
-    "fish": "Fish"
+    "fish": "Fish",
+    "ctf": "Capture the Flag"
   },
   "weapons": {
     "title": "Creation collection",

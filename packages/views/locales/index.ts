@@ -1,3 +1,8 @@
+import frCTF from "./fr/ctf.json";
+import koCTF from "./ko/ctf.json";
+import jaCTF from "./ja/ctf.json";
+import zhHansCTF from "./zh-Hans/ctf.json";
+import enCTF from "./en/ctf.json";
 import frFish from "./fr/fish.json";
 import koFish from "./ko/fish.json";
 import jaFish from "./ja/fish.json";
@@ -172,6 +177,7 @@ export const RESOURCES: Record<SupportedLocale, LocaleResources> = {
     ui: enUi,
     billing: enBilling,
     tanks: enTanks,
+    ctf: enCTF,
     fish: enFish,
     me: enMe,
     life: enLife,
@@ -201,6 +207,7 @@ export const RESOURCES: Record<SupportedLocale, LocaleResources> = {
     ui: zhHansUi,
     billing: zhHansBilling,
     tanks: zhHansTanks,
+    ctf: zhHansCTF,
     fish: zhHansFish,
     me: zhHansMe,
     life: zhHansLife,
@@ -230,6 +237,7 @@ export const RESOURCES: Record<SupportedLocale, LocaleResources> = {
     ui: koUi,
     billing: koBilling,
     tanks: koTanks,
+    ctf: koCTF,
     fish: koFish,
     me: koMe,
     life: koLife,
@@ -259,6 +267,7 @@ export const RESOURCES: Record<SupportedLocale, LocaleResources> = {
     ui: jaUi,
     billing: jaBilling,
     tanks: jaTanks,
+    ctf: jaCTF,
     fish: jaFish,
     me: jaMe,
     life: jaLife,
@@ -288,6 +297,7 @@ export const RESOURCES: Record<SupportedLocale, LocaleResources> = {
     ui: frUi,
     billing: frBilling,
     tanks: frTanks,
+    ctf: frCTF,
     fish: frFish,
     me: frMe,
     life: frLife,

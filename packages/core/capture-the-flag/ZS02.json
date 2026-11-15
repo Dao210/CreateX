@@ -1,0 +1,473 @@
+{
+  "format_version": "1.0",
+  "game_version": "12-rts-1.0",
+  "team": {
+    "team_id": "ZS02",
+    "team_name": "ZS02"
+  },
+  "strategies": {
+    "heavy_infantry": {
+      "rules": [
+        {
+          "id": "zs02_heavy_chase_enemy_flag_carrier",
+          "name": "敌方抢到我方旗后追击持旗者",
+          "enabled": true,
+          "priority": 100,
+          "condition": {
+            "source": "enemy.has_flag_carrier",
+            "operator": "==",
+            "value": true
+          },
+          "movement": {
+            "type": "MOVE_TOWARD",
+            "target": "敌方持旗者"
+          },
+          "attack": {
+            "type": "ATTACK_ENEMY_FLAG_CARRIER"
+          },
+          "special": {
+            "type": "NONE"
+          }
+        },
+        {
+          "id": "zs01_heavy_focus_recent_attacker",
+          "name": "友军被攻击时集火攻击者",
+          "enabled": true,
+          "priority": 95,
+          "condition": {
+            "source": "ally.recently_attacked",
+            "operator": "==",
+            "value": true
+          },
+          "movement": {
+            "type": "MOVE_TOWARD",
+            "target": "最近攻击友方的敌人"
+          },
+          "attack": {
+            "type": "ATTACK_RECENT_ALLY_ATTACKER"
+          },
+          "special": {
+            "type": "NONE"
+          }
+        },
+        {
+          "id": "zs01_heavy_clear_enemy_flag_area",
+          "name": "到敌旗附近先清理周边敌军",
+          "enabled": true,
+          "priority": 85,
+          "condition": {
+            "all": [
+              {
+                "source": "enemy.any_death_count",
+                "operator": ">=",
+                "value": 1
+              },
+              {
+                "source": "self.distance_to_enemy_flag_anchor",
+                "operator": "<=",
+                "value": 2
+              },
+              {
+                "source": "enemy_near_enemy_flag.count",
+                "operator": ">",
+                "value": 0
+              }
+            ]
+          },
+          "movement": {
+            "type": "MOVE_TOWARD",
+            "target": "最近敌人"
+          },
+          "attack": {
+            "type": "ATTACK_NEAREST_ENEMY"
+          },
+          "special": {
+            "type": "NONE"
+          }
+        },
+        {
+          "id": "zs01_heavy_after_first_kill_advance",
+          "name": "首杀后作为队形锚点推进",
+          "enabled": true,
+          "priority": 70,
+          "condition": {
+            "source": "enemy.any_death_count",
+            "operator": ">=",
+            "value": 1
+          },
+          "movement": {
+            "type": "GO_TO_ENEMY_FLAG"
+          },
+          "attack": {
+            "type": "ATTACK_NEAREST_ENEMY"
+          },
+          "special": {
+            "type": "NONE"
+          }
+        },
+        {
+          "id": "zs01_heavy_before_first_kill_wait_and_fight",
+          "name": "首杀前遇敌时边推进边攻击",
+          "enabled": true,
+          "priority": 30,
+          "condition": {
+            "source": "nearest_enemy.distance",
+            "operator": "<=",
+            "value": 3
+          },
+          "movement": {
+            "type": "GO_TO_ENEMY_FLAG"
+          },
+          "attack": {
+            "type": "ATTACK_NEAREST_ENEMY"
+          },
+          "special": {
+            "type": "NONE"
+          }
+        },
+        {
+          "id": "zs01_heavy_hold_anchor",
+          "name": "首杀前作为队形锚点主动推进",
+          "enabled": true,
+          "priority": 10,
+          "condition": {
+            "all": []
+          },
+          "movement": {
+            "type": "GO_TO_ENEMY_FLAG"
+          },
+          "attack": {
+            "type": "ATTACK_NEAREST_ENEMY"
+          },
+          "special": {
+            "type": "NONE"
+          }
+        }
+      ]
+    },
+    "cavalry": {
+      "rules": [
+        {
+          "id": "zs02_cavalry_chase_enemy_flag_carrier",
+          "name": "敌方抢到我方旗后追击持旗者",
+          "enabled": true,
+          "priority": 100,
+          "condition": {
+            "source": "enemy.has_flag_carrier",
+            "operator": "==",
+            "value": true
+          },
+          "movement": {
+            "type": "MOVE_TOWARD",
+            "target": "敌方持旗者"
+          },
+          "attack": {
+            "type": "ATTACK_ENEMY_FLAG_CARRIER"
+          },
+          "special": {
+            "type": "NONE"
+          }
+        },
+        {
+          "id": "zs01_cavalry_deliver_flag",
+          "name": "夺旗后最快速度回家插旗",
+          "enabled": true,
+          "priority": 99,
+          "condition": {
+            "source": "self.is_flag_carrier",
+            "operator": "==",
+            "value": true
+          },
+          "movement": {
+            "type": "RETURN_TO_OWN_FLAG"
+          },
+          "attack": {
+            "type": "ATTACK_NEAREST_ENEMY"
+          },
+          "special": {
+            "type": "DELIVER_FLAG"
+          }
+        },
+        {
+          "id": "zs01_cavalry_focus_recent_attacker",
+          "name": "友军被攻击时集火攻击者",
+          "enabled": true,
+          "priority": 94,
+          "condition": {
+            "source": "ally.recently_attacked",
+            "operator": "==",
+            "value": true
+          },
+          "movement": {
+            "type": "MOVE_TOWARD",
+            "target": "最近攻击友方的敌人"
+          },
+          "attack": {
+            "type": "ATTACK_RECENT_ALLY_ATTACKER"
+          },
+          "special": {
+            "type": "NONE"
+          }
+        },
+        {
+          "id": "zs01_cavalry_clear_enemy_flag_area",
+          "name": "敌旗附近有敌人时先不抢旗",
+          "enabled": true,
+          "priority": 85,
+          "condition": {
+            "all": [
+              {
+                "source": "enemy.any_death_count",
+                "operator": ">=",
+                "value": 1
+              },
+              {
+                "source": "self.distance_to_enemy_flag_anchor",
+                "operator": "<=",
+                "value": 2
+              },
+              {
+                "source": "enemy_near_enemy_flag.count",
+                "operator": ">",
+                "value": 0
+              }
+            ]
+          },
+          "movement": {
+            "type": "MOVE_TOWARD",
+            "target": "最近敌人"
+          },
+          "attack": {
+            "type": "ATTACK_NEAREST_ENEMY"
+          },
+          "special": {
+            "type": "NONE"
+          }
+        },
+        {
+          "id": "zs01_cavalry_capture_when_safe",
+          "name": "敌旗附近安全后由骑兵夺旗",
+          "enabled": true,
+          "priority": 80,
+          "condition": {
+            "all": [
+              {
+                "source": "enemy.any_death_count",
+                "operator": ">=",
+                "value": 1
+              },
+              {
+                "source": "enemy_near_enemy_flag.count",
+                "operator": "==",
+                "value": 0
+              },
+              {
+                "source": "enemy_flag.state",
+                "operator": "==",
+                "value": "AT_HOME"
+              }
+            ]
+          },
+          "movement": {
+            "type": "GO_TO_ENEMY_FLAG"
+          },
+          "attack": {
+            "type": "NO_ATTACK"
+          },
+          "special": {
+            "type": "CAPTURE_ENEMY_FLAG"
+          }
+        },
+        {
+          "id": "zs01_cavalry_after_first_kill_keep_formation",
+          "name": "首杀后跟随重甲保持一格队形",
+          "enabled": true,
+          "priority": 60,
+          "condition": {
+            "source": "enemy.any_death_count",
+            "operator": ">=",
+            "value": 1
+          },
+          "movement": {
+            "type": "FOLLOW",
+            "target": "友方重甲步兵",
+            "distance": 1
+          },
+          "attack": {
+            "type": "ATTACK_NEAREST_ENEMY"
+          },
+          "special": {
+            "type": "NONE"
+          }
+        },
+        {
+          "id": "zs01_cavalry_before_first_kill_group",
+          "name": "首杀前跟随重甲集体向前",
+          "enabled": true,
+          "priority": 10,
+          "condition": {
+            "all": []
+          },
+          "movement": {
+            "type": "FOLLOW",
+            "target": "友方重甲步兵",
+            "distance": 1
+          },
+          "attack": {
+            "type": "ATTACK_NEAREST_ENEMY"
+          },
+          "special": {
+            "type": "NONE"
+          }
+        }
+      ]
+    },
+    "archer": {
+      "rules": [
+        {
+          "id": "zs02_archer_chase_enemy_flag_carrier",
+          "name": "敌方抢到我方旗后追击持旗者",
+          "enabled": true,
+          "priority": 100,
+          "condition": {
+            "source": "enemy.has_flag_carrier",
+            "operator": "==",
+            "value": true
+          },
+          "movement": {
+            "type": "FOLLOW",
+            "target": "敌方持旗者",
+            "distance": 5
+          },
+          "attack": {
+            "type": "ATTACK_ENEMY_FLAG_CARRIER"
+          },
+          "special": {
+            "type": "NONE"
+          }
+        },
+        {
+          "id": "zs01_archer_return_with_team_after_flag",
+          "name": "骑兵持旗后向己方旗位赶路",
+          "enabled": true,
+          "priority": 99,
+          "condition": {
+            "source": "ally.has_flag_carrier",
+            "operator": "==",
+            "value": true
+          },
+          "movement": {
+            "type": "RETURN_TO_OWN_FLAG"
+          },
+          "attack": {
+            "type": "ATTACK_NEAREST_ENEMY"
+          },
+          "special": {
+            "type": "NONE"
+          }
+        },
+        {
+          "id": "zs01_archer_focus_recent_attacker",
+          "name": "友军被攻击时集火攻击者",
+          "enabled": true,
+          "priority": 94,
+          "condition": {
+            "source": "ally.recently_attacked",
+            "operator": "==",
+            "value": true
+          },
+          "movement": {
+            "type": "FOLLOW",
+            "target": "最近攻击友方的敌人",
+            "distance": 5
+          },
+          "attack": {
+            "type": "ATTACK_RECENT_ALLY_ATTACKER"
+          },
+          "special": {
+            "type": "NONE"
+          }
+        },
+        {
+          "id": "zs01_archer_clear_enemy_flag_area",
+          "name": "敌旗附近先清理敌军",
+          "enabled": true,
+          "priority": 85,
+          "condition": {
+            "all": [
+              {
+                "source": "enemy.any_death_count",
+                "operator": ">=",
+                "value": 1
+              },
+              {
+                "source": "self.distance_to_enemy_flag_anchor",
+                "operator": "<=",
+                "value": 5
+              },
+              {
+                "source": "enemy_near_enemy_flag.count",
+                "operator": ">",
+                "value": 0
+              }
+            ]
+          },
+          "movement": {
+            "type": "FOLLOW",
+            "target": "最近敌人",
+            "distance": 5
+          },
+          "attack": {
+            "type": "ATTACK_NEAREST_ENEMY"
+          },
+          "special": {
+            "type": "NONE"
+          }
+        },
+        {
+          "id": "zs01_archer_after_first_kill_keep_formation",
+          "name": "首杀后跟随重甲保持一格队形",
+          "enabled": true,
+          "priority": 60,
+          "condition": {
+            "source": "enemy.any_death_count",
+            "operator": ">=",
+            "value": 1
+          },
+          "movement": {
+            "type": "FOLLOW",
+            "target": "友方重甲步兵",
+            "distance": 1
+          },
+          "attack": {
+            "type": "ATTACK_NEAREST_ENEMY"
+          },
+          "special": {
+            "type": "NONE"
+          }
+        },
+        {
+          "id": "zs01_archer_before_first_kill_group",
+          "name": "首杀前跟随重甲集体向前",
+          "enabled": true,
+          "priority": 10,
+          "condition": {
+            "all": []
+          },
+          "movement": {
+            "type": "FOLLOW",
+            "target": "友方重甲步兵",
+            "distance": 1
+          },
+          "attack": {
+            "type": "ATTACK_NEAREST_ENEMY"
+          },
+          "special": {
+            "type": "NONE"
+          }
+        }
+      ]
+    }
+  },
+  "enhancement_mode": "standard"
+}

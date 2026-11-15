@@ -532,6 +532,73 @@ type ContactSalesInquiry struct {
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 }
 
+type CtfBatch struct {
+	ID          pgtype.UUID        `json:"id"`
+	WorkspaceID pgtype.UUID        `json:"workspace_id"`
+	UserID      pgtype.UUID        `json:"user_id"`
+	Status      string             `json:"status"`
+	Total       int32              `json:"total"`
+	Error       string             `json:"error"`
+	Published   bool               `json:"published"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	Leaderboard []byte             `json:"leaderboard"`
+}
+
+type CtfEntry struct {
+	WorkspaceID pgtype.UUID `json:"workspace_id"`
+	UserID      pgtype.UUID `json:"user_id"`
+	Payload     []byte      `json:"payload"`
+}
+
+type CtfLeaderboard struct {
+	WorkspaceID pgtype.UUID        `json:"workspace_id"`
+	Payload     []byte             `json:"payload"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+}
+
+type CtfMatch struct {
+	ID          pgtype.UUID        `json:"id"`
+	WorkspaceID pgtype.UUID        `json:"workspace_id"`
+	BatchID     pgtype.UUID        `json:"batch_id"`
+	Status      string             `json:"status"`
+	Payload     []byte             `json:"payload"`
+	Result      []byte             `json:"result"`
+	LeaseID     pgtype.UUID        `json:"lease_id"`
+	LeaseUntil  pgtype.Timestamptz `json:"lease_until"`
+	Attempts    int32              `json:"attempts"`
+	Error       string             `json:"error"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+}
+
+type CtfRequest struct {
+	WorkspaceID pgtype.UUID        `json:"workspace_id"`
+	UserID      pgtype.UUID        `json:"user_id"`
+	RequestID   pgtype.UUID        `json:"request_id"`
+	BodyHash    string             `json:"body_hash"`
+	Response    []byte             `json:"response"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+}
+
+type CtfRevision struct {
+	StrategyID  pgtype.UUID        `json:"strategy_id"`
+	WorkspaceID pgtype.UUID        `json:"workspace_id"`
+	UserID      pgtype.UUID        `json:"user_id"`
+	Revision    int32              `json:"revision"`
+	Published   bool               `json:"published"`
+	Payload     []byte             `json:"payload"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+}
+
+type CtfStrategy struct {
+	ID          pgtype.UUID        `json:"id"`
+	WorkspaceID pgtype.UUID        `json:"workspace_id"`
+	UserID      pgtype.UUID        `json:"user_id"`
+	Revision    int32              `json:"revision"`
+	Archived    bool               `json:"archived"`
+	Payload     []byte             `json:"payload"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+}
+
 type DaemonConnection struct {
 	ID              pgtype.UUID        `json:"id"`
 	AgentID         pgtype.UUID        `json:"agent_id"`

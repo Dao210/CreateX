@@ -63,6 +63,7 @@ function workspaceScoped(slug: string) {
     // surfaces; the campaign is reached from inside the workshop, so it has no
     // nav entry and no method here.
     siege: () => `${ws}/siege`,
+    ctf: () => `${ws}/ctf`,
     tanks: () => `${ws}/tanks`,
     fish: () => `${ws}/fish`,
     life: () => `${ws}/life`,

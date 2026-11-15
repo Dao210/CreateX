@@ -18,7 +18,9 @@
   ],
   "backend": [
     "packages/core/agent-life/**",
+    "packages/core/capture-the-flag/**",
     "scripts/build-life-runtime.mjs",
+    "scripts/build-ctf-runtime.mjs",
     "package.json",
     "pnpm-lock.yaml",
     "pnpm-workspace.yaml",

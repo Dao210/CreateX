@@ -31,6 +31,7 @@ const WORKSPACE_ROUTE_SEGMENTS = new Set([
   "runtimes",
   "skills",
   "siege",
+  "ctf",
   "tanks",
   "fish",
   "life",

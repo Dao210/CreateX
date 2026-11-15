@@ -1,0 +1,86 @@
+# 夺旗
+
+夺旗是世界内游戏，Web 和 Desktop 入口是 `/{slug}/ctf`，竞技场在 `/{slug}/ctf/arena`，单场记录在 `/{slug}/ctf/matches/{id}`。侧栏、搜索和「我的创作」均有入口，主应用的游戏管理控制开放与显示。
+
+原作：黄仲生，《夺旗Agent游戏 v4.0》。本次接入保留 `12-rts-1.0` 游戏协议和 `1.0` 策略格式；出处见 [SOURCE.md](../packages/core/capture-the-flag/SOURCE.md)。原目录、原账号和历史策略未被修改或自动导入。
+
+## 使用流程
+
+1. 下载 AI 规则包，在外部工具生成 `.strategy` 或 `.json`。
+2. 导入文件，或从模板新建并编辑 JSON，校验后本地试炼。
+3. 保存策略版本。草稿与未公开版本仅作者在当前世界内可读。
+4. 点击「报名」，确认把所选版本的完整源码公开给当前世界全部成员。
+5. 世界 owner/admin 发起正式比赛，所有参赛输入在开始时冻结。
+6. 批次完成后自动发布世界排行榜；单场记录可回放。
+
+可以保存多个策略；每个成员只有一个当前报名。修改或撤回当前报名影响后续批次，已经开始的批次继续使用原冻结版本。之后保存新版本不会更改已公开的源码或参赛输入。归档保留公开版本与历史比赛。
+
+首版不需要模型配置，不调用内置模型，也没有 MCP。JSON 编辑器提供模板、导入、导出和校验。源码库显示最新公开版本，历史比赛仍关联其确切 revision 和 hash。
+
+## 规则与排名
+
+- 100×50 地图、每方三个兵种，0.25 秒 Tick。
+- 普通试炼支持固定种子、交换红蓝、单步和倍速，不写正式成绩。批量试炼在可终止的浏览器 Worker 中运行，挑战至多 48 个其他成员公开的策略；空库使用内置基线。
+- 正式批次是不同成员两两单局赛，至多 48 位成员；红蓝按冻结报名顺序分配，种子固定为 12027，每局 480 秒上限。
+- 当前赛制保留原版固定种子单局语义，适合移植验证；它存在阵营和单一种子带来的偏差。镜像红蓝、多种子赛制需要新的赛制版本。
+- 每个策略版本独立采用 Glicko-2 评级，初始 Rating 1500、RD 350、Volatility 0.06，按保守分 `Rating - 2×RD` 排序。少于 10 场显示暂定。
+- 已发布的相同策略版本、内容哈希、阵营、种子和规则版本组合会复用已有成绩，不重复对战或计分。报名新版本后才产生新的对局。
+- 同一批次为一个评级周期，周期及场次顺序稳定。当前榜显示每位成员最近实际参加正式比赛的版本；下一批报名不会移除本批冻结版本的成绩。每批首次发布的榜单快照不可变，旧版结果保留在历史中。
+- 暂停阻止新单场启动，已经计算中的单场可正常结算。停止保留已完成结果，未完成单场不制造胜负；组织者可以选择发布已完成部分。
+
+## 代码边界
+
+| 位置 | 职责 |
+| --- | --- |
+| `packages/core/capture-the-flag` | DOM-free 引擎、校验、策略及响应契约、Query hooks、草稿 store |
+| `packages/views/capture-the-flag` | 共享页面、Canvas 插值、JSON 编辑、赛事和回放 |
+| `server/internal/ctf` | 成员权限、版本/报名、事务、持久任务及进程宿主 |
+| `server/internal/ctf/runtime` | 主服务私有 Node 计算入口 |
+| `scripts/build-ctf-runtime.mjs` | 构建计算 bundle 和规则包 |
+
+JavaScript 引擎从原版分离，公开边界有 TypeScript declarations，并用原版逐 Tick fixture 验证行为。模拟时间和随机源决定战斗，真实时间与插值留在 views。
+
+浏览器仅报告本地展示状态；正式胜负、时间线与评级输入由服务器计算。Node 子进程使用严格版本/请求标识协议及有界输入、输出和执行时间，不继承数据库、模型或账号凭据。运行时每 64 Tick 发布一个观战预览；最终保存每秒采样和关键结算帧，回放按原记录播放。
+
+列表只返回策略摘要，源码按指定 revision 单独请求。世界成员检查、游戏策略检查与作者/已公开版本检查均在服务端执行。世界角色不授予平台 Admin 权限。
+
+## 存储与恢复
+
+迁移 362–377 创建策略、不可变 revision、当前报名、批次、单场任务、幂等请求和排行榜快照，并扩展游戏策略约束。索引使用独立的并发迁移，不添加外键。
+
+写入使用世界事务锁与成员/世界行锁，保存和报名请求有幂等标识；相同标识搭配不同意图返回冲突。策略 ID 与作者由平台确定，文件内的 `team_id` 不提供权限。
+
+任务使用 `SKIP LOCKED`、30 秒租约和 lease ID fencing。计算超时 20 秒；过期任务最多重试三次。已完成单场不重跑；运行中单场可以从冻结输入重新计算。旧 lease 不能覆盖新结果。游戏关闭期间不启动新任务，提交结果前重新检查权限。
+
+世界删除在现有应用事务中清理全部 CTF 表。原项目的密码、文件库及客户端上报历史不进入正式排名。
+
+## 构建与运行
+
+```sh
+pnpm build:ctf
+make up MODE=development
+# Daily local use:
+make up MODE=production
+```
+
+`make up`、`make build`、Web 根构建、Docker 和原生发布会携带 `server/bin/runtime/ctf/engine.mjs`。Go 宿主与 bundle 一起发布。开发模式使用 `CTF_ENGINE_PATH`；默认发布路径基于可执行文件的真实 release 目录，防止软链接切换改变正在运行的版本。
+
+`/health` 和 `/readyz` 包含 CTF 状态；服务启动先验证 bundle 协议。停服取消队列及计算子进程并等待退出。
+
+规则包源文件保存在 core，构建器生成 `server/internal/ctf/rule-kit.gen.json`，通过 `/api/ctf/v1/rule-kit.zip` 下载。修改规则或文档后重新运行 `pnpm build:ctf`，不要手工修改生成文件。
+
+## 验证
+
+```sh
+pnpm --filter @auro/core exec vitest run capture-the-flag paths
+pnpm --filter @auro/views exec vitest run capture-the-flag me/me-page.test.tsx
+make ctf-test-db
+(cd server && go test ./internal/ctf ./internal/gameadmin ./cmd/server ./internal/handler)
+pnpm --filter @auro/core typecheck
+pnpm --filter @auro/views typecheck
+pnpm --filter @auro/web build
+pnpm --filter @auro/desktop build
+pnpm exec playwright test e2e/ctf.spec.ts
+```
+
+数据库测试只在随机临时 schema 中建表、写入夹具并清理。E2E 使用 TestApiClient 创建独立成员和世界，运行前明确启动隔离的管理环境。默认测试不会执行用户的 Agent CLI 或真实模型。

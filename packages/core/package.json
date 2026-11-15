@@ -131,7 +131,9 @@
     "./game-progress": "./game-progress/index.ts",
     "./inbox/system-notifications": "./inbox/system-notifications.ts",
     "./siege/queries": "./siege/queries.ts",
-    "./fish": "./fish/index.ts"
+    "./fish": "./fish/index.ts",
+    "./capture-the-flag": "./capture-the-flag/index.ts",
+    "./capture-the-flag/compute": "./capture-the-flag/compute.ts"
   },
   "dependencies": {
     "@formatjs/intl-localematcher": "catalog:",

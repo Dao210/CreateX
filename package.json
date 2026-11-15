@@ -20,8 +20,8 @@
     "ios:mobile:device:staging:release": "pnpm -C apps/mobile ios:device:staging:release",
     "ios:mobile:device:prod": "pnpm -C apps/mobile ios:device:prod",
     "ios:mobile:device:prod:release": "pnpm -C apps/mobile ios:device:prod:release",
-    "build": "pnpm build:life && turbo build --filter=!@auro/mobile",
-    "typecheck": "pnpm typecheck:life && turbo typecheck --filter=!@auro/mobile",
+    "build": "pnpm build:life && pnpm build:ctf && turbo build --filter=!@auro/mobile",
+    "typecheck": "pnpm typecheck:life && pnpm typecheck:ctf && turbo typecheck --filter=!@auro/mobile",
     "test": "turbo test --filter=!@auro/mobile",
     "lint": "turbo lint --filter=!@auro/mobile",
     "knip": "knip",
@@ -31,7 +31,9 @@
     "ui:add": "cd packages/ui && npx shadcn@latest add",
     "generate:reserved-slugs": "node scripts/generate-reserved-slugs.mjs",
     "generate:tank-contracts": "node scripts/generate-tank-contracts.mjs",
-    "generate:fish-contracts": "node scripts/generate-fish-contracts.mjs"
+    "generate:fish-contracts": "node scripts/generate-fish-contracts.mjs",
+    "build:ctf": "pnpm typecheck:ctf && node scripts/build-ctf-runtime.mjs",
+    "typecheck:ctf": "tsc -p server/internal/ctf/runtime/tsconfig.json"
   },
   "engines": {
     "node": ">=22"

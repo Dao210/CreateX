@@ -200,8 +200,8 @@ world-ops-test-db: ## Verify world analytics and follow-ups in disposable schema
 # check here would make each component slower to restart on its own.
 # The commit ldflag is what makes /health's identity useful: without it every
 # environment reports "unknown" and cannot prove which revision it is serving.
-api-dev: life-build ## Run the Go backend with its internal simulation runtime
-	cd server && AGENT_LIFE_ENGINE_PATH="$${AGENT_LIFE_ENGINE_PATH:-$(CURDIR)/server/bin/runtime/life/engine.mjs}" go run -ldflags "-X main.commit=$(COMMIT)" ./cmd/server
+api-dev: life-build ctf-build ## Run the Go backend with its internal simulation runtime
+	cd server && CTF_ENGINE_PATH="$${CTF_ENGINE_PATH:-$(CURDIR)/server/bin/runtime/ctf/engine.mjs}" AGENT_LIFE_ENGINE_PATH="$${AGENT_LIFE_ENGINE_PATH:-$(CURDIR)/server/bin/runtime/life/engine.mjs}" go run -ldflags "-X main.commit=$(COMMIT)" ./cmd/server
 
 web-dev: ## Run only the Next.js dev server for the current env file
 	pnpm dev:web
@@ -362,7 +362,7 @@ DATE    ?= $(shell date -u '+%Y-%m-%dT%H:%M:%SZ')
 # recursive one — which prints `go: Command not found` on frontend-only
 # checkouts with no Go toolchain installed.
 build: EXE = $(if $(filter windows,$(or $(GOOS),$(shell go env GOOS))),.exe,)
-build: life-build ## Build the server, simulation runtime, CLI, and migrate binaries into server/bin
+build: life-build ctf-build ## Build the server, simulation runtime, CLI, and migrate binaries into server/bin
 	cd server && go build -ldflags "-X main.version=$(VERSION) -X main.commit=$(COMMIT)" -o bin/server$(EXE) ./cmd/server
 	cd server && go build -ldflags "-X main.version=$(VERSION) -X main.commit=$(COMMIT) -X main.date=$(DATE)" -o bin/auro$(EXE) ./cmd/auro
 	cd server && go build -o bin/migrate$(EXE) ./cmd/migrate
@@ -399,3 +399,10 @@ clean: ## Remove build caches, generated binaries, and temp files
 	rm -rf .turbo apps/*/.turbo packages/*/.turbo
 	rm -rf apps/*/*.tsbuildinfo packages/*/*.tsbuildinfo
 	@echo "✓ Clean complete."
+
+.PHONY: ctf-build ctf-test-db
+ctf-build: ## Build the capture-the-flag compute engine and AI rule kit
+	@pnpm build:ctf
+
+ctf-test-db: ctf-build ## Verify CTF privacy, revisions and durable matches in disposable schemas
+	@cd server && CTF_TEST_DATABASE_URL="$(DATABASE_URL)" CTF_ENGINE_PATH="$(CURDIR)/server/bin/runtime/ctf/engine.mjs" go test -race ./internal/ctf -count=1

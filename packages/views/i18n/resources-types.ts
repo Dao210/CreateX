@@ -1,3 +1,4 @@
+import type ctf from "../locales/en/ctf.json";
 import type fish from "../locales/en/fish.json";
 import type life from "../locales/en/life.json";
 import "i18next";
@@ -68,6 +69,7 @@ declare global {
     usage: typeof usage;
     billing: typeof billing;
     tanks: typeof tanks;
+    ctf: typeof ctf;
     fish: typeof fish;
     me: typeof me;
     life: typeof life;

@@ -55,6 +55,7 @@ export type NavLabelKey =
   | "runtimes"
   | "skills"
   | "siege"
+  | "ctf"
   | "tanks"
   | "life"
   | "fish"
@@ -71,6 +72,7 @@ export type WorkspacePageKey =
   | "runtimes"
   | "skills"
   | "siege"
+  | "ctf"
   | "tanks"
   | "life"
   | "fish"
@@ -101,6 +103,7 @@ export const WORKSPACE_PAGES: Record<WorkspacePageKey, WorkspacePage> = {
   // The game. It lives in the work group because it is a per-workspace
   // activity (blueprints are workspace-scoped), not a team-management tool.
   siege: { segment: "siege", icon: "Gamepad2", navKey: "siege" },
+  ctf: { segment: "ctf", icon: "Gamepad2", navKey: "ctf" },
   tanks: { segment: "tanks", icon: "Gamepad2", navKey: "tanks" },
   life: { segment: "life", icon: "Users", navKey: "life" },
   fish: { segment: "fish", icon: "Fish", navKey: "fish" },

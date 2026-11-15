@@ -624,7 +624,7 @@ deploy() {
   bootstrap
   install -d -m 0755 "$target"
   tar -xzf "$upload/$release.tar.gz" -C "$target" --no-same-owner
-  [[ -x "$target/bin/server" && -x "$target/bin/migrate" && -f "$target/bin/runtime/life/engine.mjs" && -f "$target/web/apps/web/server.js" ]] || die 'Incomplete artifact'
+  [[ -x "$target/bin/server" && -x "$target/bin/migrate" && -f "$target/bin/runtime/life/engine.mjs" && -f "$target/bin/runtime/ctf/engine.mjs" && -f "$target/web/apps/web/server.js" ]] || die 'Incomplete artifact'
   grep -Fxq "release=$release" "$target/manifest" || die 'Release manifest mismatch'
   # Persist the writable image cache; compiled application files stay read-only.
   rm -rf "$target/web/apps/web/.next-createx/cache"
@@ -673,7 +673,7 @@ deploy_web() {
   # API binaries and migrations carry over unchanged so a later API restart
   # loads the same commit from the new release pointer.
   cp -a "$source/bin" "$source/migrations" "$source/LICENSE" "$source/NOTICE" "$target/"
-  [[ -x "$target/bin/server" && -x "$target/bin/migrate" && -f "$target/bin/runtime/life/engine.mjs" ]] || die 'Incomplete API/runtime copy; deploy a full release first'
+  [[ -x "$target/bin/server" && -x "$target/bin/migrate" && -f "$target/bin/runtime/life/engine.mjs" && -f "$target/bin/runtime/ctf/engine.mjs" ]] || die 'Incomplete API/runtime copy; deploy a full release first'
   printf 'release=%s\ncommit=%s\nweb_commit=%s\narch=linux-arm64\ndist=%s\n' \
     "$release" "$source_commit" "$web_commit" '.next-createx' > "$target/manifest"
   # Persist the writable image cache; compiled application files stay read-only.

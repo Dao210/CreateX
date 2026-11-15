@@ -1,0 +1,1 @@
+DROP INDEX CONCURRENTLY IF EXISTS ctf_revision_identity;

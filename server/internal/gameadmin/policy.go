@@ -14,9 +14,11 @@ var ErrInvalid = errors.New("invalid_game_policy")
 var ErrNotFound = errors.New("game_not_found")
 var ErrConflict = errors.New("revision_conflict")
 
-var GameIDs = []string{"siege", "life", "tanks", "fish"}
+var GameIDs = []string{"siege", "life", "tanks", "fish", "ctf"}
 
-func known(id string) bool { return id == "siege" || id == "tanks" || id == "life" || id == "fish" }
+func known(id string) bool {
+	return id == "siege" || id == "tanks" || id == "life" || id == "fish" || id == "ctf"
+}
 
 type World struct {
 	ID   string `json:"id"`

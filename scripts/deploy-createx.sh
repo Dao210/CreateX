@@ -111,7 +111,9 @@ build() {
   stage="$OUT/$release"
   mkdir -p "$stage/bin"
   pnpm -C "$ROOT" build:life
-  mkdir -p "$stage/bin/runtime/life"
+  pnpm -C "$ROOT" build:ctf
+  mkdir -p "$stage/bin/runtime/life" "$stage/bin/runtime/ctf"
+  cp "$ROOT/server/bin/runtime/ctf/engine.mjs" "$stage/bin/runtime/ctf/engine.mjs"
   cp "$ROOT/server/bin/runtime/life/engine.mjs" "$stage/bin/runtime/life/engine.mjs"
   echo "Building $release for linux/arm64"
   (

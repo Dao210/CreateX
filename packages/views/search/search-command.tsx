@@ -30,6 +30,7 @@ const PAGE_KEYWORDS: Record<WorkspacePageKey, string[]> = {
   runtimes: ["runtimes", "environments", "machines", "运行时"],
   skills: ["skills", "library", "技能"],
   siege: ["siege", "game", "workshop", "blueprint", "涂鸦", "攻城", "游戏"],
+  ctf: ["ctf", "capture the flag", "夺旗", "旗取り", "깃발", "drapeau"],
   tanks: ["tanks", "tank defense", "castle", "坦克", "守城", "戦車", "탱크", "chars"],
   fish: ["fish", "ocean", "aquarium", "海洋", "鱼", "海", "바다", "océan"],
   life: ["life", "residents", "居民", "生活", "住民", "주민", "habitants"],

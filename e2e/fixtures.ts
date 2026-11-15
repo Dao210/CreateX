@@ -209,6 +209,10 @@ export class TestApiClient {
     return this.email;
   }
 
+  async ctfRequest(path: string, input?: unknown) {
+    return this.authedFetch(`/api/ctf/v1/${path}`,input===undefined?undefined:{method:"POST",body:JSON.stringify(input)});
+  }
+
   private async authedFetch(path: string, init?: RequestInit) {
     const headers: Record<string, string> = {
       "Content-Type": "application/json",

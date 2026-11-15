@@ -46,6 +46,7 @@ type serverHealth struct {
 	startedAt  time.Time
 	pid        int
 	lifeStatus func() string
+	ctfStatus  func() string
 }
 
 type cachedReadiness struct {
@@ -60,6 +61,7 @@ type liveResponse struct {
 	Commit    string `json:"commit,omitempty"`
 	StartedAt string `json:"started_at,omitempty"`
 	Life      string `json:"life,omitempty"`
+	CTF       string `json:"ctf,omitempty"`
 }
 
 type readinessResponse struct {
@@ -71,6 +73,7 @@ type readinessChecks struct {
 	DB         string `json:"db"`
 	Migrations string `json:"migrations"`
 	Life       string `json:"life,omitempty"`
+	CTF        string `json:"ctf,omitempty"`
 }
 
 func newServerHealth(pool *pgxpool.Pool) *serverHealth {
@@ -90,6 +93,9 @@ func (h *serverHealth) liveHandler(w http.ResponseWriter, _ *http.Request) {
 	if h.lifeStatus != nil {
 		resp.Life = h.lifeStatus()
 	}
+	if h.ctfStatus != nil {
+		resp.CTF = h.ctfStatus()
+	}
 	if !h.startedAt.IsZero() {
 		resp.StartedAt = h.startedAt.Format(time.RFC3339)
 	}
@@ -101,6 +107,13 @@ func (h *serverHealth) readyHandler(w http.ResponseWriter, r *http.Request) {
 	if h.lifeStatus != nil {
 		resp.Checks.Life = h.lifeStatus()
 		if resp.Checks.Life != "running" && resp.Checks.Life != "uninitialized" {
+			resp.Status = "not_ready"
+			status = http.StatusServiceUnavailable
+		}
+	}
+	if h.ctfStatus != nil {
+		resp.Checks.CTF = h.ctfStatus()
+		if resp.Checks.CTF != "ready" {
 			resp.Status = "not_ready"
 			status = http.StatusServiceUnavailable
 		}

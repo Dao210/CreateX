@@ -7,7 +7,9 @@ COPY packages/ ./packages/
 RUN pnpm install --frozen-lockfile --ignore-scripts --filter auro --filter @auro/core...
 COPY server/internal/life/runtime/ ./server/internal/life/runtime/
 COPY scripts/build-life-runtime.mjs ./scripts/build-life-runtime.mjs
-RUN pnpm build:life
+COPY server/internal/ctf/runtime/ ./server/internal/ctf/runtime/
+COPY scripts/build-ctf-runtime.mjs ./scripts/build-ctf-runtime.mjs
+RUN pnpm build:life && pnpm build:ctf
 
 # --- Build stage ---
 FROM golang:1.26-alpine AS builder
@@ -22,6 +24,7 @@ RUN cd server && go mod download
 
 # Copy server source
 COPY server/ ./server/
+COPY --from=life-builder /src/server/internal/ctf/rule-kit.gen.json ./server/internal/ctf/rule-kit.gen.json
 
 # Build binaries
 ARG VERSION=dev

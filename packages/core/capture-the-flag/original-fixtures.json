@@ -1,0 +1,32 @@
+[
+  {
+    "seed": 12027,
+    "ticks": 642,
+    "result": {
+      "winner": "red",
+      "method": "夺旗",
+      "text": "红方交付敌旗获胜"
+    },
+    "digest": "df294c3df5c4345f026611e6ad32a901f79c1570ba454a2021eae56faffcf4c2"
+  },
+  {
+    "seed": 34891,
+    "ticks": 1920,
+    "result": {
+      "winner": "draw",
+      "method": "时间上限",
+      "text": "8 分钟时间到，双方未分胜负，平局。"
+    },
+    "digest": "c406aa9764b950ee508805db80c45468af86eb73842b8b56ae0e7da6e6860b4e"
+  },
+  {
+    "seed": 76103,
+    "ticks": 1920,
+    "result": {
+      "winner": "draw",
+      "method": "时间上限",
+      "text": "8 分钟时间到，双方未分胜负，平局。"
+    },
+    "digest": "8c6009878dd59032ca077eebd097213976609e9b232028119dbb319b3473ebca"
+  }
+]

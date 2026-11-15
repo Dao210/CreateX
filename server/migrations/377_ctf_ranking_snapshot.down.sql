@@ -1,0 +1,1 @@
+ALTER TABLE IF EXISTS ctf_batch DROP COLUMN IF EXISTS leaderboard;

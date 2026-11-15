@@ -135,6 +135,27 @@ deleted_tank_characters AS (
     DELETE FROM tank_character WHERE workspace_id = $1
 ),
 
+deleted_ctf_leaderboard AS (
+ DELETE FROM ctf_leaderboard WHERE workspace_id=$1
+),
+deleted_ctf_request AS (
+ DELETE FROM ctf_request WHERE workspace_id=$1
+),
+deleted_ctf_match AS (
+ DELETE FROM ctf_match WHERE workspace_id=$1
+),
+deleted_ctf_batch AS (
+ DELETE FROM ctf_batch WHERE workspace_id=$1
+),
+deleted_ctf_entry AS (
+ DELETE FROM ctf_entry WHERE workspace_id=$1
+),
+deleted_ctf_revision AS (
+ DELETE FROM ctf_revision WHERE workspace_id=$1
+),
+deleted_ctf_strategy AS (
+ DELETE FROM ctf_strategy WHERE workspace_id=$1
+),
 deleted_members AS (
     DELETE FROM member WHERE member.workspace_id = $1
 ),

@@ -1,3 +1,4 @@
+import "@auro/views/capture-the-flag/ctf.css";
 import { defaultStorage } from "@auro/core/platform";
 import { lazy, Suspense, useEffect } from "react";
 import { createMemoryRouter, Outlet, useMatches } from "react-router-dom";
@@ -35,6 +36,7 @@ const SiegePage = lazy(() => import("./pages/siege-page").then(module => ({ defa
 const SiegeCampaignPage = lazy(() => import("./pages/siege-page").then(module => ({ default: module.SiegeCampaignPage })));
 import { OceanPage } from "./pages/fish-page";
 import { TanksPage } from "./pages/tank-defense-page";
+const CTFPage = lazy(() => import("@auro/views/capture-the-flag").then(module => ({ default: module.CTFPage })));
 const LifePage = lazy(() => import("@auro/views/agent-life").then(module => ({ default: module.LifePage })));
 import { MePageRoute } from "./pages/me-page";
 
@@ -157,6 +159,7 @@ export const appRoutes: RouteObject[] = [
           // Shared game pages keep workspace identity and the desktop shell;
           // each game owns the content header, controls and scrolling.
           { path: "siege", element: <Suspense><SiegePage /></Suspense>, handle: { title: "Siege" } },
+          { path: "ctf/*", element: <Suspense><CTFPage storage={defaultStorage} /></Suspense>, handle: { title: "Capture the Flag" } },
           { path: "tanks", element: <TanksPage />, handle: { title: "Tank Defense" } },
           { path: "fish", element: <OceanPage />, handle: { title: "Ocean" } },
           { path: "life", element: <Suspense><LifePage storage={defaultStorage} /></Suspense>, handle: { title: "Agent Life" } },

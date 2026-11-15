@@ -17,6 +17,7 @@ import (
 
 	"github.com/auro-ai/auro/server/internal/analytics"
 	"github.com/auro-ai/auro/server/internal/auth"
+	"github.com/auro-ai/auro/server/internal/ctf"
 	"github.com/auro-ai/auro/server/internal/daemonws"
 	"github.com/auro-ai/auro/server/internal/database"
 	"github.com/auro-ai/auro/server/internal/dbreader"
@@ -695,7 +696,16 @@ func main() {
 		slog.Error("initialize resident life", "error", err)
 		os.Exit(1)
 	}
+	ctfService := &ctf.Service{Pool: pool, Engine: &ctf.NodeEngine{Path: ctf.DefaultEnginePath()}}
+	var ctfReady struct {
+		Ready bool `json:"ready"`
+	}
+	if err := ctfService.Engine.Call(context.Background(), "health", nil, &ctfReady); err != nil || !ctfReady.Ready {
+		slog.Error("initialize capture the flag engine", "error", err)
+		os.Exit(1)
+	}
 	r, h := NewRouterWithOptions(pool, hub, bus, analyticsClient, storeRedis, RouterOptions{
+		CTF:                 ctfService,
 		Life:                lifeService,
 		HTTPMetrics:         httpMetrics,
 		BusinessMetrics:     businessMetrics,
@@ -783,6 +793,8 @@ func main() {
 	go runAutopilotFailureMonitor(autopilotCtx, queries, bus, envFailureMonitorConfig())
 	go (&worldinbox.Service{Pool: pool, Bus: bus}).Run(sweepCtx)
 	go lifeService.Run(sweepCtx)
+	ctfDone := make(chan struct{})
+	go func() { defer close(ctfDone); ctfService.Run(sweepCtx) }()
 	if autopilotSvc.QuotaEnabled() {
 		go runAutopilotQuotaReconciler(autopilotCtx, autopilotSvc)
 	}
@@ -914,6 +926,11 @@ func main() {
 		JoinLife: func() {
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
+			select {
+			case <-ctfDone:
+			case <-ctx.Done():
+				slog.Warn("capture the flag did not stop within shutdown timeout")
+			}
 			if err := lifeService.Wait(ctx); err != nil {
 				slog.Warn("resident life did not stop within shutdown timeout", "error", err)
 			}

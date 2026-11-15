@@ -1,0 +1,384 @@
+{
+  "format_version": "1.0",
+  "game_version": "12-rts-1.0",
+  "unit_types": [
+    "heavy_infantry",
+    "cavalry",
+    "archer"
+  ],
+  "unit_labels": {
+    "heavy_infantry": "重甲步兵",
+    "cavalry": "骑兵",
+    "archer": "弓箭手"
+  },
+  "rule_required_fields": [
+    "id",
+    "name",
+    "enabled",
+    "priority",
+    "condition",
+    "movement",
+    "attack",
+    "special"
+  ],
+  "priority": {
+    "min": 1,
+    "max": 100,
+    "higher_runs_first": true
+  },
+  "movement_types": [
+    "MOVE_TOWARD",
+    "MOVE_AWAY_FROM",
+    "FOLLOW",
+    "GUARD",
+    "INTERCEPT",
+    "HOLD_POSITION",
+    "RETURN_TO_OWN_FLAG",
+    "GO_TO_ENEMY_FLAG",
+    "GO_TO_DROPPED_FLAG"
+  ],
+  "movement_routes": [
+    {
+      "route": "UPPER_LANE_20",
+      "description": "用于 GO_TO_ENEMY_FLAG 或 RETURN_TO_OWN_FLAG。单位使用连续二维坐标，以速度乘 Tick 时长沿直线移动，斜向不增加速度。去敌旗时依次经过地图中线上方路径点、敌旗上方路径点和敌旗；持旗回家时经过地图中线上方路径点后直接前往己方旗位。任意两个路径点之间允许自然斜向移动。默认 lane_offset 为 20。"
+    }
+  ],
+  "movement_rules": "所有单位使用连续二维坐标移动，内部保留完整小数精度。每 Tick 朝目标点沿直线移动，移动距离等于速度乘 Tick 时长，斜向不增加速度。单位没有碰撞体积且不占格，任意红蓝单位都可以处于同一坐标；其他单位不会阻挡移动或重生。",
+  "movement_coordinate": {
+    "field": "movement.coordinate",
+    "usage": "仅用于 MOVE_TOWARD，指定固定坐标作为移动目标；不能与 movement.target 同时使用。",
+    "shape": {
+      "x": "number",
+      "y": "number"
+    },
+    "bounds": {
+      "x": [
+        0,
+        99
+      ],
+      "y": [
+        0,
+        49
+      ]
+    },
+    "example": {
+      "type": "MOVE_TOWARD",
+      "coordinate": {
+        "x": 50,
+        "y": 25
+      }
+    }
+  },
+  "spawn_rules": "每局开始与每次重生时，单位均在己方基地内随机合法位置出现，避开己方旗帜周围 2 格。随机结果由比赛种子决定，同一种子可复现。策略不能配置、指定或预测出生坐标。",
+  "tick_resolution": "每个 0.25 秒策略 Tick 先以 Tick 开始时的全局快照决定全部单位行动，再按开始位置、攻击范围和冷却同时结算全部攻击；死亡单位不再移动；最后幸存单位的已计划移动位置同时提交。",
+  "archer_action_timing": "弓箭手每次射箭占用当前 Tick 和紧随的下一个 Tick，共 2 Tick（0.5 秒）硬直；硬直期间不能移动或攻击。射箭攻击冷却为 4 Tick（1 秒），因此硬直结束后可以移动，但到冷却结束前不能再次射箭。",
+  "attack_types": [
+    "ATTACK",
+    "ATTACK_NEAREST_ENEMY",
+    "ATTACK_LOWEST_HP_ENEMY",
+    "ATTACK_ENEMY_FLAG_CARRIER",
+    "ATTACK_ENEMY_THREATENING_ALLY_FLAG_CARRIER",
+    "ATTACK_RECENT_ALLY_ATTACKER",
+    "NO_ATTACK"
+  ],
+  "attack_target_rules": "attack.target 为可选的合法单位目标。使用 ATTACK 或 ATTACK_NEAREST_ENEMY 时，指定 target 会优先攻击该目标；未指定时按 attack.type 的默认选敌逻辑执行。目标仍必须是存活敌军，且仅在进入本兵种攻击范围时才会造成伤害。",
+  "special_types": [
+    "CAPTURE_ENEMY_FLAG",
+    "PICK_UP_ENEMY_DROPPED_FLAG",
+    "RETURN_OWN_DROPPED_FLAG",
+    "PICK_UP_FLAG",
+    "DROP_CARRIED_FLAG",
+    "DELIVER_FLAG",
+    "NONE"
+  ],
+  "operators": [
+    "==",
+    "!=",
+    ">",
+    ">=",
+    "<",
+    "<="
+  ],
+  "condition_sources": [
+    "game.time",
+    "ally.heavy_infantry.hp",
+    "ally.heavy_infantry.respawn_round",
+    "ally.heavy_infantry.moved_last_1s",
+    "ally.heavy_infantry.is_attacking",
+    "ally.heavy_infantry.attacked_last_1s",
+    "ally.heavy_infantry.is_flag_carrier",
+    "ally.heavy_infantry.distance_to_own_flag",
+    "ally.heavy_infantry.distance_to_enemy_flag",
+    "ally.heavy_infantry.distance_to_own_flag_zone",
+    "ally.heavy_infantry.distance_to_enemy_flag_zone",
+    "ally.cavalry.hp",
+    "ally.cavalry.respawn_round",
+    "ally.cavalry.moved_last_1s",
+    "ally.cavalry.is_attacking",
+    "ally.cavalry.attacked_last_1s",
+    "ally.cavalry.is_flag_carrier",
+    "ally.cavalry.distance_to_own_flag",
+    "ally.cavalry.distance_to_enemy_flag",
+    "ally.cavalry.distance_to_own_flag_zone",
+    "ally.cavalry.distance_to_enemy_flag_zone",
+    "ally.archer.hp",
+    "ally.archer.respawn_round",
+    "ally.archer.moved_last_1s",
+    "ally.archer.is_attacking",
+    "ally.archer.attacked_last_1s",
+    "ally.archer.is_flag_carrier",
+    "ally.archer.distance_to_own_flag",
+    "ally.archer.distance_to_enemy_flag",
+    "ally.archer.distance_to_own_flag_zone",
+    "ally.archer.distance_to_enemy_flag_zone",
+    "enemy.heavy_infantry.hp",
+    "enemy.heavy_infantry.respawn_round",
+    "enemy.heavy_infantry.moved_last_1s",
+    "enemy.heavy_infantry.is_attacking",
+    "enemy.heavy_infantry.attacked_last_1s",
+    "enemy.heavy_infantry.is_flag_carrier",
+    "enemy.heavy_infantry.distance_to_own_flag",
+    "enemy.heavy_infantry.distance_to_enemy_flag",
+    "enemy.heavy_infantry.distance_to_own_flag_zone",
+    "enemy.heavy_infantry.distance_to_enemy_flag_zone",
+    "enemy.cavalry.hp",
+    "enemy.cavalry.respawn_round",
+    "enemy.cavalry.moved_last_1s",
+    "enemy.cavalry.is_attacking",
+    "enemy.cavalry.attacked_last_1s",
+    "enemy.cavalry.is_flag_carrier",
+    "enemy.cavalry.distance_to_own_flag",
+    "enemy.cavalry.distance_to_enemy_flag",
+    "enemy.cavalry.distance_to_own_flag_zone",
+    "enemy.cavalry.distance_to_enemy_flag_zone",
+    "enemy.archer.hp",
+    "enemy.archer.respawn_round",
+    "enemy.archer.moved_last_1s",
+    "enemy.archer.is_attacking",
+    "enemy.archer.attacked_last_1s",
+    "enemy.archer.is_flag_carrier",
+    "enemy.archer.distance_to_own_flag",
+    "enemy.archer.distance_to_enemy_flag",
+    "enemy.archer.distance_to_own_flag_zone",
+    "enemy.archer.distance_to_enemy_flag_zone",
+    "self.hp",
+    "self.hp_percent",
+    "self.is_flag_carrier",
+    "self.is_capturing",
+    "self.capture_progress",
+    "self.death_count",
+    "self.attack_ready",
+    "self.zone",
+    "self.distance_to_own_flag_anchor",
+    "self.distance_to_enemy_flag_anchor",
+    "nearest_enemy.distance",
+    "nearest_enemy.unit_type",
+    "nearby_enemy.count",
+    "nearby_ally.count",
+    "ally.heavy_infantry.is_alive",
+    "ally.cavalry.is_alive",
+    "ally.archer.is_alive",
+    "enemy.any_death_count",
+    "enemy_near_enemy_flag.count",
+    "enemy.all_alive_near_enemy_flag",
+    "ally.recently_attacked",
+    "enemy.has_flag_carrier",
+    "ally.has_flag_carrier",
+    "own_flag.state",
+    "enemy_flag.state",
+    "own_flag.is_at_home",
+    "enemy_flag.is_at_home",
+    "own_flag.is_dropped",
+    "enemy_flag.is_dropped",
+    "self.in_enemy_flag_zone",
+    "self.in_own_flag_zone",
+    "ally.heavy_infantry.x",
+    "ally.heavy_infantry.y",
+    "ally.heavy_infantry.distance_to_self",
+    "ally.cavalry.x",
+    "ally.cavalry.y",
+    "ally.cavalry.distance_to_self",
+    "ally.archer.x",
+    "ally.archer.y",
+    "ally.archer.distance_to_self",
+    "enemy.heavy_infantry.x",
+    "enemy.heavy_infantry.y",
+    "enemy.heavy_infantry.distance_to_self",
+    "enemy.cavalry.x",
+    "enemy.cavalry.y",
+    "enemy.cavalry.distance_to_self",
+    "enemy.archer.x",
+    "enemy.archer.y",
+    "enemy.archer.distance_to_self",
+    "self.x",
+    "self.y",
+    "nearest_unit.id",
+    "nearest_unit.relation",
+    "nearest_unit.unit_type",
+    "nearest_unit.distance",
+    "own_flag.x",
+    "own_flag.y",
+    "enemy_flag.x",
+    "enemy_flag.y"
+  ],
+  "targets": [
+    "己方旗位",
+    "敌方旗位",
+    "地图中央",
+    "当前所在格",
+    "己方旗帜当前位置",
+    "敌方旗帜当前位置",
+    "最近敌人",
+    "最远敌人",
+    "生命值最低的敌人",
+    "生命值最高的敌人",
+    "最近的敌方重甲兵",
+    "最近的敌方骑兵",
+    "最近的敌方弓箭手",
+    "敌方持旗者",
+    "友方持旗者",
+    "友方重甲步兵",
+    "友方骑兵",
+    "友方弓箭手",
+    "最近攻击友方的敌人",
+    "距己方旗位最近敌人"
+  ],
+  "flag_states": [
+    "AT_HOME",
+    "CARRIED",
+    "DROPPED"
+  ],
+  "flag_action_rules": "旗帜不会因接触自动拾取或归还。PICK_UP_FLAG 必须带 special.flag：OWN 表示在己方旗帜在家或掉落的位置 1 格内举起己方旗，ENEMY 表示在掉落敌旗位置 1 格内举起敌旗。敌旗 AT_HOME 时仍必须通过 CAPTURE_ENEMY_FLAG 连续夺旗 3 秒。DROP_CARRIED_FLAG 会在 Tick 开始位置放下当前持有的任意旗帜。持有任意旗帜均减速 25%，每个单位一次最多持一面旗。RETURN_OWN_DROPPED_FLAG 保留为归还己方掉落旗到旗位的显式指令。",
+  "dropped_flag_timing": "持旗单位死亡或执行 DROP_CARRIED_FLAG 时，旗帜以该单位当时位置进入 DROPPED 状态。之后不会自动拾取或归还，必须由策略发出合法旗帜操作。",
+  "limits": {
+    "max_rules_per_unit": 20,
+    "max_condition_depth": 3,
+    "max_basic_conditions_per_rule": 8,
+    "max_strategy_json_size_bytes": 262144
+  },
+  "global_readable_information": {
+    "perspective": "所有字段相对当前执行策略的一方解释；ally 表示我方，enemy 表示对方，同一份策略可直接用于红方或蓝方。",
+    "game_time": {
+      "source": "game.time",
+      "type": "number",
+      "unit": "seconds",
+      "description": "本局已经进行的模拟时间。"
+    },
+    "unit_source_format": "{ally|enemy}.{heavy_infantry|cavalry|archer}.{field}",
+    "unit_fields": [
+      {
+        "field": "hp",
+        "type": "number",
+        "description": "当前生命值；死亡或等待重生时为 0。"
+      },
+      {
+        "field": "respawn_round",
+        "type": "integer",
+        "description": "当前重生轮次，取值 0、1、2、3；永久出局后仍显示 3。"
+      },
+      {
+        "field": "moved_last_1s",
+        "type": "boolean",
+        "description": "过去 1 秒内是否发生过实际位置变化。"
+      },
+      {
+        "field": "is_attacking",
+        "type": "boolean",
+        "description": "上一策略 Tick 是否实际成功发动攻击。"
+      },
+      {
+        "field": "attacked_last_1s",
+        "type": "boolean",
+        "description": "过去 1 秒内是否受到过攻击。"
+      },
+      {
+        "field": "is_flag_carrier",
+        "type": "boolean",
+        "description": "当前是否持有任意旗帜。"
+      },
+      {
+        "field": "x",
+        "type": "number",
+        "description": "当前横坐标，保留完整小数精度。"
+      },
+      {
+        "field": "y",
+        "type": "number",
+        "description": "当前纵坐标，保留完整小数精度。"
+      },
+      {
+        "field": "distance_to_self",
+        "type": "number",
+        "description": "该单位到当前执行规则单位的直线距离。"
+      },
+      {
+        "field": "distance_to_own_flag",
+        "type": "number",
+        "description": "到己方旗帜当前位置的直线距离；旗被携带时跟随持旗者。"
+      },
+      {
+        "field": "distance_to_enemy_flag",
+        "type": "number",
+        "description": "到敌方旗帜当前位置的直线距离；旗被携带时跟随持旗者。"
+      },
+      {
+        "field": "distance_to_own_flag_zone",
+        "type": "number",
+        "description": "到己方固定旗区中心的直线距离。"
+      },
+      {
+        "field": "distance_to_enemy_flag_zone",
+        "type": "number",
+        "description": "到敌方固定旗区中心的直线距离。"
+      }
+    ],
+    "self_position": {
+      "sources": [
+        "self.x",
+        "self.y"
+      ],
+      "description": "当前执行规则单位自己的精确二维坐标。"
+    },
+    "flag_positions": {
+      "sources": [
+        "own_flag.x",
+        "own_flag.y",
+        "enemy_flag.x",
+        "enemy_flag.y"
+      ],
+      "description": "双方旗帜当前位置；旗帜被携带时，坐标跟随持旗单位。"
+    },
+    "nearest_unit": {
+      "sources": [
+        "nearest_unit.id",
+        "nearest_unit.relation",
+        "nearest_unit.unit_type",
+        "nearest_unit.distance"
+      ],
+      "description": "除自身外距离最近的存活单位；relation 为 ALLY、ENEMY 或 none。无其他存活单位时 id 与 unit_type 为 none，distance 为 999。"
+    }
+  },
+  "enhancement_mode": {
+    "required": false,
+    "default": "standard",
+    "enum": [
+      "standard",
+      "cavalry",
+      "heavy_infantry",
+      "archer"
+    ],
+    "effects": {
+      "standard": "不强化任何兵种，使用基础属性。",
+      "cavalry": "骑兵移动速度增加 100%，由 5 格/秒提升至 10 格/秒。",
+      "heavy_infantry": "重甲步兵最大生命值和出生/重生生命值增加 100%，由 300 提升至 600。",
+      "archer": "弓箭手攻击范围增加 100%，由 5 格提升至 10 格。"
+    },
+    "compatibility": "旧策略缺少 enhancement_mode 时按 standard 处理。"
+  },
+  "input_limits": {
+    "max_string_length": 128,
+    "max_rule_name_length": 64,
+    "max_json_nodes": 6000,
+    "max_json_depth": 12
+  }
+}

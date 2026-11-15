@@ -10,7 +10,8 @@
     "siege": "Siège",
     "tanks": "Défense de chars",
     "mcp": "Créé via MCP",
-    "fish": "Poissons"
+    "fish": "Poissons",
+    "ctf": "Capture du drapeau"
   },
   "weapons": {
     "title": "Collection de créations",

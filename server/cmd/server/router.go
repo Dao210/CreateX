@@ -23,6 +23,7 @@ import (
 	"github.com/auro-ai/auro/server/internal/analytics"
 	"github.com/auro-ai/auro/server/internal/auth"
 	"github.com/auro-ai/auro/server/internal/cloudruntime"
+	"github.com/auro-ai/auro/server/internal/ctf"
 	"github.com/auro-ai/auro/server/internal/daemonws"
 	"github.com/auro-ai/auro/server/internal/entitlement"
 	"github.com/auro-ai/auro/server/internal/events"
@@ -266,6 +267,7 @@ type RouterOptions struct {
 	// entirely (tests and embedders that do not configure it), which keeps the
 	// game opt-in rather than a hard startup dependency.
 	Siege        *siege.Service
+	CTF          *ctf.Service
 	Tanks        *tanks.Service
 	Fish         *fish.Service
 	MCPAdmin     *mcpadmin.Service
@@ -1438,6 +1440,14 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 	if opts.Life != nil {
 		health.lifeStatus = func() string { return opts.Life.Status().State }
 	}
+	if opts.CTF != nil {
+		health.ctfStatus = func() string {
+			if opts.CTF.Engine == nil {
+				return "unavailable"
+			}
+			return "ready"
+		}
+	}
 
 	r := chi.NewRouter()
 
@@ -2038,6 +2048,9 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 			// member resolved by the middleware into the game's owner.
 			if opts.Siege != nil {
 				r.Handle("/api/siege/*", gameGuard("siege", siegeOwner((&siege.HTTP{Service: opts.Siege}).Handler())))
+			}
+			if opts.CTF != nil {
+				r.Handle("/api/ctf/*", gameGuard("ctf", ctfActor((&ctf.HTTP{Service: opts.CTF}).Handler())))
 			}
 			if opts.Fish != nil {
 				r.Handle("/api/fish/*", gameGuard("fish", fishActor((&fish.HTTP{Service: opts.Fish, Control: opts.MCPAdmin, AllowedOrigins: allowedOrigins()}).Handler())))

@@ -39,6 +39,8 @@ for (const [name, files, selected] of [
   ["cross-module runtime contract", ["packages/core/runtimes/cli-version.ts"], ["frontend", "backend", "runtime", "quality"]],
   ["life rules", ["packages/core/agent-life/engine.ts"], ["frontend", "backend", "quality"]],
   ["life build", ["scripts/build-life-runtime.mjs"], ["backend", "quality"]],
+  ["ctf rules", ["packages/core/capture-the-flag/engine.js"], ["frontend", "backend", "quality"]],
+  ["ctf build", ["scripts/build-ctf-runtime.mjs"], ["backend", "quality"]],
   ["native release lifecycle", ["scripts/deploy/createx-host.sh"], ["scripts"]],
   ["Web mode lifecycle", ["scripts/dev-env-web-mode.test.sh"], ["scripts"]],
   ["lockfile", ["pnpm-lock.yaml"], ["frontend", "backend", "quality"]],

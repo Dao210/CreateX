@@ -1,4 +1,5 @@
 "use client";
+import { ctfStateOptions } from "@auro/core/capture-the-flag";
 import { myFishOptions, useFishActions } from "@auro/core/fish";
 import { FishEditor } from "../fish/fish-editor";
 import { FishThumbnail } from "../fish/fish-thumbnail";
@@ -46,7 +47,7 @@ import { BlueprintPreview } from "./blueprint-preview";
 import { TankGrowth } from "../tank-defense/tank-growth";
 import { TankPreview } from "../tank-defense/tank-preview";
 
-type Filter = "all" | "siege" | "tanks" | "mcp" | "fish";
+type Filter = "all" | "siege" | "tanks" | "mcp" | "fish" | "ctf";
 
 export function MePage({ storage }: { storage: StorageAdapter }) {
   const workspace = useCurrentWorkspace();
@@ -62,8 +63,10 @@ function MeContent({ storage, workspace, userId }: {
 }) {
   const { t } = useT("me");
   const { t: adminT } = useT("admin");
+  const { t: ctfT } = useT("ctf");
   const { t: fishT } = useT("fish");
   const games = useWorldGames(workspace.id);
+  const ctfAvailable = games.data?.games.find(game => game.gameId === "ctf")?.available === true;
   const siegeAvailable = games.data?.games.find(game => game.gameId === "siege")?.available === true;
   const fishAvailable = games.data?.games.find(game => game.gameId === "fish")?.available === true;
   const tanksAvailable = games.data?.games.find(game => game.gameId === "tanks")?.available === true;
@@ -72,7 +75,7 @@ function MeContent({ storage, workspace, userId }: {
   const navigation = useNavigation();
   const tab = navigation.searchParams.get("tab") === "progress" ? "progress" : "creations";
   const requestedFilter = navigation.searchParams.get("filter");
-  const filter: Filter = requestedFilter === "fish" && fishAvailable ? "fish" : requestedFilter === "siege" && siegeAvailable ? "siege" : requestedFilter === "tanks" && tanksAvailable ? "tanks" : requestedFilter === "mcp" && (tanksAvailable || fishAvailable) ? "mcp" : "all";
+  const filter: Filter = requestedFilter === "ctf" && ctfAvailable ? "ctf" : requestedFilter === "fish" && fishAvailable ? "fish" : requestedFilter === "siege" && siegeAvailable ? "siege" : requestedFilter === "tanks" && tanksAvailable ? "tanks" : requestedFilter === "mcp" && (tanksAvailable || fishAvailable) ? "mcp" : "all";
   const setView = (key: "tab" | "filter", value: string) => {
     const params = new URLSearchParams(navigation.searchParams);
     if (value === "creations" || value === "all") params.delete(key);
@@ -83,6 +86,10 @@ function MeContent({ storage, workspace, userId }: {
   const siegeClient = useMemo(() => createSiegeClient(scope), [scope]);
   const fishQuery = useQuery({ ...myFishOptions(workspace.id, userId), enabled: fishAvailable });
   const fishActions = useFishActions(workspace.id);
+  const ctf = useQuery({ ...ctfStateOptions(workspace.id, userId), enabled: ctfAvailable });
+  const ctfStrategies = ctfAvailable ? (ctf.data?.mine ?? []).filter(s => !s.archived) : [];
+  const visibleCTF = filter === "ctf" || filter === "all" ? ctfStrategies : [];
+  const ctfFailed = ctfAvailable && (filter === "all" || filter === "ctf") && ctf.isError;
   const allFish = fishAvailable ? fishQuery.data ?? [] : [];
   const fish = allFish.filter(f => !f.archived);
   const showArchivedFish = filter === "fish" && navigation.searchParams.get("archived") === "1";
@@ -110,9 +117,9 @@ function MeContent({ storage, workspace, userId }: {
   const visibleTanks = filter === "mcp" ? mcpCharacters : showTanks ? characters : [];
   const siegeFailed = showSiege && library.isError;
   const tanksFailed = showTanks && tanks.isError;
-  const loading = (fishAvailable && (filter === "all" || filter === "fish" || filter === "mcp") && fishQuery.isPending) || (showSiege && library.isPending) || (showTanks && tanks.isPending);
+  const loading = (ctfAvailable && (filter === "all" || filter === "ctf") && ctf.isPending) || (fishAvailable && (filter === "all" || filter === "fish" || filter === "mcp") && fishQuery.isPending) || (showSiege && library.isPending) || (showTanks && tanks.isPending);
   const bothFailed = siegeFailed && tanksFailed && (!fishAvailable || fishFailed);
-  const nothing = !loading && !siegeFailed && !tanksFailed && !fishFailed && visibleSiege.length === 0 && visibleTanks.length === 0 && visibleFish.length === 0;
+  const nothing = !loading && !siegeFailed && !tanksFailed && !fishFailed && visibleSiege.length === 0 && visibleTanks.length === 0 && visibleFish.length === 0 && visibleCTF.length === 0 && !ctfFailed;
   const nextLevel = unlockedLevel(stars);
   const completed = totalStars === CAMPAIGN_LEVELS.length * 3;
   const syncState = remote.isError ? t(($) => $.progress.offline) : remote.data?.siege || remote.data?.tanks ? t(($) => $.progress.synced) : t(($) => $.progress.local);
@@ -132,7 +139,7 @@ function MeContent({ storage, workspace, userId }: {
           <span className="min-w-0 break-words">{t(($) => $.scope, { name: workspace.name })}</span>
         </p>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-          <Stat icon={<Shapes />} label={t(($) => $.summary.weapons)} value={blueprints.length + characters.length + fish.length} />
+          <Stat icon={<Shapes />} label={t(($) => $.summary.weapons)} value={blueprints.length + characters.length + fish.length + ctfStrategies.length} />
           {siegeAvailable && <Stat icon={<Star />} label={t(($) => $.summary.stars)} value={`${totalStars} / ${CAMPAIGN_LEVELS.length * 3}`} />}
           {tanksAvailable && <Stat icon={<Trophy />} label={t(($) => $.summary.best)} value={String(achievements.best).padStart(6, "0")} />}
         </div>
@@ -147,14 +154,15 @@ function MeContent({ storage, workspace, userId }: {
           <section aria-labelledby="me-weapons-title">
             <div className="mb-3 flex flex-wrap items-center gap-2">
               <h2 id="me-weapons-title" className="mr-auto text-title-sm font-medium">{t(($) => $.weapons.title)}</h2>
-              {(["all", "siege", "tanks", "fish", "mcp"] as const).filter(value => value === "all" || value === "siege" && siegeAvailable || value === "tanks" && tanksAvailable || value === "fish" && fishAvailable || value === "mcp" && (tanksAvailable || fishAvailable)).map((value) => <Button key={value} size="xs" variant={filter === value ? "brand" : "outline"} aria-pressed={filter === value} onClick={() => setView("filter", value)}>{t(($) => $.filters[value])}</Button>)}
+              {(["all", "siege", "tanks", "fish", "ctf", "mcp"] as const).filter(value => value === "all" || value === "ctf" && ctfAvailable || value === "siege" && siegeAvailable || value === "tanks" && tanksAvailable || value === "fish" && fishAvailable || value === "mcp" && (tanksAvailable || fishAvailable)).map((value) => <Button key={value} size="xs" variant={filter === value ? "brand" : "outline"} aria-pressed={filter === value} onClick={() => setView("filter", value)}>{t(($) => $.filters[value])}</Button>)}
               {filter === "fish" && allFish.some(f => f.archived) && <Button size="xs" variant="outline" aria-pressed={showArchivedFish} onClick={toggleArchivedFish}>{fishT($ => $.show_archived)}</Button>}
             </div>
             {fishActions.archive.isError && <p role="alert" className="mb-3 text-caption text-destructive">{fishT($ => $.error)} <Button variant="link" size="xs" onClick={() => {
               if (fishActions.archive.variables) fishActions.archive.mutate(fishActions.archive.variables);
             }}>{fishT($ => $.retry)}</Button></p>}
             {bothFailed ? <ErrorCard message={t(($) => $.error)} retry={() => { void library.refetch(); void tanks.refetch(); void fishQuery.refetch(); }} retryLabel={t(($) => $.retry)} /> : <>
-              {(visibleSiege.length > 0 || visibleTanks.length > 0 || visibleFish.length > 0) && <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {(visibleSiege.length > 0 || visibleTanks.length > 0 || visibleFish.length > 0 || visibleCTF.length > 0) && <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                {visibleCTF.map(strategy => <Card key={strategy.id} size="sm"><CardHeader><CardTitle className="truncate">{strategy.name}</CardTitle><CardDescription>{ctfT($ => $.revision, { revision: strategy.revision })}</CardDescription></CardHeader><CardContent><AppLink href={`${paths.ctf()}?strategy=${encodeURIComponent(strategy.id)}`} className={buttonVariants({ size: "sm", variant: "outline" })}>{ctfT($ => $.editor)}<ArrowRight /></AppLink></CardContent></Card>)}
                 {visibleFish.map(fish => <Card key={fish.id} size="sm" className="overflow-hidden" role="group" aria-label={fish.draft.name}>
                   <div className="flex aspect-[4/3] items-center justify-center bg-muted/25 p-4"><FishThumbnail spec={fish.draft} /></div>
                   <CardHeader><CardTitle className="truncate">{fish.draft.name}</CardTitle><CardDescription>{fish.archived ? fishT($ => $.archived) : t($ => $.weapons.revision, { revision: fish.revision })}</CardDescription></CardHeader>
@@ -176,9 +184,11 @@ function MeContent({ storage, workspace, userId }: {
                 {siegeFailed && <p role="alert" className="text-caption text-destructive">{t(($) => $.weapons.siege_error)} <Button size="xs" variant="link" onClick={() => void library.refetch()}>{t(($) => $.retry)}</Button></p>}
                 {tanksFailed && <p role="alert" className="text-caption text-destructive">{t(($) => $.weapons.tanks_error)} <Button size="xs" variant="link" onClick={() => void tanks.refetch()}>{t(($) => $.retry)}</Button></p>}
               </div>}
+              {ctfFailed && <ErrorCard message={t($ => $.error)} retry={() => void ctf.refetch()} retryLabel={t($ => $.retry)} />}
               {fishFailed && <ErrorCard message={t($ => $.error)} retry={() => void fishQuery.refetch()} retryLabel={t($ => $.retry)} />}
+              {nothing && filter === "ctf" && <AppLink href={paths.ctf()} className={buttonVariants({ variant: "outline" })}>{ctfT($ => $.newStrategy)}</AppLink>}
               {nothing && filter === "fish" && <AppLink href={paths.fish()} className={buttonVariants({ variant: "outline" })}>{t($ => $.open_ocean)}</AppLink>}
-              {nothing && filter !== "fish" && <EmptyCollection filter={filter} workshopHref={paths.siege()} garageHref={paths.tanks()} />}
+              {nothing && filter !== "fish" && filter !== "ctf" && <EmptyCollection filter={filter} workshopHref={paths.siege()} garageHref={paths.tanks()} />}
             </>}
             {loading && <p role="status" className="mt-3 text-caption text-muted-foreground">{t(($) => $.loading)}</p>}
           </section>
