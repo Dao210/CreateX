@@ -43,6 +43,13 @@ const nextConfig: NextConfig = {
   ...(process.env.STANDALONE === "true" ? { output: "standalone" as const } : {}),
   transpilePackages: ["@auro/core", "@auro/ui", "@auro/views"],
   webpack(config) {
+    // Linked pnpm workspaces need content hashes as well as timestamps.
+    if (isDev) {
+      config.snapshot ??= {};
+      config.snapshot.module = { ...config.snapshot.module, hash: true };
+      config.snapshot.resolve = { ...config.snapshot.resolve, hash: true };
+    }
+
     config.module.rules.push({ resourceQuery: /^\?source$/, type: "asset/source" });
     return config;
   },
