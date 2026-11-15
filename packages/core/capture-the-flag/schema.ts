@@ -38,6 +38,8 @@ const unit = z.object({
   captureProgress: z.number(),
   isCapturing: z.boolean(),
   isAttacking: z.boolean(),
+  attackCooldown: z.number().nonnegative().default(0),
+  shootLockTicks: z.number().int().nonnegative().default(0),
 });
 const flag = z.object({
   team: z.enum(["red", "blue"]),
@@ -51,6 +53,24 @@ export const ResultSchema = z.object({
   method: z.string(),
   text: z.string(),
 });
+export const BattleEventSchema = z.object({
+  id: z.string().max(64),
+  tick: z.number().int().nonnegative(),
+  time: z.number().nonnegative(),
+  kind: z
+    .enum(["attack", "death", "respawn", "flag", "unknown"])
+    .catch("unknown"),
+  team: z.enum(["red", "blue"]),
+  x: z.number().finite(),
+  y: z.number().finite(),
+  unitId: z.string().optional(),
+  unitType: z.enum(["heavy_infantry", "cavalry", "archer"]).optional(),
+  targetId: z.string().optional(),
+  targetX: z.number().finite().optional(),
+  targetY: z.number().finite().optional(),
+  damage: z.number().nonnegative().optional(),
+  flagState: z.string().optional(),
+});
 export const FrameSchema = z.object({
   tick: z.number().int().nonnegative(),
   time: z.number(),
@@ -59,6 +79,7 @@ export const FrameSchema = z.object({
   result: ResultSchema.nullable(),
   decisions: z.record(z.string(), z.unknown()),
   logs: z.array(z.string()).max(30),
+  events: z.array(BattleEventSchema).max(128).default([]),
 });
 export const BatchSchema = z.object({
   id: uuid,

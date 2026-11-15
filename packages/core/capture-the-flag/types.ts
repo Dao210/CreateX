@@ -55,6 +55,8 @@ export interface Unit {
   captureProgress: number;
   isCapturing: boolean;
   isAttacking: boolean;
+  attackCooldown?: number;
+  shootLockTicks?: number;
 }
 export interface Flag {
   team: Side;
@@ -68,6 +70,22 @@ export interface Result {
   method: string;
   text: string;
 }
+export interface BattleEvent {
+  id: string;
+  tick: number;
+  time: number;
+  kind: "attack" | "death" | "respawn" | "flag" | "unknown";
+  team: Side;
+  x: number;
+  y: number;
+  unitId?: string;
+  unitType?: UnitType;
+  targetId?: string;
+  targetX?: number;
+  targetY?: number;
+  damage?: number;
+  flagState?: string;
+}
 export interface Frame {
   tick: number;
   time: number;
@@ -76,6 +94,7 @@ export interface Frame {
   result: Result | null;
   decisions: Record<string, unknown>;
   logs: string[];
+  events?: BattleEvent[];
 }
 export interface Match extends Frame {
   seed: number;

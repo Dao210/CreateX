@@ -252,6 +252,7 @@ function newMatch(
     },
     decisions: {},
     logs: [],
+    events: [],
     effects: [],
     arrows: [],
     meleeAttacks: [],
@@ -374,6 +375,8 @@ function tickMatch(match, options = {}) {
       options,
     );
   }
+  recordStateEvents(match, snapshot);
+  match.events = match.events.filter((event) => event.tick > match.tick - 16);
   pruneEffects(match);
 }
 
@@ -888,6 +891,18 @@ function resolveAttacksAtTickStart(match, intents, movementPlans) {
   const attacksByTarget = new Map();
   for (const attackEvent of attacks) {
     const { unit, target, damage } = attackEvent;
+    recordEvent(match, {
+      kind: "attack",
+      unitId: unit.id,
+      team: unit.team,
+      unitType: unit.unitType,
+      x: unit.x,
+      y: unit.y,
+      targetId: target.id,
+      targetX: target.x,
+      targetY: target.y,
+      damage,
+    });
     if (unit.unitType === "archer") {
       match.arrows.push(
         makeTimedCombatEffect(
@@ -964,6 +979,58 @@ function unitCanAttackAtTickStart(unit, target, decision, movementPlan) {
       unit.attackCooldown <= 0 &&
       dist(unit, target) <= unit.range + 0.02,
   );
+}
+
+function recordEvent(match, event) {
+  match.events.push({
+    ...event,
+    id: `${match.tick}:${match.events.length}`,
+    tick: match.tick,
+    time: match.time,
+  });
+}
+
+function recordStateEvents(match, before) {
+  for (const unit of match.units) {
+    const previous = before.units.find((item) => item.id === unit.id);
+    if (previous?.state === "ALIVE" && unit.state !== "ALIVE") {
+      recordEvent(match, {
+        kind: "death",
+        unitId: unit.id,
+        team: unit.team,
+        unitType: unit.unitType,
+        x: unit.x,
+        y: unit.y,
+      });
+    } else if (previous?.state === "RESPAWNING" && unit.state === "ALIVE") {
+      recordEvent(match, {
+        kind: "respawn",
+        unitId: unit.id,
+        team: unit.team,
+        unitType: unit.unitType,
+        x: unit.x,
+        y: unit.y,
+      });
+    }
+  }
+  for (const team of ["red", "blue"]) {
+    const flag = match.flags[team],
+      previous = before.flags[team];
+    if (
+      flag.state !== previous.state ||
+      flag.carrierId !== previous.carrierId
+    ) {
+      const carrier = match.units.find((unit) => unit.id === flag.carrierId);
+      recordEvent(match, {
+        kind: "flag",
+        team,
+        unitId: flag.carrierId || undefined,
+        x: carrier?.x ?? flag.x,
+        y: carrier?.y ?? flag.y,
+        flagState: flag.state,
+      });
+    }
+  }
 }
 
 function makeTimedCombatEffect(match, effect, durationMs) {
@@ -1243,10 +1310,12 @@ function simplifyDecision(decision, match) {
     observation_facts: decision.observationFacts || [],
     movement: decision.movement?.type || "HOLD_POSITION",
     movement_target: readableTarget(decision.movementTarget),
+    movement_target_id: decision.movementTarget?.id ?? null,
     attack: decision.attack?.type || "NO_ATTACK",
     attack_target: decision.attackTarget
       ? unitName(decision.attackTarget)
       : "无",
+    attack_target_id: decision.attackTarget?.id ?? null,
     action_mode: decision.actionMode || "MOVE_ONLY",
     special: decision.special?.type || "NONE",
     special_flag: decision.special?.flag || "",

@@ -83,5 +83,183 @@
   "noNewPairs": "These versions have already played. Enter a new version to run more official matches.",
   "batchTrial": "Batch trial",
   "stopTrial": "Stop trial",
-  "trialResults": "Local trial results"
+  "trialResults": "Local trial results",
+  "unitStats": {
+    "title": "Unit stats",
+    "description": "Each side has one of each unit. Values below are for standard mode.",
+    "unit": "Unit",
+    "hp": "Health",
+    "damage": "Damage",
+    "speed": "Speed",
+    "range": "Range",
+    "interval": "Attack interval",
+    "action": "Action rules",
+    "enhancement": "Optional enhancement",
+    "cellsPerSecond": "{{value}} cells/s",
+    "cells": "{{value}} cells",
+    "oneSecond": "1 second",
+    "moveAttack": "Can move and attack together",
+    "moveOrAttack": "Move or shoot each Tick",
+    "roles": {
+      "heavy_infantry": "Tank damage · defend · intercept",
+      "cavalry": "Capture · chase · reinforce",
+      "archer": "Focus fire · ranged pressure"
+    },
+    "enhancements": {
+      "heavy_infantry": "Health ×2 → {{value}}; also on respawn",
+      "cavalry": "Speed ×2 → {{value}} cells/s",
+      "archer": "Range ×2 → {{value}} cells"
+    },
+    "timing": "Each strategy Tick is {{tick}} seconds. Attacks resolve simultaneously using positions at the start of the Tick.",
+    "archerTiming": "An archer can shoot only if its target is already in range at Tick start and its cooldown has ended. Shooting locks the current and next Tick (0.5 seconds); the full attack cooldown is 1 second.",
+    "enhancementChoice": "selects one enhancement per strategy, active from match start. Omit it or use standard for no enhancement. Each side chooses independently."
+  },
+  "guide": {
+    "title": "How to play",
+    "description": "Write rules for three units, then watch them fight, capture and defend automatically.",
+    "objective": {
+      "title": "Win conditions",
+      "text": "Bring the enemy flag within 1 cell of your own flag base to win, even if your own flag is away. You also win when all three enemy units are permanently eliminated.",
+      "detail": "A match lasts at most 8 minutes of game time. Timeout or both sides winning in the same Tick produces a draw. Units waiting to respawn do not count as permanently eliminated."
+    },
+    "battlefield": {
+      "title": "Battlefield and movement",
+      "text": "The open map is 100 × 50 cells: red base on the left, blue on the right. Each side has one heavy infantry, one cavalry and one archer.",
+      "detail": "Units move in continuous 2D coordinates without collisions or blocking. Diagonal movement gives no extra speed. A fixed MOVE_TOWARD coordinate may use x: 0–99 and y: 0–49; it cannot also specify movement.target."
+    },
+    "capture": {
+      "title": "Capture and carry",
+      "text": "To take an enemy flag that is at home, issue CAPTURE_ENEMY_FLAG within 1 cell of its base and remain there for 3 continuous seconds without moving or attacking. Leaving, dying or losing access to the flag resets progress.",
+      "detail": "Each unit can carry one flag. Carrying either flag reduces speed by 25%. Carriers can attack, with normal archer restrictions. Bringing an enemy flag home wins automatically; bringing your own flag home does not."
+    },
+    "flags": {
+      "title": "Dropped flags",
+      "text": "A carrier drops its flag on death. Merely touching a flag never picks it up or returns it; your strategy must issue a special action.",
+      "detail": "Pickup and return require being within 1 cell. An enemy flag still at home must be captured over 3 seconds; PICK_UP_FLAG cannot take it directly."
+    },
+    "flagActions": {
+      "pickOwn": "Pick up your own flag, at home or dropped.",
+      "pickEnemy": "Pick up a dropped enemy flag.",
+      "drop": "Drop the carried flag at the Tick-start position.",
+      "returnOwn": "Return your dropped flag to its base."
+    },
+    "combat": {
+      "title": "Combat timing",
+      "text": "Only enemies can be attacked. Attacks in range with a ready cooldown always deal damage, without random misses or critical hits. Heavy infantry and cavalry can move while attacking.",
+      "detail": "All units decide from the same Tick-start snapshot. Attacks resolve together first, deaths stop further actions, then surviving units move. Archers cannot move and shoot in one Tick; see Unit stats for shooting locks and enhancements."
+    },
+    "respawn": {
+      "title": "Death and respawn",
+      "text": "Each unit tracks its own deaths: the first three respawns take 5, 10 and 20 seconds. The fourth death permanently eliminates that unit.",
+      "detail": "Spawn and respawn locations are chosen inside the home base, more than 2 cells from its flag base, and are reproducible with the match seed. Respawning restores full health. Strategies cannot choose spawn coordinates."
+    },
+    "strategy": {
+      "title": "Build and test a strategy",
+      "text": "Give each unit a rule list. Higher priorities are checked first; the first matching rule supplies movement, attack and special actions. Both sides can read current global positions, health, flags and recent activity, but not opposing rule files or future actions.",
+      "detail": "Download the AI rule kit for an external AI tool, or edit JSON here. Import, validate and trial it, then save a version. Step advances one 0.25-second Tick; decisions and the event log help explain the result. Local trials never enter the ranking."
+    },
+    "arena": {
+      "title": "Official arena and ranking",
+      "text": "Each member may enter one saved version. Confirming entry publishes its full source to this world; withdrawing or archiving does not revoke that source. World owners and admins start batches, freezing all entries.",
+      "detail": "Up to 48 members play pairwise single matches, using seed 12027 and fixed red/blue assignments. The server computes official results. Completed batches publish Glicko-2 rankings by Rating − 2 × RD; fewer than 10 matches is provisional. New edits apply to future batches."
+    }
+  },
+  "tactics": {
+    "battlefield": "Capture field · 100 × 50",
+    "unitRoster": "Units",
+    "selectedUnit": "Live decisions",
+    "position": "Position",
+    "observation": "What it observes",
+    "rule": "Why this rule",
+    "action": "What it actually does",
+    "unconditional": "This rule has no observation conditions.",
+    "waiting": "Waiting for the first strategy Tick.",
+    "inactive": "No rule evaluation while inactive.",
+    "noRule": "No matching rule.",
+    "priority": "Priority {{value}}",
+    "lowerPriority": "Also matches “{{name}}” ({{value}}), at a lower priority.",
+    "noTarget": "No target",
+    "cooldown": "Attack cooldown",
+    "deaths": "Deaths",
+    "alive": "Alive",
+    "respawning": "Respawn in {{seconds}} s",
+    "eliminated": "Permanently eliminated",
+    "carrying": "Carrying a flag",
+    "capturing": "Capturing · {{seconds}} / 3 s",
+    "shootingLock": "Shooting lock",
+    "attacked": "Attacked {{target}} this Tick.",
+    "moveOnly": "Moving this Tick, without shooting.",
+    "attackWaiting": "Waiting for range, cooldown or action conditions.",
+    "noAttack": "No attack requested.",
+    "rawDecision": "Raw decision data",
+    "yes": "Yes",
+    "no": "No",
+    "negated": "Not",
+    "flagHome": "At home",
+    "flagCarried": "Carried",
+    "flagDropped": "Dropped",
+    "timeline": "Battle timeline",
+    "keyEvents": "Key events",
+    "allEvents": "All events",
+    "noEvents": "Battle events appear as the match progresses.",
+    "attackEvent": "{{actor}} → {{target}} · −{{damage}}",
+    "deathEvent": "{{actor}} was defeated",
+    "respawnEvent": "{{actor}} respawned",
+    "flagEvent": "{{team}} flag · {{state}}",
+    "editStrategy": "Edit strategy",
+    "enhancement": "Enhancement",
+    "standard": "Standard",
+    "localOnly": "Local trial · unranked",
+    "exitReplay": "Back to trial",
+    "inspectTrial": "Review match",
+    "opponent": "Opponent",
+    "result": "Result",
+    "reason": "Decision",
+    "simulationTime": "Game time",
+    "trialProgress": "{{done}} / {{total}} opponents completed",
+    "moves": {
+      "MOVE_TOWARD": "Moving toward the target",
+      "MOVE_AWAY_FROM": "Moving away from the target",
+      "FOLLOW": "Following the target",
+      "GUARD": "Guarding the assigned position",
+      "INTERCEPT": "Intercepting an enemy",
+      "HOLD_POSITION": "Holding position",
+      "RETURN_TO_OWN_FLAG": "Returning to the home flag",
+      "GO_TO_ENEMY_FLAG": "Heading for the enemy flag",
+      "GO_TO_DROPPED_FLAG": "Heading for a dropped flag"
+    },
+    "specials": {
+      "CAPTURE_ENEMY_FLAG": "Requesting capture",
+      "PICK_UP_ENEMY_DROPPED_FLAG": "Requesting enemy-flag pickup",
+      "RETURN_OWN_DROPPED_FLAG": "Requesting own-flag return",
+      "PICK_UP_FLAG": "Requesting flag pickup",
+      "DROP_CARRIED_FLAG": "Requesting flag drop",
+      "DELIVER_FLAG": "Returning with the flag",
+      "NONE": "No special action"
+    },
+    "fields": {
+      "game.time": "Game time",
+      "self.hp": "Health",
+      "self.hp_percent": "Health ratio",
+      "self.is_flag_carrier": "Carrying a flag",
+      "self.is_capturing": "Capturing",
+      "self.capture_progress": "Capture progress",
+      "self.death_count": "Deaths",
+      "self.attack_ready": "Attack ready",
+      "nearest_enemy.distance": "Nearest enemy distance",
+      "nearby_enemy.count": "Nearby enemies",
+      "nearby_ally.count": "Nearby allies",
+      "own_flag.state": "Own flag",
+      "enemy_flag.state": "Enemy flag",
+      "enemy.has_flag_carrier": "Enemy has a carrier",
+      "ally.has_flag_carrier": "Ally has a carrier"
+    },
+    "tick": "Tick {{value}}",
+    "seconds": "{{value}} s",
+    "deathCount": "{{value}} / 4",
+    "computing": "Compute preview",
+    "ruleOutline": "Unit rules",
+    "ruleDisabled": "Disabled",
+    "emptyRules": "No rules for this unit."
+  }
 }

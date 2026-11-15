@@ -83,5 +83,183 @@
   "noNewPairs": "Ces versions se sont déjà affrontées. Inscrivez une nouvelle version.",
   "batchTrial": "Essais en série",
   "stopTrial": "Arrêter les essais",
-  "trialResults": "Résultats locaux"
+  "trialResults": "Résultats locaux",
+  "unitStats": {
+    "title": "Caractéristiques des unités",
+    "description": "Chaque camp dispose d’une unité de chaque type. Valeurs du mode standard.",
+    "unit": "Unité",
+    "hp": "Vie",
+    "damage": "Dégâts",
+    "speed": "Vitesse",
+    "range": "Portée",
+    "interval": "Intervalle d’attaque",
+    "action": "Actions",
+    "enhancement": "Amélioration au choix",
+    "cellsPerSecond": "{{value}} cases/s",
+    "cells": "{{value}} cases",
+    "oneSecond": "1 seconde",
+    "moveAttack": "Déplacement et attaque simultanés",
+    "moveOrAttack": "Déplacement ou tir à chaque Tick",
+    "roles": {
+      "heavy_infantry": "Encaisser · défendre · intercepter",
+      "cavalry": "Capturer · poursuivre · renforcer",
+      "archer": "Tirs concentrés · pression à distance"
+    },
+    "enhancements": {
+      "heavy_infantry": "Vie ×2 → {{value}}, y compris à la réapparition",
+      "cavalry": "Vitesse ×2 → {{value}} cases/s",
+      "archer": "Portée ×2 → {{value}} cases"
+    },
+    "timing": "Un Tick de stratégie dure {{tick}} seconde. Les attaques sont résolues simultanément depuis les positions de début de Tick.",
+    "archerTiming": "L’archer tire uniquement si sa cible est à portée au début du Tick et si son délai est écoulé. Le tir bloque le Tick actuel et le suivant (0,5 seconde). Le délai complet entre attaques est de 1 seconde.",
+    "enhancementChoice": "sélectionne une amélioration par stratégie, active dès le début du match. Sans ce champ, ou avec standard, aucune amélioration. Les camps choisissent indépendamment."
+  },
+  "guide": {
+    "title": "Comment jouer",
+    "description": "Écrivez les règles de trois unités qui se déplacent, attaquent et capturent automatiquement.",
+    "objective": {
+      "title": "Conditions de victoire",
+      "text": "Ramenez le drapeau ennemi à moins de 1 case de votre socle pour gagner, même si votre drapeau est absent. L’élimination définitive des trois ennemis donne aussi la victoire.",
+      "detail": "Un match dure au plus 8 minutes de jeu. La limite de temps ou deux victoires dans le même Tick donnent un match nul. Une unité en attente de réapparition n’est pas définitivement éliminée."
+    },
+    "battlefield": {
+      "title": "Terrain et déplacements",
+      "text": "La carte ouverte mesure 100 × 50 cases : base rouge à gauche, bleue à droite. Chaque camp a un fantassin lourd, un cavalier et un archer.",
+      "detail": "Les coordonnées 2D sont continues, sans collision ni blocage. La diagonale n’accélère pas les unités. MOVE_TOWARD peut viser x : 0–99, y : 0–49, sans définir simultanément movement.target."
+    },
+    "capture": {
+      "title": "Capturer et porter",
+      "text": "Pour prendre le drapeau ennemi sur son socle, exécutez CAPTURE_ENEMY_FLAG à moins de 1 case et restez immobile 3 secondes sans attaquer. Partir, mourir ou perdre l’accès au drapeau annule la progression.",
+      "detail": "Une unité porte au plus un drapeau. Tout drapeau porté réduit la vitesse de 25 %. Le porteur peut attaquer, selon les contraintes normales de l’archer. Ramener le drapeau ennemi gagne automatiquement ; ramener le vôtre ne le restitue pas automatiquement."
+    },
+    "flags": {
+      "title": "Drapeaux tombés",
+      "text": "Un porteur mort laisse tomber son drapeau. Le toucher ne suffit ni à le ramasser ni à le restituer : la stratégie doit demander une action spéciale.",
+      "detail": "Ramasser ou restituer exige d’être à moins de 1 case. Le drapeau ennemi sur son socle nécessite 3 secondes de capture ; PICK_UP_FLAG ne permet pas de le prendre directement."
+    },
+    "flagActions": {
+      "pickOwn": "Ramasser votre drapeau sur son socle ou au sol.",
+      "pickEnemy": "Ramasser le drapeau ennemi tombé.",
+      "drop": "Poser le drapeau à la position de début du Tick.",
+      "returnOwn": "Restituer votre drapeau tombé à son socle."
+    },
+    "combat": {
+      "title": "Résolution des combats",
+      "text": "Seuls les ennemis peuvent être attaqués. À portée et avec un délai écoulé, l’attaque inflige toujours ses dégâts, sans raté aléatoire ni coup critique. Fantassins et cavaliers peuvent attaquer en avançant.",
+      "detail": "Tous décident depuis le même état de début de Tick. Les attaques sont résolues ensemble, les morts cessent d’agir, puis les survivants se déplacent. L’archer ne peut pas avancer et tirer dans le même Tick ; ses contraintes figurent dans les caractéristiques."
+    },
+    "respawn": {
+      "title": "Mort et réapparition",
+      "text": "Les morts sont comptées par unité : les trois premières entraînent une réapparition après 5, 10 et 20 secondes. La quatrième élimine définitivement l’unité.",
+      "detail": "Les positions initiales et de réapparition sont tirées dans la base, à plus de 2 cases du socle, de façon reproductible selon la graine. La vie est entièrement restaurée. Les stratégies ne choisissent pas ces coordonnées."
+    },
+    "strategy": {
+      "title": "Créer et tester",
+      "text": "Chaque unité a sa liste de règles, évaluées par priorité décroissante. La première correspondance définit déplacement, attaque et action spéciale. Les camps lisent positions, vie, drapeaux et activité récente, mais pas les règles adverses ni le futur.",
+      "detail": "Téléchargez les règles pour un outil IA externe ou modifiez le JSON ici. Importez, validez, testez puis enregistrez. Un pas avance de 0,25 seconde ; décisions et journal expliquent le résultat. Les essais locaux ne comptent pas au classement."
+    },
+    "arena": {
+      "title": "Arène officielle et classement",
+      "text": "Chaque membre inscrit une version enregistrée. La confirmation publie son code complet dans ce monde ; retrait et archivage ne révoquent pas ce code. Les propriétaires et administrateurs lancent les tournois en figeant les versions.",
+      "detail": "Jusqu’à 48 membres jouent deux à deux en un seul match, avec la graine 12027 et des camps fixés au départ. Le serveur calcule les résultats. Les tournois terminés publient Glicko-2 selon Rating − 2 × RD ; moins de 10 matchs reste provisoire. Les modifications servent aux tournois suivants."
+    }
+  },
+  "tactics": {
+    "battlefield": "Champ de bataille · 100 × 50",
+    "unitRoster": "Unités",
+    "selectedUnit": "Décisions de l’unité",
+    "position": "Position",
+    "observation": "Ce qu’elle observe",
+    "rule": "Pourquoi cette règle",
+    "action": "Action réelle",
+    "unconditional": "Cette règle ne dépend d’aucune condition d’observation.",
+    "waiting": "En attente du premier Tick de stratégie.",
+    "inactive": "Aucune règle évaluée dans cet état.",
+    "noRule": "Aucune règle correspondante.",
+    "priority": "Priorité {{value}}",
+    "lowerPriority": "« {{name}} » ({{value}}) correspond aussi, avec une priorité inférieure.",
+    "noTarget": "Aucune cible",
+    "cooldown": "Recharge d’attaque",
+    "deaths": "Morts",
+    "alive": "En vie",
+    "respawning": "Réapparition dans {{seconds}} s",
+    "eliminated": "Élimination définitive",
+    "carrying": "Porte un drapeau",
+    "capturing": "Capture · {{seconds}} / 3 s",
+    "shootingLock": "Immobilisation de tir",
+    "attacked": "A attaqué {{target}} ce Tick.",
+    "moveOnly": "Ce Tick : déplacement sans tir.",
+    "attackWaiting": "Attend la portée, la recharge ou les conditions d’action.",
+    "noAttack": "Aucune attaque demandée.",
+    "rawDecision": "Données de décision brutes",
+    "yes": "Oui",
+    "no": "Non",
+    "negated": "Non",
+    "flagHome": "À la base",
+    "flagCarried": "Transporté",
+    "flagDropped": "Au sol",
+    "timeline": "Chronologie du combat",
+    "keyEvents": "Événements clés",
+    "allEvents": "Tous les événements",
+    "noEvents": "Les événements apparaîtront pendant le combat.",
+    "attackEvent": "{{actor}} → {{target}} · −{{damage}}",
+    "deathEvent": "{{actor}} est vaincu",
+    "respawnEvent": "{{actor}} réapparaît",
+    "flagEvent": "Drapeau {{team}} · {{state}}",
+    "editStrategy": "Modifier la stratégie",
+    "enhancement": "Amélioration",
+    "standard": "Standard",
+    "localOnly": "Essai local · non classé",
+    "exitReplay": "Retour à l’essai",
+    "inspectTrial": "Revoir le match",
+    "opponent": "Adversaire",
+    "result": "Résultat",
+    "reason": "Décision",
+    "simulationTime": "Temps de jeu",
+    "trialProgress": "{{done}} / {{total}} adversaires terminés",
+    "moves": {
+      "MOVE_TOWARD": "Avance vers la cible",
+      "MOVE_AWAY_FROM": "S’éloigne de la cible",
+      "FOLLOW": "Suit la cible",
+      "GUARD": "Garde la position",
+      "INTERCEPT": "Intercepte un ennemi",
+      "HOLD_POSITION": "Maintient sa position",
+      "RETURN_TO_OWN_FLAG": "Revient au drapeau allié",
+      "GO_TO_ENEMY_FLAG": "Va au drapeau ennemi",
+      "GO_TO_DROPPED_FLAG": "Va au drapeau tombé"
+    },
+    "specials": {
+      "CAPTURE_ENEMY_FLAG": "Demande la capture",
+      "PICK_UP_ENEMY_DROPPED_FLAG": "Demande de ramasser le drapeau ennemi",
+      "RETURN_OWN_DROPPED_FLAG": "Demande de rendre le drapeau allié",
+      "PICK_UP_FLAG": "Demande de ramasser le drapeau",
+      "DROP_CARRIED_FLAG": "Demande de lâcher le drapeau",
+      "DELIVER_FLAG": "Rapporte le drapeau",
+      "NONE": "Aucune action spéciale"
+    },
+    "fields": {
+      "game.time": "Temps de jeu",
+      "self.hp": "Santé",
+      "self.hp_percent": "Proportion de santé",
+      "self.is_flag_carrier": "Porte un drapeau",
+      "self.is_capturing": "Capture en cours",
+      "self.capture_progress": "Progression de capture",
+      "self.death_count": "Morts",
+      "self.attack_ready": "Attaque prête",
+      "nearest_enemy.distance": "Distance de l’ennemi le plus proche",
+      "nearby_enemy.count": "Ennemis proches",
+      "nearby_ally.count": "Alliés proches",
+      "own_flag.state": "Drapeau allié",
+      "enemy_flag.state": "Drapeau ennemi",
+      "enemy.has_flag_carrier": "Porteur de drapeau ennemi",
+      "ally.has_flag_carrier": "Porteur de drapeau allié"
+    },
+    "tick": "Tick {{value}}",
+    "seconds": "{{value}} s",
+    "deathCount": "{{value}} / 4",
+    "computing": "Aperçu du calcul",
+    "ruleOutline": "Règles par unité",
+    "ruleDisabled": "Désactivée",
+    "emptyRules": "Aucune règle pour cette unité."
+  }
 }

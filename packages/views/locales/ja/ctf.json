@@ -83,5 +83,183 @@
   "noNewPairs": "この組み合わせは対戦済みです。新しいバージョンを登録してください。",
   "batchTrial": "一括練習",
   "stopTrial": "練習を停止",
-  "trialResults": "練習結果"
+  "trialResults": "練習結果",
+  "unitStats": {
+    "title": "兵種ステータス表",
+    "description": "各陣営に各兵種が1体ずついます。以下は標準モードの数値です。",
+    "unit": "兵種",
+    "hp": "HP",
+    "damage": "ダメージ",
+    "speed": "移動速度",
+    "range": "射程",
+    "interval": "攻撃間隔",
+    "action": "行動ルール",
+    "enhancement": "選択できる強化",
+    "cellsPerSecond": "{{value}} マス/秒",
+    "cells": "{{value}} マス",
+    "oneSecond": "1 秒",
+    "moveAttack": "移動と攻撃を同時に実行可能",
+    "moveOrAttack": "各Tickで移動か射撃のどちらか",
+    "roles": {
+      "heavy_infantry": "耐久 · 防衛 · 迎撃",
+      "cavalry": "奪旗 · 追撃 · 援護",
+      "archer": "集中攻撃 · 遠距離制圧"
+    },
+    "enhancements": {
+      "heavy_infantry": "HPが2倍の{{value}}に。復活時も適用",
+      "cavalry": "速度が2倍の{{value}}マス/秒に",
+      "archer": "射程が2倍の{{value}}マスに"
+    },
+    "timing": "戦略Tickは{{tick}}秒です。攻撃はTick開始時の位置に基づき同時に解決します。",
+    "archerTiming": "弓兵はTick開始時に敵が射程内にいて、クールダウンが終わっている場合のみ射撃します。射撃したTickと次のTickの計0.5秒は移動・攻撃できません。攻撃間隔は1秒です。",
+    "enhancementChoice": "で戦略ごとに1種類の強化を選び、試合開始時から適用します。省略またはstandardなら強化なし。両陣営は独立して選択できます。"
+  },
+  "guide": {
+    "title": "遊び方",
+    "description": "3兵種のルールを事前に書き、自動で移動・攻撃・奪旗・防衛させます。",
+    "objective": {
+      "title": "勝利条件",
+      "text": "敵旗を自軍の固定旗台から1マス以内に持ち帰れば勝利です。自軍の旗がなくても構いません。敵の3体をすべて永久退場させても勝利です。",
+      "detail": "試合はゲーム内時間で最大8分。時間切れ、または両陣営が同じTickで勝利条件を満たすと引き分けです。復活待ちのユニットは永久退場には含みません。"
+    },
+    "battlefield": {
+      "title": "戦場と移動",
+      "text": "障害物のない100 × 50マスの戦場です。赤の基地が左、青が右。各陣営に重装歩兵・騎兵・弓兵が1体ずついます。",
+      "detail": "連続した2次元座標で移動し、衝突や通せんぼはありません。斜め移動でも速さは同じです。MOVE_TOWARDの固定座標はx: 0–99、y: 0–49で、movement.targetとの併用はできません。"
+    },
+    "capture": {
+      "title": "奪旗と運搬",
+      "text": "敵旗が旗台にある場合、1マス以内でCAPTURE_ENEMY_FLAGを実行し、移動も攻撃もせず3秒間留まります。離脱、死亡、他のユニットによる取得で進捗がリセットされます。",
+      "detail": "1体が持てる旗は1本です。どちらの旗でも運搬中は25%減速します。攻撃は可能ですが弓兵の制約は適用されます。敵旗を持ち帰ると自動勝利します。自軍の旗は持ち帰るだけでは勝利も返還もできません。"
+    },
+    "flags": {
+      "title": "落ちた旗の操作",
+      "text": "運搬者が死亡すると旗をその場に落とします。触れるだけでは拾えず返還もされません。戦略で特殊行動を明示してください。",
+      "detail": "拾得・返還には旗から1マス以内にいる必要があります。旗台にある敵旗は3秒間の奪旗が必要で、PICK_UP_FLAGでは直接取得できません。"
+    },
+    "flagActions": {
+      "pickOwn": "旗台または地面にある自軍の旗を拾う。",
+      "pickEnemy": "落ちている敵旗を拾う。",
+      "drop": "Tick開始時の位置に運搬中の旗を置く。",
+      "returnOwn": "落ちた自軍の旗を旗台へ返す。"
+    },
+    "combat": {
+      "title": "戦闘の処理",
+      "text": "攻撃対象は敵のみ。射程内でクールダウンが終わっていれば必ずダメージを与え、ランダムなミスやクリティカルはありません。重装歩兵と騎兵は移動中も攻撃できます。",
+      "detail": "全員が同じTick開始時の状態から判断します。攻撃を同時処理し、死亡者の行動を止めてから生存者を移動させます。弓兵は同一Tickで移動と射撃を行えません。硬直と強化はステータス表を参照してください。"
+    },
+    "respawn": {
+      "title": "死亡と復活",
+      "text": "死亡回数は各ユニットで独立しています。1・2・3回目はそれぞれ5・10・20秒後に復活し、4回目は永久退場します。",
+      "detail": "出現・復活位置は自軍基地内かつ旗台から2マスより離れた場所から選ばれ、試合シードで再現できます。復活時はHPが全回復します。戦略から出現座標は指定できません。"
+    },
+    "strategy": {
+      "title": "戦略の作成と試行",
+      "text": "兵種ごとにルールを用意し、優先度の高い順に最初に一致したものを実行します。移動・攻撃・特殊行動を指定できます。両陣営は全体の位置・HP・旗・直近の活動を読めますが、敵戦略や未来の行動は読めません。",
+      "detail": "AIルールキットを外部AIに渡すか、ここでJSONを編集します。インポート・検証・試行後にバージョンを保存してください。ステップは0.25秒進み、判断とログで検証できます。ローカル試行はランキングに入りません。"
+    },
+    "arena": {
+      "title": "公式アリーナと順位",
+      "text": "各メンバーは保存済みの1バージョンを登録できます。確認すると全ソースがこのワールドに公開され、撤回・アーカイブでも取り消せません。ワールド所有者と管理者が大会を開始し、参加バージョンを固定します。",
+      "detail": "最大48人が総当たりで各1試合を行い、シードは12027、陣営は開始時に固定されます。結果はサーバーが計算します。完了後にRating − 2 × RDによるGlicko-2順位を公開し、10試合未満は暫定扱いです。編集は今後の大会に適用されます。"
+    }
+  },
+  "tactics": {
+    "battlefield": "奪旗戦場 · 100 × 50",
+    "unitRoster": "両軍の部隊",
+    "selectedUnit": "ユニットの判断",
+    "position": "位置",
+    "observation": "観察した情報",
+    "rule": "このルールを選ぶ理由",
+    "action": "実際の行動",
+    "unconditional": "このルールには観察条件がありません。",
+    "waiting": "最初の判断 Tick を待っています。",
+    "inactive": "現在はルール判定を行いません。",
+    "noRule": "一致するルールがありません。",
+    "priority": "優先度 {{value}}",
+    "lowerPriority": "「{{name}}」({{value}}) も一致しますが優先度が低いです。",
+    "noTarget": "対象なし",
+    "cooldown": "攻撃クールダウン",
+    "deaths": "戦死回数",
+    "alive": "生存",
+    "respawning": "復活まで {{seconds}} 秒",
+    "eliminated": "永久離脱",
+    "carrying": "旗を運搬中",
+    "capturing": "奪取中 · {{seconds}} / 3 秒",
+    "shootingLock": "射撃硬直",
+    "attacked": "この Tick に {{target}} を攻撃しました。",
+    "moveOnly": "この Tick は移動のみ、射撃なし。",
+    "attackWaiting": "射程、クールダウン、行動条件を待っています。",
+    "noAttack": "攻撃指示なし。",
+    "rawDecision": "判断の元データ",
+    "yes": "はい",
+    "no": "いいえ",
+    "negated": "否定",
+    "flagHome": "自陣",
+    "flagCarried": "運搬中",
+    "flagDropped": "落下",
+    "timeline": "戦闘タイムライン",
+    "keyEvents": "重要イベント",
+    "allEvents": "全イベント",
+    "noEvents": "対局が進むとイベントを表示します。",
+    "attackEvent": "{{actor}} → {{target}} · −{{damage}}",
+    "deathEvent": "{{actor}} が戦死",
+    "respawnEvent": "{{actor}} が復活",
+    "flagEvent": "{{team}}の旗 · {{state}}",
+    "editStrategy": "戦略を編集",
+    "enhancement": "強化",
+    "standard": "標準",
+    "localOnly": "ローカル試練 · ランク対象外",
+    "exitReplay": "試練に戻る",
+    "inspectTrial": "対局を振り返る",
+    "opponent": "対戦相手",
+    "result": "結果",
+    "reason": "判定",
+    "simulationTime": "ゲーム内時間",
+    "trialProgress": "{{done}} / {{total}} 対戦完了",
+    "moves": {
+      "MOVE_TOWARD": "対象に向かう",
+      "MOVE_AWAY_FROM": "対象から離れる",
+      "FOLLOW": "対象を追従",
+      "GUARD": "指定位置を守る",
+      "INTERCEPT": "敵を迎撃",
+      "HOLD_POSITION": "その場で待機",
+      "RETURN_TO_OWN_FLAG": "自軍の旗に戻る",
+      "GO_TO_ENEMY_FLAG": "敵の旗に向かう",
+      "GO_TO_DROPPED_FLAG": "落ちた旗に向かう"
+    },
+    "specials": {
+      "CAPTURE_ENEMY_FLAG": "旗の奪取を指示",
+      "PICK_UP_ENEMY_DROPPED_FLAG": "敵旗の回収を指示",
+      "RETURN_OWN_DROPPED_FLAG": "自軍旗の返還を指示",
+      "PICK_UP_FLAG": "旗の回収を指示",
+      "DROP_CARRIED_FLAG": "旗を落とす指示",
+      "DELIVER_FLAG": "旗を持って帰還",
+      "NONE": "特殊行動なし"
+    },
+    "fields": {
+      "game.time": "対局時間",
+      "self.hp": "体力",
+      "self.hp_percent": "体力割合",
+      "self.is_flag_carrier": "旗を運搬中",
+      "self.is_capturing": "奪取中",
+      "self.capture_progress": "奪取進捗",
+      "self.death_count": "戦死回数",
+      "self.attack_ready": "攻撃準備完了",
+      "nearest_enemy.distance": "最寄りの敵との距離",
+      "nearby_enemy.count": "近くの敵の数",
+      "nearby_ally.count": "近くの味方の数",
+      "own_flag.state": "自軍の旗",
+      "enemy_flag.state": "敵の旗",
+      "enemy.has_flag_carrier": "敵の旗の運搬者",
+      "ally.has_flag_carrier": "味方の旗の運搬者"
+    },
+    "tick": "Tick {{value}}",
+    "seconds": "{{value}} 秒",
+    "deathCount": "{{value}} / 4",
+    "computing": "計算プレビュー",
+    "ruleOutline": "兵種のルール",
+    "ruleDisabled": "無効",
+    "emptyRules": "この兵種にルールはありません。"
+  }
 }

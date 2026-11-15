@@ -4,6 +4,7 @@ import { TestApiClient } from "./fixtures";
 import {
   StateSchema,
   StrategyRecordSchema,
+  MatchRecordSchema,
 } from "../packages/core/capture-the-flag/schema";
 import { readFileSync } from "node:fs";
 const red = JSON.parse(
@@ -68,6 +69,13 @@ test("strategy import, explicit publication, official score and replay", async (
     page.getByRole("link", { name: "夺旗", exact: true }),
   ).toBeVisible();
   await expect(page).toHaveTitle(/夺旗/);
+  await expect(page.locator(".ctf-unit-roster button")).toHaveCount(6);
+  await expect(page.locator(".ctf-inspector")).toContainText("观察到了什么");
+  await expect(page.locator(".ctf-json")).toBeHidden();
+  await page.getByRole("button", { name: "编辑策略", exact: true }).click();
+  await expect(page.locator(".ctf-json")).toBeVisible();
+  await page.getByRole("group", { name: "兵种规则", exact: true }).getByRole("button", { name: "重甲步兵", exact: true }).click();
+  await expect(page.locator(".ctf-strategy-outline li").first()).toBeVisible();
   await page.getByRole("button", { name: "单步", exact: true }).click();
   await expect(page.locator(".ctf-stage-meta")).toContainText("1 / 1920");
   await page.locator('input[type="file"]').setInputFiles({
@@ -82,6 +90,15 @@ test("strategy import, explicit publication, official score and replay", async (
   await expect(page.locator(".ctf-trial-results tbody tr")).toHaveCount(1, {
     timeout: 15000,
   });
+  await page.getByRole("button", { name: "复盘对局", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "返回试炼", exact: true }),
+  ).toBeVisible();
+  const localSlider = page.getByRole("slider", { name: "回放", exact: true });
+  await localSlider.focus();
+  await localSlider.press("End");
+  await expect(page.locator(".ctf-event-timeline")).toContainText("战斗时间线");
+  await page.getByRole("button", { name: "返回试炼", exact: true }).click();
   const savedResponse = page.waitForResponse(
     (r) =>
       r.url().includes("/api/ctf/v1/strategies") &&
@@ -95,7 +112,10 @@ test("strategy import, explicit publication, official score and replay", async (
   await expect(page.getByRole("dialog")).toContainText("完整源码");
   await page.getByRole("button", { name: "公开并报名", exact: true }).click();
   await expect(page.getByRole("dialog")).not.toBeVisible();
-  const ownCard=page.locator(".ctf-cards article").filter({has:page.getByRole("button",{name:"报名",exact:true})}).filter({hasText:"Scout"});
+  const ownCard = page
+    .locator(".ctf-cards article")
+    .filter({ has: page.getByRole("button", { name: "报名", exact: true }) })
+    .filter({ hasText: "Scout" });
   await expect(ownCard).toContainText("已公开源码");
   const publicVersion = StrategyRecordSchema.parse(
     await (
@@ -155,7 +175,9 @@ test("strategy import, explicit publication, official score and replay", async (
     await (await owner.ctfRequest("state")).json(),
   );
   expect(state.leaderboard).toHaveLength(2);
-  expect((await owner.ctfRequest("batches",{requestId:randomUUID()})).status).toBe(409);
+  expect(
+    (await owner.ctfRequest("batches", { requestId: randomUUID() })).status,
+  ).toBe(409);
   expect(state.matches[0]?.red.revision).toBe(1);
   expect(state.leaderboard.every((r) => r.games === 1)).toBeTruthy();
   await expect(
@@ -168,7 +190,17 @@ test("strategy import, explicit publication, official score and replay", async (
     .getByRole("link", { name: "查看比赛", exact: true })
     .first()
     .click();
-  await expect(page.getByRole("img", { name: "回放" })).toBeVisible();
+  const rawOfficial = await (
+    await owner.ctfRequest(`matches/${state.matches[0]!.id}`)
+  ).json();
+  expect(rawOfficial.frames[0]).toHaveProperty("events");
+  const official = MatchRecordSchema.parse(rawOfficial);
+  // Entry order can swap the fixtures; the reverse pairing has no actual attacks.
+  const hasAttacks = official.frames.some((frame) =>
+    frame.events.some((event) => event.kind === "attack"),
+  );
+  expect(hasAttacks).toBe(official.red.name === "Scout");
+  await expect(page.getByRole("img", { name: /夺旗战场/ })).toBeVisible();
   await page.getByRole("button", { name: "回放", exact: true }).click();
   await page.screenshot({
     path: "test-results/ctf/replay.png",
@@ -190,15 +222,50 @@ test("strategy import, explicit publication, official score and replay", async (
     const rules = await downloadEvent;
     expect(rules.suggestedFilename()).toBe("ctf-rules.zip");
     expect(await rules.failure()).toBeNull();
+    await page.getByLabel("速度", { exact: true }).selectOption("30");
     await page.getByRole("button", { name: "开始", exact: true }).click();
     await expect(
       page.getByRole("button", { name: "暂停", exact: true }),
     ).toBeVisible();
+    await expect
+      .poll(async () => {
+        const text = await page
+          .locator(".ctf-stage-meta > span")
+          .nth(1)
+          .textContent();
+        return Number.parseInt(text ?? "0");
+      })
+      .toBeGreaterThanOrEqual(120);
     await page.getByRole("button", { name: "暂停", exact: true }).click();
+    await page.locator(".ctf-unit-roster button").last().click();
+    await expect(page.locator(".ctf-inspector h2")).toHaveText("弓箭手");
+    const beforeFullscreen = await page.locator(".ctf-stage-meta").textContent();
+    const canvasHandle = await page.locator(".ctf-canvas").elementHandle();
+    await page.getByRole("button", { name: "全屏", exact: true }).click();
+    await expect.poll(() => page.evaluate(() => !!document.fullscreenElement)).toBe(true);
+    await page.getByRole("button", { name: "全屏", exact: true }).click();
+    await expect.poll(() => page.evaluate(() => !!document.fullscreenElement)).toBe(false);
+    expect(await page.locator(".ctf-stage-meta").textContent()).toBe(beforeFullscreen);
+    expect(await page.evaluate(el => el === document.querySelector(".ctf-canvas"), canvasHandle)).toBe(true);
+    await page.locator(".ctf-scroll").evaluate((el) => {
+      el.scrollTop = 0;
+    });
     await page.screenshot({
       path: "test-results/ctf/trial.png",
       fullPage: true,
     });
+    await page.setViewportSize({ width: 1366, height: 900 });
+    await expect(page.locator(".ctf-unit-roster")).toBeInViewport({ ratio: 1 });
+    await expect(page.locator(".ctf-inspector")).toBeInViewport();
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.evaluate(() => document.documentElement.classList.add("dark"));
+    await page.screenshot({
+      path: "test-results/ctf/compact-dark.png",
+      animations: "disabled",
+    });
+    await page.evaluate(() =>
+      document.documentElement.classList.remove("dark"),
+    );
     const other = await owner.createWorkspace(
       "Other Flag QA",
       `ctf-other-${run}`,

@@ -83,5 +83,183 @@
   "noNewPairs": "这些版本已完成正式对局，请报名新版本后再次发起。",
   "batchTrial": "批量试炼",
   "stopTrial": "停止试炼",
-  "trialResults": "本地试炼结果"
+  "trialResults": "本地试炼结果",
+  "unitStats": {
+    "title": "兵种数值表",
+    "description": "每方各有一名重甲步兵、骑兵和弓箭手。下表为标准模式数值。",
+    "unit": "兵种",
+    "hp": "生命",
+    "damage": "单次伤害",
+    "speed": "移动速度",
+    "range": "攻击范围",
+    "interval": "攻击间隔",
+    "action": "行动规则",
+    "enhancement": "可选强化",
+    "cellsPerSecond": "{{value}} 格/秒",
+    "cells": "{{value}} 格",
+    "oneSecond": "1 秒",
+    "moveAttack": "可以边移动边攻击",
+    "moveOrAttack": "每个 Tick 只能移动或射击",
+    "roles": {
+      "heavy_infantry": "抗伤 · 守旗 · 拦截",
+      "cavalry": "抢旗 · 追击 · 回防",
+      "archer": "集火 · 远程压制"
+    },
+    "enhancements": {
+      "heavy_infantry": "生命翻倍至 {{value}}，重生时同样生效",
+      "cavalry": "速度翻倍至 {{value}} 格/秒",
+      "archer": "射程翻倍至 {{value}} 格"
+    },
+    "timing": "每个策略 Tick 为 {{tick}} 秒；所有攻击按 Tick 开始时的位置同时结算。",
+    "archerTiming": "弓箭手仅在 Tick 开始时目标已在射程内、冷却已结束时射击。射箭占用当前和下一个 Tick（共 0.5 秒），期间不能移动或攻击；完整攻击冷却为 1 秒。",
+    "enhancementChoice": "每份策略可选一种强化，开局生效；省略或填 standard 则不强化。双方独立选择。"
+  },
+  "guide": {
+    "title": "玩法说明",
+    "description": "提前为三个兵种编写规则，让单位自动行动、攻击、夺旗和防守。",
+    "objective": {
+      "title": "如何获胜",
+      "text": "把敌旗带回己方固定旗位 1 格内即可获胜，己方旗帜是否在家不影响交付。敌方三个单位全部永久出局时，也会获胜。",
+      "detail": "每局最多进行 8 分钟游戏内时间，超时或双方在同一 Tick 达成胜利条件时为平局。等待重生的单位不算永久出局，不会触发团灭。"
+    },
+    "battlefield": {
+      "title": "战场与移动",
+      "text": "地图为 100 × 50 格的开放战场，红方基地在左、蓝方在右。每方各有一名重甲步兵、骑兵和弓箭手。",
+      "detail": "单位使用连续二维坐标，没有碰撞和挡路；斜向移动不会更快。MOVE_TOWARD 可指定固定坐标 x: 0–99、y: 0–49，但不能同时设置 movement.target。"
+    },
+    "capture": {
+      "title": "夺旗与持旗",
+      "text": "敌旗在家时，需在敌方旗位 1 格内执行 CAPTURE_ENEMY_FLAG，连续停留 3 秒，期间不能移动或攻击。离开、死亡或旗帜被先拿走都会清空进度。",
+      "detail": "每个单位最多携带一面旗。持有己旗或敌旗都会减速 25%，仍可攻击，弓箭手遵守射击限制。敌旗带回家会自动获胜；己旗带回家不会获胜，也不会自动归还。"
+    },
+    "flags": {
+      "title": "掉旗、拾旗与归还",
+      "text": "持旗单位死亡时旗帜掉在原地。接触旗帜不会自动拾取或归还，必须由策略明确发出特殊动作。",
+      "detail": "拾旗和归还都要求在旗帜 1 格内。仍在家的敌旗必须连续夺旗 3 秒，不能用 PICK_UP_FLAG 直接拿走。"
+    },
+    "flagActions": {
+      "pickOwn": "举起在家或掉落的己方旗帜。",
+      "pickEnemy": "举起掉落的敌方旗帜。",
+      "drop": "在本 Tick 开始位置放下当前旗帜。",
+      "returnOwn": "将掉落的己方旗帜归还旗位。"
+    },
+    "combat": {
+      "title": "战斗如何结算",
+      "text": "只能攻击敌军。目标在射程内且冷却结束时必定造成伤害，没有随机命中和暴击。重甲步兵、骑兵可以边移动边攻击。",
+      "detail": "所有单位从同一份 Tick 开始快照决定行动，先同时结算攻击，死亡单位停止后续行动，再提交幸存单位的移动。弓箭手不能在同一 Tick 移动并射击；硬直与强化见兵种数值表。"
+    },
+    "respawn": {
+      "title": "死亡与重生",
+      "text": "每个单位独立计算死亡次数：第 1、2、3 次死亡分别等待 5、10、20 秒重生；第 4 次死亡永久出局。",
+      "detail": "出生和重生位置由比赛种子决定，在己方基地内随机选择，并避开己方旗位周围 2 格。重生恢复满血；策略不能指定出生或重生坐标。"
+    },
+    "strategy": {
+      "title": "编写与试炼策略",
+      "text": "为各兵种设置规则列表，优先级越高越先判断，执行第一条满足条件的规则，包括移动、攻击和特殊动作。双方都能读取全局位置、血量、旗帜和近期活动，但不能读取对手策略或未来行动。",
+      "detail": "下载 AI 规则包交给外部 AI，或直接编辑 JSON；导入、校验、试炼后保存版本。单步推进一个 0.25 秒 Tick，可结合决策解释和事件日志复盘。本地试炼不计入排行榜。"
+    },
+    "arena": {
+      "title": "正式竞技场与排名",
+      "text": "每位成员可报名一个已保存版本。确认报名会把完整源码公开给当前世界，撤回或归档不会撤销公开。世界所有者和管理员可发起批次，开始时冻结参赛版本。",
+      "detail": "至多 48 位成员两两单局对战，固定种子 12027，红蓝分配在批次开始时确定。正式结果由服务器计算；完成后发布 Glicko-2 排名，按 Rating − 2 × RD 排序，少于 10 场为暂定。后续修改用于未来批次。"
+    }
+  },
+  "tactics": {
+    "battlefield": "夺旗战场 · 100 × 50",
+    "unitRoster": "双方部队",
+    "selectedUnit": "单位实时决策",
+    "position": "位置",
+    "observation": "观察到了什么",
+    "rule": "为什么命中这条规则",
+    "action": "实际执行的行动",
+    "unconditional": "当前命中无条件规则，不依赖额外观察条件。",
+    "waiting": "等待首个策略 Tick。",
+    "inactive": "当前不参与规则判定。",
+    "noRule": "尚未命中规则。",
+    "priority": "优先级 {{value}}",
+    "lowerPriority": "同时满足「{{name}}」（{{value}}），优先级更低。",
+    "noTarget": "无目标",
+    "cooldown": "攻击冷却",
+    "deaths": "阵亡次数",
+    "alive": "存活",
+    "respawning": "重生倒计时 {{seconds}} 秒",
+    "eliminated": "永久出局",
+    "carrying": "持旗",
+    "capturing": "夺旗中 · {{seconds}} / 3 秒",
+    "shootingLock": "射击硬直",
+    "attacked": "本 Tick 已攻击 {{target}}。",
+    "moveOnly": "本 Tick 只移动，未射击。",
+    "attackWaiting": "等待射程、冷却或行动条件满足。",
+    "noAttack": "未请求攻击。",
+    "rawDecision": "查看原始决策数据",
+    "yes": "是",
+    "no": "否",
+    "negated": "不满足",
+    "flagHome": "在家",
+    "flagCarried": "被携带",
+    "flagDropped": "掉落",
+    "timeline": "战斗时间线",
+    "keyEvents": "关键事件",
+    "allEvents": "全部事件",
+    "noEvents": "对局推进后显示战斗事件。",
+    "attackEvent": "{{actor}} → {{target}} · −{{damage}}",
+    "deathEvent": "{{actor}} 阵亡",
+    "respawnEvent": "{{actor}} 重生",
+    "flagEvent": "{{team}}旗 · {{state}}",
+    "editStrategy": "编辑策略",
+    "enhancement": "兵种强化",
+    "standard": "标准模式",
+    "localOnly": "本地试炼 · 不计入排名",
+    "exitReplay": "返回试炼",
+    "inspectTrial": "复盘对局",
+    "opponent": "对手",
+    "result": "结果",
+    "reason": "判定",
+    "simulationTime": "模拟时间",
+    "trialProgress": "已完成 {{done}} / {{total}} 个对手",
+    "moves": {
+      "MOVE_TOWARD": "向目标移动",
+      "MOVE_AWAY_FROM": "远离目标",
+      "FOLLOW": "跟随目标",
+      "GUARD": "守卫指定位置",
+      "INTERCEPT": "拦截敌人",
+      "HOLD_POSITION": "原地待命",
+      "RETURN_TO_OWN_FLAG": "返回己方旗位",
+      "GO_TO_ENEMY_FLAG": "前往敌方旗位",
+      "GO_TO_DROPPED_FLAG": "前往掉落旗帜"
+    },
+    "specials": {
+      "CAPTURE_ENEMY_FLAG": "请求夺取敌旗",
+      "PICK_UP_ENEMY_DROPPED_FLAG": "请求拾取掉落的敌旗",
+      "RETURN_OWN_DROPPED_FLAG": "请求归还己方旗帜",
+      "PICK_UP_FLAG": "请求拾取旗帜",
+      "DROP_CARRIED_FLAG": "请求放下旗帜",
+      "DELIVER_FLAG": "持旗返回",
+      "NONE": "无特殊行动"
+    },
+    "fields": {
+      "game.time": "对局时间",
+      "self.hp": "生命值",
+      "self.hp_percent": "生命比例",
+      "self.is_flag_carrier": "是否持旗",
+      "self.is_capturing": "是否正在夺旗",
+      "self.capture_progress": "夺旗进度",
+      "self.death_count": "阵亡次数",
+      "self.attack_ready": "攻击是否就绪",
+      "nearest_enemy.distance": "最近敌人距离",
+      "nearby_enemy.count": "附近敌人数",
+      "nearby_ally.count": "附近友军数",
+      "own_flag.state": "己方旗帜状态",
+      "enemy_flag.state": "敌方旗帜状态",
+      "enemy.has_flag_carrier": "敌方是否有人持旗",
+      "ally.has_flag_carrier": "友军是否有人持旗"
+    },
+    "tick": "Tick {{value}}",
+    "seconds": "{{value}} 秒",
+    "deathCount": "{{value}} / 4",
+    "computing": "计算预览",
+    "ruleOutline": "兵种规则",
+    "ruleDisabled": "已停用",
+    "emptyRules": "该兵种尚无规则。"
+  }
 }

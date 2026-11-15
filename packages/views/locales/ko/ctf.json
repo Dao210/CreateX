@@ -83,5 +83,183 @@
   "noNewPairs": "이 버전들은 이미 대결했습니다. 새 버전을 등록하세요.",
   "batchTrial": "일괄 연습",
   "stopTrial": "연습 중지",
-  "trialResults": "연습 결과"
+  "trialResults": "연습 결과",
+  "unitStats": {
+    "title": "병종 능력치",
+    "description": "진영마다 각 병종이 한 명씩 있습니다. 아래는 표준 모드 수치입니다.",
+    "unit": "병종",
+    "hp": "체력",
+    "damage": "피해량",
+    "speed": "이동 속도",
+    "range": "사거리",
+    "interval": "공격 간격",
+    "action": "행동 규칙",
+    "enhancement": "선택 강화",
+    "cellsPerSecond": "{{value}} 칸/초",
+    "cells": "{{value}} 칸",
+    "oneSecond": "1초",
+    "moveAttack": "이동과 공격을 동시에 수행",
+    "moveOrAttack": "매 Tick에 이동 또는 사격",
+    "roles": {
+      "heavy_infantry": "피해 흡수 · 방어 · 차단",
+      "cavalry": "깃발 탈취 · 추격 · 지원",
+      "archer": "집중 공격 · 원거리 압박"
+    },
+    "enhancements": {
+      "heavy_infantry": "체력 2배 → {{value}}, 부활 시에도 적용",
+      "cavalry": "속도 2배 → {{value}}칸/초",
+      "archer": "사거리 2배 → {{value}}칸"
+    },
+    "timing": "전략 Tick은 {{tick}}초입니다. 공격은 Tick 시작 위치를 기준으로 동시에 처리됩니다.",
+    "archerTiming": "궁수는 Tick 시작 시 목표가 사거리 안에 있고 재사용 대기시간이 끝나야 발사합니다. 사격한 Tick과 다음 Tick, 총 0.5초 동안 이동과 공격이 잠깁니다. 전체 공격 간격은 1초입니다.",
+    "enhancementChoice": "으로 전략마다 강화 한 가지를 선택하며 경기 시작부터 적용됩니다. 생략하거나 standard를 사용하면 강화되지 않습니다. 양 진영은 독립적으로 선택합니다."
+  },
+  "guide": {
+    "title": "게임 방법",
+    "description": "세 병종의 규칙을 미리 작성하면 유닛이 자동으로 이동, 공격, 깃발 탈취와 방어를 수행합니다.",
+    "objective": {
+      "title": "승리 조건",
+      "text": "적 깃발을 아군 고정 깃대 1칸 이내로 가져오면 승리합니다. 아군 깃발이 없어도 됩니다. 적 세 유닛을 모두 영구 탈락시켜도 승리합니다.",
+      "detail": "경기는 게임 시간으로 최대 8분입니다. 시간 초과 또는 같은 Tick에 양쪽이 승리 조건을 달성하면 무승부입니다. 부활 대기 중인 유닛은 영구 탈락으로 세지 않습니다."
+    },
+    "battlefield": {
+      "title": "전장과 이동",
+      "text": "장애물이 없는 100 × 50칸 전장으로, 빨강 기지는 왼쪽, 파랑 기지는 오른쪽입니다. 각 진영에 중보병, 기병, 궁수가 한 명씩 있습니다.",
+      "detail": "연속적인 2차원 좌표로 이동하며 충돌이나 길막이 없습니다. 대각선 이동도 속도가 같습니다. MOVE_TOWARD 고정 좌표는 x: 0–99, y: 0–49이며 movement.target과 함께 지정할 수 없습니다."
+    },
+    "capture": {
+      "title": "깃발 탈취와 운반",
+      "text": "적 깃발이 기지에 있으면 깃대 1칸 이내에서 CAPTURE_ENEMY_FLAG를 실행하고 이동이나 공격 없이 3초간 머물러야 합니다. 이탈, 사망 또는 다른 유닛의 탈취로 진행도가 초기화됩니다.",
+      "detail": "유닛은 깃발 하나만 들 수 있습니다. 어느 깃발이든 들면 속도가 25% 감소합니다. 운반 중에도 공격할 수 있지만 궁수 제약은 유지됩니다. 적 깃발을 가져오면 자동 승리하며, 아군 깃발은 가져오는 것만으로 승리하거나 반환되지 않습니다."
+    },
+    "flags": {
+      "title": "떨어진 깃발 조작",
+      "text": "운반자가 죽으면 그 자리에 깃발이 떨어집니다. 닿는 것만으로 줍거나 반환하지 않으며, 전략에서 특수 행동을 명시해야 합니다.",
+      "detail": "줍기와 반환은 깃발 1칸 이내에서 가능합니다. 기지에 있는 적 깃발은 3초간 탈취해야 하며 PICK_UP_FLAG로 바로 가져갈 수 없습니다."
+    },
+    "flagActions": {
+      "pickOwn": "기지에 있거나 떨어진 아군 깃발을 듭니다.",
+      "pickEnemy": "떨어진 적 깃발을 듭니다.",
+      "drop": "Tick 시작 위치에 들고 있는 깃발을 내려놓습니다.",
+      "returnOwn": "떨어진 아군 깃발을 깃대로 반환합니다."
+    },
+    "combat": {
+      "title": "전투 처리",
+      "text": "적만 공격할 수 있습니다. 사거리 안이고 대기시간이 끝나면 항상 피해를 주며 무작위 빗나감이나 치명타는 없습니다. 중보병과 기병은 이동하면서 공격할 수 있습니다.",
+      "detail": "모두 같은 Tick 시작 상태로 판단합니다. 공격을 동시에 처리하고 사망자의 행동을 중단한 뒤 생존자를 이동시킵니다. 궁수는 한 Tick에 이동과 사격을 함께 할 수 없습니다. 사격 잠금과 강화는 능력치 표를 참고하세요."
+    },
+    "respawn": {
+      "title": "사망과 부활",
+      "text": "사망 횟수는 유닛별로 계산합니다. 첫 세 번은 각각 5초, 10초, 20초 후 부활하며 네 번째 사망 시 영구 탈락합니다.",
+      "detail": "출현과 부활 위치는 아군 기지 안에서 깃대와 2칸 넘게 떨어진 곳으로 정해지며 경기 시드로 재현됩니다. 부활 시 체력이 모두 회복됩니다. 전략으로 출현 좌표를 지정할 수 없습니다."
+    },
+    "strategy": {
+      "title": "전략 작성과 시험",
+      "text": "유닛마다 규칙 목록을 만들면 높은 우선순위부터 첫 번째로 일치한 규칙의 이동, 공격, 특수 행동을 실행합니다. 양쪽은 전체 위치, 체력, 깃발과 최근 활동을 읽지만 적 전략 파일이나 미래 행동은 읽지 못합니다.",
+      "detail": "AI 규칙 키트를 외부 AI에 전달하거나 여기서 JSON을 편집하세요. 가져오기, 검증, 시험 후 버전을 저장합니다. 한 단계는 0.25초이며 판단과 로그로 결과를 확인합니다. 로컬 시험은 순위에 반영되지 않습니다."
+    },
+    "arena": {
+      "title": "공식 경기와 순위",
+      "text": "멤버마다 저장한 버전 하나를 등록할 수 있습니다. 확인하면 전체 소스가 현재 월드에 공개되며 철회나 보관으로 공개를 취소할 수 없습니다. 월드 소유자와 관리자가 대회를 시작하고 참가 버전을 고정합니다.",
+      "detail": "최대 48명이 두 명씩 단판 경기를 치르며 시드는 12027, 진영은 시작 시 고정됩니다. 서버가 공식 결과를 계산합니다. 완료 후 Rating − 2 × RD 기준 Glicko-2 순위를 공개하며 10경기 미만은 잠정 순위입니다. 수정 사항은 이후 대회에 적용됩니다."
+    }
+  },
+  "tactics": {
+    "battlefield": "깃발 전장 · 100 × 50",
+    "unitRoster": "양측 부대",
+    "selectedUnit": "유닛 실시간 판단",
+    "position": "위치",
+    "observation": "관찰한 정보",
+    "rule": "이 규칙을 선택한 이유",
+    "action": "실제로 수행한 행동",
+    "unconditional": "이 규칙에는 추가 관찰 조건이 없습니다.",
+    "waiting": "첫 전략 Tick을 기다립니다.",
+    "inactive": "현재 규칙을 평가하지 않습니다.",
+    "noRule": "일치하는 규칙이 없습니다.",
+    "priority": "우선순위 {{value}}",
+    "lowerPriority": "「{{name}}」({{value}})도 일치하지만 우선순위가 낮습니다.",
+    "noTarget": "대상 없음",
+    "cooldown": "공격 재사용 대기",
+    "deaths": "전사 횟수",
+    "alive": "생존",
+    "respawning": "{{seconds}}초 후 부활",
+    "eliminated": "영구 탈락",
+    "carrying": "깃발 운반 중",
+    "capturing": "깃발 점령 · {{seconds}} / 3초",
+    "shootingLock": "사격 경직",
+    "attacked": "이번 Tick에 {{target}}을(를) 공격했습니다.",
+    "moveOnly": "이번 Tick에는 이동만 하고 사격하지 않습니다.",
+    "attackWaiting": "사거리, 재사용 대기 또는 행동 조건을 기다립니다.",
+    "noAttack": "공격 요청이 없습니다.",
+    "rawDecision": "원본 판단 데이터",
+    "yes": "예",
+    "no": "아니요",
+    "negated": "부정",
+    "flagHome": "기지",
+    "flagCarried": "운반 중",
+    "flagDropped": "떨어짐",
+    "timeline": "전투 타임라인",
+    "keyEvents": "주요 이벤트",
+    "allEvents": "모든 이벤트",
+    "noEvents": "대전이 진행되면 전투 이벤트가 표시됩니다.",
+    "attackEvent": "{{actor}} → {{target}} · −{{damage}}",
+    "deathEvent": "{{actor}} 전사",
+    "respawnEvent": "{{actor}} 부활",
+    "flagEvent": "{{team}} 깃발 · {{state}}",
+    "editStrategy": "전략 편집",
+    "enhancement": "병종 강화",
+    "standard": "기본 모드",
+    "localOnly": "로컬 연습 · 순위 미반영",
+    "exitReplay": "연습으로 돌아가기",
+    "inspectTrial": "대전 복기",
+    "opponent": "상대",
+    "result": "결과",
+    "reason": "판정",
+    "simulationTime": "게임 시간",
+    "trialProgress": "상대 {{done}} / {{total}} 완료",
+    "moves": {
+      "MOVE_TOWARD": "대상으로 이동",
+      "MOVE_AWAY_FROM": "대상에서 멀어짐",
+      "FOLLOW": "대상 추적",
+      "GUARD": "지정 위치 방어",
+      "INTERCEPT": "적 차단",
+      "HOLD_POSITION": "위치 유지",
+      "RETURN_TO_OWN_FLAG": "아군 깃발로 복귀",
+      "GO_TO_ENEMY_FLAG": "적 깃발로 이동",
+      "GO_TO_DROPPED_FLAG": "떨어진 깃발로 이동"
+    },
+    "specials": {
+      "CAPTURE_ENEMY_FLAG": "적 깃발 점령 요청",
+      "PICK_UP_ENEMY_DROPPED_FLAG": "떨어진 적 깃발 줍기 요청",
+      "RETURN_OWN_DROPPED_FLAG": "아군 깃발 반환 요청",
+      "PICK_UP_FLAG": "깃발 줍기 요청",
+      "DROP_CARRIED_FLAG": "깃발 내려놓기 요청",
+      "DELIVER_FLAG": "깃발 운반 복귀",
+      "NONE": "특수 행동 없음"
+    },
+    "fields": {
+      "game.time": "대전 시간",
+      "self.hp": "생명력",
+      "self.hp_percent": "생명력 비율",
+      "self.is_flag_carrier": "깃발 운반 여부",
+      "self.is_capturing": "깃발 점령 여부",
+      "self.capture_progress": "깃발 점령 진행",
+      "self.death_count": "전사 횟수",
+      "self.attack_ready": "공격 준비 여부",
+      "nearest_enemy.distance": "가장 가까운 적 거리",
+      "nearby_enemy.count": "주변 적 수",
+      "nearby_ally.count": "주변 아군 수",
+      "own_flag.state": "아군 깃발 상태",
+      "enemy_flag.state": "적 깃발 상태",
+      "enemy.has_flag_carrier": "적 깃발 운반자 여부",
+      "ally.has_flag_carrier": "아군 깃발 운반자 여부"
+    },
+    "tick": "Tick {{value}}",
+    "seconds": "{{value}}초",
+    "deathCount": "{{value}} / 4",
+    "computing": "계산 미리보기",
+    "ruleOutline": "병종 규칙",
+    "ruleDisabled": "비활성",
+    "emptyRules": "이 병종에 규칙이 없습니다."
+  }
 }

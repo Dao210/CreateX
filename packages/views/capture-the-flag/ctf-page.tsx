@@ -55,7 +55,9 @@ import {
 import { useT } from "../i18n";
 import { AppLink, useNavigation } from "../navigation";
 import { GameAccessBoundary } from "../admin/game-access-boundary";
-import { BattleCanvas } from "./battle-canvas";
+import { BattleView, battleTime } from "./battle-view";
+import { CTFReference } from "./ctf-reference";
+import { StrategyOutline } from "./strategy-outline";
 
 function download(name: string, body: Blob) {
   const url = URL.createObjectURL(body);
@@ -83,6 +85,14 @@ export function CTFPage({ storage }: { storage: StorageAdapter }) {
     </GameAccessBoundary>
   );
 }
+type LocalReview = {
+  frames: Frame[];
+  redName: string;
+  blueName: string;
+  seed: number;
+  result: Frame["result"];
+};
+
 function Content({
   wsId,
   userId,
@@ -147,6 +157,11 @@ function Content({
   const generations = useRef({ red: 0, blue: 0, editor: 0 });
   const [notice, setNotice] = useState("");
   const [errors, setErrors] = useState<string[]>([]);
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [selectedUnit, setSelectedUnit] = useState("red_archer");
+  const [localReview, setLocalReview] = useState<LocalReview | null>(null);
+  const trialChallenger = useRef("");
+  const [trialTotal, setTrialTotal] = useState(0);
   const [red, setRed] = useState<Strategy>(() => baseline());
   const [blue, setBlue] = useState<Strategy>(() =>
     makeBaselineStrategy("opponent", "Baseline", "blue"),
@@ -159,6 +174,14 @@ function Content({
   const [initialMatch] = useState(() => newMatch(seed, { red, blue }));
   const engine = useRef<Match>(initialMatch);
   const [frame, setFrame] = useState<Frame>(() => frameOf(engine.current));
+  const localRecording = useRef<Frame[]>([frame]);
+  const liveTimeline = useMemo(
+    () =>
+      localRecording.current.at(-1)?.tick === frame.tick
+        ? localRecording.current.slice()
+        : [...localRecording.current, frame],
+    [frame],
+  );
   const [recordingIndex, setRecordingIndex] = useState(0);
   const [replaying, setReplaying] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -180,29 +203,47 @@ function Content({
   const reset = (nextRed = red, nextBlue = blue, nextSeed = seed) => {
     setRunning(false);
     engine.current = newMatch(nextSeed, { red: nextRed, blue: nextBlue });
-    setFrame(frameOf(engine.current));
+    const next = frameOf(engine.current);
+    localRecording.current = [next];
+    setLocalReview(null);
+    setFrame(next);
+  };
+  const advance = () => {
+    tickMatch(engine.current, { headless: true });
+    const next = frameOf(engine.current);
+    if (
+      (next.tick % 4 === 0 || next.result) &&
+      localRecording.current.at(-1)?.tick !== next.tick
+    )
+      localRecording.current.push(next);
+    return next;
   };
   const step = () => {
-    tickMatch(engine.current, { headless: true });
-    setFrame(frameOf(engine.current));
+    setFrame(advance());
     if (engine.current.result) setRunning(false);
   };
   useEffect(() => {
     if (!running) return;
     const timer = setInterval(() => {
-      for (let i = 0; i < Math.max(1, speed); i++)
-        tickMatch(engine.current, { headless: true });
-      setFrame(frameOf(engine.current));
+      let next = frameOf(engine.current);
+      for (let i = 0; i < Math.max(1, speed); i++) next = advance();
+      setFrame(next);
       if (engine.current.result) setRunning(false);
     }, 250);
     return () => clearInterval(timer);
   }, [running, speed]);
   useEffect(() => {
     const pause = () => {
-      if (document.hidden) setRunning(false);
+      if (document.hidden) {
+        setRunning(false);
+        setReplaying(false);
+      }
     };
     const fullscreen = () => {
-      if (!document.fullscreenElement) setRunning(false);
+      if (!document.fullscreenElement) {
+        setRunning(false);
+        setReplaying(false);
+      }
     };
     document.addEventListener("visibilitychange", pause);
     document.addEventListener("fullscreenchange", fullscreen);
@@ -218,6 +259,7 @@ function Content({
     const record = state.data?.mine.find((s) => s.id === selected);
     if (record) {
       loaded.current = selected;
+      setEditorOpen(true);
       const generation = ++generations.current.editor;
       setSourceLoading(true);
       void loadStrategy(record.id, record.revision)
@@ -247,23 +289,27 @@ function Content({
     setRunning(false);
     setReplaying(false);
     setRecordingIndex(0);
+    setLocalReview(null);
   }, [isArena, matchId, stopTrial]);
-  const recorded = matchQuery.data?.frames ?? [];
+  const recorded = useMemo(
+    () =>
+      matchId ? (matchQuery.data?.frames ?? []) : (localReview?.frames ?? []),
+    [matchId, matchQuery.data?.frames, localReview],
+  );
   useEffect(() => {
     if (!replaying || recorded.length < 2) return;
-    const timer = setInterval(
-      () =>
-        setRecordingIndex((i) => {
-          if (i >= recorded.length - 1) {
-            setReplaying(false);
-            return i;
-          }
-          return i + 1;
-        }),
-      1000 / speed,
+    if (recordingIndex >= recorded.length - 1) {
+      setReplaying(false);
+      return;
+    }
+    const current = recorded[recordingIndex]!,
+      next = recorded[recordingIndex + 1]!;
+    const timer = setTimeout(
+      () => setRecordingIndex((i) => i + 1),
+      Math.max(16, ((next.time - current.time) * 1000) / speed),
     );
-    return () => clearInterval(timer);
-  }, [replaying, recorded.length, speed]);
+    return () => clearTimeout(timer);
+  }, [replaying, recorded, recordingIndex, speed]);
   const status = (value: string) => {
     switch (value) {
       case "running":
@@ -325,6 +371,8 @@ function Content({
     stopTrial();
     setRunning(false);
     setTrialResults([]);
+    setTrialTotal(0);
+    trialChallenger.current = challenger.team.team_name;
     setTrialRunning(true);
     const generation = trialGeneration.current;
     try {
@@ -347,6 +395,7 @@ function Content({
           name: t(($) => $.baseline),
           strategy: makeBaselineStrategy("baseline", "Baseline", "blue"),
         });
+      setTrialTotal(opponents.length);
       const worker = new Worker(new URL("./trial.worker.ts", import.meta.url), {
         type: "module",
       });
@@ -422,6 +471,7 @@ function Content({
     });
   };
   const load = (record: StrategySummary) => {
+    setEditorOpen(true);
     void attempt(async () => {
       const generation = ++generations.current.editor;
       setSourceLoading(true);
@@ -447,9 +497,38 @@ function Content({
   const active = state.data?.batches.find(
     (b) => b.status === "running" || b.status === "paused",
   );
-  const shown = matchId
-    ? recorded[Math.min(recordingIndex, recorded.length - 1)]
-    : frame;
+  const shown =
+    matchId || localReview
+      ? recorded[Math.min(recordingIndex, recorded.length - 1)]
+      : frame;
+  const enhancementName = (strategy: Strategy) => {
+    const mode = strategy.enhancement_mode ?? "standard";
+    return mode === "standard"
+      ? t(($) => $.tactics.standard)
+      : t(($) => $[mode]);
+  };
+  const draftStrategy = useMemo(() => {
+    try {
+      const parsed = StrategySchema.safeParse(JSON.parse(text));
+      return parsed.success ? parsed.data : null;
+    } catch {
+      return null;
+    }
+  }, [text]);
+  const draftEnhancement = draftStrategy?.enhancement_mode ?? "standard";
+  const review = localReview
+    ? {
+        ...localReview,
+        status: localReview.result ? "completed" : "paused",
+        red: { ownerName: t(($) => $.red), name: localReview.redName },
+        blue: { ownerName: t(($) => $.blue), name: localReview.blueName },
+      }
+    : matchQuery.data;
+  const seek = (index: number) => {
+    setReplaying(false);
+    setSpeed((value) => Math.min(value, 10));
+    setRecordingIndex(index);
+  };
   return (
     <Dialog
       open={confirmOpen}
@@ -465,6 +544,7 @@ function Content({
             <span>{t(($) => $.ruleVersion, { version: GAME_VERSION })}</span>
           </div>
           <div className="ctf-header-actions">
+            <CTFReference />
             <Button
               size="sm"
               variant="ghost"
@@ -524,12 +604,12 @@ function Content({
               </Button>
             </div>
           )}
-          {matchId ? (
+          {matchId || localReview ? (
             <section className="ctf-match">
-              {matchQuery.isPending && (
+              {matchId && matchQuery.isPending && (
                 <p role="status">{t(($) => $.loading)}</p>
               )}
-              {matchQuery.isError && (
+              {matchId && matchQuery.isError && (
                 <p role="alert">
                   {t(($) => $.error)}
                   <Button onClick={() => void matchQuery.refetch()}>
@@ -537,85 +617,162 @@ function Content({
                   </Button>
                 </p>
               )}
-              {matchQuery.data && (
+              {review && (
                 <>
                   <div className="ctf-matchup">
                     <strong>
-                      {matchQuery.data.red.ownerName} ·{" "}
-                      {matchQuery.data.red.name}
+                      {review.red.ownerName} · {review.red.name}
                     </strong>
-                    <span>{status(matchQuery.data.status)}</span>
+                    <span>{status(review.status)}</span>
                     <strong>
-                      {matchQuery.data.blue.ownerName} ·{" "}
-                      {matchQuery.data.blue.name}
+                      {review.blue.ownerName} · {review.blue.name}
                     </strong>
                   </div>
                   {shown ? (
-                    <BattleCanvas frame={shown} label={t(($) => $.replay)} />
+                    <BattleView
+                      frame={shown}
+                      selectedId={selectedUnit}
+                      onSelect={setSelectedUnit}
+                      playing={replaying}
+                      interval={
+                        (Math.max(
+                          0.25,
+                          (recorded[recordingIndex]?.time ?? 1) -
+                            (recorded[Math.max(0, recordingIndex - 1)]?.time ??
+                              0),
+                        ) *
+                          1000) /
+                        speed
+                      }
+                      timeline={recorded}
+                      onSeek={seek}
+                      stageMeta={
+                        <div className="ctf-stage-meta">
+                          <span>{battleTime(shown.time)}</span>
+                          <span>
+                            {!localReview &&
+                            (review.status === "running" ||
+                              review.status === "queued")
+                              ? t(($) => $.tactics.computing)
+                              : t(($) => $.replay)}{" "}
+                            ·{" "}
+                            {localReview
+                              ? t(($) => $.tactics.localOnly)
+                              : t(($) => $.arena)}
+                          </span>
+                          <span>
+                            {t(($) => $.seed)} {review.seed}
+                          </span>
+                        </div>
+                      }
+                      controls={
+                        <div className="ctf-controls ctf-replay-controls">
+                          <Button
+                            disabled={recorded.length < 2}
+                            onClick={() => {
+                              if (recordingIndex >= recorded.length - 1)
+                                setRecordingIndex(0);
+                              setReplaying(!replaying);
+                            }}
+                          >
+                            {replaying ? <Pause /> : <Play />}
+                            {replaying ? t(($) => $.pause) : t(($) => $.replay)}
+                          </Button>
+                          <input
+                            type="range"
+                            min="0"
+                            max={Math.max(0, recorded.length - 1)}
+                            value={recordingIndex}
+                            aria-label={t(($) => $.replay)}
+                            onChange={(e) => {
+                              setReplaying(false);
+                              setRecordingIndex(Number(e.target.value));
+                            }}
+                          />
+                          <span>
+                            {review.result
+                              ? outcome(review.result.winner)
+                              : status(review.status)}
+                            {review.result && (
+                              <small>{review.result.method}</small>
+                            )}
+                          </span>
+                          <select
+                            aria-label={t(($) => $.speed)}
+                            value={speed}
+                            onChange={(e) => setSpeed(Number(e.target.value))}
+                          >
+                            {[1, 2, 5, 10].map((value) => (
+                              <option key={value} value={value}>
+                                {value}×
+                              </option>
+                            ))}
+                          </select>
+                          {localReview && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setLocalReview(null);
+                                setReplaying(false);
+                              }}
+                            >
+                              {t(($) => $.tactics.exitReplay)}
+                            </Button>
+                          )}
+                        </div>
+                      }
+                    />
                   ) : (
                     <p className="ctf-empty">{t(($) => $.emptyFrames)}</p>
                   )}
-                  <div className="ctf-controls">
-                    <Button
-                      disabled={recorded.length < 2}
-                      onClick={() => {
-                        if (recordingIndex >= recorded.length - 1)
-                          setRecordingIndex(0);
-                        setReplaying(!replaying);
-                      }}
-                    >
-                      {replaying ? <Pause /> : <Play />}
-                      {replaying ? t(($) => $.pause) : t(($) => $.replay)}
-                    </Button>
-                    <input
-                      type="range"
-                      min="0"
-                      max={Math.max(0, recorded.length - 1)}
-                      value={recordingIndex}
-                      aria-label={t(($) => $.replay)}
-                      onChange={(e) => {
-                        setReplaying(false);
-                        setRecordingIndex(Number(e.target.value));
-                      }}
-                    />
-                    <span>
-                      {matchQuery.data.result
-                        ? outcome(matchQuery.data.result.winner)
-                        : status(matchQuery.data.status)}
-                    </span>
-                    <code>{matchQuery.data.seed}</code>
-                  </div>
                 </>
               )}
-              {shown && <DecisionPanels frame={shown} />}
             </section>
           ) : !isArena ? (
             <>
-              <div className="ctf-matchup">
+              <div className="ctf-matchup ctf-trial-matchup">
+                <div className="ctf-clock">
+                  <strong>{battleTime(frame.time)}</strong>
+                  <span>
+                    {frame.result
+                      ? outcome(frame.result.winner)
+                      : running
+                        ? t(($) => $.running)
+                        : t(($) => $.paused)}
+                  </span>
+                </div>
                 {(["red", "blue"] as const).map((side) => (
-                  <label key={side} className={`ctf-side ctf-${side}`}>
-                    <span>
-                      {side === "red" ? t(($) => $.red) : t(($) => $.blue)}
-                    </span>
-                    <select
-                      value={side === "red" ? redKey : blueKey}
-                      onChange={(e) =>
-                        void attempt(() => choose(side, e.target.value))
-                      }
-                    >
-                      <option value="baseline">{t(($) => $.baseline)}</option>
-                      <option value="draft">{t(($) => $.draftTrial)}</option>
-                      {choices.map((s) => (
-                        <option
-                          key={`${s.id}:${s.revision}`}
-                          value={`${s.id}:${s.revision}`}
-                        >
-                          {s.ownerName} · {s.name} ·{" "}
-                          {t(($) => $.revision, { revision: s.revision })}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                  <div key={side} className={`ctf-matchup-slot ctf-${side}`}>
+                    <label className={`ctf-side ctf-${side}`}>
+                      <span>
+                        {side === "red" ? t(($) => $.red) : t(($) => $.blue)}
+                      </span>
+                      <select
+                        aria-label={t(($) => $[side])}
+                        value={side === "red" ? redKey : blueKey}
+                        onChange={(e) =>
+                          void attempt(() => choose(side, e.target.value))
+                        }
+                      >
+                        <option value="baseline">{t(($) => $.baseline)}</option>
+                        <option value="draft">{t(($) => $.draftTrial)}</option>
+                        {choices.map((s) => (
+                          <option
+                            key={`${s.id}:${s.revision}`}
+                            value={`${s.id}:${s.revision}`}
+                          >
+                            {s.ownerName} · {s.name} ·{" "}
+                            {t(($) => $.revision, { revision: s.revision })}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <small>
+                      {t(($) => $.tactics.enhancement)} ·{" "}
+                      {enhancementName(side === "red" ? red : blue)}
+                    </small>
+                  </div>
                 ))}
                 <Button
                   size="icon-sm"
@@ -632,252 +789,366 @@ function Content({
                   <ArrowLeftRight />
                 </Button>
               </div>
-              <div ref={stage} className="ctf-stage">
-                {shown && (
-                  <BattleCanvas frame={shown} label={t(($) => $.trial)} />
-                )}
-                <div className="ctf-stage-meta">
-                  <span>
-                    {Math.floor(frame.time / 60)
-                      .toString()
-                      .padStart(2, "0")}
-                    :
-                    {Math.floor(frame.time % 60)
-                      .toString()
-                      .padStart(2, "0")}
-                  </span>
-                  <span>
-                    {frame.result
-                      ? outcome(frame.result.winner)
-                      : `${frame.tick} / 1920`}
-                  </span>
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label={t(($) => $.fullscreen)}
-                    onClick={() =>
-                      void attempt(async () => {
-                        if (document.fullscreenElement)
-                          await document.exitFullscreen();
-                        else await stage.current?.requestFullscreen();
-                      })
-                    }
-                  >
-                    <Maximize2 />
-                  </Button>
-                </div>
-              </div>
-              <div className="ctf-controls">
-                <Button
-                  disabled={!!frame.result}
-                  onClick={() => setRunning(!running)}
-                >
-                  {running ? <Pause /> : <Play />}
-                  {running ? t(($) => $.pause) : t(($) => $.start)}
-                </Button>
-                <Button
-                  variant="outline"
-                  disabled={running || !!frame.result}
-                  onClick={step}
-                >
-                  <SkipForward />
-                  {t(($) => $.step)}
-                </Button>
-                <Button variant="ghost" onClick={() => reset()}>
-                  <RotateCcw />
-                  {t(($) => $.reset)}
-                </Button>
-                <label>
-                  {t(($) => $.speed)}
-                  <select
-                    value={speed}
-                    onChange={(e) => setSpeed(Number(e.target.value))}
-                  >
-                    {[1, 2, 5, 10, 30, 100].map((s) => (
-                      <option key={s} value={s}>
-                        {s}×
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  {t(($) => $.seed)}
-                  <Input
-                    type="number"
-                    min="0"
-                    max="4294967295"
-                    value={seed}
-                    onChange={(e) => {
-                      const next = Number(e.target.value);
-                      if (
-                        Number.isInteger(next) &&
-                        next >= 0 &&
-                        next <= 0xffffffff
-                      ) {
-                        setSeed(next);
-                        reset(red, blue, next);
+              <BattleView
+                frame={frame}
+                selectedId={selectedUnit}
+                onSelect={setSelectedUnit}
+                playing={running}
+                stageRef={stage}
+                timeline={liveTimeline}
+                onSeek={(index) => {
+                  setRunning(false);
+                  setLocalReview({
+                    frames: liveTimeline,
+                    redName: red.team.team_name,
+                    blueName: blue.team.team_name,
+                    seed,
+                    result: frame.result,
+                  });
+                  seek(index);
+                }}
+                stageMeta={
+                  <div className="ctf-stage-meta">
+                    <span>
+                      {Math.floor(frame.time / 60)
+                        .toString()
+                        .padStart(2, "0")}
+                      :
+                      {Math.floor(frame.time % 60)
+                        .toString()
+                        .padStart(2, "0")}
+                    </span>
+                    <span>
+                      {frame.result
+                        ? outcome(frame.result.winner)
+                        : `${frame.tick} / 1920`}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label={t(($) => $.fullscreen)}
+                      onClick={() =>
+                        void attempt(async () => {
+                          if (document.fullscreenElement)
+                            await document.exitFullscreen();
+                          else await stage.current?.requestFullscreen();
+                        })
                       }
-                    }}
-                  />
-                </label>
-              </div>
-              <div className="ctf-lower">
-                <section className="ctf-editor">
-                  <div className="ctf-section-head">
-                    <h2>{t(($) => $.editor)}</h2>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => {
-                        setEditing(null);
-                        setName("");
-                        setText(JSON.stringify(baseline(), null, 2));
-                        setErrors([]);
-                      }}
                     >
-                      {t(($) => $.newStrategy)}
+                      <Maximize2 />
                     </Button>
                   </div>
-                  <label>
-                    {t(($) => $.strategyName)}
-                    <Input
-                      value={name}
-                      maxLength={128}
-                      onChange={(e) => setName(e.target.value)}
-                    />
-                  </label>
-                  <Textarea
-                    spellCheck={false}
-                    aria-label={t(($) => $.editor)}
-                    value={text}
-                    onChange={(e) => setText(e.target.value)}
-                    className="ctf-json"
-                  />
-                  <input
-                    ref={importInput}
-                    type="file"
-                    accept=".strategy,.json,application/json"
-                    hidden
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (!file) return;
-                      e.target.value = "";
-                      void attempt(async () => {
-                        if (file.size > 256 * 1024)
-                          throw new Error("file_too_large");
-                        const content = await file.text();
-                        setEditing(null);
-                        setText(content);
-                        setName(
-                          file.name
-                            .replace(/\.(strategy|json)$/i, "")
-                            .slice(0, 128),
-                        );
-                        setErrors([]);
-                      });
-                    }}
-                  />
-                  <div className="ctf-editor-actions">
+                }
+                controls={
+                  <div className="ctf-controls">
                     <Button
-                      size="sm"
+                      disabled={!!frame.result}
+                      onClick={() => setRunning(!running)}
+                    >
+                      {running ? <Pause /> : <Play />}
+                      {running ? t(($) => $.pause) : t(($) => $.start)}
+                    </Button>
+                    <Button
                       variant="outline"
-                      onClick={() => importInput.current?.click()}
+                      disabled={running || !!frame.result}
+                      onClick={step}
                     >
-                      <FileUp />
-                      {t(($) => $.importFile)}
+                      <SkipForward />
+                      {t(($) => $.step)}
                     </Button>
+                    <Button variant="ghost" onClick={() => reset()}>
+                      <RotateCcw />
+                      {t(($) => $.reset)}
+                    </Button>
+                    <label>
+                      {t(($) => $.speed)}
+                      <select
+                        aria-label={t(($) => $.speed)}
+                        value={speed}
+                        onChange={(e) => setSpeed(Number(e.target.value))}
+                      >
+                        {[1, 2, 5, 10, 30, 100].map((s) => (
+                          <option key={s} value={s}>
+                            {s}×
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label>
+                      {t(($) => $.seed)}
+                      <Input
+                        type="number"
+                        min="0"
+                        max="4294967295"
+                        value={seed}
+                        onChange={(e) => {
+                          const next = Number(e.target.value);
+                          if (
+                            Number.isInteger(next) &&
+                            next >= 0 &&
+                            next <= 0xffffffff
+                          ) {
+                            setSeed(next);
+                            reset(red, blue, next);
+                          }
+                        }}
+                      />
+                    </label>
                     <Button
-                      size="sm"
                       variant="outline"
-                      onClick={() => {
-                        const value = parse();
-                        if (value)
-                          download(
-                            `${name || "strategy"}.strategy`,
-                            new Blob([JSON.stringify(value, null, 2)], {
-                              type: "application/json",
-                            }),
-                          );
-                      }}
-                    >
-                      {t(($) => $.exportFile)}
-                    </Button>
-                    <Button
                       size="sm"
-                      variant="ghost"
-                      onClick={() => {
-                        if (parse()) setNotice(t(($) => $.valid));
-                      }}
+                      onClick={() => setEditorOpen((open) => !open)}
                     >
-                      <Check />
-                      {t(($) => $.validate)}
-                    </Button>
-                    <Button
-                      size="sm"
-                      disabled={busy || !state.data}
-                      onClick={() => void save()}
-                    >
-                      {t(($) => $.save)}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        const strategy = parse();
-                        if (strategy) {
-                          setRed(strategy);
-                          setRedKey("draft");
-                          reset(strategy, blue);
-                        }
-                      }}
-                    >
-                      {t(($) => $.trial)}
+                      {t(($) => $.tactics.editStrategy)}
                     </Button>
                   </div>
-                  <div className="ctf-editor-actions">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      disabled={sourceLoading || trialRunning}
-                      onClick={() => void runTrials()}
-                    >
-                      {t(($) => $.batchTrial)}
-                    </Button>
-                    {trialRunning && (
-                      <Button size="sm" variant="ghost" onClick={stopTrial}>
-                        {t(($) => $.stopTrial)}
+                }
+              />
+              <details
+                className="ctf-workshop"
+                open={editorOpen}
+                onToggle={(event) => setEditorOpen(event.currentTarget.open)}
+              >
+                <summary>{t(($) => $.tactics.editStrategy)}</summary>
+                <div className="ctf-lower">
+                  <section className="ctf-editor">
+                    <div className="ctf-section-head">
+                      <h2>{t(($) => $.editor)}</h2>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => {
+                          setEditing(null);
+                          setName("");
+                          setText(JSON.stringify(baseline(), null, 2));
+                          setErrors([]);
+                        }}
+                      >
+                        {t(($) => $.newStrategy)}
                       </Button>
-                    )}
-                  </div>
-                  {trialResults.length > 0 && (
-                    <section className="ctf-trial-results">
-                      <h2>{t(($) => $.trialResults)}</h2>
-                      <div className="ctf-table-scroll">
-                        <table>
-                          <tbody>
-                            {trialResults.map((row) => (
-                              <tr key={row.index}>
-                                <td>{row.name}</td>
-                                <td>{outcome(row.result.winner)}</td>
-                                <td>{row.duration.toFixed(2)}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
+                    </div>
+                    <label>
+                      {t(($) => $.strategyName)}
+                      <Input
+                        value={name}
+                        maxLength={128}
+                        onChange={(e) => setName(e.target.value)}
+                      />
+                    </label>
+                    <label className="ctf-enhancement-select">
+                      {t(($) => $.tactics.enhancement)}
+                      <select
+                        aria-label={t(($) => $.tactics.enhancement)}
+                        value={draftEnhancement}
+                        onChange={(event) => {
+                          const strategy = parse();
+                          if (strategy)
+                            setText(
+                              JSON.stringify(
+                                {
+                                  ...strategy,
+                                  enhancement_mode: event.target.value,
+                                },
+                                null,
+                                2,
+                              ),
+                            );
+                        }}
+                      >
+                        <option value="standard">
+                          {t(($) => $.tactics.standard)}
+                        </option>
+                        {(["heavy_infantry", "cavalry", "archer"] as const).map(
+                          (type) => (
+                            <option key={type} value={type}>
+                              {t(($) => $[type])}
+                            </option>
+                          ),
+                        )}
+                      </select>
+                    </label>
+                    <StrategyOutline strategy={draftStrategy} />
+                    <Textarea
+                      spellCheck={false}
+                      aria-label={t(($) => $.editor)}
+                      value={text}
+                      onChange={(e) => setText(e.target.value)}
+                      className="ctf-json"
+                    />
+                    <input
+                      ref={importInput}
+                      type="file"
+                      accept=".strategy,.json,application/json"
+                      hidden
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        e.target.value = "";
+                        void attempt(async () => {
+                          if (file.size > 256 * 1024)
+                            throw new Error("file_too_large");
+                          const content = await file.text();
+                          setEditorOpen(true);
+                          setEditing(null);
+                          setText(content);
+                          setName(
+                            file.name
+                              .replace(/\.(strategy|json)$/i, "")
+                              .slice(0, 128),
+                          );
+                          setErrors([]);
+                        });
+                      }}
+                    />
+                    <div className="ctf-editor-actions">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => importInput.current?.click()}
+                      >
+                        <FileUp />
+                        {t(($) => $.importFile)}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          const value = parse();
+                          if (value)
+                            download(
+                              `${name || "strategy"}.strategy`,
+                              new Blob([JSON.stringify(value, null, 2)], {
+                                type: "application/json",
+                              }),
+                            );
+                        }}
+                      >
+                        {t(($) => $.exportFile)}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => {
+                          if (parse()) setNotice(t(($) => $.valid));
+                        }}
+                      >
+                        <Check />
+                        {t(($) => $.validate)}
+                      </Button>
+                      <Button
+                        size="sm"
+                        disabled={busy || !state.data}
+                        onClick={() => void save()}
+                      >
+                        {t(($) => $.save)}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          const strategy = parse();
+                          if (strategy) {
+                            setRed(strategy);
+                            setRedKey("draft");
+                            reset(strategy, blue);
+                          }
+                        }}
+                      >
+                        {t(($) => $.trial)}
+                      </Button>
+                    </div>
+                    <div className="ctf-editor-actions">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={sourceLoading || trialRunning}
+                        onClick={() => void runTrials()}
+                      >
+                        {t(($) => $.batchTrial)}
+                      </Button>
+                      {trialRunning && (
+                        <Button size="sm" variant="ghost" onClick={stopTrial}>
+                          {t(($) => $.stopTrial)}
+                        </Button>
+                      )}
+                    </div>
+                    {(trialRunning || trialResults.length > 0) && (
+                      <div className="ctf-trial-progress">
+                        <span>
+                          {t(($) => $.tactics.trialProgress, {
+                            done: trialResults.length,
+                            total: trialTotal,
+                          })}
+                        </span>
+                        <progress
+                          max={Math.max(1, trialTotal)}
+                          value={trialResults.length}
+                        />
                       </div>
-                    </section>
-                  )}
-                  {errors.length > 0 && (
-                    <ul role="alert" className="ctf-errors">
-                      {errors.slice(0, 12).map((e, i) => (
-                        <li key={i}>{e}</li>
-                      ))}
-                    </ul>
-                  )}
-                  <p className="ctf-caption">{t(($) => $.newSaveNote)}</p>
-                </section>
-                <DecisionPanels frame={shown} />
-              </div>
+                    )}
+                    {trialResults.length > 0 && (
+                      <section className="ctf-trial-results">
+                        <h2>{t(($) => $.trialResults)}</h2>
+                        <div className="ctf-table-scroll">
+                          <table>
+                            <thead>
+                              <tr>
+                                <th>{t(($) => $.tactics.opponent)}</th>
+                                <th>{t(($) => $.seed)}</th>
+                                <th>{t(($) => $.tactics.result)}</th>
+                                <th>{t(($) => $.tactics.reason)}</th>
+                                <th>{t(($) => $.tactics.simulationTime)}</th>
+                                <th />
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {trialResults.map((row) => (
+                                <tr key={row.index}>
+                                  <td>{row.name}</td>
+                                  <td>{row.seed}</td>
+                                  <td>{outcome(row.result.winner)}</td>
+                                  <td>{row.result.method}</td>
+                                  <td>{battleTime(row.duration)}</td>
+                                  <td>
+                                    <Button
+                                      size="xs"
+                                      variant="outline"
+                                      disabled={
+                                        trialRunning || row.frames.length < 2
+                                      }
+                                      onClick={() => {
+                                        setRunning(false);
+                                        setLocalReview({
+                                          frames: row.frames,
+                                          redName: trialChallenger.current,
+                                          blueName: row.name,
+                                          seed: row.seed,
+                                          result: row.result,
+                                        });
+                                        seek(0);
+                                      }}
+                                    >
+                                      {t(($) => $.tactics.inspectTrial)}
+                                    </Button>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </section>
+                    )}
+                    {errors.length > 0 && (
+                      <ul role="alert" className="ctf-errors">
+                        {errors.slice(0, 12).map((e, i) => (
+                          <li key={i}>{e}</li>
+                        ))}
+                      </ul>
+                    )}
+                    <p className="ctf-caption">{t(($) => $.newSaveNote)}</p>
+                  </section>
+                </div>
+              </details>
             </>
           ) : (
             <>
@@ -1257,43 +1528,5 @@ function Content({
         </DialogContent>
       </div>
     </Dialog>
-  );
-}
-
-function DecisionPanels({ frame }: { frame: Frame | undefined }) {
-  const { t } = useT("ctf");
-  return (
-    <aside>
-      <details className="ctf-details">
-        <summary>{t(($) => $.decision)}</summary>
-        {frame?.units.map((u) => (
-          <article key={u.id}>
-            <strong>
-              {u.team === "red" ? t(($) => $.red) : t(($) => $.blue)} ·{" "}
-              {u.unitType === "cavalry"
-                ? t(($) => $.cavalry)
-                : u.unitType === "archer"
-                  ? t(($) => $.archer)
-                  : t(($) => $.heavy_infantry)}
-            </strong>
-            <span>
-              {Math.round(u.hp)} / {u.maxHp}
-            </span>
-            <pre>{JSON.stringify(frame.decisions[u.id] ?? {}, null, 2)}</pre>
-          </article>
-        ))}
-      </details>
-      <details className="ctf-details">
-        <summary>{t(($) => $.events)}</summary>
-        <ol>
-          {frame?.logs
-            .slice()
-            .reverse()
-            .map((line, i) => (
-              <li key={i}>{line}</li>
-            ))}
-        </ol>
-      </details>
-    </aside>
   );
 }

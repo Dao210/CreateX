@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { StrategySchema, ResultSchema } from "./schema";
+import { StrategySchema, ResultSchema, FrameSchema } from "./schema";
 export const TrialRequestSchema = z.object({
   seed: z.number().int().min(0).max(0xffffffff),
   challenger: StrategySchema,
@@ -16,6 +16,8 @@ export const TrialMessageSchema = z.discriminatedUnion("kind", [
     total: z.number().int(),
     result: ResultSchema,
     duration: z.number(),
+    seed: z.number().int().nonnegative(),
+    frames: z.array(FrameSchema).max(482),
   }),
   z.object({ kind: z.literal("done") }),
   z.object({ kind: z.literal("error") }),

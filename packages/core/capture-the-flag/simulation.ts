@@ -6,6 +6,7 @@ export function frameOf(match: Match): Frame {
     tick: match.tick,
     time: match.time,
     result: match.result,
+    events: structuredClone(match.events ?? []),
     units: match.units.map((u) => ({
       id: u.id,
       team: u.team,
@@ -22,6 +23,8 @@ export function frameOf(match: Match): Frame {
       captureProgress: u.captureProgress,
       isCapturing: u.isCapturing,
       isAttacking: u.isAttacking,
+      attackCooldown: u.attackCooldown ?? 0,
+      shootLockTicks: u.shootLockTicks ?? 0,
     })),
     flags: structuredClone(match.flags),
     decisions: structuredClone(match.decisions),

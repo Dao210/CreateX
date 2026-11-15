@@ -8,6 +8,32 @@ import { StrategySchema } from "./schema";
 import fixtures from "./original-fixtures.json";
 import red from "./ZS01.json";
 import blue from "./ZS02.json";
+// The original fixture hashes rule state, independently of new presentation metadata.
+function ruleState(frame: ReturnType<typeof frameOf>) {
+  return {
+    tick: frame.tick,
+    time: frame.time,
+    result: frame.result,
+    units: frame.units.map(
+      ({ attackCooldown: _cooldown, shootLockTicks: _lock, ...unit }) => unit,
+    ),
+    flags: frame.flags,
+    logs: frame.logs,
+    decisions: Object.fromEntries(
+      Object.entries(frame.decisions).map(([id, value]) => [
+        id,
+        value && typeof value === "object"
+          ? Object.fromEntries(
+              Object.entries(value).filter(
+                ([key]) =>
+                  key !== "movement_target_id" && key !== "attack_target_id",
+              ),
+            )
+          : value,
+      ]),
+    ),
+  };
+}
 const strategies = {
   red: StrategySchema.parse(red),
   blue: StrategySchema.parse(blue),
@@ -20,7 +46,7 @@ describe("v4 battle semantics", () => {
       while (!match.result) {
         tickMatch(match, { headless: true });
         hash.update(
-          JSON.stringify(frameOf(match), (_, o) =>
+          JSON.stringify(ruleState(frameOf(match)), (_, o) =>
             o && typeof o === "object" && !Array.isArray(o)
               ? Object.fromEntries(
                   Object.entries(o).sort(([a], [b]) => a.localeCompare(b)),
