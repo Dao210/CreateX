@@ -71,21 +71,62 @@ test("strategy import, explicit publication, official score and replay", async (
   await expect(page).toHaveTitle(/夺旗/);
   await expect(page.locator(".ctf-unit-roster button")).toHaveCount(6);
   await expect(page.locator(".ctf-inspector")).toContainText("观察到了什么");
-  await expect(page.locator(".ctf-json")).toBeHidden();
-  await page.getByRole("button", { name: "编辑策略", exact: true }).click();
-  await expect(page.locator(".ctf-json")).toBeVisible();
-  await page.getByRole("group", { name: "兵种规则", exact: true }).getByRole("button", { name: "重甲步兵", exact: true }).click();
-  await expect(page.locator(".ctf-strategy-outline li").first()).toBeVisible();
+  await expect(page.locator("textarea, pre, code")).toHaveCount(0);
   await page.getByRole("button", { name: "单步", exact: true }).click();
   await expect(page.locator(".ctf-stage-meta")).toContainText("1 / 1920");
-  await page.locator('input[type="file"]').setInputFiles({
+  await page.getByRole("button", { name: "导入策略", exact: true }).click();
+  const importDialog = page.getByRole("dialog", {
+    name: "导入策略",
+    exact: true,
+  });
+  await importDialog.locator('input[type="file"]').setInputFiles({
+    name: "全攻全守 Max 0.2 版-行为验证.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(
+      JSON.stringify({
+        engine: "local reconstruction",
+        strategy_sha256: "a".repeat(64),
+        results: [],
+      }),
+    ),
+  });
+  await expect(importDialog.getByRole("alert")).toContainText(
+    "这是行为验证报告",
+  );
+  await page.screenshot({
+    path: "test-results/ctf/import-report.png",
+    animations: "disabled",
+  });
+  await expect(
+    importDialog.getByRole("button", { name: "导入并保存", exact: true }),
+  ).toBeDisabled();
+  await expect(page.locator(".ctf-stage-meta")).toContainText("1 / 1920");
+  await importDialog.locator('input[type="file"]').setInputFiles({
     name: "Scout.strategy",
     mimeType: "application/json",
     buffer: Buffer.from(JSON.stringify(red)),
   });
-  await expect(page.getByRole("textbox", { name: "策略名称" })).toHaveValue(
-    "Scout",
+  await expect(importDialog.getByText("可导入", { exact: true })).toBeVisible();
+  await page.screenshot({
+    path: "test-results/ctf/import-preview.png",
+    animations: "disabled",
+  });
+  await expect(
+    importDialog.locator("textarea, pre, code, input:not([type=file])"),
+  ).toHaveCount(0);
+  const savedResponse = page.waitForResponse(
+    (r) =>
+      r.url().includes("/api/ctf/v1/strategies") &&
+      r.request().method() === "POST",
   );
+  await importDialog
+    .getByRole("button", { name: "导入并保存", exact: true })
+    .click();
+  saved = StrategyRecordSchema.parse(await (await savedResponse).json());
+  await expect(importDialog).not.toBeVisible();
+  await expect(
+    page.getByRole("region", { name: "红方当前策略", exact: true }),
+  ).toContainText("Scout");
   await page.getByRole("button", { name: "批量试炼", exact: true }).click();
   await expect(page.locator(".ctf-trial-results tbody tr")).toHaveCount(1, {
     timeout: 15000,
@@ -99,24 +140,17 @@ test("strategy import, explicit publication, official score and replay", async (
   await localSlider.press("End");
   await expect(page.locator(".ctf-event-timeline")).toContainText("战斗时间线");
   await page.getByRole("button", { name: "返回试炼", exact: true }).click();
-  const savedResponse = page.waitForResponse(
-    (r) =>
-      r.url().includes("/api/ctf/v1/strategies") &&
-      r.request().method() === "POST",
-  );
-  await page.getByRole("button", { name: "保存版本", exact: true }).click();
-  saved = StrategyRecordSchema.parse(await (await savedResponse).json());
   const hidden = await opponent.ctfRequest(`strategies/${saved.id}?revision=1`);
   expect(hidden.status).toBe(404);
   await page.getByRole("button", { name: "报名", exact: true }).click();
-  await expect(page.getByRole("dialog")).toContainText("完整源码");
+  await expect(page.getByRole("dialog")).toContainText("完整策略文件");
   await page.getByRole("button", { name: "公开并报名", exact: true }).click();
   await expect(page.getByRole("dialog")).not.toBeVisible();
   const ownCard = page
     .locator(".ctf-cards article")
     .filter({ has: page.getByRole("button", { name: "报名", exact: true }) })
     .filter({ hasText: "Scout" });
-  await expect(ownCard).toContainText("已公开源码");
+  await expect(ownCard).toContainText("策略已公开");
   const publicVersion = StrategyRecordSchema.parse(
     await (
       await opponent.ctfRequest(`strategies/${saved.id}?revision=1`)
@@ -147,14 +181,39 @@ test("strategy import, explicit publication, official score and replay", async (
   expect(
     (await opponent.ctfRequest("batches", { requestId: randomUUID() })).status,
   ).toBe(403);
-  const edited = await owner.ctfRequest("strategies", {
-    requestId: randomUUID(),
-    id: saved.id,
-    expectedRevision: 1,
-    name: "Private revision",
-    strategy: blue,
+  await ownCard
+    .getByRole("button", { name: "上传新版本", exact: true })
+    .click();
+  const versionDialog = page.getByRole("dialog", {
+    name: "上传新版本",
+    exact: true,
   });
-  expect(edited.ok).toBeTruthy();
+  await expect(versionDialog).toContainText("当前报名仍使用已报名的版本");
+  await versionDialog.locator('input[type="file"]').setInputFiles({
+    name: "Private revision.strategy",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(blue)),
+  });
+  const versionResponse = page.waitForResponse(
+    (r) =>
+      r.url().includes("/api/ctf/v1/strategies") &&
+      r.request().method() === "POST",
+  );
+  await versionDialog
+    .getByRole("button", { name: "导入并保存", exact: true })
+    .click();
+  const edited = StrategyRecordSchema.parse(
+    await (await versionResponse).json(),
+  );
+  expect(edited.id).toBe(saved.id);
+  expect(edited.revision).toBe(2);
+  await expect(versionDialog).not.toBeVisible();
+  const afterUpload = StateSchema.parse(
+    await (await owner.ctfRequest("state")).json(),
+  );
+  expect(
+    afterUpload.entries.find((e) => e.ownerId === saved.ownerId)?.revision,
+  ).toBe(1);
   expect(
     (await opponent.ctfRequest(`strategies/${saved.id}?revision=2`)).status,
   ).toBe(404);
@@ -213,10 +272,36 @@ test("strategy import, explicit publication, official score and replay", async (
     await expect(
       page.getByText("Private revision", { exact: true }),
     ).toBeVisible({ timeout: 60000 });
-    await page.getByRole("link", { name: "策略 JSON", exact: true }).click();
-    await expect(page.getByRole("textbox", { name: "策略名称" })).toHaveValue(
-      "Private revision",
-    );
+    await page.getByRole("link", { name: "查看策略", exact: true }).click();
+    await expect(
+      page.getByRole("region", { name: "红方当前策略", exact: true }),
+    ).toContainText("Private revision");
+    await expect(page.locator("textarea, pre, code")).toHaveCount(0);
+    const strategyDownloadEvent = page.waitForEvent("download");
+    await page
+      .getByRole("region", { name: "红方当前策略", exact: true })
+      .getByRole("button", { name: "下载策略文件", exact: true })
+      .click();
+    const exported = await strategyDownloadEvent;
+    expect(exported.suggestedFilename()).toBe("Private revision.strategy");
+    const exportedPath = await exported.path();
+    expect(exportedPath).not.toBeNull();
+    const exportedBytes = readFileSync(exportedPath!);
+    expect(JSON.parse(exportedBytes.toString("utf8"))).toEqual(blue);
+    await page.getByRole("button", { name: "导入策略", exact: true }).click();
+    const roundTrip = page.getByRole("dialog", {
+      name: "导入策略",
+      exact: true,
+    });
+    await roundTrip
+      .locator('input[type="file"]')
+      .setInputFiles({
+        name: exported.suggestedFilename(),
+        mimeType: "application/json",
+        buffer: exportedBytes,
+      });
+    await expect(roundTrip.getByText("可导入", { exact: true })).toBeVisible();
+    await roundTrip.getByRole("button", { name: "取消", exact: true }).click();
     const downloadEvent = page.waitForEvent("download");
     await page.getByRole("button", { name: "AI 规则包", exact: true }).click();
     const rules = await downloadEvent;
@@ -239,14 +324,27 @@ test("strategy import, explicit publication, official score and replay", async (
     await page.getByRole("button", { name: "暂停", exact: true }).click();
     await page.locator(".ctf-unit-roster button").last().click();
     await expect(page.locator(".ctf-inspector h2")).toHaveText("弓箭手");
-    const beforeFullscreen = await page.locator(".ctf-stage-meta").textContent();
+    const beforeFullscreen = await page
+      .locator(".ctf-stage-meta")
+      .textContent();
     const canvasHandle = await page.locator(".ctf-canvas").elementHandle();
     await page.getByRole("button", { name: "全屏", exact: true }).click();
-    await expect.poll(() => page.evaluate(() => !!document.fullscreenElement)).toBe(true);
+    await expect
+      .poll(() => page.evaluate(() => !!document.fullscreenElement))
+      .toBe(true);
     await page.getByRole("button", { name: "全屏", exact: true }).click();
-    await expect.poll(() => page.evaluate(() => !!document.fullscreenElement)).toBe(false);
-    expect(await page.locator(".ctf-stage-meta").textContent()).toBe(beforeFullscreen);
-    expect(await page.evaluate(el => el === document.querySelector(".ctf-canvas"), canvasHandle)).toBe(true);
+    await expect
+      .poll(() => page.evaluate(() => !!document.fullscreenElement))
+      .toBe(false);
+    expect(await page.locator(".ctf-stage-meta").textContent()).toBe(
+      beforeFullscreen,
+    );
+    expect(
+      await page.evaluate(
+        (el) => el === document.querySelector(".ctf-canvas"),
+        canvasHandle,
+      ),
+    ).toBe(true);
     await page.locator(".ctf-scroll").evaluate((el) => {
       el.scrollTop = 0;
     });

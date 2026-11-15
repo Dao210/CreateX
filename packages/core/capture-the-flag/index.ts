@@ -12,7 +12,12 @@ export {
   FLAG_ANCHORS,
 } from "./engine.js";
 export { validateStrategy } from "./validator.js";
-export { readCTFDraft, createCTFDraftStore } from "./draft";
+export {
+  parseCTFImport,
+  CTF_FILE_LIMIT,
+  type CTFImportProblem,
+  type CTFImportResult,
+} from "./import";
 export { TrialMessageSchema, type TrialResult } from "./trial-contract";
 
 export { DecisionSchema, emptyDecision, type Decision } from "./decision";

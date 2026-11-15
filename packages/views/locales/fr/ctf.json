@@ -20,23 +20,14 @@
   "heavy_infantry": "Infanterie lourde",
   "cavalry": "Cavalerie",
   "archer": "Archer",
-  "strategyName": "Nom de la stratégie",
-  "editor": "Stratégie JSON",
-  "newStrategy": "Nouvelle stratégie",
-  "importFile": "Importer",
-  "exportFile": "Exporter",
-  "validate": "Valider",
-  "save": "Enregistrer la version",
-  "valid": "La stratégie est valide.",
-  "invalid": "Vérifiez les erreurs de la stratégie.",
-  "saved": "Version enregistrée.",
+  "saved": "Version privée enregistrée.",
   "error": "Échec de l’action. Réessayez.",
   "loading": "Chargement…",
   "retry": "Réessayer",
   "worldLibrary": "Stratégies du monde",
   "enroll": "S’inscrire",
   "enrollTitle": "Publier et participer ?",
-  "enrollHelp": "Le code complet de cette version sera accessible à tous les membres du monde. La version inscrite est figée ; les modifications serviront aux prochains tournois. Le retrait ou l’archivage ne révoque pas le code publié.",
+  "enrollHelp": "Tous les membres de ce monde pourront télécharger le fichier complet de cette version. L’inscription fige cette version : un nouvel import ne la remplace pas. Le retrait ou l’archivage ne révoque pas les fichiers déjà publiés.",
   "cancel": "Annuler",
   "confirm": "Publier et participer",
   "withdraw": "Retirer l’inscription",
@@ -65,21 +56,19 @@
   "unknown": "Inconnu",
   "archive": "Archiver",
   "restore": "Restaurer",
-  "conflict": "Cette version a changé sur un autre appareil. Rechargez-la avant d’enregistrer.",
+  "conflict": "Un autre appareil a modifié cette stratégie. Fermez cette fenêtre, actualisez la liste puis importez à nouveau.",
   "myCreations": "Mes créations",
-  "published": "Code publié",
+  "published": "Stratégie publiée",
   "private": "Brouillon privé",
   "emptyFrames": "L’enregistrement apparaîtra lors du match.",
   "draw": "Match nul",
   "redWin": "Victoire rouge",
   "blueWin": "Victoire bleue",
-  "source": "Code",
+  "source": "Télécharger la stratégie",
   "revision": "Version {{revision}}",
   "archived": "Archivé",
   "manageHelp": "Les propriétaires et administrateurs du monde lancent les tournois. Les versions sont figées au départ.",
   "ruleVersion": "Règles {{version}}",
-  "newSaveNote": "Chaque enregistrement crée une version immuable.",
-  "draftTrial": "Brouillon d’entraînement",
   "noNewPairs": "Ces versions se sont déjà affrontées. Inscrivez une nouvelle version.",
   "batchTrial": "Essais en série",
   "stopTrial": "Arrêter les essais",
@@ -112,7 +101,7 @@
     },
     "timing": "Un Tick de stratégie dure {{tick}} seconde. Les attaques sont résolues simultanément depuis les positions de début de Tick.",
     "archerTiming": "L’archer tire uniquement si sa cible est à portée au début du Tick et si son délai est écoulé. Le tir bloque le Tick actuel et le suivant (0,5 seconde). Le délai complet entre attaques est de 1 seconde.",
-    "enhancementChoice": "sélectionne une amélioration par stratégie, active dès le début du match. Sans ce champ, ou avec standard, aucune amélioration. Les camps choisissent indépendamment."
+    "enhancementChoice": "Chaque fichier de stratégie choisit une amélioration, figée au début de la partie. Les deux camps choisissent indépendamment."
   },
   "guide": {
     "title": "Comment jouer",
@@ -124,8 +113,8 @@
     },
     "battlefield": {
       "title": "Terrain et déplacements",
-      "text": "La carte ouverte mesure 100 × 50 cases : base rouge à gauche, bleue à droite. Chaque camp a un fantassin lourd, un cavalier et un archer.",
-      "detail": "Les coordonnées 2D sont continues, sans collision ni blocage. La diagonale n’accélère pas les unités. MOVE_TOWARD peut viser x : 0–99, y : 0–49, sans définir simultanément movement.target."
+      "text": "Le champ de bataille est un espace ouvert de 100 × 50 cases, avec la base rouge à gauche et la bleue à droite. Chaque camp possède un fantassin lourd, un cavalier et un archer.",
+      "detail": "Les unités se déplacent en coordonnées continues, sans collision ni blocage. La diagonale ne va pas plus vite. Une stratégie peut choisir une destination fixe dans le champ de bataille."
     },
     "capture": {
       "title": "Capturer et porter",
@@ -135,13 +124,7 @@
     "flags": {
       "title": "Drapeaux tombés",
       "text": "Un porteur mort laisse tomber son drapeau. Le toucher ne suffit ni à le ramasser ni à le restituer : la stratégie doit demander une action spéciale.",
-      "detail": "Ramasser ou restituer exige d’être à moins de 1 case. Le drapeau ennemi sur son socle nécessite 3 secondes de capture ; PICK_UP_FLAG ne permet pas de le prendre directement."
-    },
-    "flagActions": {
-      "pickOwn": "Ramasser votre drapeau sur son socle ou au sol.",
-      "pickEnemy": "Ramasser le drapeau ennemi tombé.",
-      "drop": "Poser le drapeau à la position de début du Tick.",
-      "returnOwn": "Restituer votre drapeau tombé à son socle."
+      "detail": "Ramasser ou rendre un drapeau exige une distance maximale d’une case. Le drapeau ennemi à sa base nécessite 3 secondes continues de capture."
     },
     "combat": {
       "title": "Résolution des combats",
@@ -154,9 +137,9 @@
       "detail": "Les positions initiales et de réapparition sont tirées dans la base, à plus de 2 cases du socle, de façon reproductible selon la graine. La vie est entièrement restaurée. Les stratégies ne choisissent pas ces coordonnées."
     },
     "strategy": {
-      "title": "Créer et tester",
+      "title": "Créer et essayer une stratégie",
       "text": "Chaque unité a sa liste de règles, évaluées par priorité décroissante. La première correspondance définit déplacement, attaque et action spéciale. Les camps lisent positions, vie, drapeaux et activité récente, mais pas les règles adverses ni le futur.",
-      "detail": "Téléchargez les règles pour un outil IA externe ou modifiez le JSON ici. Importez, validez, testez puis enregistrez. Un pas avance de 0,25 seconde ; décisions et journal expliquent le résultat. Les essais locaux ne comptent pas au classement."
+      "detail": "Téléchargez le kit de règles pour votre outil de création externe, puis importez et enregistrez son fichier de stratégie ici. Un pas avance de 0,25 seconde. Les décisions et événements expliquent le résultat ; les essais locaux ne modifient pas le classement."
     },
     "arena": {
       "title": "Arène officielle et classement",
@@ -191,7 +174,6 @@
     "moveOnly": "Ce Tick : déplacement sans tir.",
     "attackWaiting": "Attend la portée, la recharge ou les conditions d’action.",
     "noAttack": "Aucune attaque demandée.",
-    "rawDecision": "Données de décision brutes",
     "yes": "Oui",
     "no": "Non",
     "negated": "Non",
@@ -206,7 +188,6 @@
     "deathEvent": "{{actor}} est vaincu",
     "respawnEvent": "{{actor}} réapparaît",
     "flagEvent": "Drapeau {{team}} · {{state}}",
-    "editStrategy": "Modifier la stratégie",
     "enhancement": "Amélioration",
     "standard": "Standard",
     "localOnly": "Essai local · non classé",
@@ -257,9 +238,37 @@
     "tick": "Tick {{value}}",
     "seconds": "{{value}} s",
     "deathCount": "{{value}} / 4",
-    "computing": "Aperçu du calcul",
-    "ruleOutline": "Règles par unité",
-    "ruleDisabled": "Désactivée",
-    "emptyRules": "Aucune règle pour cette unité."
-  }
+    "computing": "Aperçu du calcul"
+  },
+  "files": {
+    "importStrategy": "Importer une stratégie",
+    "uploadVersion": "Importer une nouvelle version",
+    "viewStrategy": "Voir la stratégie",
+    "currentStrategy": "Stratégie rouge actuelle",
+    "useExample": "Utiliser un exemple",
+    "ruleCount": "{{count}} règles",
+    "importHelp": "Choisissez un fichier .strategy ou .json complet. Il reste privé jusqu’à votre inscription.",
+    "versionHelp": "Importez une nouvelle version de {{name}}. Votre inscription actuelle conserve sa version.",
+    "selectFile": "Choisir un fichier de stratégie",
+    "reselect": "Choisir un autre fichier",
+    "checking": "Vérification du fichier…",
+    "ready": "Prêt à importer",
+    "importAndSave": "Importer et enregistrer",
+    "saving": "Enregistrement…",
+    "readError": "Lecture impossible. Sélectionnez à nouveau le fichier.",
+    "saveError": "Enregistrement impossible. Le fichier sélectionné est conservé pour réessayer.",
+    "copyError": "Copie impossible. Autorisez l’accès au presse-papiers puis réessayez.",
+    "copyProblems": "Copier les problèmes pour votre IA",
+    "copied": "Problèmes copiés",
+    "feedbackTitle": "Corrigez cette stratégie pour Weavea World CTF et renvoyez un fichier de stratégie complet.",
+    "problems": {
+      "report": "Ceci est un rapport de vérification. Choisissez la stratégie correspondante dans votre dossier de stratégies importables.",
+      "reference": "Ceci est une référence de règles ou un manifeste. Choisissez un fichier de stratégie complet.",
+      "syntax": "Ce fichier est illisible comme stratégie. Demandez à votre outil de création un fichier .strategy ou .json complet.",
+      "version": "Cette version de stratégie n’est pas prise en charge. Régénérez-la avec le kit de règles actuel.",
+      "invalid": "La stratégie ne passe pas la validation. Copiez les problèmes dans votre outil de création, corrigez le fichier puis réimportez-le.",
+      "tooLarge": "Le fichier dépasse 256 Ko. Choisissez une stratégie respectant cette limite."
+    }
+  },
+  "strategyName": "Nom de la stratégie"
 }

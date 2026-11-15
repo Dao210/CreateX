@@ -20,23 +20,14 @@
   "heavy_infantry": "Heavy infantry",
   "cavalry": "Cavalry",
   "archer": "Archer",
-  "strategyName": "Strategy name",
-  "editor": "Strategy JSON",
-  "newStrategy": "New strategy",
-  "importFile": "Import file",
-  "exportFile": "Export file",
-  "validate": "Validate",
-  "save": "Save version",
-  "valid": "Strategy is valid.",
-  "invalid": "Review the strategy errors.",
-  "saved": "Version saved.",
+  "saved": "Private version saved.",
   "error": "The action could not be completed. Please retry.",
   "loading": "Loading…",
   "retry": "Retry",
   "worldLibrary": "World strategy library",
   "enroll": "Enter arena",
   "enrollTitle": "Publish and enter?",
-  "enrollHelp": "The complete source of this version will be visible to every member of this world. Your entry is frozen; later edits apply to a future batch. Withdrawing or archiving does not revoke the published source.",
+  "enrollHelp": "This version’s complete strategy file will be available to all members of this world. Enrollment freezes this version; uploading a new version does not change your entry. Withdrawing or archiving does not revoke files already published.",
   "cancel": "Cancel",
   "confirm": "Publish and enter",
   "withdraw": "Withdraw entry",
@@ -65,21 +56,19 @@
   "unknown": "Unknown",
   "archive": "Archive",
   "restore": "Restore",
-  "conflict": "This version changed on another device. Reload it before saving.",
+  "conflict": "Another device updated this strategy. Close this window, refresh the strategy list and upload again.",
   "myCreations": "My Creations",
-  "published": "Published source",
+  "published": "Published strategy",
   "private": "Private draft",
   "emptyFrames": "The recording will appear when the match runs.",
   "draw": "Draw",
   "redWin": "Red wins",
   "blueWin": "Blue wins",
-  "source": "Source",
+  "source": "Download strategy file",
   "revision": "Revision {{revision}}",
   "archived": "Archived",
   "manageHelp": "World owners and admins can start a batch. Entries are frozen at the start.",
   "ruleVersion": "Rules {{version}}",
-  "newSaveNote": "Each save creates an immutable version.",
-  "draftTrial": "Trial draft",
   "noNewPairs": "These versions have already played. Enter a new version to run more official matches.",
   "batchTrial": "Batch trial",
   "stopTrial": "Stop trial",
@@ -112,7 +101,7 @@
     },
     "timing": "Each strategy Tick is {{tick}} seconds. Attacks resolve simultaneously using positions at the start of the Tick.",
     "archerTiming": "An archer can shoot only if its target is already in range at Tick start and its cooldown has ended. Shooting locks the current and next Tick (0.5 seconds); the full attack cooldown is 1 second.",
-    "enhancementChoice": "selects one enhancement per strategy, active from match start. Omit it or use standard for no enhancement. Each side chooses independently."
+    "enhancementChoice": "Each strategy selects one enhancement in its file. The choice is fixed at the start of a game."
   },
   "guide": {
     "title": "How to play",
@@ -124,8 +113,8 @@
     },
     "battlefield": {
       "title": "Battlefield and movement",
-      "text": "The open map is 100 × 50 cells: red base on the left, blue on the right. Each side has one heavy infantry, one cavalry and one archer.",
-      "detail": "Units move in continuous 2D coordinates without collisions or blocking. Diagonal movement gives no extra speed. A fixed MOVE_TOWARD coordinate may use x: 0–99 and y: 0–49; it cannot also specify movement.target."
+      "text": "The battlefield is a 100 × 50 open plane with a red base on the left and a blue base on the right. Each side has one heavy infantry, cavalry and archer.",
+      "detail": "Units move in continuous coordinates without collision or blocking. Diagonal movement is no faster. Strategies can also specify a fixed destination within the battlefield."
     },
     "capture": {
       "title": "Capture and carry",
@@ -135,13 +124,7 @@
     "flags": {
       "title": "Dropped flags",
       "text": "A carrier drops its flag on death. Merely touching a flag never picks it up or returns it; your strategy must issue a special action.",
-      "detail": "Pickup and return require being within 1 cell. An enemy flag still at home must be captured over 3 seconds; PICK_UP_FLAG cannot take it directly."
-    },
-    "flagActions": {
-      "pickOwn": "Pick up your own flag, at home or dropped.",
-      "pickEnemy": "Pick up a dropped enemy flag.",
-      "drop": "Drop the carried flag at the Tick-start position.",
-      "returnOwn": "Return your dropped flag to its base."
+      "detail": "Picking up or returning a flag requires being within 1 cell. Taking an enemy flag from its home requires 3 continuous seconds of capture."
     },
     "combat": {
       "title": "Combat timing",
@@ -154,9 +137,9 @@
       "detail": "Spawn and respawn locations are chosen inside the home base, more than 2 cells from its flag base, and are reproducible with the match seed. Respawning restores full health. Strategies cannot choose spawn coordinates."
     },
     "strategy": {
-      "title": "Build and test a strategy",
+      "title": "Create and trial a strategy",
       "text": "Give each unit a rule list. Higher priorities are checked first; the first matching rule supplies movement, attack and special actions. Both sides can read current global positions, health, flags and recent activity, but not opposing rule files or future actions.",
-      "detail": "Download the AI rule kit for an external AI tool, or edit JSON here. Import, validate and trial it, then save a version. Step advances one 0.25-second Tick; decisions and the event log help explain the result. Local trials never enter the ranking."
+      "detail": "Download the AI rule kit for your external creation tool, then import and save its strategy file here. Step advances the game by 0.25 seconds. Decisions and events help explain the result; local trials do not affect rankings."
     },
     "arena": {
       "title": "Official arena and ranking",
@@ -191,7 +174,6 @@
     "moveOnly": "Moving this Tick, without shooting.",
     "attackWaiting": "Waiting for range, cooldown or action conditions.",
     "noAttack": "No attack requested.",
-    "rawDecision": "Raw decision data",
     "yes": "Yes",
     "no": "No",
     "negated": "Not",
@@ -206,7 +188,6 @@
     "deathEvent": "{{actor}} was defeated",
     "respawnEvent": "{{actor}} respawned",
     "flagEvent": "{{team}} flag · {{state}}",
-    "editStrategy": "Edit strategy",
     "enhancement": "Enhancement",
     "standard": "Standard",
     "localOnly": "Local trial · unranked",
@@ -257,9 +238,37 @@
     "tick": "Tick {{value}}",
     "seconds": "{{value}} s",
     "deathCount": "{{value}} / 4",
-    "computing": "Compute preview",
-    "ruleOutline": "Unit rules",
-    "ruleDisabled": "Disabled",
-    "emptyRules": "No rules for this unit."
-  }
+    "computing": "Compute preview"
+  },
+  "files": {
+    "importStrategy": "Import strategy",
+    "uploadVersion": "Upload new version",
+    "viewStrategy": "View strategy",
+    "currentStrategy": "Current red strategy",
+    "useExample": "Use example strategy",
+    "ruleCount": "{{count}} rules",
+    "importHelp": "Choose a complete .strategy or .json file. It stays private until you enter the arena.",
+    "versionHelp": "Upload a new version of {{name}}. Your current arena entry stays on its enrolled version.",
+    "selectFile": "Choose strategy file",
+    "reselect": "Choose another file",
+    "checking": "Checking file…",
+    "ready": "Ready to import",
+    "importAndSave": "Import and save",
+    "saving": "Saving…",
+    "readError": "Could not read this file. Choose it again.",
+    "saveError": "Could not save. Your selected file is ready to retry.",
+    "copyError": "Could not copy. Allow clipboard access and try again.",
+    "copyProblems": "Copy issues for your AI tool",
+    "copied": "Issues copied",
+    "feedbackTitle": "Please fix this strategy for Weavea World CTF and return one complete strategy file.",
+    "problems": {
+      "report": "This is a verification report. Choose the corresponding file from your importable strategies folder.",
+      "reference": "This is a rule reference or package manifest. Choose a complete strategy file.",
+      "syntax": "This file could not be read as a strategy. Ask your creation tool to export a complete .strategy or .json file.",
+      "version": "This strategy uses an unsupported version. Regenerate it with the current AI rule kit.",
+      "invalid": "This strategy did not pass validation. Copy the issues to your creation tool, fix the file and import it again.",
+      "tooLarge": "This file exceeds 256 KB. Choose a strategy file within the limit."
+    }
+  },
+  "strategyName": "Strategy name"
 }

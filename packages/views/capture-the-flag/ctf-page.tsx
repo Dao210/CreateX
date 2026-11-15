@@ -1,6 +1,5 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useStore } from "zustand";
 import { useQuery } from "@tanstack/react-query";
 import {
   Flag,
@@ -11,20 +10,15 @@ import {
   RotateCcw,
   Maximize2,
   ArrowLeftRight,
-  FileUp,
-  Check,
   Trophy,
 } from "lucide-react";
 import {
-  createCTFDraftStore,
   TrialMessageSchema,
   type TrialResult,
   newMatch,
   tickMatch,
   frameOf,
   makeBaselineStrategy,
-  validateStrategy,
-  StrategySchema,
   ctfStateOptions,
   ctfMatchOptions,
   useCTFActions,
@@ -34,14 +28,13 @@ import {
   type Match,
   type Strategy,
   type StrategySummary,
+  type StrategyRecord,
 } from "@auro/core/capture-the-flag";
 import { authenticatedFetch } from "@auro/core/api";
 import { useCurrentWorkspace, useWorkspacePaths } from "@auro/core/paths";
 import { useAuthStore } from "@auro/core/auth";
-import type { StorageAdapter } from "@auro/core/types";
 import { Button, buttonVariants } from "@auro/ui/components/ui/button";
 import { Input } from "@auro/ui/components/ui/input";
-import { Textarea } from "@auro/ui/components/ui/textarea";
 import {
   Dialog,
   DialogTrigger,
@@ -57,7 +50,8 @@ import { AppLink, useNavigation } from "../navigation";
 import { GameAccessBoundary } from "../admin/game-access-boundary";
 import { BattleView, battleTime } from "./battle-view";
 import { CTFReference } from "./ctf-reference";
-import { StrategyOutline } from "./strategy-outline";
+import { StrategySummary as StrategySummaryView } from "./strategy-summary";
+import { StrategyImportDialog } from "./strategy-import-dialog";
 
 function download(name: string, body: Blob) {
   const url = URL.createObjectURL(body);
@@ -70,18 +64,13 @@ function download(name: string, body: Blob) {
 const baseline = () =>
   makeBaselineStrategy("my_strategy", "My strategy", "red");
 
-export function CTFPage({ storage }: { storage: StorageAdapter }) {
+export function CTFPage() {
   const ws = useCurrentWorkspace(),
     user = useAuthStore((s) => s.user);
   if (!ws || !user) return null;
   return (
     <GameAccessBoundary gameId="ctf">
-      <Content
-        key={`${ws.id}:${user.id}`}
-        wsId={ws.id}
-        userId={user.id}
-        storage={storage}
-      />
+      <Content key={`${ws.id}:${user.id}`} wsId={ws.id} userId={user.id} />
     </GameAccessBoundary>
   );
 }
@@ -93,15 +82,7 @@ type LocalReview = {
   result: Frame["result"];
 };
 
-function Content({
-  wsId,
-  userId,
-  storage,
-}: {
-  wsId: string;
-  userId: string;
-  storage: StorageAdapter;
-}) {
+function Content({ wsId, userId }: { wsId: string; userId: string }) {
   const { t } = useT("ctf");
   const paths = useWorkspacePaths(),
     navigation = useNavigation();
@@ -131,33 +112,9 @@ function Content({
     },
     [],
   );
-  const draftKey = `ctf:draft:${userId}:${wsId}`;
-  const [draftStore] = useState(() =>
-    createCTFDraftStore(storage, draftKey, JSON.stringify(baseline(), null, 2)),
-  );
-  const text = useStore(draftStore, (d) => d.text),
-    name = useStore(draftStore, (d) => d.name),
-    editing = useStore(draftStore, (d) => d.source);
-  const setText = useCallback(
-    (text: string) => draftStore.getState().update({ text }),
-    [draftStore],
-  );
-  const setName = useCallback(
-    (name: string) => draftStore.getState().update({ name }),
-    [draftStore],
-  );
-  const setEditing = useCallback(
-    (value: { id: string; revision: number } | null) =>
-      draftStore.getState().update({
-        source: value ? { id: value.id, revision: value.revision } : null,
-      }),
-    [draftStore],
-  );
   const [sourceLoading, setSourceLoading] = useState(false);
-  const generations = useRef({ red: 0, blue: 0, editor: 0 });
+  const generations = useRef({ red: 0, blue: 0 });
   const [notice, setNotice] = useState("");
-  const [errors, setErrors] = useState<string[]>([]);
-  const [editorOpen, setEditorOpen] = useState(false);
   const [selectedUnit, setSelectedUnit] = useState("red_archer");
   const [localReview, setLocalReview] = useState<LocalReview | null>(null);
   const trialChallenger = useRef("");
@@ -168,6 +125,9 @@ function Content({
   );
   const [redKey, setRedKey] = useState("baseline"),
     [blueKey, setBlueKey] = useState("baseline");
+  const [redLabel, setRedLabel] = useState(t(($) => $.baseline));
+  const [blueLabel, setBlueLabel] = useState(t(($) => $.baseline));
+  const strategyPanel = useRef<HTMLElement>(null);
   const [seed, setSeed] = useState(12027),
     [speed, setSpeed] = useState(1),
     [running, setRunning] = useState(false);
@@ -186,8 +146,7 @@ function Content({
   const [replaying, setReplaying] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [enrolling, setEnrolling] = useState<StrategySummary | null>(null);
-  const importInput = useRef<HTMLInputElement>(null),
-    stage = useRef<HTMLDivElement>(null);
+  const stage = useRef<HTMLDivElement>(null);
   const request = useRef<{ key: string; id: string } | null>(null),
     startRequest = useRef<string | null>(null);
   const entry = state.data?.entries.find((e) => e.ownerId === userId);
@@ -200,14 +159,17 @@ function Content({
       if (!c.archived) unique.set(`${c.id}:${c.revision}`, c);
     return [...unique.values()];
   }, [state.data]);
-  const reset = (nextRed = red, nextBlue = blue, nextSeed = seed) => {
-    setRunning(false);
-    engine.current = newMatch(nextSeed, { red: nextRed, blue: nextBlue });
-    const next = frameOf(engine.current);
-    localRecording.current = [next];
-    setLocalReview(null);
-    setFrame(next);
-  };
+  const reset = useCallback(
+    (nextRed = red, nextBlue = blue, nextSeed = seed) => {
+      setRunning(false);
+      engine.current = newMatch(nextSeed, { red: nextRed, blue: nextBlue });
+      const next = frameOf(engine.current);
+      localRecording.current = [next];
+      setLocalReview(null);
+      setFrame(next);
+    },
+    [red, blue, seed],
+  );
   const advance = () => {
     tickMatch(engine.current, { headless: true });
     const next = frameOf(engine.current);
@@ -252,38 +214,51 @@ function Content({
       document.removeEventListener("fullscreenchange", fullscreen);
     };
   }, []);
+  const choose = useCallback(
+    async (side: "red" | "blue", key: string) => {
+      const generation = ++generations.current[side];
+      const choice = choices.find((s) => `${s.id}:${s.revision}` === key);
+      setSourceLoading(true);
+      try {
+        const strategy = choice
+          ? (await loadStrategy(choice.id, choice.revision)).strategy
+          : makeBaselineStrategy(
+              side,
+              t(($) => $.baseline),
+              side,
+            );
+        if (generation !== generations.current[side]) return;
+        if (side === "red") {
+          stopTrial();
+          setTrialResults([]);
+          setTrialTotal(0);
+          setRed(strategy);
+          setRedLabel(choice?.name ?? t(($) => $.baseline));
+          setRedKey(key);
+          reset(strategy, blue);
+        } else {
+          setBlue(strategy);
+          setBlueLabel(choice?.name ?? t(($) => $.baseline));
+          setBlueKey(key);
+          reset(red, strategy);
+        }
+      } finally {
+        if (generation === generations.current[side]) setSourceLoading(false);
+      }
+    },
+    [choices, loadStrategy, t, reset, red, blue, stopTrial],
+  );
   const loaded = useRef("");
   useEffect(() => {
     const selected = navigation.searchParams.get("strategy");
     if (!selected || loaded.current === selected) return;
     const record = state.data?.mine.find((s) => s.id === selected);
-    if (record) {
-      loaded.current = selected;
-      setEditorOpen(true);
-      const generation = ++generations.current.editor;
-      setSourceLoading(true);
-      void loadStrategy(record.id, record.revision)
-        .then((full) => {
-          if (generation !== generations.current.editor) return;
-          setEditing(full);
-          setText(JSON.stringify(full.strategy, null, 2));
-          setName(full.name);
-        })
-        .catch(() => setNotice(t(($) => $.error)))
-        .finally(() => {
-          if (generation === generations.current.editor)
-            setSourceLoading(false);
-        });
-    }
-  }, [
-    navigation.searchParams,
-    state.data,
-    loadStrategy,
-    t,
-    setEditing,
-    setName,
-    setText,
-  ]);
+    if (!record) return;
+    loaded.current = selected;
+    void choose("red", `${record.id}:${record.revision}`).catch(() =>
+      setNotice(t(($) => $.error)),
+    );
+  }, [navigation.searchParams, state.data, choose, t]);
   useEffect(() => {
     stopTrial();
     setRunning(false);
@@ -352,27 +327,13 @@ function Content({
       return false;
     }
   };
-  const parse = () => {
-    try {
-      const value: unknown = JSON.parse(text);
-      const problems = validateStrategy(value);
-      setErrors(problems);
-      if (problems.length) return null;
-      return StrategySchema.parse(value);
-    } catch {
-      setErrors([t(($) => $.invalid)]);
-      return null;
-    }
-  };
-
   const runTrials = async () => {
-    const challenger = parse();
-    if (!challenger) return;
+    const challenger = red;
     stopTrial();
     setRunning(false);
     setTrialResults([]);
     setTrialTotal(0);
-    trialChallenger.current = challenger.team.team_name;
+    trialChallenger.current = redLabel;
     setTrialRunning(true);
     const generation = trialGeneration.current;
     try {
@@ -427,65 +388,22 @@ function Content({
       }
     }
   };
-  const choose = async (side: "red" | "blue", key: string) => {
-    const generation = ++generations.current[side];
-    const c = choices.find((s) => `${s.id}:${s.revision}` === key);
-    const strategy = c
-      ? (await loadStrategy(c.id, c.revision)).strategy
-      : makeBaselineStrategy(
-          side,
-          t(($) => $.baseline),
-          side,
-        );
-    if (generation !== generations.current[side]) return;
-    if (side === "red") {
-      setRed(strategy);
-      setRedKey(key);
-      reset(strategy, blue);
-    } else {
-      setBlue(strategy);
-      setBlueKey(key);
-      reset(red, strategy);
-    }
-  };
-  const save = async () => {
-    const strategy = parse();
-    if (!strategy) return;
-    const input = {
-      id: editing?.id,
-      expectedRevision: editing?.revision ?? 0,
-      name: name.trim() || strategy.team.team_name,
-      strategy,
-    };
-    const key = JSON.stringify(input);
-    if (request.current?.key !== key)
-      request.current = { key, id: crypto.randomUUID() };
-    await attempt(async () => {
-      const result = await actions.save.mutateAsync({
-        ...input,
-        requestId: request.current!.id,
-      });
-      setEditing(result);
-      setName(result.name);
-      setNotice(t(($) => $.saved));
-    });
+  const imported = (record: StrategyRecord) => {
+    generations.current.red++;
+    stopTrial();
+    setTrialResults([]);
+    setTrialTotal(0);
+    setSourceLoading(false);
+    setRed(record.strategy);
+    setRedLabel(record.name);
+    setRedKey(`${record.id}:${record.revision}`);
+    reset(record.strategy, blue);
+    setNotice(t(($) => $.saved));
   };
   const load = (record: StrategySummary) => {
-    setEditorOpen(true);
     void attempt(async () => {
-      const generation = ++generations.current.editor;
-      setSourceLoading(true);
-      const full = await loadStrategy(record.id, record.revision).finally(
-        () => {
-          if (generation === generations.current.editor)
-            setSourceLoading(false);
-        },
-      );
-      if (generation !== generations.current.editor) return;
-      setEditing(full);
-      setName(full.name);
-      setText(JSON.stringify(full.strategy, null, 2));
-      setErrors([]);
+      await choose("red", `${record.id}:${record.revision}`);
+      strategyPanel.current?.scrollIntoView({ block: "nearest" });
     });
   };
   const busy =
@@ -507,15 +425,6 @@ function Content({
       ? t(($) => $.tactics.standard)
       : t(($) => $[mode]);
   };
-  const draftStrategy = useMemo(() => {
-    try {
-      const parsed = StrategySchema.safeParse(JSON.parse(text));
-      return parsed.success ? parsed.data : null;
-    } catch {
-      return null;
-    }
-  }, [text]);
-  const draftEnhancement = draftStrategy?.enhancement_mode ?? "standard";
   const review = localReview
     ? {
         ...localReview,
@@ -567,6 +476,13 @@ function Content({
               <Download />
               {t(($) => $.rules)}
             </Button>
+            {!matchId && (
+              <StrategyImportDialog
+                disabled={busy}
+                onSave={actions.save.mutateAsync}
+                onSaved={imported}
+              />
+            )}
             <AppLink
               href={`${paths.me()}?filter=ctf`}
               className={buttonVariants({ size: "sm", variant: "outline" })}
@@ -750,13 +666,23 @@ function Content({
                       </span>
                       <select
                         aria-label={t(($) => $[side])}
+                        disabled={sourceLoading}
                         value={side === "red" ? redKey : blueKey}
                         onChange={(e) =>
                           void attempt(() => choose(side, e.target.value))
                         }
                       >
                         <option value="baseline">{t(($) => $.baseline)}</option>
-                        <option value="draft">{t(($) => $.draftTrial)}</option>
+                        {(side === "red" ? redKey : blueKey) !== "baseline" &&
+                          !choices.some(
+                            (s) =>
+                              `${s.id}:${s.revision}` ===
+                              (side === "red" ? redKey : blueKey),
+                          ) && (
+                            <option value={side === "red" ? redKey : blueKey}>
+                              {side === "red" ? redLabel : blueLabel}
+                            </option>
+                          )}
                         {choices.map((s) => (
                           <option
                             key={`${s.id}:${s.revision}`}
@@ -779,8 +705,13 @@ function Content({
                   variant="ghost"
                   aria-label={t(($) => $.swap)}
                   onClick={() => {
+                    stopTrial();
+                    setTrialResults([]);
+                    setTrialTotal(0);
                     setRed(blue);
                     setBlue(red);
+                    setRedLabel(blueLabel);
+                    setBlueLabel(redLabel);
                     setRedKey(blueKey);
                     setBlueKey(redKey);
                     reset(blue, red);
@@ -800,8 +731,8 @@ function Content({
                   setRunning(false);
                   setLocalReview({
                     frames: liveTimeline,
-                    redName: red.team.team_name,
-                    blueName: blue.team.team_name,
+                    redName: redLabel,
+                    blueName: blueLabel,
                     seed,
                     result: frame.result,
                   });
@@ -897,258 +828,142 @@ function Content({
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setEditorOpen((open) => !open)}
+                      onClick={() =>
+                        strategyPanel.current?.scrollIntoView({
+                          block: "nearest",
+                        })
+                      }
                     >
-                      {t(($) => $.tactics.editStrategy)}
+                      {t(($) => $.files.viewStrategy)}
                     </Button>
                   </div>
                 }
               />
-              <details
-                className="ctf-workshop"
-                open={editorOpen}
-                onToggle={(event) => setEditorOpen(event.currentTarget.open)}
+              <section
+                className="ctf-strategy-panel"
+                ref={strategyPanel}
+                aria-label={t(($) => $.files.currentStrategy)}
               >
-                <summary>{t(($) => $.tactics.editStrategy)}</summary>
-                <div className="ctf-lower">
-                  <section className="ctf-editor">
-                    <div className="ctf-section-head">
-                      <h2>{t(($) => $.editor)}</h2>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => {
-                          setEditing(null);
-                          setName("");
-                          setText(JSON.stringify(baseline(), null, 2));
-                          setErrors([]);
-                        }}
-                      >
-                        {t(($) => $.newStrategy)}
-                      </Button>
-                    </div>
-                    <label>
-                      {t(($) => $.strategyName)}
-                      <Input
-                        value={name}
-                        maxLength={128}
-                        onChange={(e) => setName(e.target.value)}
-                      />
-                    </label>
-                    <label className="ctf-enhancement-select">
-                      {t(($) => $.tactics.enhancement)}
-                      <select
-                        aria-label={t(($) => $.tactics.enhancement)}
-                        value={draftEnhancement}
-                        onChange={(event) => {
-                          const strategy = parse();
-                          if (strategy)
-                            setText(
-                              JSON.stringify(
-                                {
-                                  ...strategy,
-                                  enhancement_mode: event.target.value,
-                                },
-                                null,
-                                2,
-                              ),
-                            );
-                        }}
-                      >
-                        <option value="standard">
-                          {t(($) => $.tactics.standard)}
-                        </option>
-                        {(["heavy_infantry", "cavalry", "archer"] as const).map(
-                          (type) => (
-                            <option key={type} value={type}>
-                              {t(($) => $[type])}
-                            </option>
-                          ),
-                        )}
-                      </select>
-                    </label>
-                    <StrategyOutline strategy={draftStrategy} />
-                    <Textarea
-                      spellCheck={false}
-                      aria-label={t(($) => $.editor)}
-                      value={text}
-                      onChange={(e) => setText(e.target.value)}
-                      className="ctf-json"
-                    />
-                    <input
-                      ref={importInput}
-                      type="file"
-                      accept=".strategy,.json,application/json"
-                      hidden
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (!file) return;
-                        e.target.value = "";
-                        void attempt(async () => {
-                          if (file.size > 256 * 1024)
-                            throw new Error("file_too_large");
-                          const content = await file.text();
-                          setEditorOpen(true);
-                          setEditing(null);
-                          setText(content);
-                          setName(
-                            file.name
-                              .replace(/\.(strategy|json)$/i, "")
-                              .slice(0, 128),
-                          );
-                          setErrors([]);
-                        });
-                      }}
-                    />
-                    <div className="ctf-editor-actions">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => importInput.current?.click()}
-                      >
-                        <FileUp />
-                        {t(($) => $.importFile)}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          const value = parse();
-                          if (value)
-                            download(
-                              `${name || "strategy"}.strategy`,
-                              new Blob([JSON.stringify(value, null, 2)], {
-                                type: "application/json",
-                              }),
-                            );
-                        }}
-                      >
-                        {t(($) => $.exportFile)}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => {
-                          if (parse()) setNotice(t(($) => $.valid));
-                        }}
-                      >
-                        <Check />
-                        {t(($) => $.validate)}
-                      </Button>
-                      <Button
-                        size="sm"
-                        disabled={busy || !state.data}
-                        onClick={() => void save()}
-                      >
-                        {t(($) => $.save)}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          const strategy = parse();
-                          if (strategy) {
-                            setRed(strategy);
-                            setRedKey("draft");
-                            reset(strategy, blue);
-                          }
-                        }}
-                      >
-                        {t(($) => $.trial)}
-                      </Button>
-                    </div>
-                    <div className="ctf-editor-actions">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        disabled={sourceLoading || trialRunning}
-                        onClick={() => void runTrials()}
-                      >
-                        {t(($) => $.batchTrial)}
-                      </Button>
-                      {trialRunning && (
-                        <Button size="sm" variant="ghost" onClick={stopTrial}>
-                          {t(($) => $.stopTrial)}
-                        </Button>
-                      )}
-                    </div>
-                    {(trialRunning || trialResults.length > 0) && (
-                      <div className="ctf-trial-progress">
-                        <span>
-                          {t(($) => $.tactics.trialProgress, {
-                            done: trialResults.length,
-                            total: trialTotal,
-                          })}
-                        </span>
-                        <progress
-                          max={Math.max(1, trialTotal)}
-                          value={trialResults.length}
-                        />
-                      </div>
+                <div className="ctf-section-head">
+                  <div>
+                    <h2>{t(($) => $.files.currentStrategy)}</h2>
+                    <strong>{redLabel}</strong>
+                    {redKey !== "baseline" && (
+                      <span className="ctf-active-revision">
+                        {t(($) => $.revision, {
+                          revision: Number(redKey.split(":").at(-1)),
+                        })}
+                      </span>
                     )}
-                    {trialResults.length > 0 && (
-                      <section className="ctf-trial-results">
-                        <h2>{t(($) => $.trialResults)}</h2>
-                        <div className="ctf-table-scroll">
-                          <table>
-                            <thead>
-                              <tr>
-                                <th>{t(($) => $.tactics.opponent)}</th>
-                                <th>{t(($) => $.seed)}</th>
-                                <th>{t(($) => $.tactics.result)}</th>
-                                <th>{t(($) => $.tactics.reason)}</th>
-                                <th>{t(($) => $.tactics.simulationTime)}</th>
-                                <th />
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {trialResults.map((row) => (
-                                <tr key={row.index}>
-                                  <td>{row.name}</td>
-                                  <td>{row.seed}</td>
-                                  <td>{outcome(row.result.winner)}</td>
-                                  <td>{row.result.method}</td>
-                                  <td>{battleTime(row.duration)}</td>
-                                  <td>
-                                    <Button
-                                      size="xs"
-                                      variant="outline"
-                                      disabled={
-                                        trialRunning || row.frames.length < 2
-                                      }
-                                      onClick={() => {
-                                        setRunning(false);
-                                        setLocalReview({
-                                          frames: row.frames,
-                                          redName: trialChallenger.current,
-                                          blueName: row.name,
-                                          seed: row.seed,
-                                          result: row.result,
-                                        });
-                                        seek(0);
-                                      }}
-                                    >
-                                      {t(($) => $.tactics.inspectTrial)}
-                                    </Button>
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      </section>
+                  </div>
+                  <div className="ctf-strategy-actions">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() =>
+                        download(
+                          `${redLabel}.strategy`,
+                          new Blob([JSON.stringify(red, null, 2)], {
+                            type: "application/json",
+                          }),
+                        )
+                      }
+                    >
+                      <Download />
+                      {t(($) => $.source)}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() =>
+                        void attempt(() => choose("red", "baseline"))
+                      }
+                    >
+                      {t(($) => $.files.useExample)}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={sourceLoading || trialRunning}
+                      onClick={() => void runTrials()}
+                    >
+                      {t(($) => $.batchTrial)}
+                    </Button>
+                    {trialRunning && (
+                      <Button size="sm" variant="ghost" onClick={stopTrial}>
+                        {t(($) => $.stopTrial)}
+                      </Button>
                     )}
-                    {errors.length > 0 && (
-                      <ul role="alert" className="ctf-errors">
-                        {errors.slice(0, 12).map((e, i) => (
-                          <li key={i}>{e}</li>
-                        ))}
-                      </ul>
-                    )}
-                    <p className="ctf-caption">{t(($) => $.newSaveNote)}</p>
-                  </section>
+                  </div>
                 </div>
-              </details>
+                <StrategySummaryView strategy={red} />
+                {(trialRunning || trialResults.length > 0) && (
+                  <div className="ctf-trial-progress">
+                    <span>
+                      {t(($) => $.tactics.trialProgress, {
+                        done: trialResults.length,
+                        total: trialTotal,
+                      })}
+                    </span>
+                    <progress
+                      max={Math.max(1, trialTotal)}
+                      value={trialResults.length}
+                    />
+                  </div>
+                )}
+                {trialResults.length > 0 && (
+                  <section className="ctf-trial-results">
+                    <h2>{t(($) => $.trialResults)}</h2>
+                    <div className="ctf-table-scroll">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>{t(($) => $.tactics.opponent)}</th>
+                            <th>{t(($) => $.seed)}</th>
+                            <th>{t(($) => $.tactics.result)}</th>
+                            <th>{t(($) => $.tactics.reason)}</th>
+                            <th>{t(($) => $.tactics.simulationTime)}</th>
+                            <th />
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {trialResults.map((row) => (
+                            <tr key={row.index}>
+                              <td>{row.name}</td>
+                              <td>{row.seed}</td>
+                              <td>{outcome(row.result.winner)}</td>
+                              <td>{row.result.method}</td>
+                              <td>{battleTime(row.duration)}</td>
+                              <td>
+                                <Button
+                                  size="xs"
+                                  variant="outline"
+                                  disabled={
+                                    trialRunning || row.frames.length < 2
+                                  }
+                                  onClick={() => {
+                                    setRunning(false);
+                                    setLocalReview({
+                                      frames: row.frames,
+                                      redName: trialChallenger.current,
+                                      blueName: row.name,
+                                      seed: row.seed,
+                                      result: row.result,
+                                    });
+                                    seek(0);
+                                  }}
+                                >
+                                  {t(($) => $.tactics.inspectTrial)}
+                                </Button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </section>
+                )}
+              </section>
             </>
           ) : (
             <>
@@ -1392,7 +1207,7 @@ function Content({
                             variant: "outline",
                           })}
                         >
-                          {t(($) => $.editor)}
+                          {t(($) => $.files.viewStrategy)}
                         </AppLink>
                       ) : (
                         <Button
@@ -1400,9 +1215,15 @@ function Content({
                           variant="outline"
                           onClick={() => load(s)}
                         >
-                          {t(($) => $.editor)}
+                          {t(($) => $.files.viewStrategy)}
                         </Button>
                       )}
+                      <StrategyImportDialog
+                        target={s}
+                        disabled={s.archived || busy}
+                        onSave={actions.save.mutateAsync}
+                        onSaved={imported}
+                      />
                       <DialogTrigger
                         render={
                           <Button

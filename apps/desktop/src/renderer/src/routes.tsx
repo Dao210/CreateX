@@ -159,7 +159,7 @@ export const appRoutes: RouteObject[] = [
           // Shared game pages keep workspace identity and the desktop shell;
           // each game owns the content header, controls and scrolling.
           { path: "siege", element: <Suspense><SiegePage /></Suspense>, handle: { title: "Siege" } },
-          { path: "ctf/*", element: <Suspense><CTFPage storage={defaultStorage} /></Suspense>, handle: { title: "Capture the Flag" } },
+          { path: "ctf/*", element: <Suspense><CTFPage /></Suspense>, handle: { title: "Capture the Flag" } },
           { path: "tanks", element: <TanksPage />, handle: { title: "Tank Defense" } },
           { path: "fish", element: <OceanPage />, handle: { title: "Ocean" } },
           { path: "life", element: <Suspense><LifePage storage={defaultStorage} /></Suspense>, handle: { title: "Agent Life" } },

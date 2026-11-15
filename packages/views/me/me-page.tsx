@@ -162,7 +162,7 @@ function MeContent({ storage, workspace, userId }: {
             }}>{fishT($ => $.retry)}</Button></p>}
             {bothFailed ? <ErrorCard message={t(($) => $.error)} retry={() => { void library.refetch(); void tanks.refetch(); void fishQuery.refetch(); }} retryLabel={t(($) => $.retry)} /> : <>
               {(visibleSiege.length > 0 || visibleTanks.length > 0 || visibleFish.length > 0 || visibleCTF.length > 0) && <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                {visibleCTF.map(strategy => <Card key={strategy.id} size="sm"><CardHeader><CardTitle className="truncate">{strategy.name}</CardTitle><CardDescription>{ctfT($ => $.revision, { revision: strategy.revision })}</CardDescription></CardHeader><CardContent><AppLink href={`${paths.ctf()}?strategy=${encodeURIComponent(strategy.id)}`} className={buttonVariants({ size: "sm", variant: "outline" })}>{ctfT($ => $.editor)}<ArrowRight /></AppLink></CardContent></Card>)}
+                {visibleCTF.map(strategy => <Card key={strategy.id} size="sm"><CardHeader><CardTitle className="truncate">{strategy.name}</CardTitle><CardDescription>{ctfT($ => $.revision, { revision: strategy.revision })}</CardDescription></CardHeader><CardContent><AppLink href={`${paths.ctf()}?strategy=${encodeURIComponent(strategy.id)}`} className={buttonVariants({ size: "sm", variant: "outline" })}>{ctfT($ => $.files.viewStrategy)}<ArrowRight /></AppLink></CardContent></Card>)}
                 {visibleFish.map(fish => <Card key={fish.id} size="sm" className="overflow-hidden" role="group" aria-label={fish.draft.name}>
                   <div className="flex aspect-[4/3] items-center justify-center bg-muted/25 p-4"><FishThumbnail spec={fish.draft} /></div>
                   <CardHeader><CardTitle className="truncate">{fish.draft.name}</CardTitle><CardDescription>{fish.archived ? fishT($ => $.archived) : t($ => $.weapons.revision, { revision: fish.revision })}</CardDescription></CardHeader>
@@ -186,7 +186,7 @@ function MeContent({ storage, workspace, userId }: {
               </div>}
               {ctfFailed && <ErrorCard message={t($ => $.error)} retry={() => void ctf.refetch()} retryLabel={t($ => $.retry)} />}
               {fishFailed && <ErrorCard message={t($ => $.error)} retry={() => void fishQuery.refetch()} retryLabel={t($ => $.retry)} />}
-              {nothing && filter === "ctf" && <AppLink href={paths.ctf()} className={buttonVariants({ variant: "outline" })}>{ctfT($ => $.newStrategy)}</AppLink>}
+              {nothing && filter === "ctf" && <AppLink href={paths.ctf()} className={buttonVariants({ variant: "outline" })}>{ctfT($ => $.files.importStrategy)}</AppLink>}
               {nothing && filter === "fish" && <AppLink href={paths.fish()} className={buttonVariants({ variant: "outline" })}>{t($ => $.open_ocean)}</AppLink>}
               {nothing && filter !== "fish" && filter !== "ctf" && <EmptyCollection filter={filter} workshopHref={paths.siege()} garageHref={paths.tanks()} />}
             </>}

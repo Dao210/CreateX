@@ -87,13 +87,7 @@ function mount() {
   });
   return renderWithI18n(
     <QueryClientProvider client={query}>
-      <CTFPage
-        storage={{
-          getItem: () => null,
-          setItem: () => {},
-          removeItem: () => {},
-        }}
-      />
+      <CTFPage />
     </QueryClientProvider>,
   );
 }
@@ -104,9 +98,7 @@ describe("publication and frozen enrollment", () => {
     await screen.findByText("Scout");
     fireEvent.click(screen.getByRole("button", { name: "Enter arena" }));
     expect(mock.enroll).not.toHaveBeenCalled();
-    expect(
-      await screen.findByText(/complete source of this version/),
-    ).toBeVisible();
+    expect(await screen.findByText(/complete strategy file/)).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Publish and enter" }));
     await waitFor(() =>
       expect(mock.enroll).toHaveBeenCalledWith(

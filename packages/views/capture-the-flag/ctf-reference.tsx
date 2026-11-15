@@ -25,12 +25,6 @@ const guideSections = [
   "strategy",
   "arena",
 ] as const;
-const flagActions = [
-  { action: 'PICK_UP_FLAG · flag: "OWN"', key: "pickOwn" },
-  { action: 'PICK_UP_FLAG · flag: "ENEMY"', key: "pickEnemy" },
-  { action: "DROP_CARRIED_FLAG", key: "drop" },
-  { action: "RETURN_OWN_DROPPED_FLAG", key: "returnOwn" },
-] as const;
 
 function ReferenceDialog({
   title,
@@ -133,10 +127,7 @@ export function CTFReference() {
         <div className="ctf-reference-notes">
           <p>{t(($) => $.unitStats.timing, { tick: TICK_SECONDS })}</p>
           <p>{t(($) => $.unitStats.archerTiming)}</p>
-          <p>
-            <code>{"enhancement_mode"}</code>{" "}
-            {t(($) => $.unitStats.enhancementChoice)}
-          </p>
+          <p>{t(($) => $.unitStats.enhancementChoice)}</p>
         </div>
       </ReferenceDialog>
       <ReferenceDialog
@@ -152,18 +143,6 @@ export function CTFReference() {
                 {t(($) => $.guide[section].title)}
               </h3>
               <p>{t(($) => $.guide[section].text)}</p>
-              {section === "flags" && (
-                <dl className="ctf-guide-actions">
-                  {flagActions.map(({ action, key }) => (
-                    <div key={key}>
-                      <dt>
-                        <code>{action}</code>
-                      </dt>
-                      <dd>{t(($) => $.guide.flagActions[key])}</dd>
-                    </div>
-                  ))}
-                </dl>
-              )}
               <p>{t(($) => $.guide[section].detail)}</p>
             </section>
           ))}

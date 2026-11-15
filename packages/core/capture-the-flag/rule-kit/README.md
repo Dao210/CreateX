@@ -3,7 +3,9 @@
 原作：黄仲生。游戏协议 `12-rts-1.0`；策略格式 `1.0`。
 
 先阅读 gameplay-guide.md，再阅读 strategy-authoring-guide.md、strategy-schema.json 和 examples/。
-生成合法 JSON，保存为 .strategy 或 .json，在 Weavea World 的夺旗页面导入。
+请让外部创作工具输出完整策略对象，保存为 .strategy 或 .json，在 Weavea World 的夺旗页面导入。不要为策略增加外层 strategy、red 或 blue 包装。
+
+仅导入完整策略文件；manifest.json、strategy-schema.json、规则包和行为验证报告不是可导入策略。页面自动校验并展示摘要，确认“导入并保存”后创建私有版本。游戏内不显示代码或提供手工编辑，修改后在原策略卡片上传新版本。
 
 用 Node.js 22 或更新版本校验：
 

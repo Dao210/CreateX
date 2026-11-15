@@ -486,13 +486,6 @@ export function BattleView({
             </div>
           </div>
         </div>
-        <details className="ctf-raw-decision">
-          <summary>
-            {t(($) => $.tactics.rawDecision)}
-            <ChevronDown aria-hidden />
-          </summary>
-          <pre>{JSON.stringify(frame.decisions[unit.id] ?? {}, null, 2)}</pre>
-        </details>
       </aside>
     </div>
   );

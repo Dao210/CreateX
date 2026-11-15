@@ -20,23 +20,14 @@
   "heavy_infantry": "重甲步兵",
   "cavalry": "骑兵",
   "archer": "弓箭手",
-  "strategyName": "策略名称",
-  "editor": "策略 JSON",
-  "newStrategy": "新建策略",
-  "importFile": "导入文件",
-  "exportFile": "导出文件",
-  "validate": "校验",
-  "save": "保存版本",
-  "valid": "策略校验通过。",
-  "invalid": "请检查策略错误。",
-  "saved": "版本已保存。",
+  "saved": "私有版本已保存。",
   "error": "操作未完成，请重试。",
   "loading": "加载中…",
   "retry": "重试",
   "worldLibrary": "世界策略库",
   "enroll": "报名",
   "enrollTitle": "公开并报名？",
-  "enrollHelp": "此版本的完整源码将向当前世界所有成员开放。报名版本已冻结，之后的编辑用于后续批次。 撤回报名或归档不会撤回已公开的源码。",
+  "enrollHelp": "此版本的完整策略文件将向当前世界所有成员开放下载。报名会冻结此版本，上传新版本不会自动替换当前报名。撤回报名或归档不会撤回已公开的文件。",
   "cancel": "取消",
   "confirm": "公开并报名",
   "withdraw": "撤回报名",
@@ -65,21 +56,19 @@
   "unknown": "未知",
   "archive": "归档",
   "restore": "恢复",
-  "conflict": "其他设备已更新此版本，请重新载入后保存。",
+  "conflict": "其他设备已更新此策略，请关闭窗口、刷新策略列表后重新上传。",
   "myCreations": "我的创作",
-  "published": "已公开源码",
+  "published": "策略已公开",
   "private": "私有草稿",
   "emptyFrames": "比赛运行后将在此显示录像。",
   "draw": "平局",
   "redWin": "红方获胜",
   "blueWin": "蓝方获胜",
-  "source": "源码",
+  "source": "下载策略文件",
   "revision": "版本 {{revision}}",
   "archived": "已归档",
   "manageHelp": "世界所有者和管理员可发起比赛，开始时冻结参赛版本。",
   "ruleVersion": "规则 {{version}}",
-  "newSaveNote": "每次保存都会产生独立的历史版本。",
-  "draftTrial": "试炼草稿",
   "noNewPairs": "这些版本已完成正式对局，请报名新版本后再次发起。",
   "batchTrial": "批量试炼",
   "stopTrial": "停止试炼",
@@ -112,7 +101,7 @@
     },
     "timing": "每个策略 Tick 为 {{tick}} 秒；所有攻击按 Tick 开始时的位置同时结算。",
     "archerTiming": "弓箭手仅在 Tick 开始时目标已在射程内、冷却已结束时射击。射箭占用当前和下一个 Tick（共 0.5 秒），期间不能移动或攻击；完整攻击冷却为 1 秒。",
-    "enhancementChoice": "每份策略可选一种强化，开局生效；省略或填 standard 则不强化。双方独立选择。"
+    "enhancementChoice": "每份策略在文件中选择一种强化，开局固定生效，双方独立选择。"
   },
   "guide": {
     "title": "玩法说明",
@@ -125,7 +114,7 @@
     "battlefield": {
       "title": "战场与移动",
       "text": "地图为 100 × 50 格的开放战场，红方基地在左、蓝方在右。每方各有一名重甲步兵、骑兵和弓箭手。",
-      "detail": "单位使用连续二维坐标，没有碰撞和挡路；斜向移动不会更快。MOVE_TOWARD 可指定固定坐标 x: 0–99、y: 0–49，但不能同时设置 movement.target。"
+      "detail": "单位使用连续坐标，没有碰撞和挡路，斜向移动不会更快。策略也可以指定战场内的固定目标位置。"
     },
     "capture": {
       "title": "夺旗与持旗",
@@ -135,13 +124,7 @@
     "flags": {
       "title": "掉旗、拾旗与归还",
       "text": "持旗单位死亡时旗帜掉在原地。接触旗帜不会自动拾取或归还，必须由策略明确发出特殊动作。",
-      "detail": "拾旗和归还都要求在旗帜 1 格内。仍在家的敌旗必须连续夺旗 3 秒，不能用 PICK_UP_FLAG 直接拿走。"
-    },
-    "flagActions": {
-      "pickOwn": "举起在家或掉落的己方旗帜。",
-      "pickEnemy": "举起掉落的敌方旗帜。",
-      "drop": "在本 Tick 开始位置放下当前旗帜。",
-      "returnOwn": "将掉落的己方旗帜归还旗位。"
+      "detail": "拾旗和归还都要求在旗帜 1 格内。仍在家的敌旗必须连续夺旗 3 秒。"
     },
     "combat": {
       "title": "战斗如何结算",
@@ -154,9 +137,9 @@
       "detail": "出生和重生位置由比赛种子决定，在己方基地内随机选择，并避开己方旗位周围 2 格。重生恢复满血；策略不能指定出生或重生坐标。"
     },
     "strategy": {
-      "title": "编写与试炼策略",
+      "title": "创作与试炼策略",
       "text": "为各兵种设置规则列表，优先级越高越先判断，执行第一条满足条件的规则，包括移动、攻击和特殊动作。双方都能读取全局位置、血量、旗帜和近期活动，但不能读取对手策略或未来行动。",
-      "detail": "下载 AI 规则包交给外部 AI，或直接编辑 JSON；导入、校验、试炼后保存版本。单步推进一个 0.25 秒 Tick，可结合决策解释和事件日志复盘。本地试炼不计入排行榜。"
+      "detail": "下载 AI 规则包交给外部创作工具，生成策略文件后在此导入并保存。单步推进 0.25 秒，可结合决策解释和事件日志复盘。本地试炼不计入排行榜。"
     },
     "arena": {
       "title": "正式竞技场与排名",
@@ -191,7 +174,6 @@
     "moveOnly": "本 Tick 只移动，未射击。",
     "attackWaiting": "等待射程、冷却或行动条件满足。",
     "noAttack": "未请求攻击。",
-    "rawDecision": "查看原始决策数据",
     "yes": "是",
     "no": "否",
     "negated": "不满足",
@@ -206,7 +188,6 @@
     "deathEvent": "{{actor}} 阵亡",
     "respawnEvent": "{{actor}} 重生",
     "flagEvent": "{{team}}旗 · {{state}}",
-    "editStrategy": "编辑策略",
     "enhancement": "兵种强化",
     "standard": "标准模式",
     "localOnly": "本地试炼 · 不计入排名",
@@ -257,9 +238,37 @@
     "tick": "Tick {{value}}",
     "seconds": "{{value}} 秒",
     "deathCount": "{{value}} / 4",
-    "computing": "计算预览",
-    "ruleOutline": "兵种规则",
-    "ruleDisabled": "已停用",
-    "emptyRules": "该兵种尚无规则。"
-  }
+    "computing": "计算预览"
+  },
+  "files": {
+    "importStrategy": "导入策略",
+    "uploadVersion": "上传新版本",
+    "viewStrategy": "查看策略",
+    "currentStrategy": "红方当前策略",
+    "useExample": "使用示例策略",
+    "ruleCount": "{{count}} 条规则",
+    "importHelp": "选择完整的 .strategy 或 .json 策略文件。报名之前，仅你可见。",
+    "versionHelp": "为“{{name}}”上传新版本。当前报名仍使用已报名的版本。",
+    "selectFile": "选择策略文件",
+    "reselect": "重新选择文件",
+    "checking": "正在检查文件…",
+    "ready": "可导入",
+    "importAndSave": "导入并保存",
+    "saving": "正在保存…",
+    "readError": "未能读取文件，请重新选择。",
+    "saveError": "未能保存，已保留所选文件，可重试。",
+    "copyError": "未能复制，请允许访问剪贴板后重试。",
+    "copyProblems": "复制问题说明给 AI",
+    "copied": "问题说明已复制",
+    "feedbackTitle": "请为 Weavea World 夺旗修复此策略，并返回一个完整的策略文件。",
+    "problems": {
+      "report": "这是行为验证报告，请选择“可导入策略”文件夹中的对应策略文件。",
+      "reference": "这是规则说明或规则包清单，请选择完整的策略文件。",
+      "syntax": "无法读取此策略文件，请让创作工具重新导出完整的 .strategy 或 .json 文件。",
+      "version": "此策略的版本暂不支持，请使用当前 AI 规则包重新生成。",
+      "invalid": "策略未通过校验。可复制问题说明交给创作工具，修正文件后重新导入。",
+      "tooLarge": "文件超过 256 KB，请选择限制以内的策略文件。"
+    }
+  },
+  "strategyName": "策略名称"
 }
