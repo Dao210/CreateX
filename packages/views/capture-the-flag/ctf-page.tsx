@@ -217,7 +217,9 @@ function Content({ wsId, userId }: { wsId: string; userId: string }) {
   const choose = useCallback(
     async (side: "red" | "blue", key: string) => {
       const generation = ++generations.current[side];
-      const choice = choices.find((s) => `${s.id}:${s.revision}` === key);
+      const choice =
+        choices.find((s) => `${s.id}:${s.revision}` === key) ??
+        state.data?.mine.find((s) => `${s.id}:${s.revision}` === key);
       setSourceLoading(true);
       try {
         const strategy = choice
@@ -246,7 +248,7 @@ function Content({ wsId, userId }: { wsId: string; userId: string }) {
         if (generation === generations.current[side]) setSourceLoading(false);
       }
     },
-    [choices, loadStrategy, t, reset, red, blue, stopTrial],
+    [choices, state.data?.mine, loadStrategy, t, reset, red, blue, stopTrial],
   );
   const loaded = useRef("");
   useEffect(() => {

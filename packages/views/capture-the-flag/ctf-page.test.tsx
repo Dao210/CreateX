@@ -1,9 +1,13 @@
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithI18n } from "../test/i18n";
 import { makeBaselineStrategy } from "@auro/core/capture-the-flag";
-const mock = vi.hoisted(() => ({ enroll: vi.fn(), save: vi.fn() }));
+const mock = vi.hoisted(() => ({
+  enroll: vi.fn(),
+  save: vi.fn(),
+  archived: false,
+}));
 const ws = "00000000-0000-4000-8000-000000000001",
   user = "00000000-0000-4000-8000-000000000002";
 const record = {
@@ -25,7 +29,7 @@ vi.mock("@auro/core/capture-the-flag", async () => ({
     queryFn: async () => ({
       workspaceId: ws,
       canManage: false,
-      mine: [record],
+      mine: [{ ...record, archived: mock.archived }],
       library: [],
       entries: [],
       batches: [],
@@ -92,6 +96,30 @@ function mount() {
   );
 }
 describe("publication and frozen enrollment", () => {
+  beforeEach(() => {
+    mock.archived = false;
+    mock.enroll.mockReset();
+    mock.save.mockReset();
+  });
+  it("opens an archived strategy for viewing instead of substituting the baseline", async () => {
+    mock.archived = true;
+    Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
+      configurable: true,
+      value: vi.fn(),
+    });
+    mount();
+    await screen.findByText("Scout");
+    fireEvent.click(
+      screen.getAllByRole("button", { name: "View strategy" }).at(-1)!,
+    );
+    await waitFor(() =>
+      expect(
+        screen.getByRole("region", { name: "Current red strategy" }),
+      ).toHaveTextContent("Scout"),
+    );
+    expect(screen.getByRole("button", { name: "Enter arena" })).toBeDisabled();
+    mock.archived = false;
+  });
   it("requires visible consent before publishing the saved revision", async () => {
     mock.enroll.mockResolvedValue({ ...record, published: true });
     mount();
