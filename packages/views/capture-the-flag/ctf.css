@@ -636,3 +636,4 @@
 .ctf-field-heading { flex-wrap: wrap; }
 .ctf-spawn-key { color: var(--ctf-ink); font-weight: 400; }
 .ctf-spawn-key > i { width: 17px; height: 13px; flex-shrink: 0; border: 1px dashed currentColor; border-radius: 2px; background-image: radial-gradient(currentColor .7px, transparent .7px); background-size: 4px 4px; opacity: .8; }
+.ctf-inspector-metrics > .ctf-range-metric { grid-column: 1 / -1; flex-direction: row; align-items: center; justify-content: space-between; }

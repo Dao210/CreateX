@@ -24,6 +24,7 @@ describe("battle decisions and event review", () => {
   it("selects units with readable rules and separates archer movement from an attack", () => {
     const frame = sample();
     const archer = frame.units.find((u) => u.id === "red_archer")!;
+    archer.range = 10;
     archer.isAttacking = false;
     archer.shootLockTicks = 0;
     frame.decisions[archer.id] = {
@@ -52,6 +53,7 @@ describe("battle decisions and event review", () => {
       screen.getByRole("complementary", { name: "Decisions" }),
     );
     expect(panel.getByText(/Nearest enemy distance/)).toBeVisible();
+    expect(panel.getByText("10 cells")).toBeVisible();
     expect(panel.getByText("Retreat")).toBeVisible();
     expect(panel.getByText("Priority 90")).toBeVisible();
     expect(

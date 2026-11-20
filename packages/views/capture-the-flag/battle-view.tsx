@@ -251,6 +251,7 @@ export function BattleView({
               key={u.id}
               className={`ctf-unit-card ctf-${u.team}`}
               aria-pressed={u.id === unit.id}
+              title={`${t(($) => $.unitStats.range)} · ${t(($) => $.unitStats.cells, { value: u.range })}`}
               onClick={() => setSelected(u.id)}
             >
               <UnitPortrait unit={u} />
@@ -355,6 +356,10 @@ export function BattleView({
               <b>
                 {unit.x.toFixed(1)}, {unit.y.toFixed(1)}
               </b>
+            </div>
+            <div className="ctf-range-metric">
+              <span>{t(($) => $.unitStats.range)}</span>
+              <b>{t(($) => $.unitStats.cells, { value: unit.range })}</b>
             </div>
           </div>
         </div>

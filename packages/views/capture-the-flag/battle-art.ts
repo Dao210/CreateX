@@ -418,16 +418,36 @@ export function drawBattle(
       moving: moving && blend < 1,
     };
   });
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(20, 30, MAP_W * SCALE, MAP_H * SCALE);
+  ctx.clip();
+  for (const { unit: u } of [...units].sort(
+    (a, b) => Number(a.unit.id === selected) - Number(b.unit.id === selected),
+  )) {
+    if (u.state !== "ALIVE" || u.range <= 0) continue;
+    const p = fieldPoint(u.x, u.y);
+    const focused = u.id === selected;
+    ctx.fillStyle = COLORS[u.team] + (focused ? "14" : "08");
+    ctx.setLineDash(u.team === "blue" ? [5, 4] : []);
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, u.range * SCALE, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "#29382b70";
+    ctx.lineWidth = focused ? 3.5 : 2.5;
+    ctx.stroke();
+    ctx.strokeStyle = focused
+      ? "#ffe7a3"
+      : u.team === "red"
+        ? "#f3b4a0"
+        : "#acd9ef";
+    ctx.lineWidth = focused ? 2 : 1.2;
+    ctx.stroke();
+  }
+  ctx.restore();
   const chosen = units.find((item) => item.unit.id === selected)?.unit;
   if (chosen?.state === "ALIVE") {
     const p = fieldPoint(chosen.x, chosen.y);
-    ctx.fillStyle = COLORS[chosen.team] + "0b";
-    ctx.strokeStyle = "#e8e6bf55";
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, chosen.range * SCALE, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
     const target = units.find(
       (item) => item.unit.id === targetId && item.unit.state === "ALIVE",
     )?.unit;

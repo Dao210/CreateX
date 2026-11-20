@@ -19,6 +19,7 @@ const blue = JSON.parse(
     "utf8",
   ),
 );
+const privateRevision = { ...blue, enhancement_mode: "archer" };
 const run = `${Date.now().toString(36)}-${process.pid}`;
 let owner: TestApiClient,
   opponent: TestApiClient,
@@ -71,6 +72,8 @@ test("strategy import, explicit publication, official score and replay", async (
   await expect(page).toHaveTitle(/夺旗/);
   await expect(page.locator(".ctf-unit-roster button")).toHaveCount(6);
   await expect(page.locator(".ctf-inspector")).toContainText("观察到了什么");
+  await expect(page.locator(".ctf-inspector-head")).toContainText("攻击范围");
+  await expect(page.locator(".ctf-inspector-head")).toContainText("5 格");
   await expect(
     page.getByText("骑兵等单位出生区", { exact: true }),
   ).toBeVisible();
@@ -223,7 +226,7 @@ test("strategy import, explicit publication, official score and replay", async (
   await versionDialog.locator('input[type="file"]').setInputFiles({
     name: "Private revision.strategy",
     mimeType: "application/json",
-    buffer: Buffer.from(JSON.stringify(blue)),
+    buffer: Buffer.from(JSON.stringify(privateRevision)),
   });
   const versionResponse = page.waitForResponse(
     (r) =>
@@ -310,6 +313,7 @@ test("strategy import, explicit publication, official score and replay", async (
       page.getByRole("region", { name: "红方当前策略", exact: true }),
     ).toContainText("Private revision");
     await expect(page.locator("textarea, pre, code")).toHaveCount(0);
+    await expect(page.locator(".ctf-range-metric")).toContainText("10 格");
     const strategyDownloadEvent = page.waitForEvent("download");
     await page
       .getByRole("region", { name: "红方当前策略", exact: true })
@@ -320,7 +324,7 @@ test("strategy import, explicit publication, official score and replay", async (
     const exportedPath = await exported.path();
     expect(exportedPath).not.toBeNull();
     const exportedBytes = readFileSync(exportedPath!);
-    expect(JSON.parse(exportedBytes.toString("utf8"))).toEqual(blue);
+    expect(JSON.parse(exportedBytes.toString("utf8"))).toEqual(privateRevision);
     await page.getByRole("button", { name: "导入策略", exact: true }).click();
     const roundTrip = page.getByRole("dialog", {
       name: "导入策略",
