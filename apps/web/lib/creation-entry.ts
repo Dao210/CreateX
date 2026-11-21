@@ -5,6 +5,18 @@ import { localizedHref } from "./marketing-urls";
 export function parseCreation(value: string | null): GameId | null {
   return value === "tank" || value === "fish" || value === "resident" ? value : null;
 }
+
+/** Read only the homepage's onboarding intent; other destinations stay generic. */
+export function creationFromNextUrl(next: string | undefined): GameId | null {
+  if (!next?.startsWith("/") || next.startsWith("//")) return null;
+  try {
+    const url = new URL(next, "https://local.invalid");
+    if (url.origin !== "https://local.invalid" || url.pathname !== "/onboarding") return null;
+    return parseCreation(url.searchParams.get("creation"));
+  } catch {
+    return null;
+  }
+}
 export function creationLoginHref(locale: SupportedLocale, game: GameId): string {
   const url = new URL(localizedHref("/login", locale), "https://local.invalid");
   url.searchParams.set("next", `/onboarding?creation=${game}`);

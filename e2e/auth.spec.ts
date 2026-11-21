@@ -4,14 +4,14 @@ import { TestApiClient } from "./fixtures";
 
 test.describe("Authentication", () => {
   test("login page renders correctly", async ({ page }) => {
-    await page.goto("/login", { waitUntil: "domcontentloaded" });
-    await waitForPageText(page, "Sign in to Auro");
+    await page.goto("/login?lang=en", { waitUntil: "domcontentloaded" });
+    await waitForPageText(page, "Start creating");
 
-    await expect(page.getByText("Sign in to Auro")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Start creating" })).toBeVisible();
     await expect(page.getByRole("textbox", { name: "Email" })).toBeVisible();
     await expect(page.getByPlaceholder("you@example.com")).toBeVisible();
-    await expect(page.getByLabel("Password", { exact: true })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Sign in", exact: true })).toBeDisabled();
+    await expect(page.getByLabel("Password", { exact: true })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Send code", exact: true })).toBeDisabled();
   });
 
   test("login and redirect to /me", async ({ page }) => {
@@ -19,6 +19,17 @@ test.describe("Authentication", () => {
 
     await expect(page).toHaveURL(new RegExp(`/${workspaceSlug}/me$`));
     await expect(page.getByRole("heading", { name: "My Creations" })).toBeVisible();
+  });
+
+  test("carries the chosen homepage game into login", async ({ page }) => {
+    await page.goto("/?lang=en", { waitUntil: "domcontentloaded" });
+    await page.getByRole("tab", { name: /fish/i }).click();
+    await page.locator("#games").getByRole("link", { name: "Create my fish", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "Start creating" })).toBeVisible();
+    expect(new URL(page.url()).searchParams.get("next")).toBe("/onboarding?creation=fish");
+    await expect(page.getByRole("img", { name: /azure sail/i })).toBeVisible();
+    await page.getByRole("link", { name: "Back to home" }).click();
+    await expect(page).toHaveURL(/\/\?lang=en#games$/);
   });
 
   test("password login enters the account's workspace", async ({ page }) => {
@@ -35,6 +46,7 @@ test.describe("Authentication", () => {
       const sessionCheck = page.waitForResponse((response) => new URL(response.url()).pathname === "/api/me");
       await page.goto("/login", { waitUntil: "domcontentloaded" });
       await sessionCheck;
+      await page.getByRole("button", { name: "Use a password instead" }).click();
       await page.getByRole("textbox", { name: "Email" }).fill(email);
       await page.getByLabel("Password", { exact: true }).fill(password);
       await page.getByRole("button", { name: "Sign in", exact: true }).click();
@@ -57,7 +69,7 @@ test.describe("Authentication", () => {
 
     await page.goto(`/${workspace.slug}/me`, { waitUntil: "domcontentloaded" });
     await page.waitForURL("**/login", { timeout: 10000, waitUntil: "domcontentloaded" });
-    await waitForPageText(page, "Sign in to Auro");
+    await waitForPageText(page, "Start creating");
   });
 
   test("logout redirects to /login", async ({ page }) => {

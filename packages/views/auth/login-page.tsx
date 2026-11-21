@@ -19,7 +19,7 @@ import {
   InputOTPGroup,
   InputOTPSlot,
 } from "@auro/ui/components/ui/input-otp";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { useAuthStore } from "@auro/core/auth";
 import { workspaceKeys } from "@auro/core/workspace/queries";
 import { api } from "@auro/core/api";
@@ -480,9 +480,11 @@ export function LoginPage({
             <Button
               onClick={handleCliAuthorize}
               disabled={loading}
+              aria-busy={loading}
               className="w-full"
               size="lg"
             >
+              {loading && <Loader2 className="animate-spin motion-reduce:animate-none" aria-hidden="true" />}
               {loading
                 ? t(($) => $.cli.authorizing)
                 : t(($) => $.cli.authorize)}
@@ -527,6 +529,9 @@ export function LoginPage({
           <CardContent className="flex flex-col items-center gap-4">
             <InputOTP
               autoFocus
+              name="code"
+              inputMode="numeric"
+              spellCheck={false}
               maxLength={6}
               aria-label={t(($) => $.verify.title)}
               aria-invalid={Boolean(error)}
@@ -549,6 +554,12 @@ export function LoginPage({
                 <InputOTPSlot index={5} className="h-12 w-10 text-title-sm" />
               </InputOTPGroup>
             </InputOTP>
+            {loading && (
+              <p role="status" className="flex items-center gap-2 text-body text-muted-foreground">
+                <Loader2 className="size-4 animate-spin motion-reduce:animate-none" aria-hidden="true" />
+                {t(($) => $.password.signing_in)}
+              </p>
+            )}
             {error && (
               <p
                 id="login-code-error"
@@ -563,7 +574,7 @@ export function LoginPage({
                 type="button"
                 onClick={handleResend}
                 disabled={cooldown > 0 || loading}
-                className="text-primary underline-offset-4 hover:underline disabled:cursor-not-allowed disabled:text-muted-foreground disabled:no-underline"
+                className="min-h-11 rounded-md text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 disabled:cursor-not-allowed disabled:text-muted-foreground disabled:no-underline"
               >
                 {cooldown > 0
                   ? t(($) => $.verify.resend_cooldown, { seconds: cooldown })
@@ -643,7 +654,7 @@ export function LoginPage({
           >
             {title}
           </CardTitle>
-          {description && <CardDescription>{description}</CardDescription>}
+          {description && <CardDescription id="login-description">{description}</CardDescription>}
         </CardHeader>
         <CardContent className="space-y-4">
           {sessionExpired && (
@@ -666,7 +677,6 @@ export function LoginPage({
                 placeholder={t(($) => $.common.email_placeholder)}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                autoFocus
                 autoComplete="username"
                 autoCapitalize="none"
                 spellCheck={false}
@@ -676,7 +686,7 @@ export function LoginPage({
                 required
                 className="h-11"
                 aria-invalid={Boolean(error)}
-                aria-describedby={error ? "login-error" : undefined}
+                aria-describedby={[description ? "login-description" : "", error ? "login-error" : ""].filter(Boolean).join(" ") || undefined}
               />
             </div>
             {mode !== "code" && (
@@ -775,6 +785,7 @@ export function LoginPage({
               }
               aria-busy={loading}
             >
+              {loading && <Loader2 className="animate-spin motion-reduce:animate-none" aria-hidden="true" />}
               {submitLabel}
             </Button>
             {canRecoverWithCode && (

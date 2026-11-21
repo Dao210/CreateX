@@ -87,7 +87,7 @@ vi.mock("@auro/core/api", () => ({
   },
 }));
 
-import LoginPage from "./page";
+import LoginPage from "./login-form";
 
 describe("LoginPage", () => {
   beforeEach(() => {

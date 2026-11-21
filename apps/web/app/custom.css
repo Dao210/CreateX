@@ -94,7 +94,8 @@
  * to the Chinese serifs, then Hangul to the Korean ones. Chinese MUST stay
  * before Korean so zh users never get Korean Hanja glyph shapes (Hangul is a
  * separate Unicode block, so ko users still get Korean fonts for Hangul). */
-.landing-light {
+.landing-light,
+.landing-type {
     --font-serif: var(--font-instrument-serif), "Songti SC", "SimSun",
         "Noto Serif CJK SC", "Nanum Myeongjo", "AppleMyungjo", "Batang",
         "Noto Serif CJK KR", ui-serif, serif;
@@ -105,7 +106,7 @@
    Chinese-first default above would hand Japanese users Chinese glyph shapes for
    shared ideographs. Promote a Mincho-first chain only for Japanese. Instrument
    Serif still leads for Latin; zh/ko remain as a deep fallback. */
-html[lang|="ja"] .landing-light {
+html[lang|="ja"] :is(.landing-light, .landing-type) {
     --font-serif: var(--font-instrument-serif), "Hiragino Mincho ProN",
         "Yu Mincho", "MS Mincho", "Noto Serif CJK JP", "Songti SC", "SimSun",
         "Noto Serif CJK SC", "Nanum Myeongjo", "AppleMyungjo", "Batang",

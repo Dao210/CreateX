@@ -152,7 +152,7 @@ describe("LoginPage", () => {
       screen.getByText(/sign in to weave a world/i),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/verifying creates your account/i),
+      screen.getByText(/verifying your email creates your account/i),
     ).toBeInTheDocument();
     expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
     expect(
@@ -315,6 +315,7 @@ describe("LoginPage", () => {
     await user.click(screen.getByRole("button", { name: /^send code$/i }));
 
     expect(screen.getByText(/sending code/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /sending code/i })).toHaveAttribute("aria-busy", "true");
   });
 
   it("transitions to code step after successful sendCode", async () => {
