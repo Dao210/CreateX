@@ -100,7 +100,7 @@ export function InboxPage() {
         {selectedKey && <Button className="m-2 md:hidden" variant="ghost" size="sm" onClick={() => select("")}><ArrowLeft />{t($ => $.page.back)}</Button>}
         {selected ? <article className={cn(PAGE_GUTTER, "mx-auto max-w-3xl py-6")}>
           <h2 className="break-words text-title-sm font-semibold">{copy.title(selected)}</h2>
-          {selected.type === "autopilot_quota_exceeded" ? <AutopilotQuotaNotice item={selected} onOpenRecovery={openQuotaRecovery} /> : selected.type === "creation_ready" || selected.type === "character_milestone" || selected.type === "world_digest" ? <InboxMessageContent item={selected} /> : selected.body && <p className="mt-4 whitespace-pre-wrap text-body leading-relaxed">{selected.body}</p>}
+          {selected.type === "autopilot_quota_exceeded" ? <AutopilotQuotaNotice item={selected} onOpenRecovery={openQuotaRecovery} /> : selected.type === "creation_ready" || selected.type === "character_milestone" || selected.type === "world_digest" || selected.type === "fish_letter" ? <InboxMessageContent item={selected} /> : selected.body && <p className="mt-4 whitespace-pre-wrap text-body leading-relaxed">{selected.body}</p>}
           {selected.type === "autopilot_paused" && <AppLink href={automationId ? paths.autopilotDetail(automationId) : paths.autopilots()} className="mt-4 inline-flex rounded-sm text-label text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-ring">{t($ => $.messages.view_automation)}</AppLink>}
           <div className="mt-6 flex flex-wrap gap-2">
             <Button variant="outline" size="sm" disabled={archiveItem.isPending || restoreItem.isPending} onClick={() => {

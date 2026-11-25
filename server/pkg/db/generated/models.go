@@ -673,6 +673,19 @@ type FishCharacter struct {
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
 }
 
+type FishExplorationClock struct {
+	ID       int32              `json:"id"`
+	Tick     int64              `json:"tick"`
+	LastTick pgtype.Timestamptz `json:"last_tick"`
+}
+
+type FishExplorationState struct {
+	ResidentID  pgtype.UUID `json:"resident_id"`
+	WorkspaceID pgtype.UUID `json:"workspace_id"`
+	UserID      pgtype.UUID `json:"user_id"`
+	State       []byte      `json:"state"`
+}
+
 type FishOcean struct {
 	ID          pgtype.UUID `json:"id"`
 	WorkspaceID pgtype.UUID `json:"workspace_id"`

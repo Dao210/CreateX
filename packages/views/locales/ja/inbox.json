@@ -149,6 +149,17 @@
     "view_resident": "住民を見る",
     "view_world": "ワールドを見る",
     "author": "作者：{{name}}",
-    "view_automation": "自動化を見る"
+    "view_automation": "自動化を見る",
+    "fish_letter": "「{{name}}」から海の便り",
+    "fish_simulation": "継続する海洋シミュレーションで記録された見聞です。このワールドでは1日最大1通届きます。",
+    "view_fish": "この魚を見る",
+    "fish_west_reef": "西の岩礁を泳ぎ、その場所を覚えました。",
+    "fish_east_reef": "東の岩礁を探索しました。",
+    "fish_upper_water": "上層の海を探索しました。",
+    "fish_deep_water": "深い水域を探索しました。",
+    "fish_encounter": "近くを泳ぐ「{{name}}」を見かけました。",
+    "fish_stripes": "体には縞模様がありました。",
+    "fish_spots": "体には斑点がありました。",
+    "fish_glow": "淡い光を放っていました。"
   }
 }

@@ -55,16 +55,6 @@ make status ARGS="createx-440"           # 按登记名称查看一个环境
 
 已有环境只有显式传入 `--ephemeral` 或 `--ttl` 时才更新 owner 和有效期。普通 `make up` 会保留这些属性。到期环境会在执行 `make gc` 时被回收，`make up` 也会先触发自动清理；回收包含停止进程、删除数据库和 profile。长期使用前应查看登记的有效期。
 
-## DEAL 与 Siege 独立壳
-
-| 命令 | 作用 |
-| --- | --- |
-| `make up C=deal` | 启动独立 DEAL 环境，数据和日志位于 `.deal/`。 |
-| `make status C=deal` | 查看 DEAL 状态。 |
-| `make down C=deal` | 停止 DEAL，保留数据。 |
-
-`deal`、`siege` 通过各自脚本管理，需要单独指定，不能与 Auro 组件组合为一个 `C` 值。`make list` 枚举的是 Auro 环境注册表；DEAL 和 Siege 独立壳分别使用上表的状态命令。Auro 工作区内的 Siege 功能随 API 和 Web/Desktop 启动。
-
 ## 编译与单独运行
 
 | 命令 | 作用 |
@@ -106,7 +96,6 @@ Windows 目标自动添加 `.exe` 后缀。`VERSION`、`COMMIT` 默认由 Git �
 pnpm build                              # 全部前端应用，排除移动端
 pnpm --filter @auro/web build            # Web
 pnpm --filter @auro/desktop build        # Desktop 编译
-pnpm --filter @auro/deal build           # DEAL
 ```
 
 ## 初始化与其他启动入口

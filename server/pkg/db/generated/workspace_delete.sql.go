@@ -100,6 +100,10 @@ deleted_game_progress AS (
 deleted_fish_request AS (
     DELETE FROM fish_request WHERE workspace_id = $1
 ),
+deleted_fish_exploration_states AS (
+    DELETE FROM fish_exploration_state WHERE workspace_id = $1
+    RETURNING resident_id
+),
 deleted_fish_publication AS (
     DELETE FROM fish_publication WHERE workspace_id = $1
 ),

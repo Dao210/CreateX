@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { InboxItem } from "@auro/core/types";
-import { getAutopilotQuotaBody, getInboxDisplayTitle } from "./inbox-display";
+import { getAutopilotQuotaBody, getInboxDisplayTitle, getFishSightingText } from "./inbox-display";
 
 function item(overrides: Partial<InboxItem>): InboxItem {
   return {
@@ -50,6 +50,12 @@ describe("getInboxDisplayTitle", () => {
 });
 
 describe("getInboxNavigationTarget", () => {
+});
+
+it("formats actual fish sightings with the same meaning as web", () => {
+  expect(getFishSightingText({ kind: "discovery", place: "west_reef", position: [-5, 3, -2], occurredAt: "2026-11-11T02:29:00Z" })).toBe("I swam past the western reef and remembered this place.");
+  const text = getFishSightingText({ kind: "encounter", peerId: "00000000-0000-4000-8000-000000000003", peerName: "Neighbor", pattern: "stripes", glow: true, position: [-5, 3, -2], occurredAt: "2026-11-11T02:29:00Z" });
+  expect(text).toContain("Neighbor"); expect(text).toContain("stripes"); expect(text).toContain("soft glow");
 });
 
 describe("getAutopilotQuotaBody", () => {

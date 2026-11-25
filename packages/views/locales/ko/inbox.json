@@ -149,6 +149,17 @@
     "view_resident": "주민 보기",
     "view_world": "세계 보기",
     "author": "작성자: {{name}}",
-    "view_automation": "자동화 보기"
+    "view_automation": "자동화 보기",
+    "fish_letter": "{{name}}의 바다 편지",
+    "fish_simulation": "지속되는 바다 시뮬레이션에서 기록한 이야기입니다. 이 세계에서 하루 최대 한 통을 받습니다.",
+    "view_fish": "이 물고기 보기",
+    "fish_west_reef": "서쪽 암초를 지나며 그곳을 기억했어요.",
+    "fish_east_reef": "동쪽 암초를 탐험했어요.",
+    "fish_upper_water": "위쪽 바닷물을 탐험했어요.",
+    "fish_deep_water": "깊은 물속을 탐험했어요.",
+    "fish_encounter": "근처를 헤엄치는 “{{name}}”을 보았어요.",
+    "fish_stripes": "몸에 줄무늬가 있었어요.",
+    "fish_spots": "몸에 반점이 있었어요.",
+    "fish_glow": "은은한 빛을 내고 있었어요."
   }
 }

@@ -50,7 +50,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
 
       - name: Install (runner tree — supplies the spec and the browser)
         run: pnpm install --frozen-lockfile

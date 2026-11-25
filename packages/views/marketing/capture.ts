@@ -54,7 +54,7 @@ if (kind === "tank") {
     while (acc >= .05) { stepFish(objects.map(o => o.state), .05, time); time += .05; acc -= .05; }
     for (const object of objects) { pose(object, dt, false, acc); object.setDetail(1, object === subject); }
     target.copy(subject.group.position); camera.position.copy(target).add(new THREE.Vector3(.3, .45, 3.4)); camera.lookAt(target);
-    waterTime.value += dt; reef.configure(false, false, camera.position); renderer.render(scene, camera); requestAnimationFrame(frame);
+    waterTime.value += dt; reef.configure(false, camera.position); renderer.render(scene, camera); requestAnimationFrame(frame);
   };
   frame(last);
 } else {

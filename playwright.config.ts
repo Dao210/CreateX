@@ -5,8 +5,7 @@ export default defineConfig({
   testDir: "./e2e",
   // The performance scenario has its own config: one worker, no retries, and a
   // running production build. It must not be swept up by the ordinary suite.
-  // Dedicated game harnesses use the config under apps/deal.
-  testIgnore: ["**/perf/**", "**/deal/**"],
+  testIgnore: ["**/perf/**"],
   timeout: 60000,
   workers: 1,
   retries: 0,

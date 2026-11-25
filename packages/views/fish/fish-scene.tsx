@@ -8,7 +8,7 @@ import { useT } from "../i18n";
 import { createReef, WATER_LEVEL } from "./reef";
 import { createSwimPose, makeFish, type FishObject } from "./fish-visual";
 
-interface Props { residents: FishSceneResident[]; selectedId?: string; onSelect?: (id: string) => void; follow?: boolean; reset?: number; paused?: boolean; lowQuality?: boolean; preview?: boolean }
+interface Props { residents: FishSceneResident[]; selectedId?: string; onSelect?: (id: string) => void; follow?: boolean; reset?: number; paused?: boolean; preview?: boolean; highQuality?: boolean }
 interface SceneAPI { update: (residents: FishSceneResident[]) => void; focus: (id: string, follow: boolean) => void; reset: () => void }
 
 function disposeObject(object: THREE.Object3D) {
@@ -34,6 +34,7 @@ export default function FishScene(props: Props) {
     try { renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: "high-performance" }); } catch { setFailed(true); return; }
     const scene = new THREE.Scene(), waterTime = { value: 0 };
     const reef = createReef(scene, waterTime);
+    renderer.shadowMap.type = THREE.PCFShadowMap;
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.6));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -136,11 +137,12 @@ export default function FishScene(props: Props) {
       let elapsed = Math.min((now - last) / 1000, 0.15); last = now;
       if (document.hidden) return;
       const cameraElapsed = elapsed;
-      const { paused, preview = false, lowQuality = false } = latest.current;
+      const { paused, preview = false, highQuality = false } = latest.current;
       if (paused) elapsed = 0;
       const densityScale = fish.size >= 32 ? 0.86 : 1;
-      const pixelRatio = Math.min(window.devicePixelRatio, lowQuality ? 1 : 1.6) * densityScale;
+      const pixelRatio = Math.min(window.devicePixelRatio, highQuality ? 2 : 1.6) * densityScale;
       if (renderer.getPixelRatio() !== pixelRatio) renderer.setPixelRatio(pixelRatio);
+      renderer.shadowMap.enabled = highQuality && !preview;
       const objects = [...fish.values()];
       if (!preview) {
         accumulator += elapsed;
@@ -178,10 +180,11 @@ export default function FishScene(props: Props) {
       controls.update();
       for (const object of objects) {
         const apparentSize = object.length / Math.max(0.1, object.group.position.distanceTo(camera.position));
-        object.setDetail(lowQuality ? 0 : apparentSize, preview || object === subject);
+        object.setDetail(apparentSize, preview || object === subject, highQuality);
       }
-      reef.configure(preview, lowQuality, camera.position);
+      reef.configure(preview, camera.position, highQuality);
       renderer.render(scene, camera); renderer.domElement.dataset.ready = "true";
+      renderer.domElement.dataset.quality = highQuality ? "high" : "standard";
       if (Math.floor(time) !== lastMetric) { lastMetric = Math.floor(time); renderer.domElement.dataset.geometries = String(renderer.info.memory.geometries); renderer.domElement.dataset.drawCalls = String(renderer.info.render.calls); }
     };
     loop(last);

@@ -792,6 +792,7 @@ func main() {
 	go heartbeatScheduler.Run(sweepCtx)
 	go runAutopilotFailureMonitor(autopilotCtx, queries, bus, envFailureMonitorConfig())
 	go (&worldinbox.Service{Pool: pool, Bus: bus}).Run(sweepCtx)
+	go (&fish.Service{Pool: pool}).RunExploration(sweepCtx)
 	go lifeService.Run(sweepCtx)
 	ctfDone := make(chan struct{})
 	go func() { defer close(ctfDone); ctfService.Run(sweepCtx) }()

@@ -248,6 +248,65 @@ test("previews and releases into the same open ocean, supports a narrow viewport
  expect((await tool(request, "fish_get_public_ocean")).total).toBe(0);
 });
 
+test.describe("high graphics", () => {
+ test.use({ deviceScaleFactor: 2 });
+ test("switches the live ocean, remembers the setting and keeps it scoped to the world", async ({ page, request }) => {
+  const errors: string[] = [];
+  page.on("pageerror", error => errors.push(error.message));
+  page.on("console", message => {
+   if (message.type() === "error" && message.text().includes("THREE.WebGLProgram")) errors.push(message.text());
+  });
+  const fish = await tool(request, "fish_save", { requestId: randomUUID(), draft: { ...catalog.examples[0], name: "High graphics preview" } });
+  const path = `/${workspace.slug}/fish?fish=${fish.id}&revision=${fish.revision}`;
+  await page.goto(path);
+  const canvas = page.getByTestId("fish-scene").locator("canvas");
+  const quality = page.getByRole("button", { name: "高画质", exact: true });
+  await expect(canvas).toHaveAttribute("data-quality", "standard", { timeout: 60_000 });
+  await expect(quality).toHaveAttribute("aria-pressed", "false");
+  await expect(page.getByRole("button", { name: "低画质", exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "暂停", exact: true }).click();
+  const liveCanvas = await canvas.elementHandle();
+  const standardWidth = await canvas.evaluate(node => node.width);
+  await page.screenshot({ path: "test-results/fish/standard-quality.png", fullPage: true });
+  await quality.click();
+  await expect(quality).toHaveAttribute("aria-pressed", "true");
+  await expect(canvas).toHaveAttribute("data-quality", "high");
+  expect(await canvas.evaluate(node => node.width)).toBeGreaterThan(standardWidth);
+  expect(await liveCanvas!.evaluate(node => node.isConnected)).toBe(true);
+  await expect(page.getByRole("button", { name: "继续", exact: true })).toBeVisible();
+  await page.screenshot({ path: "test-results/fish/high-quality.png", fullPage: true });
+  await page.evaluate(() => document.documentElement.classList.add("dark"));
+  await quality.hover();
+  await page.screenshot({ path: "test-results/fish/high-quality-dark.png", fullPage: true });
+  await page.reload();
+  await expect(quality).toHaveAttribute("aria-pressed", "true", { timeout: 60_000 });
+  await expect(canvas).toHaveAttribute("data-quality", "high");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.screenshot({ path: "test-results/fish/high-quality-mobile.png", fullPage: true });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await page.getByRole("button", { name: "全屏", exact: true }).click();
+  await expect(canvas).toHaveAttribute("data-quality", "high");
+  await page.getByRole("button", { name: "退出全屏", exact: true }).click();
+  const other = await api.createWorkspace("Fish quality isolation", `fish-quality-${run}`);
+  try {
+   await page.goto(`/${other.slug}/fish`);
+   await expect(quality).toHaveAttribute("aria-pressed", "false", { timeout: 60_000 });
+   await expect(canvas).toHaveAttribute("data-quality", "standard");
+  } finally {
+   await api.deleteWorkspace();
+   api.setWorkspaceId(workspace.id);
+   api.setWorkspaceSlug(workspace.slug);
+  }
+  await page.goto(path);
+  await expect(quality).toHaveAttribute("aria-pressed", "true", { timeout: 60_000 });
+  await quality.click();
+  await expect(canvas).toHaveAttribute("data-quality", "standard");
+  await page.reload();
+  await expect(quality).toHaveAttribute("aria-pressed", "false", { timeout: 60_000 });
+  expect(errors).toEqual([]);
+ });
+});
+
 test("fifty distinct fish remain stable throughout the soak",async({page,request},testInfo)=>{
  test.skip(process.env.FISH_SOAK !== "1", "Set FISH_SOAK=1 for the ten-minute browser soak.");
  test.setTimeout(720000);

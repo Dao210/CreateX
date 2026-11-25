@@ -26,9 +26,25 @@ describe("fish contract and ambient runtime", () => {
     expect(tip).toBeGreaterThan(0);
     expect(geometry.finFlex.some(weight => weight > 0 && weight < tip)).toBe(true);
     expect(geometry.finFlex[0]).toBe(0);
-    const distant = compileFishGeometry(spec, true);
+    const distant = compileFishGeometry(spec, "distant");
     expect(distant.positions.length).toBeLessThan(geometry.positions.length);
     expect(Math.max(...distant.finFlex)).toBe(tip);
+  });
+  it.each(FISH_EXAMPLES)("builds bounded high-detail geometry for $name without changing the design", spec => {
+    const source = structuredClone(spec);
+    const standard = compileFishGeometry(spec);
+    const high = compileFishGeometry(spec, "high");
+    expect(high.positions.length).toBeGreaterThan(standard.positions.length);
+    expect(high.positions.length / 3).toBeLessThan(10_000);
+    expect(high.positions.every(Number.isFinite)).toBe(true);
+    expect(high.indices.every(index => Number.isInteger(index) && index >= 0 && index < high.positions.length / 3)).toBe(true);
+    expect(high.colors.length).toBe(high.positions.length);
+    expect(high.finFlex.length).toBe(high.positions.length / 3);
+    expect(high.surface.length).toBe(high.positions.length);
+    expect(high.surface.every(value => Number.isFinite(value) && value >= 0 && value <= 1)).toBe(true);
+    expect(Math.max(...high.finFlex)).toBe(Math.max(...standard.finFlex));
+    expect(high).toEqual(compileFishGeometry(spec, "high"));
+    expect(spec).toEqual(source);
   });
   it("rejects invalid ordering, unknown scripts, detached and concave fins", () => {
     const spec = structuredClone(FISH_EXAMPLES[0]!);

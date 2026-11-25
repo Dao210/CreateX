@@ -2,7 +2,7 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "@auro/core/api";
 import { useQuery } from "@tanstack/react-query";
-import { Copy, Crosshair, Maximize, Minimize, Pause, Play, RotateCcw, Waves, X } from "lucide-react";
+import { Check, Copy, Crosshair, Maximize, Minimize, Pause, Play, RotateCcw, Sparkles, Waves, X } from "lucide-react";
 import { useAuthStore } from "@auro/core/auth";
 import { useCurrentWorkspace, useWorkspacePaths } from "@auro/core/paths";
 import { buildFishMCPContext, FISH_EXAMPLES, fishOceanOptions, publicFishOceanOptions, useFishActions, type FishCharacter, type FishResident, type FishSpec, type PublicFishResident } from "@auro/core/fish";
@@ -97,8 +97,8 @@ function OceanContent({ storage, workspace, userId }: { storage: StorageAdapter;
   const [follow, setFollow] = useState(false), [paused, setPaused] = useState(false);
   const [reset, setReset] = useState(0), [fullscreen, setFullscreen] = useState(false);
   const [copied, setCopied] = useState(false);
-  const preferenceKey = `fish:${workspace.id}:${userId}:quality`;
-  const [lowQuality, setLowQuality] = useState(() => storage.getItem(preferenceKey) === "low");
+  const preferenceKey = `fish:${workspace.id}:${userId}:graphics`;
+  const [highQuality, setHighQuality] = useState(() => storage.getItem(preferenceKey) === "high");
 
   useEffect(() => {
     const changed = () => {
@@ -220,7 +220,7 @@ function OceanContent({ storage, workspace, userId }: { storage: StorageAdapter;
         <Suspense fallback={<div className="fish-state" role="status">{t($ => $.loading)}</div>}>
           <Scene residents={visibleResidents} selectedId={draftResident?.id ?? selected?.id}
             onSelect={id => { if (residents.some(resident => resident.id === id)) navigate({ resident: id }); }}
-            follow={follow} reset={reset} paused={paused} lowQuality={lowQuality} />
+            follow={follow} reset={reset} paused={paused} highQuality={highQuality} />
         </Suspense>}
       {!activeQuery.isError && <>
         <div className="fish-scene-heading">
@@ -233,7 +233,11 @@ function OceanContent({ storage, workspace, userId }: { storage: StorageAdapter;
         <div className="fish-tools">
           <Button variant="ghost" size="icon-sm" aria-label={t($ => $.reset)} onClick={() => { setReset(v => v + 1); setFollow(false); }}><RotateCcw /></Button>
           <Button variant="ghost" size="icon-sm" aria-label={paused ? t($ => $.resume) : t($ => $.pause)} aria-pressed={paused} onClick={() => setPaused(v => !v)}>{paused ? <Play /> : <Pause />}</Button>
-          <Button variant={lowQuality ? "brandSubtle" : "ghost"} size="sm" aria-pressed={lowQuality} onClick={() => { setLowQuality(v => !v); storage.setItem(preferenceKey, lowQuality ? "high" : "low"); }}>{t($ => $.low_quality)}</Button>
+          <Button variant={highQuality ? "brand" : "ghost"} size="sm" aria-pressed={highQuality} title={t($ => $.high_quality_hint)} onClick={() => {
+            const next = !highQuality;
+            setHighQuality(next);
+            storage.setItem(preferenceKey, next ? "high" : "standard");
+          }}>{highQuality ? <Check /> : <Sparkles />}{t($ => $.high_quality)}</Button>
           <Button variant="ghost" size="icon-sm" aria-label={fullscreen ? t($ => $.exit_fullscreen) : t($ => $.fullscreen)} onClick={async () => {
             try { if (document.fullscreenElement) await document.exitFullscreen(); else await root.current?.requestFullscreen(); }
             catch { setError(true); }

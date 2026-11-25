@@ -121,6 +121,17 @@
     "view_resident": "查看居民",
     "view_world": "查看世界",
     "author": "作者：{{name}}",
-    "view_automation": "查看自动化"
+    "view_automation": "查看自动化",
+    "fish_letter": "「{{name}}」寄来了海洋来信",
+    "fish_simulation": "来自持续海洋模拟中的实际记录。在当前世界每天最多收到一封。",
+    "view_fish": "去看这条鱼",
+    "fish_west_reef": "我游过了西侧礁区，记住了这里的位置。",
+    "fish_east_reef": "我探索了东侧礁区。",
+    "fish_upper_water": "我游到了上层水域。",
+    "fish_deep_water": "我探索了较深的水域。",
+    "fish_encounter": "我看见「{{name}}」在附近游动。",
+    "fish_stripes": "它身上有一道道条纹。",
+    "fish_spots": "它身上有斑点。",
+    "fish_glow": "它身上泛着微光。"
   }
 }

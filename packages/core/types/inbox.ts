@@ -3,7 +3,7 @@ import type { InboxContent } from "../inbox/messages";
 
 export type InboxSeverity = "action_required" | "attention" | "info";
 
-export type InboxItemType = "creation_ready" | "character_milestone" | "world_digest" | "autopilot_paused" | "autopilot_quota_exceeded" | (string & {});
+export type InboxItemType = "creation_ready" | "character_milestone" | "world_digest" | "fish_letter" | "autopilot_paused" | "autopilot_quota_exceeded" | (string & {});
 
 /**
  * One workspace's unread inbox count in the cross-workspace summary

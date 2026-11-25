@@ -15,7 +15,7 @@ images:
     pullPolicy: IfNotPresent
   postgres:
     repository: pgvector/pgvector
-    tag: pg17
+    tag: pg18
     pullPolicy: IfNotPresent
 
 # -----------------------------------------------------------------------------

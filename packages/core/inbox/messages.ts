@@ -1,9 +1,19 @@
 import { z } from "zod";
 import type { InboxItem } from "../types/inbox";
 
+const sightingBase = {
+  position: z.tuple([z.number().min(-12).max(12), z.number().min(0.7).max(7.5), z.number().min(-8).max(8)]),
+  occurredAt: z.iso.datetime({ offset: true }),
+};
+export const FishSightingSchema = z.discriminatedUnion("kind", [
+  z.object({ ...sightingBase, kind: z.literal("discovery"), place: z.enum(["west_reef", "east_reef", "upper_water", "deep_water"]) }),
+  z.object({ ...sightingBase, kind: z.literal("encounter"), peerId: z.uuid(), peerName: z.string().min(1).max(160), pattern: z.enum(["solid", "stripes", "spots"]), glow: z.boolean().default(false) }),
+]);
+export type FishSighting = z.infer<typeof FishSightingSchema>;
+
 export const InboxEntrySchema = z.object({
   id: z.string().uuid(),
-  kind: z.enum(["tank_created", "tank_updated", "tank_level_up", "resident_goal_reached"]),
+  kind: z.enum(["tank_created", "tank_updated", "tank_level_up", "resident_goal_reached", "fish_letter"]),
   subjectId: z.string().uuid(),
   name: z.string().min(1).max(160),
   authorName: z.string().max(160).optional(),
@@ -13,10 +23,12 @@ export const InboxEntrySchema = z.object({
   goalKind: z.enum(["wood", "coins"]).optional(),
   target: z.number().int().positive().optional(),
   occurredAt: z.iso.datetime({ offset: true }),
+  sightings: z.array(FishSightingSchema).min(1).max(3).optional(),
 }).superRefine((entry, ctx) => {
   if ((entry.kind === "tank_created" || entry.kind === "tank_updated") && !entry.revision) ctx.addIssue({ code: "custom", message: "Missing creation revision" });
   if (entry.kind === "tank_level_up" && !entry.level) ctx.addIssue({ code: "custom", message: "Missing growth level" });
   if (entry.kind === "resident_goal_reached" && (!entry.goalKind || !entry.target)) ctx.addIssue({ code: "custom", message: "Missing resident goal" });
+  if (entry.kind === "fish_letter" && (!entry.sightings || !entry.revision)) ctx.addIssue({ code: "custom", message: "Missing fish sightings or resident revision" });
 });
 
 export const InboxContentSchema = z.object({
@@ -38,8 +50,12 @@ export type InboxCategory = "all" | "creations" | "world" | "system";
 
 export function inboxCategory(item: Pick<InboxItem, "type">): Exclude<InboxCategory, "all"> {
   if (item.type === "world_digest") return "world";
-  if (item.type === "creation_ready" || item.type === "character_milestone") return "creations";
+  if (item.type === "creation_ready" || item.type === "character_milestone" || item.type === "fish_letter") return "creations";
   return "system";
+}
+
+export function inboxEntryGame(entry: Pick<InboxEntry, "kind">): "fish" | "life" | "tanks" {
+  return entry.kind === "fish_letter" ? "fish" : entry.kind === "resident_goal_reached" ? "life" : "tanks";
 }
 
 export function parseInboxCategory(value: string | null): InboxCategory {

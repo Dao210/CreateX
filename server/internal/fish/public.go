@@ -238,6 +238,9 @@ func (s *Service) recallPublic(ctx context.Context, a Actor, in RecallInput) (js
 		if count != 1 {
 			return nil, problem("resident_revision_conflict", 409)
 		}
+		if err := q.DeleteFishExplorationState(ctx, id); err != nil {
+			return nil, err
+		}
 		return map[string]any{"recalled": true, "residentId": in.ResidentID}, nil
 	})
 }

@@ -1,4 +1,4 @@
-const publicRoutes = new Set(["", "about", "login", "signup", "onboarding", "join", "privacy", "terms", "licensing", "deal"]);
+const publicRoutes = new Set(["", "about", "login", "signup", "onboarding", "join", "privacy", "terms", "licensing"]);
 const workspaceRoutes = new Set(["tanks", "siege", "chat", "me", "settings", "agents", "skills", "runtimes", "inbox", "usage", "autopilots"]);
 
 /** Keep route categories, never workspace slugs, object IDs, query strings or fragments. */

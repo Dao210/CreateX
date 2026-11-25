@@ -23,9 +23,9 @@ the next version. The loop we are building toward is:
 
 **Create → Play → Observe → Improve → Leave a mark on the world.**
 
-The repository currently contains playable defense games, a negotiation game,
-and an autonomous world prototype. A shared, evolving civilization is the
-longer-term direction; creations do not yet travel freely between these games.
+The repository currently contains playable defense games and an autonomous
+world prototype. A shared, evolving civilization is the longer-term direction;
+creations do not yet travel freely between these games.
 
 ## What you can explore today
 
@@ -35,7 +35,6 @@ longer-term direction; creations do not yet travel freely between these games.
 | **Tank Defense** | Build a tank from budgeted parts, then drive and shoot through campaign, blitz, or survival modes. | `/{workspaceSlug}/tanks`. Web/Desktop; keyboard and browser touch controls. External agents can create tanks through MCP. |
 | **Personal collection** | Revisit your Siege blueprints, Tank characters, and personal progress. | `/{workspaceSlug}/me`. Scoped to your account and workspace; personal records are client-reported. |
 | **REACH world preview** | Watch autonomous entities compete for supplies, fight, and leave wrecks. Submit creations through its HTTP API. | Public homepage preview plus a separate experimental world service. The homepage labels live, preview, and disconnected states. The browser creation flow is still pending. |
-| **DEAL** | Negotiate with a debt collector using conversation, evidence, and objects in the room. | Standalone `/deal`, started separately. Supports an explicitly selected rule practice mode or a configured language model. |
 
 For Siege and Tanks, sign in at the local Web address, complete onboarding, and
 open the game from the workspace sidebar. Ordinary defense gameplay needs no
@@ -111,23 +110,6 @@ its `.env.worktree` with `make worktree-env`; do not copy the main checkout's
 `.env`. See [Make commands](docs/make-commands.md) and [scripts/dev-env.sh](scripts/dev-env.sh)
 for environment management.
 
-### DEAL: standalone practice
-
-DEAL needs Node.js, pnpm, and Go, and runs without a workspace account or
-PostgreSQL:
-
-```bash
-pnpm install --frozen-lockfile --filter @auro/deal...
-DEAL_MODEL_MODE=scripted make up C=deal
-make status C=deal
-make down C=deal
-```
-
-The default Web address is `http://127.0.0.1:13106/deal/`. Sessions and logs live
-in `.deal/`. For model-backed play, configure `DEAL_MODEL_MODE=llm` and
-`DEAL_LLM_*` using [.env.example](.env.example), then restart DEAL. Model failure
-does not silently switch to rule practice. See [DEAL setup and delivery](docs/deal-delivery.md).
-
 ### REACH: experimental world service
 
 REACH currently has its own single-instance, file-backed service. It is not
@@ -159,7 +141,6 @@ for endpoints and remaining work, including season archival and creator pages.
 | `packages/views` | Shared game screens, Canvas rendering, physics, input, and audio. |
 | `packages/ui` | Shared UI primitives and semantic styles. |
 | `server/internal/siege`, `tanks`, `gameprogress` | Main application game APIs, saved creations, and personal progress. |
-| `apps/deal`, `server/internal/deal` | Standalone negotiation game. |
 | `server/internal/reach`, `server/cmd/reach` | Experimental autonomous world engine, HTTP API, and service. |
 | `apps/mobile` | Independent Expo/React Native client; game integration is pending. |
 
@@ -187,7 +168,6 @@ application:
 pnpm exec playwright test e2e/siege e2e/tanks.spec.ts e2e/tanks-mcp.spec.ts
 ```
 
-DEAL has its own [checks and Playwright configuration](docs/deal-delivery.md).
 REACH's Go tests run with `(cd server && go test ./internal/reach)`.
 Root frontend checks exclude native mobile; see its [README](apps/mobile/README.md)
 and [agent instructions](apps/mobile/AGENTS.md).
@@ -202,7 +182,6 @@ and [agent instructions](apps/mobile/AGENTS.md).
 | Tank rules and controls | [Tank Defense](docs/tank-defense.md) |
 | Agent-created tanks | [Tank MCP](docs/tank-character-mcp.md) · [Client setup](docs/codex-mcp-deployment.md) |
 | Autonomous world direction | [REACH PRD and prototype status](docs/reach-world-prd.md) |
-| Negotiation game | [DEAL PRD](docs/deal-prd.md) · [Setup and delivery](docs/deal-delivery.md) |
 | Proposed general character protocol | [Design specification](docs/character-game-api.md) |
 | Repository contribution rules | [AGENTS.md](AGENTS.md) |
 

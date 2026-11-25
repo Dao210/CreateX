@@ -46,12 +46,6 @@
 //     answered capped at 3000 runes (2000 head + 1000 tail) and each older
 //     message at 800.
 //
-//   - DEAL game understanding and constrained dialogue selection —
-//     server/internal/deal/model.go, configured by server/cmd/deal.
-//     Sends the player's text and up to four recent public game turns for
-//     extraction, or the player's text and authorized lines for selection.
-//     Internal secrets, psychology and ownership credentials are excluded.
-//
 //   - Doodle Siege weapon interpretation — server/internal/siege/recognition.go.
 //     Sends a bounded PNG derived from player vector strokes, their IDs and
 //     point counts, bounds and endpoints, and a constrained component schema.
@@ -79,9 +73,7 @@
 // (TestUnconfiguredClientMakesZeroUpstreamRequests). An operator who must not
 // let THIS layer send chat content leaves AURO_LLM_API_KEY and
 // AURO_LLM_BASE_URL empty; the product stays whole (client-derived chat
-// titles, no follow-up question buttons). The independent DEAL process uses
-// its own configuration and reports an unavailable game when unconfigured;
-// scripted practice is explicitly selected, never an automatic fallback.
+// titles, no follow-up question buttons).
 //
 // The wrapper is intentionally small:
 //

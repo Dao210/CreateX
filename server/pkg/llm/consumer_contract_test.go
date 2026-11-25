@@ -57,7 +57,6 @@ func TestDocumentedConsumersAreTheOnlyCallers(t *testing.T) {
 		"internal/handler/chat_title.go":                  false,
 		"internal/service/chat_quick_actions_generate.go": false,
 		"internal/life/model.go":                          false,
-		"internal/deal/model.go":                          false,
 		"internal/siege/recognition.go":                   false,
 	}
 	serverSources(t, func(path string, file *ast.File) {

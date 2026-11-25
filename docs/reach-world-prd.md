@@ -21,12 +21,12 @@
 
 ## 1. 背景与问题
 
-现在的落地页是标准的 SaaS 三件套：Hero 主张、功能三栏、开源区块、FAQ。它解释了产品，但不产生**停留**，也不产生**回来的理由**。仓库里已经有 DEAL（AI 谈判 Roguelike）和 Doodle Siege（画武器对战）两个可玩的独立游戏，但它们挂在 `/deal`、`/siege` 两个孤岛上，和首页没有关系，访客要先理解产品，才会想起来「哦，还有游戏」。
+现在的落地页是标准的 SaaS 三件套：Hero 主张、功能三栏、开源区块、FAQ。它解释了产品，但不产生**停留**，也不产生**回来的理由**。仓库里已经有 Doodle Siege（画武器对战），但它挂在 `/siege` 孤岛上，和首页没有关系，访客要先理解产品，才会想起来「哦，还有游戏」。
 
 问题可以归成三条：
 
 1. **首页没有可看的东西。** 访客的判断窗口只有几秒，静态截图给不出「现在发生了什么」。
-2. **游戏与产品叙事脱节。** 两个游戏的入口藏在导航里，无法承担拉新。
+2. **游戏与产品叙事脱节。** 游戏入口藏在导航里，无法承担拉新。
 3. **创作没有出口。** 用户画了一个武器，只能在那一局里用；Agent 生成一个角色，没有地方可以送去跑。
 
 REACH 要解决的不是「再做一个游戏」，而是**给已有的游戏内核加一个持续存在的世界，并让这个世界本身成为首页内容**。
@@ -51,7 +51,7 @@ REACH 要解决的不是「再做一个游戏」，而是**给已有的游戏内
 - 不做用户自定义代码或脚本上传：一切行为由声明式参数表达，服务端编译。
 - 不做经济系统/付费道具：第一版没有内购，避免与营销页的「免费观看」冲突。
 - 不做 3D：世界窗口是 2D 确定性渲染，包体与首屏优先。
-- 不接管 DEAL / Siege 的既有玩法：它们是世界里的**场景**，不是被替换。
+- 不接管 Siege 的既有玩法：它是世界里的**场景**，不是被替换。
 
 ---
 
@@ -113,7 +113,7 @@ REACH 要解决的不是「再做一个游戏」，而是**给已有的游戏内
 | 类型 | 谁来做 | 表达方式 | 复用 |
 | --- | --- | --- | --- |
 | **Weapon（武器）** | 人画、或 Agent 生成 | 结构化参数（形态 + 尺寸 + 材质 + 一个特性） | 复用 Siege 的几何编译器与校验 |
-| **Character（角色）** | Agent 生成、或人选模板改造 | 底盘 + 装备（1 武器 + 1 护具）+ 行为策略 + 一句台词 | 复用 Siege 的 blueprint 与 DEAL 的结算词汇 |
+| **Character（角色）** | Agent 生成、或人选模板改造 | 底盘 + 装备（1 武器 + 1 护具）+ 行为策略 + 一句台词 | 复用 Siege 的 blueprint 与结算词汇 |
 
 **为什么武器不用「画」而用「参数」：** LLM 不擅长生成 4096 网格的笔迹，但极擅长填参数。对外接口只接受参数化描述，几何由服务端确定性编译 —— 人画的路径仍然走 Siege，最终也编译成同一份 `WeaponSpec`。
 
@@ -287,7 +287,7 @@ curl -sX POST https://example.com/api/reach/entities \
 | `/developers/reach` | 接口文档 | well-known、schema、三条 curl、tool 定义 |
 | `/world/seasons/[id]` | 归档赛季 | 名人堂与季末结算 |
 
-`/deal`、`/siege` 保留原路径，在导航中降为「世界里的场景」，从 `/world` 交叉链接。
+`/siege` 保留原路径，在导航中降为「世界里的场景」，从 `/world` 交叉链接。
 
 ### 7.2 首页结构（从上到下）
 
@@ -356,7 +356,7 @@ curl -sX POST https://example.com/api/reach/entities \
 | `Submission` | `idempotencyKey`, `payloadHash`, `entityId`, `diagnostics` | 幂等与审计 |
 | `Lineage` | `childId`, `parentId`, `kind` | 拾取改造的血缘链 |
 
-存储：沿用现有 PostgreSQL（世界数据与平台数据同库、不同 schema）；`BeatSnapshot` 的 `payloadRef` 指向对象存储。DEAL / Siege 的单实例文件存储不动。
+存储：沿用现有 PostgreSQL（世界数据与平台数据同库、不同 schema）；`BeatSnapshot` 的 `payloadRef` 指向对象存储。
 
 ---
 
@@ -413,7 +413,7 @@ M0–M2 可并行两路（引擎 / 前端壳），M3 依赖 M0，M4 依赖 M3。
 | 结算成本失控 | 实体数增长导致账单线性上涨 | 按 beat 批量 + 只保留 720 beat 全量 + 季末冷存 |
 | 内容审核漏网 | 台词进首页播报造成事故 | 播报只输出服务端模板生成文本，用户 `voice` 需通过审核才可入播报；未过审则显示占位 |
 | 营销页「游戏化」伤及产品叙事 | 访客以为这是游戏公司 | 页脚与 `/about` 保留平台定位；接口段本身就是产品能力的证明 |
-| 与 DEAL / Siege 口径漂移 | 三处规则描述不一致 | 规则版本号 `rulesVersion` 单一来源，页面从接口读，不硬编码 |
+| 与 Siege 口径漂移 | 两处规则描述不一致 | 规则版本号 `rulesVersion` 单一来源，页面从接口读，不硬编码 |
 
 **开放问题（需产品决策，不阻塞 M0）：**
 
@@ -428,14 +428,13 @@ M0–M2 可并行两路（引擎 / 前端壳），M3 依赖 M0，M4 依赖 M3。
 | 需求 | 复用 | 需要新增 |
 | --- | --- | --- |
 | 武器几何编译 | `server/internal/siege`（`Spec`/`Drawing` 校验、确定性编译、`RulesVersion` 模式） | 参数化入口 `weaponParams → Drawing`，对外不暴露画笔迹 |
-| 回合结算与叙事 | `server/internal/deal`（回合、心理学向量、`Receipt` 回执模式） | 把「对话回合」抽象为 beat 内的决策步 |
-| HTTP 层 | 两个游戏的 `http.go`（owner cookie、Origin 校验、`problem()` 错误体、限流窗口） | 世界级 `state`/`feed`，以及跨实体的队列 |
+| HTTP 层 | 现有游戏的 `http.go`（owner cookie、Origin 校验、`problem()` 错误体、限流窗口） | 世界级 `state`/`feed`，以及跨实体的队列 |
 | 实体档案与分享 | `apps/web/app/(landing)/usecases/[slug]` 的动态路由与 metadata 写法 | 动态 OG 图 |
 | 首页组件 | `apps/web/features/landing/components/*` 的 section 拆分方式 | `world-window`、`chronicle-feed` 两个新组件 |
 | i18n | `features/landing/i18n/{en,zh,ja,ko}.ts` 的字典工厂 | 世界相关 key 一组，四语同步；未提供语言的 locale 回落 en |
 | 校验测试 | `packages/core/siege` 的纯函数测试风格 | schema 边界用例（点数、对比度、闭集外值） |
 
-**边界提醒：** 世界内核属于新领域 `server/internal/reach`，不复用 `deal`/`siege` 的 session 模型 —— 那两个是「一局」，世界是「一直」。共用的只有编译、校验与 HTTP 卫生习惯。
+**边界提醒：** 世界内核属于新领域 `server/internal/reach`，不复用 `siege` 的 session 模型 —— Siege 是「一局」，世界是「一直」。共用的只有编译、校验与 HTTP 卫生习惯。
 
 ---
 

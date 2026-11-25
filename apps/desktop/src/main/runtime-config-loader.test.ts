@@ -47,9 +47,9 @@ describe("loadRuntimeConfig", () => {
       ok: true,
       config: {
         schemaVersion: 1,
-        apiUrl: "https://api.auro.ai",
-        wsUrl: "wss://api.auro.ai/ws",
-        appUrl: "https://auro.ai",
+        apiUrl: "https://weavea.world",
+        wsUrl: "wss://weavea.world/ws",
+        appUrl: "https://weavea.world",
       },
     });
   });

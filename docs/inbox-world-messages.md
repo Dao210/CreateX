@@ -12,6 +12,7 @@ categories and opens game destinations on the Web because it has no native games
 | Saved Tank character, manual or MCP | MCP saves/revisions notify the owner | All members see the saved creation/revision |
 | Tank experience crosses a level | Owner receives a growth milestone | All members see the milestone |
 | Resident reaches its existing wood/coin goal | No personal ownership is implied | Members of the simulation's bound world see the goal |
+| Published Fish records a new exploration sighting | Owner receives at most one ocean letter per world/Shanghai day | Excluded; sightings are private |
 | Automation failure protection or quota rejection | Existing responsible-human routing | Excluded |
 
 Saved Tanks are already world-readable through their game API. Unsaved drafts,
@@ -20,6 +21,15 @@ not become public. Tank milestones retain their meaning as client-reported
 personal play, not verified competition. Resident goals come from authoritative
 simulation resource settlement. Ordinary resident actions do not create inbox
 messages. No LLM or product-agent execution is added.
+
+Fish letters contain only committed discoveries and proximity encounters from the
+Go exploration simulation, including observation times and frozen public neighbor
+names/appearance. They are shown under My creations, link to the reporting fish,
+and follow creation-update notification preferences and current Fish availability.
+Recall and membership removal suppress delayed delivery; historical letters stay
+readable. Both source generation and deterministic daily inbox identities bound
+delivery, including after outages. Fish facts are explicitly excluded from every
+world-digest window and summary read. See [Fish](fish.md#持续探索与海洋来信).
 
 REACH remains an independent experimental world with separate ownership. It is
 not included until a supported account/world association exists. This does not

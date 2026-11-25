@@ -1,7 +1,7 @@
 "use client";
 
 import type { InboxItem } from "@auro/core/types";
-import { inboxContent } from "@auro/core/inbox/messages";
+import { inboxContent, inboxEntryGame, type InboxEntry } from "@auro/core/inbox/messages";
 import { useWorldGames } from "@auro/core/admin";
 import { useWorkspaceId } from "@auro/core/hooks";
 import { useWorkspacePaths } from "@auro/core/paths";
@@ -19,17 +19,22 @@ export function InboxMessageContent({ item }: { item: InboxItem }) {
   const content = inboxContent(item);
   if (!content) return item.body ? <p className="mt-4 whitespace-pre-wrap text-body">{item.body}</p> : null;
   const available = (id: string) => games.data?.games.find(game => game.gameId === id)?.available === true;
-  const hasOpenGame = content.entries.some(entry => available(entry.kind === "resident_goal_reached" ? "life" : "tanks"));
+  const hasOpenGame = content.entries.some(entry => available(inboxEntryGame(entry)));
+  const destination = (entry: InboxEntry) => entry.kind === "fish_letter" ? `${paths.fish()}?resident=${encodeURIComponent(entry.subjectId)}` : entry.kind === "resident_goal_reached" ? `${paths.life()}?resident=${encodeURIComponent(entry.subjectId)}` : `${paths.tanks()}?character=${encodeURIComponent(entry.subjectId)}`;
   const digest = item.type === "world_digest";
   return <div className="mt-5 space-y-5">
     {content.windowStart && content.windowEnd && <p className="text-caption text-muted-foreground">{t($ => $.messages.window, { start: copy.time(content.windowStart), end: copy.time(content.windowEnd) })}</p>}
     {digest && <p className="text-body font-medium leading-relaxed">{copy.summary(content)}</p>}
+    {item.type === "fish_letter" && <p className="text-caption text-muted-foreground">{t($ => $.messages.fish_simulation)}</p>}
     <ul className="space-y-2">
       {content.entries.map(entry => <li key={entry.id} className="rounded-lg bg-muted/40 p-4">
-        <p className="break-words text-body font-medium">{copy.entryText(entry)}</p>
+        {entry.kind === "fish_letter" ? <ul className="space-y-4">{entry.sightings?.map((sighting, index) => <li key={index}>
+          <p className="break-words text-body leading-relaxed">{copy.sightingText(sighting)}</p>
+          <time dateTime={sighting.occurredAt} className="mt-1 block text-caption text-muted-foreground">{copy.time(sighting.occurredAt)}</time>
+        </li>)}</ul> : <p className="break-words text-body font-medium">{copy.entryText(entry)}</p>}
         {digest && entry.authorName && <p className="mt-1 break-words text-caption text-muted-foreground">{t($ => $.messages.author, { name: entry.authorName })}</p>}
-        <time dateTime={entry.occurredAt} className="mt-1 block text-caption text-muted-foreground">{copy.time(entry.occurredAt)}</time>
-        {available(entry.kind === "resident_goal_reached" ? "life" : "tanks") && <AppLink href={entry.kind === "resident_goal_reached" ? `${paths.life()}?resident=${encodeURIComponent(entry.subjectId)}` : `${paths.tanks()}?character=${encodeURIComponent(entry.subjectId)}`} className="mt-3 inline-flex items-center gap-1 rounded-sm text-label text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-ring">{entry.kind === "resident_goal_reached" ? t($ => $.messages.view_resident) : t($ => $.messages.view_character)}<ArrowUpRight className="size-3.5" /></AppLink>}
+        {entry.kind !== "fish_letter" && <time dateTime={entry.occurredAt} className="mt-1 block text-caption text-muted-foreground">{copy.time(entry.occurredAt)}</time>}
+        {available(inboxEntryGame(entry)) && <AppLink href={destination(entry)} className="mt-3 inline-flex items-center gap-1 rounded-sm text-label text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-ring">{entry.kind === "fish_letter" ? t($ => $.messages.view_fish) : entry.kind === "resident_goal_reached" ? t($ => $.messages.view_resident) : t($ => $.messages.view_character)}<ArrowUpRight className="size-3.5" /></AppLink>}
       </li>)}
     </ul>
     {content.totalEntries > content.entries.length && <p className="text-caption text-muted-foreground">{t($ => $.messages.more, { count: content.totalEntries - content.entries.length })}</p>}

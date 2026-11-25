@@ -151,6 +151,17 @@
     "view_resident": "Voir l’habitant",
     "view_world": "Voir le monde",
     "author": "Par {{name}}",
-    "view_automation": "Voir l’automatisation"
+    "view_automation": "Voir l’automatisation",
+    "fish_letter": "Une lettre de {{name}}",
+    "fish_simulation": "Observations enregistrées dans la simulation continue de l’océan. Une lettre par jour au maximum dans ce monde.",
+    "view_fish": "Voir ce poisson",
+    "fish_west_reef": "Je suis passé près du récif ouest et j’ai mémorisé cet endroit.",
+    "fish_east_reef": "J’ai exploré le récif est.",
+    "fish_upper_water": "J’ai exploré les eaux de surface.",
+    "fish_deep_water": "Je me suis aventuré dans les eaux plus profondes.",
+    "fish_encounter": "J’ai aperçu « {{name}} » qui nageait à proximité.",
+    "fish_stripes": "Son corps portait des rayures.",
+    "fish_spots": "Son corps était couvert de taches.",
+    "fish_glow": "Il émettait une douce lueur."
   }
 }

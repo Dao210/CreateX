@@ -11,7 +11,6 @@
   "exports": {
     "./agent-life": "./agent-life/index.ts",
     "./agent-life/queries": "./agent-life/queries.ts",
-    "./deal": "./deal/index.ts",
     ".": "./index.ts",
     "./markdown": "./markdown/index.ts",
     "./types": "./types/index.ts",

@@ -7,5 +7,5 @@ export function isSystemInboxItem(item: Pick<InboxItem, "type">): boolean {
 
 /** Retired task notifications stay excluded, including issue-less outcomes. */
 export function isVisibleInboxItem(item: Pick<InboxItem, "type">): boolean {
-  return (isSystemInboxItem(item) || item.type === "creation_ready" || item.type === "character_milestone" || item.type === "world_digest");
+  return (isSystemInboxItem(item) || item.type === "creation_ready" || item.type === "character_milestone" || item.type === "world_digest" || item.type === "fish_letter");
 }

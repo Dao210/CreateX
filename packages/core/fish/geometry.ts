@@ -1,6 +1,7 @@
 import type { FishSpec } from "./schema";
 
-export interface FishGeometry { positions: number[]; colors: number[]; indices: number[]; finFlex: number[] }
+export type FishGeometryDetail = "distant" | "standard" | "high";
+export interface FishGeometry { positions: number[]; colors: number[]; indices: number[]; finFlex: number[]; surface: number[] }
 export function bodySection(spec: FishSpec, u: number) {
   const sections = spec.body.sections;
   let i = 1;
@@ -11,15 +12,17 @@ export function bodySection(spec: FishSpec, u: number) {
 }
 function rgb(hex: string) { const n = Number.parseInt(hex.slice(1), 16); return [(n >> 16) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255]; }
 /** Plain arrays keep the compiler independent of the rendering library. Forward is +X. */
-export function compileFishGeometry(spec: FishSpec, distant = false): FishGeometry {
-  const g: FishGeometry = { positions: [], colors: [], indices: [], finFlex: [] };
-  const length = spec.body.lengthMm / 1000, rings = distant ? 18 : 32, sides = distant ? 12 : 16;
+export function compileFishGeometry(spec: FishSpec, detail: FishGeometryDetail = "standard"): FishGeometry {
+  const distant = detail === "distant", high = detail === "high";
+  const g: FishGeometry = { positions: [], colors: [], indices: [], finFlex: [], surface: [] };
+  const length = spec.body.lengthMm / 1000, rings = distant ? 18 : high ? 64 : 32, sides = distant ? 12 : high ? 32 : 16;
   const base = rgb(spec.appearance.body), belly = rgb(spec.appearance.belly), accent = rgb(spec.appearance.accent);
   for (let i = 0; i <= rings; i++) {
     const u = i / rings, s = bodySection(spec, u * 1000);
     for (let j = 0; j <= sides; j++) {
       const a = j / sides * Math.PI * 2, y = Math.cos(a), z = Math.sin(a);
       g.positions.push((0.5 - u) * length, (s.offset + y * s.height) * length, z * s.width * length);
+      g.surface.push(u, j / sides, 1);
       const pattern = spec.appearance.pattern === "stripes" ? Math.sin(u * 55) > 0.6 : spec.appearance.pattern === "spots" && Math.sin(u * 43 + a * 3) * Math.cos(a * 7 - u * 19) > 0.55;
       const c = pattern ? accent : y < -0.2 ? belly : base;
       g.colors.push(...c);
@@ -33,7 +36,7 @@ export function compileFishGeometry(spec: FishSpec, distant = false): FishGeomet
   }
   const polygon = (points: number[][]) => { const start = g.positions.length / 3; for (const p of points) { g.positions.push(...p); g.colors.push(...accent); } for (let i = 1; i < points.length - 1; i++) g.indices.push(start, start + i, start + i + 1); };
   const flexFin = (points: number[][], flex: number[]) => {
-    const divisions = distant ? 2 : 4;
+    const divisions = distant ? 2 : high ? 8 : 4;
     const rowStart = (row: number) => row * (row + 1) / 2;
     for (let i = 1; i < points.length - 1; i++) {
       const start = g.positions.length / 3;
@@ -62,7 +65,7 @@ export function compileFishGeometry(spec: FishSpec, distant = false): FishGeomet
     });
     const lateral = fin.side === "left" || fin.side === "right";
     const flex = fin.outline.map(p => lateral ? Math.max(0, p.y) / 1000 : 0);
-    if (lateral && spec.motion.style === "fin-glide") {
+    if (high || (lateral && spec.motion.style === "fin-glide")) {
       flexFin(points, flex);
     } else {
       polygon(points);
@@ -71,10 +74,13 @@ export function compileFishGeometry(spec: FishSpec, distant = false): FishGeomet
   }
   const tip = bodySection(spec, 1000), tailX = -0.5 * length, tailY = tip.offset * length, tailLength = spec.tail.length / 1000 * length, spread = spec.tail.spread / 1000 * length;
   // Separate lobes allow a concave fork without fan-triangulating a concave polygon.
-  for (const sign of [-1, 1]) polygon([[tailX, tailY, 0], [tailX - tailLength, tailY + sign * spread, 0], [tailX - tailLength * (1 - spec.tail.fork / 1000), tailY, 0]]);
+  for (const sign of [-1, 1]) {
+    const points = [[tailX, tailY, 0], [tailX - tailLength, tailY + sign * spread, 0], [tailX - tailLength * (1 - spec.tail.fork / 1000), tailY, 0]];
+    if (high) flexFin(points, [0, 0, 0]); else polygon(points);
+  }
   const eyeSection = bodySection(spec, spec.eyes.at), eyeSize = length * spec.eyes.size / 1000;
   const sphere = (cx: number, cy: number, cz: number, radius: number, color: number[]) => {
-    const start = g.positions.length / 3, rows = distant ? 4 : 6, columns = distant ? 6 : 8;
+    const start = g.positions.length / 3, rows = distant ? 4 : high ? 10 : 6, columns = distant ? 6 : high ? 16 : 8;
     for (let i = 0; i <= rows; i++) for (let j = 0; j <= columns; j++) {
       const latitude = i / rows * Math.PI, longitude = j / columns * Math.PI * 2;
       g.positions.push(cx + Math.sin(latitude) * Math.cos(longitude) * radius, cy + Math.cos(latitude) * radius, cz + Math.sin(latitude) * Math.sin(longitude) * radius); g.colors.push(...color);
@@ -86,5 +92,6 @@ export function compileFishGeometry(spec: FishSpec, distant = false): FishGeomet
     sphere(x, y, z, eyeSize, rgb("#F8F1D8")); sphere(x + eyeSize * 0.25, y, z + sign * eyeSize * 0.8, eyeSize * 0.53, rgb("#112D35"));
   }
   g.finFlex.push(...Array(g.positions.length / 3 - g.finFlex.length).fill(0));
+  g.surface.push(...Array(g.positions.length - g.surface.length).fill(0));
   return g;
 }

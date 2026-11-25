@@ -26,7 +26,6 @@
       "description": "`admin` owns the global administration console at `/admin`, including games and MCP modules. `auro` is reserved as the brand name to block impersonation workspaces. `www`, `new`, `home`, `homepage`, `dashboard` are confusables or likely-future global landing/entry routes; `homepage` matches the existing `/homepage` landing variant in apps/web.",
       "slugs": [
         "api",
-        "deal",
         "siege",
         "ocean",
         "admin",

@@ -43,7 +43,7 @@ func fishDB(t *testing.T) (*Service, *testutil.Fixture, Actor) {
 		t.Fatal(e)
 	}
 	t.Cleanup(pool.Close)
-	for _, table := range []string{"user", "workspace", "member", "fish_character", "fish_revision", "fish_ocean", "fish_resident", "fish_request", "fish_publication"} {
+	for _, table := range []string{"user", "workspace", "member", "fish_character", "fish_revision", "fish_ocean", "fish_resident", "fish_request", "fish_publication", "fish_exploration_state", "fish_exploration_clock", "world_inbox_event", "inbox_item", "notification_preference", "game_policy", "game_world_override"} {
 		name := pgx.Identifier{table}.Sanitize()
 		if _, e = pool.Exec(ctx, "CREATE TABLE "+name+" (LIKE public."+name+" INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES)"); e != nil {
 			t.Fatal(e)

@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/auro-ai/auro/server/internal/events"
@@ -22,17 +23,30 @@ import (
 )
 
 type Entry struct {
-	ID         string    `json:"id"`
-	Kind       string    `json:"kind"`
-	SubjectID  string    `json:"subjectId"`
-	Name       string    `json:"name"`
-	AuthorName string    `json:"authorName,omitempty"`
-	Revision   int       `json:"revision,omitempty"`
-	Level      int       `json:"level,omitempty"`
-	Origin     string    `json:"origin,omitempty"`
-	GoalKind   string    `json:"goalKind,omitempty"`
-	Target     int       `json:"target,omitempty"`
-	OccurredAt time.Time `json:"occurredAt"`
+	ID         string         `json:"id"`
+	Kind       string         `json:"kind"`
+	SubjectID  string         `json:"subjectId"`
+	Name       string         `json:"name"`
+	AuthorName string         `json:"authorName,omitempty"`
+	Revision   int            `json:"revision,omitempty"`
+	Level      int            `json:"level,omitempty"`
+	Origin     string         `json:"origin,omitempty"`
+	GoalKind   string         `json:"goalKind,omitempty"`
+	Target     int            `json:"target,omitempty"`
+	OccurredAt time.Time      `json:"occurredAt"`
+	Sightings  []FishSighting `json:"sightings,omitempty"`
+}
+
+// FishSighting is a committed simulation observation, never client telemetry.
+type FishSighting struct {
+	Kind       string     `json:"kind"`
+	Place      string     `json:"place,omitempty"`
+	PeerID     string     `json:"peerId,omitempty"`
+	PeerName   string     `json:"peerName,omitempty"`
+	Pattern    string     `json:"pattern,omitempty"`
+	Glow       bool       `json:"glow,omitempty"`
+	Position   [3]float64 `json:"position"`
+	OccurredAt time.Time  `json:"occurredAt"`
 }
 
 type Totals struct {
@@ -56,7 +70,7 @@ func Record(ctx context.Context, q *db.Queries, workspace, actor, subject pgtype
 	if err := q.LockWorldInboxWrites(ctx, util.UUIDToString(workspace)); err != nil {
 		return err
 	}
-	entry.ID = uuid.NewSHA1(uuid.NameSpaceOID, []byte("world-event/"+util.UUIDToString(workspace)+"/"+key)).String()
+	entry.ID = FactID(util.UUIDToString(workspace), key)
 	entry.SubjectID, entry.Kind = util.UUIDToString(subject), kind
 	if actor.Valid {
 		user, err := q.GetUser(ctx, actor)
@@ -74,6 +88,14 @@ func Record(ctx context.Context, q *db.Queries, workspace, actor, subject pgtype
 		return err
 	}
 	return q.RecordWorldInboxEvent(ctx, db.RecordWorldInboxEventParams{ID: id, WorkspaceID: workspace, ActorID: actor, SubjectID: subject, Kind: kind, Content: raw})
+}
+
+func FactID(workspace, key string) string {
+	return uuid.NewSHA1(uuid.NameSpaceOID, []byte("world-event/"+workspace+"/"+key)).String()
+}
+
+func FishLetterDay(now time.Time) string {
+	return now.In(time.FixedZone("Asia/Shanghai", 8*60*60)).Format("2006-01-02")
 }
 
 type Service struct {
@@ -106,6 +128,7 @@ type fact struct {
 }
 type message struct {
 	ID, Workspace, Recipient, Actor, Type, Title string
+	Body                                         string
 	Content                                      Content
 	At                                           time.Time
 }
@@ -119,7 +142,7 @@ func (s *Service) Process(ctx context.Context, now time.Time) error {
 	}
 	defer tx.Rollback(ctx)
 	var locked bool
-	if err = tx.QueryRow(ctx, "SELECT pg_try_advisory_xact_lock(19646,1)").Scan(&locked); err != nil || !locked {
+	if err = tx.QueryRow(ctx, "SELECT pg_try_advisory_xact_lock(19646,hashtext(current_schema()))").Scan(&locked); err != nil || !locked {
 		return err
 	}
 	rows, err := tx.Query(ctx, `SELECT id::text,workspace_id::text,COALESCE(actor_id::text,''),occurred_at,content
@@ -154,6 +177,9 @@ func (s *Service) Process(ctx context.Context, now time.Time) error {
 		if kind == "resident_goal_reached" {
 			game = "life"
 		}
+		if kind == "fish_letter" {
+			game = "fish"
+		}
 		key := workspace + "/" + game
 		if value, ok := access[key]; ok {
 			return value, nil
@@ -178,6 +204,9 @@ func (s *Service) Process(ctx context.Context, now time.Time) error {
 		if f.Entry.Kind == "tank_level_up" {
 			latest[f.Workspace+"/"+f.Entry.SubjectID+"/character_milestone"] = f.ID
 		}
+		if f.Entry.Kind == "fish_letter" {
+			latest[f.Workspace+"/"+f.Actor+"/fish_letter"] = f.ID
+		}
 	}
 	for _, f := range facts {
 		open, err := allowed(f.Workspace, f.Entry.Kind)
@@ -191,9 +220,28 @@ func (s *Service) Process(ctx context.Context, now time.Time) error {
 		if f.Entry.Kind == "tank_level_up" {
 			personalType = "character_milestone"
 		}
-		if open && personalType != "" && latest[f.Workspace+"/"+f.Entry.SubjectID+"/"+personalType] == f.ID {
+		personalKey := f.Workspace + "/" + f.Entry.SubjectID + "/" + personalType
+		if f.Entry.Kind == "fish_letter" {
+			personalType = "fish_letter"
+			personalKey = f.Workspace + "/" + f.Actor + "/fish_letter"
+		}
+		if open && personalType != "" && latest[personalKey] == f.ID {
 			m := message{Workspace: f.Workspace, Recipient: f.Actor, Actor: f.Actor, Type: personalType, Title: f.Entry.Name, Content: Content{Entries: []Entry{f.Entry}, TotalEntries: 1}}
 			m.ID = messageID(f.ID + "/" + f.Actor)
+			if personalType == "fish_letter" {
+				// A delayed backlog still delivers at most one letter per actual day.
+				m.ID = messageID("fish-letter/" + f.Workspace + "/" + f.Actor + "/" + FishLetterDay(now))
+				m.Title = "A letter from " + f.Entry.Name
+				lines := []string{"Recorded in the ongoing ocean simulation."}
+				for _, sighting := range f.Entry.Sightings {
+					if sighting.Kind == "encounter" {
+						lines = append(lines, "I spotted "+sighting.PeerName+" swimming nearby.")
+					} else {
+						lines = append(lines, "I explored the "+strings.ReplaceAll(sighting.Place, "_", " ")+".")
+					}
+				}
+				m.Body = strings.Join(lines, "\n")
+			}
 			inserted, err := insert(ctx, tx, &m)
 			if err != nil {
 				return err
@@ -210,7 +258,7 @@ func (s *Service) Process(ctx context.Context, now time.Time) error {
 	// contain facts, not a synthesized claim about unimplemented world mechanics.
 	cutoff := now.UTC().Truncate(time.Hour)
 	windows, err := tx.Query(ctx, `SELECT workspace_id::text,date_trunc('hour',occurred_at AT TIME ZONE 'UTC') AT TIME ZONE 'UTC' AS start
-		FROM world_inbox_event WHERE summarized_at IS NULL AND occurred_at < $1
+		FROM world_inbox_event WHERE summarized_at IS NULL AND kind <> 'fish_letter' AND occurred_at < $1
 		GROUP BY workspace_id,start ORDER BY start,workspace_id LIMIT 8`, cutoff)
 	if err != nil {
 		return err
@@ -250,7 +298,7 @@ func (s *Service) Process(ctx context.Context, now time.Time) error {
 		// Keep the latest fact of each kind for each character. Counts and entries
 		// share this set, so repeated design saves do not inflate a world's story.
 		r, err := tx.Query(ctx, `SELECT DISTINCT ON (subject_id,kind) content,occurred_at
-			FROM world_inbox_event WHERE workspace_id=$1::uuid AND occurred_at >= $2 AND occurred_at < $3
+			FROM world_inbox_event WHERE workspace_id=$1::uuid AND kind <> 'fish_letter' AND occurred_at >= $2 AND occurred_at < $3
 			ORDER BY subject_id,kind,occurred_at DESC,id DESC`, w.ws, w.start, end)
 		if err != nil {
 			return err
@@ -353,13 +401,23 @@ func insert(ctx context.Context, tx pgx.Tx, m *message) (bool, error) {
 	if err != nil {
 		return false, err
 	}
+	if m.Type == "fish_letter" {
+		entry := m.Content.Entries[0]
+		err = tx.QueryRow(ctx, `SELECT id::text FROM fish_publication WHERE id=$1::uuid AND workspace_id=$2::uuid AND user_id=$3::uuid AND active AND revision=$4 FOR SHARE`, entry.SubjectID, m.Workspace, m.Recipient, entry.Revision).Scan(&id)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return false, nil
+		}
+		if err != nil {
+			return false, err
+		}
+	}
 	raw, err := json.Marshal(m.Content)
 	if err != nil {
 		return false, err
 	}
-	err = tx.QueryRow(ctx, `INSERT INTO inbox_item(id,workspace_id,recipient_type,recipient_id,type,severity,title,actor_type,actor_id,content)
-		VALUES($1::uuid,$2::uuid,'member',$3::uuid,$4,'info',$5,$6,NULLIF($7,'')::uuid,$8)
-		ON CONFLICT(id) DO NOTHING RETURNING created_at`, m.ID, m.Workspace, m.Recipient, m.Type, m.Title, actorType(m.Actor), m.Actor, raw).Scan(&m.At)
+	err = tx.QueryRow(ctx, `INSERT INTO inbox_item(id,workspace_id,recipient_type,recipient_id,type,severity,title,actor_type,actor_id,content,body)
+		VALUES($1::uuid,$2::uuid,'member',$3::uuid,$4,'info',$5,$6,NULLIF($7,'')::uuid,$8,NULLIF($9,''))
+		ON CONFLICT(id) DO NOTHING RETURNING created_at`, m.ID, m.Workspace, m.Recipient, m.Type, m.Title, actorType(m.Actor), m.Actor, raw, m.Body).Scan(&m.At)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return false, nil
 	}
@@ -378,11 +436,15 @@ func (s *Service) publish(m message) {
 		return
 	}
 	var actor any
+	var body any
+	if m.Body != "" {
+		body = m.Body
+	}
 	if m.Actor != "" {
 		actor = m.Actor
 	}
 	s.Bus.Publish(events.Event{Type: protocol.EventInboxNew, WorkspaceID: m.Workspace, ActorType: actorType(m.Actor), ActorID: m.Actor, Payload: map[string]any{"item": map[string]any{
-		"id": m.ID, "workspace_id": m.Workspace, "recipient_type": "member", "recipient_id": m.Recipient, "type": m.Type, "severity": "info", "title": m.Title, "body": nil, "issue_id": nil, "issue_status": nil, "issue_priority": nil, "actor_type": actorType(m.Actor), "actor_id": actor, "read": false, "archived": false, "created_at": m.At.Format(time.RFC3339Nano), "details": nil, "content": m.Content,
+		"id": m.ID, "workspace_id": m.Workspace, "recipient_type": "member", "recipient_id": m.Recipient, "type": m.Type, "severity": "info", "title": m.Title, "body": body, "issue_id": nil, "issue_status": nil, "issue_priority": nil, "actor_type": actorType(m.Actor), "actor_id": actor, "read": false, "archived": false, "created_at": m.At.Format(time.RFC3339Nano), "details": nil, "content": m.Content,
 	}}})
 }
 

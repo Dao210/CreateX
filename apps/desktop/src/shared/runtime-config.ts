@@ -15,9 +15,9 @@ export type RuntimeConfigResult =
 
 export const DEFAULT_RUNTIME_CONFIG: RuntimeConfig = Object.freeze({
   schemaVersion: 1,
-  apiUrl: "https://api.auro.ai",
-  wsUrl: "wss://api.auro.ai/ws",
-  appUrl: "https://auro.ai",
+  apiUrl: "https://weavea.world",
+  wsUrl: "wss://weavea.world/ws",
+  appUrl: "https://weavea.world",
 });
 
 const LOCAL_DEV_RUNTIME_CONFIG: RuntimeConfig = Object.freeze({

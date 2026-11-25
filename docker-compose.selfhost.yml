@@ -34,7 +34,7 @@ name: auro
 
 services:
   postgres:
-    image: pgvector/pgvector:pg17
+    image: postgres:18
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-auro}
       POSTGRES_USER: ${POSTGRES_USER:-auro}

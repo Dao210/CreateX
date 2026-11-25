@@ -113,6 +113,17 @@
     "view_resident": "View resident",
     "view_world": "View world",
     "author": "By {{name}}",
-    "view_automation": "View automation"
+    "view_automation": "View automation",
+    "fish_letter": "A letter from {{name}}",
+    "fish_simulation": "Recorded in the ongoing ocean simulation. At most one letter per day in this world.",
+    "view_fish": "Visit this fish",
+    "fish_west_reef": "I swam past the western reef and remembered this place.",
+    "fish_east_reef": "I explored the eastern reef.",
+    "fish_upper_water": "I explored the upper water.",
+    "fish_deep_water": "I ventured into the deeper water.",
+    "fish_encounter": "I spotted “{{name}}” swimming nearby.",
+    "fish_stripes": "It had stripes along its body.",
+    "fish_spots": "Its body was covered in spots.",
+    "fish_glow": "It gave off a soft glow."
   }
 }

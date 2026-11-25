@@ -135,6 +135,30 @@
   max-height: 60dvh;
   object-fit: contain;
 }
+.ctf-battlefield {
+  position: relative;
+  min-height: 0;
+}
+.ctf-battle-result {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  pointer-events: none;
+  color: var(--ctf-ink);
+  text-align: center;
+  font-size: clamp(var(--text-display-sm), 5vw, calc(var(--text-display) * 2));
+  font-weight: 800;
+  line-height: 1.15;
+  text-shadow: 0 2px 0 #f9f6ee, 0 0 16px #f9f6ee, 0 4px 20px #f9f6ee;
+}
+.ctf-battle-result[data-winner="red"] {
+  color: #a34836;
+}
+.ctf-battle-result[data-winner="blue"] {
+  color: #35678d;
+}
 .ctf-stage-meta {
   display: flex;
   align-items: center;

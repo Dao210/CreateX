@@ -22,7 +22,7 @@
 
 **创造 → 游玩 → 观察 → 改造 → 在世界里留下痕迹。**
 
-当前仓库包含可玩的防守游戏、谈判游戏和自动世界原型。
+当前仓库包含可玩的防守游戏和自动世界原型。
 共享且持续演化的虚拟文明是长期方向；现阶段，作品还不能在这些游戏之间自由通用。
 
 ## 现在可以体验什么
@@ -33,7 +33,6 @@
 | **坦克守城 · Tank Defense** | 在点数预算内搭配部件，驾驶坦克挑战战役、限时突击与无尽防守。 | `/{workspaceSlug}/tanks`。支持 Web/Desktop、键盘和浏览器触屏操作；外部 Agent 可通过 MCP 创建坦克。 |
 | **个人收藏** | 查看自己的 Siege 蓝图、坦克角色与个人进度。 | `/{workspaceSlug}/me`。按账号和工作区隔离；个人成绩由客户端上报。 |
 | **REACH 世界预览** | 观察实体争夺补给、战斗和留下残骸，也可通过 HTTP API 投入作品。 | 首页公开预览与独立的实验性世界服务。页面区分实时、预览和断连状态；浏览器内的创作流程尚待完成。 |
-| **DEAL** | 利用对话、证据和房间内的物品，与讨债人谈判。 | 独立运行的 `/deal`。支持显式选择的规则试玩，以及配置语言模型后的 AI 模式。 |
 
 体验 Siege 和坦克时，在本地 Web 地址登录、完成首次进入流程，再从工作区侧栏打开游戏。
 普通防守玩法不需要模型配置；Siege 也支持不依赖 AI 识别的手动部件确认。
@@ -103,22 +102,6 @@ make down                  # 停止当前环境，保留数据
 生成自己的 `.env.worktree`，不要复制主检出目录的 `.env`。
 环境管理详见 [Make 命令参考](docs/make-commands.md)与 [scripts/dev-env.sh](scripts/dev-env.sh)。
 
-### DEAL：独立规则试玩
-
-DEAL 需要 Node.js、pnpm 和 Go，无需工作区账号或 PostgreSQL：
-
-```bash
-pnpm install --frozen-lockfile --filter @auro/deal...
-DEAL_MODEL_MODE=scripted make up C=deal
-make status C=deal
-make down C=deal
-```
-
-默认 Web 地址为 `http://127.0.0.1:13106/deal/`，会话与日志保存在 `.deal/`。
-使用模型玩法时，参考 [.env.example](.env.example) 配置 `DEAL_MODEL_MODE=llm`
-及 `DEAL_LLM_*`，然后重启 DEAL。模型失败不会自动切换成规则试玩。
-详见 [DEAL 运行与交付说明](docs/deal-delivery.md)。
-
 ### REACH：实验性世界服务
 
 REACH 当前使用独立、单实例的文件存储服务，主应用的 `make up` 不会启动它：
@@ -147,7 +130,6 @@ API 默认监听 `http://127.0.0.1:18107`，能力发现入口为
 | `packages/views` | 共享游戏界面、Canvas 绘制、物理、输入与音频。 |
 | `packages/ui` | 共享 UI 原语与语义样式。 |
 | `server/internal/siege`、`tanks`、`gameprogress` | 主应用的游戏 API、创作存储和个人进度。 |
-| `apps/deal`、`server/internal/deal` | 独立谈判游戏。 |
 | `server/internal/reach`、`server/cmd/reach` | 实验性自动世界引擎、HTTP API 与服务入口。 |
 | `apps/mobile` | 独立 Expo/React Native 客户端，游戏接入待完成。 |
 
@@ -172,7 +154,6 @@ make test
 pnpm exec playwright test e2e/siege e2e/tanks.spec.ts e2e/tanks-mcp.spec.ts
 ```
 
-DEAL 使用独立的[检查与 Playwright 配置](docs/deal-delivery.md)。
 REACH 的 Go 测试为 `(cd server && go test ./internal/reach)`。
 根目录前端检查不覆盖原生移动端，移动端另见其 [README](apps/mobile/README.md)
 与[开发规则](apps/mobile/AGENTS.md)。
@@ -187,7 +168,6 @@ REACH 的 Go 测试为 `(cd server && go test ./internal/reach)`。
 | 坦克规则与操作 | [坦克守城](docs/tank-defense.md) |
 | Agent 创建坦克 | [坦克 MCP](docs/tank-character-mcp.md) · [客户端配置](docs/codex-mcp-deployment.md) |
 | 自动世界方向 | [REACH PRD 与原型状态](docs/reach-world-prd.md) |
-| 谈判游戏 | [DEAL PRD](docs/deal-prd.md) · [运行与交付](docs/deal-delivery.md) |
 | 通用角色协议提案 | [技术规范](docs/character-game-api.md) |
 | 仓库贡献规则 | [AGENTS.md](AGENTS.md) |
 

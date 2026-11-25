@@ -6,10 +6,10 @@ import { InboxPage } from "./inbox-page";
 
 const state = vi.hoisted(() => ({ items: [] as InboxItem[], archived: [] as InboxItem[], params: new URLSearchParams(), replace: vi.fn(), markRead: vi.fn(), archive: vi.fn(), restore: vi.fn(), available: true, recover: vi.fn() }));
 vi.mock("@auro/core/hooks", () => ({ useWorkspaceId: () => "ws-1" }));
-vi.mock("@auro/core/paths", () => ({ useWorkspacePaths: () => ({ inbox: () => "/acme/inbox", tanks: () => "/acme/tanks", life: () => "/acme/life", autopilots: () => "/acme/autopilots", autopilotDetail: (id: string) => `/acme/autopilots/${id}` }) }));
+vi.mock("@auro/core/paths", () => ({ useWorkspacePaths: () => ({ inbox: () => "/acme/inbox", fish: () => "/acme/fish", tanks: () => "/acme/tanks", life: () => "/acme/life", autopilots: () => "/acme/autopilots", autopilotDetail: (id: string) => `/acme/autopilots/${id}` }) }));
 vi.mock("../../navigation", () => ({ useNavigation: () => ({ searchParams: state.params, replace: state.replace }), AppLink: ({ href, children, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement>) => <a href={href} {...props}>{children}</a> }));
 vi.mock("@auro/core/inbox/queries", () => ({ inboxListOptions: () => ({ queryKey: ["inbox"] }), archivedInboxPagesOptions: () => ({ queryKey: ["archive"] }), archivedInboxLookupOptions: () => ({ queryKey: ["lookup"] }) }));
-vi.mock("@auro/core/admin", () => ({ useWorldGames: () => ({ data: { games: [{ gameId: "tanks", available: state.available }, { gameId: "life", available: state.available }] } }) }));
+vi.mock("@auro/core/admin", () => ({ useWorldGames: () => ({ data: { games: [{ gameId: "tanks", available: state.available }, { gameId: "life", available: state.available }, { gameId: "fish", available: state.available }] } }) }));
 vi.mock("@tanstack/react-query", () => ({ useQuery: ({ queryKey }: { queryKey: string[] }) => ({ data: queryKey[0] === "lookup" ? { items: [] } : state.items }), useInfiniteQuery: () => ({ data: { pages: [{ items: state.archived }] }, hasNextPage: false }) }));
 vi.mock("@auro/core/inbox/mutations", () => ({ useMarkInboxRead: () => ({ mutate: state.markRead }), useMarkInboxUnread: () => ({ mutate: vi.fn() }), useArchiveInbox: () => ({ mutate: state.archive }), useUnarchiveInbox: () => ({ mutate: state.restore }), useMarkAllInboxRead: () => ({ mutate: vi.fn() }) }));
 vi.mock("../../modals/use-autopilot-quota-recovery", () => ({ useAutopilotQuotaRecovery: () => state.recover }));
@@ -83,4 +83,18 @@ it("keeps a recovery destination when a paused notice has no optional details", 
   state.items = [item("paused", "autopilot_paused")]; state.params = new URLSearchParams("item=paused");
   renderWithI18n(<InboxPage />);
   expect(screen.getByRole("link", { name: "View automation" })).toHaveAttribute("href", "/acme/autopilots");
+});
+
+it("shows a private fish letter with recorded sightings and a guarded fish destination", () => {
+  const letter: InboxItem = { ...item("letter", "fish_letter"), content: { entries: [{ id: "00000000-0000-4000-8000-000000000001", kind: "fish_letter", name: "Azure", subjectId: "00000000-0000-4000-8000-000000000002", revision: 1, occurredAt: "2026-11-11T02:30:00Z", sightings: [{ kind: "discovery", place: "west_reef", position: [-5, 3, -2], occurredAt: "2026-11-11T02:29:00Z" }, { kind: "encounter", peerId: "00000000-0000-4000-8000-000000000003", peerName: "Neighbor", pattern: "stripes", glow: true, position: [-4, 3, -2], occurredAt: "2026-11-11T02:29:01Z" }] }], totals: { created: 0, updated: 0, milestones: 0 }, totalEntries: 1 } };
+  state.items = [letter]; state.params = new URLSearchParams("category=creations&item=letter");
+  const { unmount } = renderWithI18n(<InboxPage />);
+  expect(screen.getByText("I swam past the western reef and remembered this place.")).toBeInTheDocument();
+  expect(screen.getByText(/I spotted “Neighbor” swimming nearby/)).toHaveTextContent("It gave off a soft glow.");
+  expect(screen.getByRole("link", { name: "Visit this fish" })).toHaveAttribute("href", "/acme/fish?resident=00000000-0000-4000-8000-000000000002");
+  expect(state.markRead).toHaveBeenCalledWith("letter");
+  unmount(); state.available = false;
+  renderWithI18n(<InboxPage />);
+  expect(screen.getByText("I swam past the western reef and remembered this place.")).toBeInTheDocument();
+  expect(screen.queryByRole("link", { name: "Visit this fish" })).not.toBeInTheDocument();
 });

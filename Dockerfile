@@ -1,5 +1,5 @@
 # --- Internal TypeScript engine ---
-FROM node:22-alpine AS life-builder
+FROM node:24-alpine AS life-builder
 WORKDIR /src
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 RUN npm install --global --no-audit --no-fund "$(node -p 'require("./package.json").packageManager')"
@@ -37,7 +37,7 @@ RUN cd server && CGO_ENABLED=0 go build -ldflags "-s -w" -o bin/backfill_task_us
 RUN cd server && CGO_ENABLED=0 go build -ldflags "-s -w" -o bin/backfill_codex_usage_cache ./cmd/backfill_codex_usage_cache
 
 # --- Runtime stage ---
-FROM node:22-alpine
+FROM node:24-alpine
 
 RUN apk add --no-cache ca-certificates tzdata
 

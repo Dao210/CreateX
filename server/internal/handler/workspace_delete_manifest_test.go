@@ -67,6 +67,8 @@ var workspaceDeletionManifest = map[string]workspaceDeleteAction{
 	"ctf_revision":                    workspaceDelete,
 	"ctf_strategy":                    workspaceDelete,
 	"fish_character":                  workspaceDelete,
+	"fish_exploration_state":          workspaceDelete,
+	"fish_exploration_clock":          workspaceDeleteKeep,
 	"fish_publication":                workspaceDelete,
 	"fish_ocean":                      workspaceDelete,
 	"fish_request":                    workspaceDelete,

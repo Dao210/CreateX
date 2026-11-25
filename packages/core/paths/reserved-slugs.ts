@@ -39,7 +39,6 @@ export const RESERVED_SLUGS: ReadonlySet<string> = new Set([
   // likely-future global landing/entry routes; `homepage` matches the existing
   // `/homepage` landing variant in apps/web.
   "api",
-  "deal",
   "siege",
   "ocean",
   "admin",

@@ -229,15 +229,34 @@ export function BattleView({
               ))}
             </div>
           </div>
-          <BattleCanvas
-            frame={frame}
-            label={t(($) => $.tactics.battlefield)}
-            selectedId={unit.id}
-            targetId={decision.movement_target_id ?? undefined}
-            onSelect={setSelected}
-            playing={playing}
-            interval={interval}
-          />
+          <div className="ctf-battlefield">
+            <BattleCanvas
+              frame={frame}
+              label={t(($) => $.tactics.battlefield)}
+              selectedId={unit.id}
+              targetId={decision.movement_target_id ?? undefined}
+              onSelect={setSelected}
+              playing={playing}
+              interval={interval}
+            />
+            {frame.result && (
+              <div
+                className="ctf-battle-result"
+                data-winner={frame.result.winner}
+                role="status"
+              >
+                <span>
+                  {frame.result.winner === "red"
+                    ? t(($) => $.redWin)
+                    : frame.result.winner === "blue"
+                      ? t(($) => $.blueWin)
+                      : frame.result.winner === "draw"
+                        ? t(($) => $.draw)
+                        : t(($) => $.unknown)}
+                </span>
+              </div>
+            )}
+          </div>
           {stageMeta}
         </div>
         {controls}

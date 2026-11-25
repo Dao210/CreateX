@@ -6,7 +6,7 @@
  * the title a user sees in the mobile inbox MUST match what they see on
  * web for the same item. When the web version changes, sync this file.
  */
-import { inboxContent, type InboxContent, type InboxEntry } from "@auro/core/inbox/messages";
+import { inboxContent, type FishSighting, type InboxContent, type InboxEntry } from "@auro/core/inbox/messages";
 import { isVisibleInboxItem } from "@auro/core/inbox/system-notifications";
 import type { InboxItem } from "@auro/core/types";
 import { i18n } from "@/lib/i18n/singleton";
@@ -45,6 +45,7 @@ export function getInboxDisplayTitle(item: InboxItem): string {
   if (item.type === "world_digest") return i18n.t("inbox:messages.world_digest");
   if (entry && item.type === "creation_ready") return i18n.t(entry.kind === "tank_updated" ? "inbox:messages.creation_updated" : "inbox:messages.creation_ready", { name: entry.name });
   if (entry && item.type === "character_milestone") return i18n.t("inbox:messages.character_milestone", { name: entry.name, level: entry.level });
+  if (entry && item.type === "fish_letter") return i18n.t("inbox:messages.fish_letter", { name: entry.name });
   // Resolve system-notice titles through the selected UI locale. Mirror
   // rather than exposing backend fallback copy that can include raw counts.
   switch (item.type) {
@@ -77,10 +78,17 @@ export function deduplicateInboxItems(items: InboxItem[]): InboxItem[] {
 }
 
 export function getInboxEntryText(entry: InboxEntry): string {
+  if (entry.kind === "fish_letter") return i18n.t("inbox:messages.fish_letter", { name: entry.name });
   if (entry.kind === "resident_goal_reached") return i18n.t(entry.goalKind === "wood" ? "inbox:messages.resident_wood" : "inbox:messages.resident_coins", { name: entry.name, target: entry.target });
   if (entry.kind === "tank_created") return i18n.t("inbox:messages.tank_created", { name: entry.name });
   if (entry.kind === "tank_updated") return i18n.t("inbox:messages.tank_updated", { name: entry.name, revision: entry.revision });
   return i18n.t("inbox:messages.tank_level_up", { name: entry.name, level: entry.level });
+}
+export function getFishSightingText(sighting: FishSighting): string {
+  if (sighting.kind === "discovery") return i18n.t(`inbox:messages.fish_${sighting.place}`);
+  return [i18n.t("inbox:messages.fish_encounter", { name: sighting.peerName }),
+    sighting.pattern === "stripes" ? i18n.t("inbox:messages.fish_stripes") : sighting.pattern === "spots" ? i18n.t("inbox:messages.fish_spots") : "",
+    sighting.glow ? i18n.t("inbox:messages.fish_glow") : ""].filter(Boolean).join(" ");
 }
 export function getInboxSummary(content: InboxContent): string {
   return [content.totals.created ? i18n.t("inbox:messages.created", { count: content.totals.created }) : "",

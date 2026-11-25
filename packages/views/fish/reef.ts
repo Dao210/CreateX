@@ -23,20 +23,29 @@ export function createReef(scene: THREE.Scene, time: { value: number }) {
   scene.add(new THREE.HemisphereLight("#b8edf0", "#496052", 1.75));
   const sun = new THREE.DirectionalLight("#fff2d7", 2.4);
   sun.position.set(-8, 19, 3);
+  sun.shadow.mapSize.set(2048, 2048);
+  Object.assign(sun.shadow.camera, { left: -23, right: 23, top: 23, bottom: -23, near: 0.5, far: 70 });
+  sun.shadow.bias = -0.0002;
+  sun.shadow.normalBias = 0.025;
+  sun.shadow.intensity = 0.55;
+  sun.shadow.radius = 2;
   scene.add(sun);
 
   // Project one tiled light field onto the seabed, rocks and swimming fish.
   const caustic = makeCausticTexture();
-  const detail = { value: 1 };
+  let highCaustic: THREE.DataTexture | undefined;
+  const causticMap = { value: caustic }, detail = { value: 1 }, quality = { value: 0 };
   const tintWater = (shader: THREE.WebGLProgramParametersWithUniforms, surface: "sand" | "rock" | "grass" | "fish") => {
     shader.uniforms.reefTime = time;
     shader.uniforms.reefDetail = detail;
-    shader.uniforms.reefCaustic = { value: caustic };
+    shader.uniforms.reefQuality = quality;
+    shader.uniforms.reefCaustic = causticMap;
     shader.vertexShader = `varying vec3 vReefPosition;\n${shader.vertexShader}`
       .replace("#include <project_vertex>", `${worldPosition}\n#include <project_vertex>`);
     shader.fragmentShader = `
       uniform float reefTime;
       uniform float reefDetail;
+      uniform float reefQuality;
       uniform sampler2D reefCaustic;
       varying vec3 vReefPosition;
       ${shader.fragmentShader}
@@ -67,10 +76,11 @@ export function createReef(scene: THREE.Scene, time: { value: number }) {
       if (reefDetail > 0.0${surface === "fish" ? " && fishDetail > 0.5" : ""}) {
         vec2 lightUV = (bed + vReefPosition.y * vec2(0.39, -0.22)) * 0.22;
         float lightA = texture2D(reefCaustic, lightUV + vec2(0.029, -0.014) * reefTime).r;
-        float caustics = lightA * 0.72;
-        if (reefDetail > 0.5) {
-          float lightB = texture2D(reefCaustic, lightUV.yx * 0.81 + vec2(-0.018, 0.026) * reefTime).r;
-          caustics = min(lightA, lightB) + 0.34 * max(lightA, lightB);
+        float lightB = texture2D(reefCaustic, lightUV.yx * 0.81 + vec2(-0.018, 0.026) * reefTime).r;
+        float caustics = min(lightA, lightB) + 0.34 * max(lightA, lightB);
+        if (reefQuality > 0.5) {
+          float lightC = texture2D(reefCaustic, lightUV * 1.63 + vec2(0.011, 0.019) * reefTime).r;
+          caustics += lightC * 0.20;
         }
         float falloff = exp(-depth * 0.054 - length(bed - vec2(-5.0, 0.0)) * 0.047);
         diffuseColor.rgb *= 1.0 + caustics * falloff * ${surface === "fish" ? "0.53" : "1.02"} * reefDetail;
@@ -85,13 +95,15 @@ export function createReef(scene: THREE.Scene, time: { value: number }) {
   floor.computeVertexNormals();
   const sand = new THREE.MeshStandardMaterial({ color: "#ad9d76", roughness: 0.96 });
   sand.onBeforeCompile = shader => tintWater(shader, "sand");
-  stage.add(new THREE.Mesh(floor, sand));
+  const seabed = new THREE.Mesh(floor, sand);
+  seabed.receiveShadow = true;
+  stage.add(seabed);
 
   // Resolve the water surface along each view ray so it fades into open water at grazing angles.
   const water = new THREE.Mesh(
     new THREE.SphereGeometry(77, 24, 12),
     new THREE.ShaderMaterial({
-      uniforms: { reefTime: time, distantWater: { value: new THREE.Color(waterColor) } },
+      uniforms: { reefTime: time, reefQuality: quality, distantWater: { value: new THREE.Color(waterColor) } },
       side: THREE.BackSide,
       depthWrite: false,
       toneMapped: false,
@@ -105,6 +117,7 @@ export function createReef(scene: THREE.Scene, time: { value: number }) {
       `,
       fragmentShader: /* glsl */ `
         uniform float reefTime;
+        uniform float reefQuality;
         uniform vec3 distantWater;
         varying vec3 vWaterPoint;
         void main() {
@@ -124,6 +137,9 @@ export function createReef(scene: THREE.Scene, time: { value: number }) {
               + 0.4 * sin(p.x * 0.31 - p.y * 0.95 + reefTime * 0.38);
             float waves = sin(p.y * 2.5 + p.x * 1.25 + swell * 1.9 + reefTime * 0.7);
             float ripples = sin(p.x * 5.1 - p.y * 3.0 + waves * 1.15 + reefTime * 0.73);
+            if (reefQuality > 0.5) {
+              ripples += 0.22 * sin(p.x * 10.3 + p.y * 7.1 + swell + reefTime * 0.91);
+            }
             float glint = pow(max(0.0, 0.48 + 0.32 * waves + 0.20 * ripples), 5.0);
             float windowLight = smoothstep(0.025, 0.55, ray.y) * exp(-distanceToSurface * 0.024);
             water += (vec3(0.023, 0.13, 0.12) + vec3(0.30, 0.49, 0.38) * glint)
@@ -162,6 +178,7 @@ export function createReef(scene: THREE.Scene, time: { value: number }) {
   ];
   const rockCount = OCEAN_ROCKS.length + smallRocks.length;
   const rocks = new THREE.InstancedMesh(rockGeometry, stone, rockCount);
+  rocks.castShadow = rocks.receiveShadow = true;
   const transform = new THREE.Object3D(), color = new THREE.Color();
   [...OCEAN_ROCKS.map(r => [r.x, r.z, r.radius]), ...smallRocks].forEach(([x = 0, z = 0, size = 0.4], i) => {
     transform.position.set(x, seabedHeight(x, z) + size * 0.15, z);
@@ -195,6 +212,7 @@ export function createReef(scene: THREE.Scene, time: { value: number }) {
   };
   const patches = [[-8.3, 3.8], [6.7, 4.2], [-7.4, -2.5], [-4.5, -5.5], [4.8, -5.7], [8.2, -6.8], [-12.1, -4.1], [0.6, -8.8], [10.7, 0.1], [-8.0, -10.8, 1.65], [-5.0, -11.9, 1.8], [8.7, -11.1, 1.55]];
   const meadow = new THREE.InstancedMesh(blade, grass, patches.length * 24);
+  meadow.receiveShadow = true;
   patches.forEach(([x = 0, z = 0, scale = 1], patch) => {
     for (let j = 0; j < 24; j++) {
       const i = patch * 24 + j, angle = j * 2.39996, spread = Math.sqrt(j / 24);
@@ -244,18 +262,24 @@ export function createReef(scene: THREE.Scene, time: { value: number }) {
 
   return {
     tintFish: (shader: THREE.WebGLProgramParametersWithUniforms) => tintWater(shader, "fish"),
-    configure(preview: boolean, lowQuality: boolean, cameraPosition: THREE.Vector3) {
+    configure(preview: boolean, cameraPosition: THREE.Vector3, highQuality = false) {
       stage.visible = !preview;
-      plankton.visible = !lowQuality;
-      detail.value = preview ? 0 : lowQuality ? 0.48 : 1;
+      detail.value = preview ? 0 : 1;
+      quality.value = highQuality ? 1 : 0;
+      sun.castShadow = highQuality && !preview;
+      causticMap.value = highQuality ? (highCaustic ??= makeCausticTexture(256)) : caustic;
       water.position.copy(cameraPosition);
     },
-    dispose: () => caustic.dispose(),
+    dispose() {
+      caustic.dispose();
+      highCaustic?.dispose();
+      sun.shadow.dispose();
+    },
   };
 }
 
-function makeCausticTexture() {
-  const size = 128, cells = 7, data = new Uint8Array(size * size);
+function makeCausticTexture(size = 128) {
+  const cells = 7, data = new Uint8Array(size * size);
   const point = (x: number, y: number, salt: number) => {
     const n = Math.sin(((x + cells) % cells) * 127.1 + ((y + cells) % cells) * 311.7 + salt) * 43758.5453;
     return 0.18 + (n - Math.floor(n)) * 0.64;

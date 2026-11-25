@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { compileFishGeometry, swimState, type FishSceneResident, type FishSpec, type SwimState } from "@auro/core/fish";
+import { compileFishGeometry, swimState, type FishGeometryDetail, type FishSceneResident, type FishSpec, type SwimState } from "@auro/core/fish";
 
 type TintFish = (shader: THREE.WebGLProgramParametersWithUniforms) => void;
 
@@ -10,15 +10,16 @@ export interface FishObject {
   visual: { value: THREE.Vector4 };
   length: number;
   initialized: boolean;
-  setDetail: (apparentSize: number, focus: boolean) => void;
+  setDetail: (apparentSize: number, focus: boolean, highQuality?: boolean) => void;
   dispose: () => void;
 }
 
-function makeGeometry(spec: FishSpec, distant: boolean) {
-  const data = compileFishGeometry(spec, distant);
+function makeGeometry(spec: FishSpec, detail: FishGeometryDetail) {
+  const data = compileFishGeometry(spec, detail);
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute("position", new THREE.Float32BufferAttribute(data.positions, 3));
   geometry.setAttribute("finFlex", new THREE.Float32BufferAttribute(data.finFlex, 1));
+  geometry.setAttribute("fishSurface", new THREE.Float32BufferAttribute(data.surface, 3));
   const colors = new Float32Array(data.colors.length);
   const workingColor = new THREE.Color();
   for (let i = 0; i < data.colors.length; i += 3) {
@@ -36,7 +37,7 @@ function makeGeometry(spec: FishSpec, distant: boolean) {
 
 export function makeFish(resident: FishSceneResident, tintFish: TintFish): FishObject {
   const spec = resident.fish.draft, length = spec.body.lengthMm / 1000;
-  const material = new THREE.MeshStandardMaterial({
+  const material = new THREE.MeshPhysicalMaterial({
     vertexColors: true,
     roughness: 0.45,
     metalness: 0.05,
@@ -50,19 +51,14 @@ export function makeFish(resident: FishSceneResident, tintFish: TintFish): FishO
   material.forceSinglePass = true;
   const visual = { value: new THREE.Vector4(0, 1, 0, length) };
   const amplitude = { value: spec.motion.amplitude / 1000 };
-  const style = spec.motion.style, detail = { value: 0 };
-  material.onBeforeCompile = shader => {
-    tintFish(shader);
+  const style = spec.motion.style, detail = { value: 0 }, quality = { value: 0 };
+  const animate = (shader: THREE.WebGLProgramParametersWithUniforms) => {
     shader.uniforms.fishVisual = visual;
     shader.uniforms.fishAmplitude = amplitude;
-    shader.uniforms.fishDetail = detail;
-    shader.fragmentShader = `uniform float fishDetail;
-${shader.fragmentShader}`;
     shader.vertexShader = /* glsl */ `
       attribute float finFlex;
       uniform vec4 fishVisual;
       uniform float fishAmplitude;
-      uniform float fishDetail;
 
       vec2 swimOffset(vec3 p, float flex) {
         float phase = fishVisual.x;
@@ -86,7 +82,39 @@ ${shader.fragmentShader}`;
           return fishLength * vec2(trim, wave * fishAmplitude * effort + turn);
         `}
       }
-
+      ${shader.vertexShader}
+    `.replace("#include <begin_vertex>", /* glsl */ `
+      #include <begin_vertex>
+      transformed.yz += swimOffset(position, finFlex);
+    `);
+  };
+  material.onBeforeCompile = shader => {
+    tintFish(shader);
+    animate(shader);
+    shader.uniforms.fishDetail = detail;
+    shader.uniforms.fishQuality = quality;
+    shader.fragmentShader = /* glsl */ `
+      uniform float fishDetail;
+      uniform float fishQuality;
+      varying vec3 vFishSurface;
+      ${shader.fragmentShader}
+    `.replace("#include <roughnessmap_fragment>", /* glsl */ `
+      #include <roughnessmap_fragment>
+      if (fishQuality > 0.5 && vFishSurface.z > 0.5) {
+        vec2 scales = vFishSurface.xy * vec2(72.0, 36.0);
+        float footprint = max(length(dFdx(scales)), length(dFdy(scales)));
+        float visibility = 1.0 - smoothstep(0.35, 0.9, footprint);
+        scales.x += mod(floor(scales.y), 2.0) * 0.5;
+        vec2 cell = fract(scales) - 0.5;
+        float scale = exp(-dot(cell * vec2(1.0, 1.4), cell * vec2(1.0, 1.4)) * 12.0);
+        diffuseColor.rgb *= 1.0 + (scale - 0.35) * 0.10 * visibility;
+        roughnessFactor *= 1.0 - scale * 0.24 * visibility;
+      }
+    `);
+    shader.vertexShader = /* glsl */ `
+      attribute vec3 fishSurface;
+      varying vec3 vFishSurface;
+      uniform float fishDetail;
       ${shader.vertexShader}
     `.replace("#include <beginnormal_vertex>", /* glsl */ `
       #include <beginnormal_vertex>
@@ -100,32 +128,50 @@ ${shader.fragmentShader}`;
           objectNormal.z -= across.x * sign(position.z) * objectNormal.y;
         }
       }
-    `).replace("#include <begin_vertex>", /* glsl */ `
-      #include <begin_vertex>
-      transformed.yz += swimOffset(position, finFlex);
+    `).replace("#include <project_vertex>", /* glsl */ `
+      vFishSurface = fishSurface;
+      #include <project_vertex>
     `);
   };
   material.customProgramCacheKey = () => `reef-swim:${style}`;
 
-  const distant = makeGeometry(spec, true);
-  let near: THREE.BufferGeometry | undefined;
+  // Shadow silhouettes use the same deformation and uniforms as the visible fish.
+  const depth = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking });
+  depth.onBeforeCompile = animate;
+  depth.customProgramCacheKey = () => `reef-swim-depth:${style}`;
+  const distant = makeGeometry(spec, "distant");
+  let near: THREE.BufferGeometry | undefined, high: THREE.BufferGeometry | undefined;
   const mesh = new THREE.Mesh(distant, material), group = new THREE.Group();
+  mesh.customDepthMaterial = depth;
+  mesh.receiveShadow = true;
   group.add(mesh);
   group.userData.residentId = resident.id;
   return {
     group, visual, length, initialized: false,
     state: swimState(resident.id, spec, resident.seed),
     version: `${resident.revision}:${resident.fish.contentHash}`,
-    setDetail(apparentSize, focus) {
-      const close = focus || apparentSize > (detail.value ? 0.095 : 0.125);
-      if (close === !!detail.value) return;
-      mesh.geometry = close ? (near ??= makeGeometry(spec, false)) : distant;
+    setDetail(apparentSize, focus, highQuality = false) {
+      const close = focus || apparentSize > (detail.value ? 0.095 : 0.125) * (highQuality ? 0.65 : 1);
+      const enhanced = highQuality && close;
+      mesh.castShadow = highQuality && spec.appearance.opacity === 1000;
+      if (quality.value !== Number(enhanced)) {
+        quality.value = Number(enhanced);
+        material.clearcoat = enhanced ? 0.28 : 0;
+        material.clearcoatRoughness = 0.3;
+        material.roughness = enhanced ? 0.36 : 0.45;
+        material.needsUpdate = true;
+      }
+      const geometry = !close ? distant : enhanced
+        ? (high ??= makeGeometry(spec, "high")) : (near ??= makeGeometry(spec, "standard"));
+      if (mesh.geometry !== geometry) mesh.geometry = geometry;
       detail.value = close ? 1 : 0;
     },
     dispose() {
       distant.dispose();
       near?.dispose();
+      high?.dispose();
       material.dispose();
+      depth.dispose();
     },
   };
 }
