@@ -85,7 +85,7 @@ pack_sharp() {
   for package in @img/sharp-linux-arm64 @img/sharp-libvips-linux-arm64; do
     package_version="$(cd "$ROOT/apps/web" && PACKAGE_NAME="$package" node -e 'const {createRequire}=require("module"),fs=require("fs"),path=require("path"); const r=createRequire(require.resolve("next/package.json")); const p=JSON.parse(fs.readFileSync(path.resolve(path.dirname(r.resolve("sharp")),"../package.json"),"utf8")); process.stdout.write(p.optionalDependencies[process.env.PACKAGE_NAME]);')"
     [[ "$package_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo 'Invalid sharp runtime version' >&2; exit 1; }
-    packed="$(npm pack "$package@$package_version" --ignore-scripts --pack-destination "$OUT/downloads" --json | node -e 'let s=""; process.stdin.on("data",c=>s+=c).on("end",()=>process.stdout.write(JSON.parse(s)[0].filename))')"
+    packed="$(npm pack "$package@$package_version" --ignore-scripts --pack-destination "$OUT/downloads" --json | node -e 'let s=""; process.stdin.on("data",c=>s+=c).on("end",()=>process.stdout.write(Object.values(JSON.parse(s))[0].filename))')"
     mkdir -p "$stage/web/node_modules/$package"
     tar -xzf "$OUT/downloads/$packed" --strip-components=1 -C "$stage/web/node_modules/$package"
   done
