@@ -35,7 +35,7 @@ export function MarketingHeader({ locale, light = false }: { locale: SupportedLo
             <summary aria-label={copy.menu}><Menu size={19} aria-hidden="true" /></summary>
             <nav aria-label={copy.navigation} className={styles.mobileNav}>{navLinks}</nav>
           </details>
-          <a href={localizedHref("/#create", locale)} data-analytics-cta="header_play" className={styles.playLink}>{brand.play}</a>
+          <Link href={localizedHref("/login", locale)} prefetch={false} data-analytics-cta="header_play" className={styles.playLink}>{brand.play}</Link>
         </div>
       </div>
     </header>
